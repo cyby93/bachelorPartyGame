@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <title>Legénybúcsú Játék - HOST</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #header {
+            width: 100%;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            background: #252525;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            z-index: 100;
+        }
+        #qrcode-container {
+            background: white;
+            padding: 5px;
+            border-radius: 5px;
+        }
+
+        #game-area {
+            position: relative;
+            width: 100%;
+            height: calc(100vh - 100px);
+            background: #111;
+            background-image: linear-gradient(#222 1px, transparent 1px), linear-gradient(90deg, #222 1px, transparent 1px);
+            background-size: 50px 50px;
+            overflow: hidden;
+        }
+
+        .player-character {
+            position: absolute;
+            width: 0; height: 0; /* A pozicionálást a közepére állítjuk */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.05s linear; /* Szuper sima mozgás */
+        }
+
+        /* A játékos teste */
+        .player-body {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            position: absolute;
+            z-index: 2;
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+
+        /* A "fegyver" vagy irányjelző */
+        .player-aim {
+            width: 60px;
+            height: 10px;
+            background: rgba(255,255,255,0.3);
+            position: absolute;
+            left: 0; /* A közepétől indul */
+            transform-origin: left center; /* Forgáspont a játékos közepe */
+            border-radius: 5px;
+            z-index: 1;
+        }
+        .player-aim::after {
+            content: '';
+            position: absolute;
+            right: -5px; top: -5px;
+            width: 10px; height: 20px;
+            background: white;
+            border-radius: 2px;
+        }
+
+        .player-name {
+            position: absolute;
+            top: -40px;
+            font-size: 14px;
+            font-weight: bold;
+            white-space: nowrap;
+            text-shadow: 1px 1px 2px black;
+            z-index: 3;
+        }
+
+        /* Akció effektek */
+        .action-flash { animation: flash 0.2s; }
+        @keyframes flash { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.5); filter: brightness(3); } 100% { transform: scale(1); } }
+
+    </style>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+<div id="header">
+    <div>
+        <h2>🔥 Twin-Stick Aréna</h2>
+        <p style="margin:0; font-size: 14px; opacity: 0.7;">Csatlakozz: <span id="join-url" style="color: #4CAF50; font-weight:bold;">...</span></p>
+    </div>
+    <div id="qrcode-container">
+        <div id="qrcode"></div>
+    </div>
+</div>
+
+<div id="game-area"></div>
+
+<script>
+    const socket = io();
+    const gameArea = document.getElementById('game-area');
+
+    // Játékállapot
+    const players = {};
+    const SPEED = 5;
+
+    socket.emit('identify', 'HOST');
+
+    fetch('/api/ip').then(r=>r.json()).then(d=>{
+        const url=`http://${d.ip}:${d.port}/controller.html`;
+        document.getElementById('join-url').innerText=url;
+        new QRCode(document.getElementById("qrcode"),{text:url,width:64,height:64});
+    });
+
+    // Új játékos
+    socket.on('host_player_joined', (data) => {
+        if (players[data.id]) return;
+
+        const el = document.createElement('div');
+        el.className = 'player-character';
+        el.innerHTML = `
+                <div class="player-name">${data.name}</div>
+                <div class="player-body" style="background-color: ${data.color};"></div>
+                <div class="player-aim"></div>
+            `;
+        gameArea.appendChild(el);
+
+        players[data.id] = {
+            id: data.id,
+            el: el,
+            body: el.querySelector('.player-body'),
+            aim: el.querySelector('.player-aim'),
+            x: Math.random() * (gameArea.clientWidth - 100) + 50,
+            y: Math.random() * (gameArea.clientHeight - 100) + 50,
+            vx: 0, vy: 0,
+            aimAngle: 0
+        };
+    });
+
+    socket.on('host_player_left', (d) => {
+        if (players[d.id]) { players[d.id].el.remove(); delete players[d.id]; }
+    });
+
+    // INPUT KEZELÉS
+    socket.on('host_player_input', (data) => {
+        const p = players[data.id];
+        if (!p) return;
+
+        if (data.type === 'move') {
+            // Bal joystick: Sebességvektor
+            p.vx = data.x * SPEED;
+            p.vy = data.y * -1 * SPEED;
+        }
+        else if (data.type === 'aim') {
+            // Jobb joystick: Forgatás szöge (radian)
+            // Math.atan2(y, x) adja meg a szöget
+            if (Math.abs(data.x) > 0.1 || Math.abs(data.y) > 0.1) {
+                // JAVÍTÁS: Nem kell invertálni az Y-t a forgatáshoz, mert a lenti renderelés (-deg)
+                // már helyesen kezeli a koordináta-transzformációt.
+                p.aimAngle = Math.atan2(data.y, data.x);
+            }
+        }
+        else if (data.type === 'action') {
+            // Gombok 1-4
+            const colors = { 1: '#e74c3c', 2: '#f1c40f', 3: '#3498db', 4: '#2ecc71' };
+            p.body.style.borderColor = colors[data.btn];
+            p.body.classList.remove('action-flash');
+            void p.body.offsetWidth; // Trigger reflow
+            p.body.classList.add('action-flash');
+        }
+    });
+
+    // GAME LOOP
+    function update() {
+        const w = gameArea.clientWidth;
+        const h = gameArea.clientHeight;
+
+        for (const id in players) {
+            const p = players[id];
+
+            // Mozgás
+            p.x += p.vx;
+            p.y += p.vy;
+
+            // Falak
+            if (p.x < 20) p.x = 20; if (p.x > w-20) p.x = w-20;
+            if (p.y < 20) p.y = 20; if (p.y > h-20) p.y = h-20;
+
+            // Render pozíció
+            p.el.style.left = p.x + 'px';
+            p.el.style.top = p.y + 'px';
+
+            // Render célzás forgatása
+            // Radiánból fokba váltás a CSS-nek
+            const deg = p.aimAngle * (180 / Math.PI);
+            p.aim.style.transform = `rotate(${-deg}deg)`; // CSS forgatás negatív
+        }
+        requestAnimationFrame(update);
+    }
+    requestAnimationFrame(update);
+</script>
+</body>
+</html>

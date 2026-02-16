@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Twin-Stick Controller</title>
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #111;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            touch-action: none;
+            display: flex;
+            flex-direction: column; /* Fentről lefelé építkezünk */
+        }
+
+        /* --- LOGIN --- */
+        #login-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            width: 100%;
+            background: #1a1a1a;
+            position: absolute;
+            z-index: 10;
+        }
+        input {
+            padding: 15px;
+            font-size: 20px;
+            border-radius: 8px;
+            border: none;
+            width: 80%;
+            max-width: 300px;
+            margin-bottom: 20px;
+            text-align: center;
+            background: #333;
+            color: white;
+        }
+        button.start-btn {
+            padding: 15px 40px;
+            font-size: 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 300px;
+            cursor: pointer;
+        }
+
+        /* --- GAME SCREEN --- */
+        #game-screen {
+            display: none; /* JS váltja */
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* FELSŐ SÁV - 4 GOMB (20%) */
+        #actions-row {
+            height: 20%;
+            display: flex;
+            border-bottom: 2px solid #333;
+        }
+        .action-btn {
+            flex: 1; /* Egyenlő szélesség */
+            border: none;
+            border-right: 1px solid #333;
+            font-weight: bold;
+            font-size: 20px;
+            color: rgba(255,255,255,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        .action-btn:last-child { border-right: none; }
+        .action-btn:active { opacity: 0.7; }
+
+        /* Gomb színek */
+        #btn-1 { background: #e74c3c; } /* Piros */
+        #btn-2 { background: #f1c40f; color: #333; } /* Sárga */
+        #btn-3 { background: #3498db; } /* Kék */
+        #btn-4 { background: #2ecc71; } /* Zöld */
+
+        /* ALSÓ SÁV - 2 JOYSTICK (80%) */
+        #joysticks-row {
+            height: 100%;
+            display: flex;
+            /*position: relative;*/
+        }
+        .joy-zone {
+            flex: 1; /* 50-50% szélesség */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #zone-left { border-right: 1px solid #333; background: radial-gradient(circle at center, #222 0%, #111 100%); }
+        #zone-right { background: radial-gradient(circle at center, #222 0%, #111 100%); }
+
+        .zone-label {
+            opacity: 0.2;
+            font-size: 20px;
+            pointer-events: none;
+            text-transform: uppercase;
+        }
+
+        /* LANDSCAPE MÓD KIKÉNYSZERÍTÉSE */
+        #rotate-msg {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000;
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            flex-direction: column;
+        }
+        @media (orientation: portrait) {
+            body.in-game #rotate-msg { display: flex; }
+            body.in-game #game-screen { display: none; }
+        }
+    </style>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
+</head>
+<body>
+
+<div id="rotate-msg">
+    <h1>🔄</h1>
+    <p>Forgasd el a telefont!</p>
+</div>
+
+<div id="login-screen">
+    <h2>Twin-Stick Login</h2>
+    <input type="text" id="username" placeholder="Név" maxlength="10">
+    <button class="start-btn" onclick="joinGame()">START</button>
+</div>
+
+<div id="game-screen">
+    <!-- 1. SOR: 4 GOMB -->
+    <div id="actions-row">
+        <button id="btn-1" class="action-btn" ontouchstart="sendBtn(1)">1</button>
+        <button id="btn-2" class="action-btn" ontouchstart="sendBtn(2)">2</button>
+        <button id="btn-3" class="action-btn" ontouchstart="sendBtn(3)">3</button>
+        <button id="btn-4" class="action-btn" ontouchstart="sendBtn(4)">4</button>
+    </div>
+
+    <!-- 2. SOR: JOYSTICKOK -->
+    <div id="joysticks-row">
+        <div id="zone-left" class="joy-zone">
+            <span class="zone-label">Mozgás</span>
+        </div>
+        <div id="zone-right" class="joy-zone">
+            <span class="zone-label">Célzás</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    const socket = io();
+    let myName = '';
+    let wakeLock = null;
+
+    async function joinGame() {
+        const input = document.getElementById('username');
+        if (!input.value.trim()) return;
+        myName = input.value;
+
+        document.body.classList.add('in-game');
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('game-screen').style.display = 'flex';
+
+        try { if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen(); } catch(e){}
+        requestWakeLock();
+
+        socket.emit('player_join', { name: myName });
+
+        // Joystickok indítása
+        initJoysticks();
+    }
+
+    // --- JOYSTICK LOGIKA ---
+    function initJoysticks() {
+        const options = {
+            mode: 'dynamic', // Ez teszi lehetővé, hogy ott jöjjön létre, ahol érinted
+            color: 'white',
+            size: 200,
+            dynamicPage: true,
+            threshold: 0.1 // Mennyire kell elhúzni, hogy érzékelje
+        };
+
+        // BAL JOYSTICK (Mozgás)
+        const leftManager = nipplejs.create({ ...options, zone: document.getElementById('zone-left'), color: 'cyan' });
+        setupJoystickListener(leftManager, 'move');
+
+        // JOBB JOYSTICK (Célzás)
+        const rightManager = nipplejs.create({ ...options, zone: document.getElementById('zone-right'), color: 'red' });
+        setupJoystickListener(rightManager, 'aim');
+    }
+
+    function setupJoystickListener(manager, type) {
+        let lastSent = 0;
+        manager.on('move', (evt, data) => {
+            const now = Date.now();
+            if (now - lastSent > 50 && data.vector) {
+                socket.emit('player_input', {
+                    type: type, // 'move' vagy 'aim'
+                    x: data.vector.x,
+                    y: data.vector.y
+                });
+                lastSent = now;
+            }
+        });
+        manager.on('end', () => {
+            socket.emit('player_input', { type: type, x: 0, y: 0 });
+        });
+    }
+
+    // --- GOMB LOGIKA ---
+    function sendBtn(id) {
+        if (navigator.vibrate) navigator.vibrate(20);
+        socket.emit('player_input', { type: 'action', btn: id });
+    }
+
+    // Wake Lock
+    async function requestWakeLock() {
+        try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
+    }
+    document.addEventListener('visibilitychange', async () => {
+        if (wakeLock !== null && document.visibilityState === 'visible') await requestWakeLock();
+    });
+
+</script>
+</body>
+</html>

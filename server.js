@@ -15,10 +15,16 @@ function getLocalIp() {
     const interfaces = os.networkInterfaces();
     for (const name of Object.keys(interfaces)) {
         for (const iface of interfaces[name]) {
-            if (iface.family === 'IPv4' && !iface.internal && iface.address.includes('0.18')) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                console.log(`Helyi IP cím: ${iface.address}`);
+            }
+        }
+                for (const iface of interfaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) {
                 return iface.address;
             }
         }
+
     }
     return 'localhost';
 }

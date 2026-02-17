@@ -67,7 +67,7 @@ export class LobbyScene extends Scene {
             p.update(width, height);
             
             // Lövés (csak vizuális móka)
-            if (p.canShoot(now)) {
+            if (p.getAction(now)) {
                 this.spawnBullet(p);
             }
         }

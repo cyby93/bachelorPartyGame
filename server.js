@@ -3,6 +3,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
 const ip = require('ip');
+const { CLASSES, CLASS_NAMES } = require('./public/js/Constants');
 
 const app = express();
 const server = http.createServer(app);
@@ -33,6 +34,7 @@ io.on('connection', (socket) => {
       id: socket.id,
       name: name || 'Player',
       className: className,
+      classData: CLASSES[CLASS_NAMES[className]],
       isHost: isHost || false,
       x: 400 + Math.random() * 200,
       y: 300 + Math.random() * 200,

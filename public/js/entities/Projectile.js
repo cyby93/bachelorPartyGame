@@ -11,7 +11,7 @@ export default class Projectile {
     this.radius = config.radius || 8;
     this.color = config.color || '#ffff00';
     this.owner = config.owner;
-    this.lifetime = config.lifetime || 3000;
+    this.lifetime = config.lifetime || 30000;
     this.createdAt = Date.now();
     this.isAlive = true;
     

@@ -40,12 +40,12 @@
     </button>
     
     <div id="ui-overlay">
-      <div class="boss-health-bar">
+      <!-- <div class="boss-health-bar">
         <div class="boss-name">Illidan Stormrage</div>
         <div class="health-bar-container">
           <div class="health-bar-fill" id="boss-hp-bar" style="width: 100%;"></div>
         </div>
-      </div>
+      </div> -->
     </div>
   </div>
   <script src="/socket.io/socket.io.js"></script>
@@ -56,7 +56,9 @@
     const socket = io();
     const canvas = document.getElementById('game-canvas');
     const game = new Game(canvas, socket);
-    
+    let currentPlayers = [];
+
+
     socket.on('connect', () => {
       console.log('Connected as HOST');
       socket.emit('join_game', {
@@ -118,14 +120,20 @@
     
     // Update player list
     socket.on('init_state', (state) => {
-      updatePlayerList(state.players);
+      updatePlayerList(Object.values(state.players));
     });
     
-    socket.on('player_joined', (data) => {
-      // Will be handled by game state updates
+    socket.on('player_joined', (player) => {
+      updatePlayerList([...currentPlayers, player]);
     });
+
+    socket.on('player_left', (player) => {
+      updatePlayerList(currentPlayers.filter(p => player.id !== p.id));
+    });
+
     
     function updatePlayerList(players) {
+      currentPlayers = players;
       const listContainer = document.getElementById('player-list-items');
       const playerArray = Object.values(players).filter(p => !p.isHost);
       
@@ -134,9 +142,9 @@
         startButton.disabled = true;
       } else {
         listContainer.innerHTML = playerArray.map(p => 
-          `<div class="player-item">
+          `<div class="player-item" style="border-left-color:${p.classData.color}">
             <span class="player-name">${p.name}</span>
-            <span class="player-class">${p.className}</span>
+            <span class="player-class" style="color:${p.classData.color}">${p.className}</span>
           </div>`
         ).join('');
         startButton.disabled = false;

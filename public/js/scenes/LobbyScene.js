@@ -53,6 +53,7 @@ export default class LobbyScene extends Scene {
     
     // Update projectiles
     this.projectiles = this.projectiles.filter(projectile => {
+      // return true;
       projectile.update(deltaTime);
       
       if (!projectile.isAlive) return false;
@@ -62,7 +63,7 @@ export default class LobbyScene extends Scene {
         if (projectile.checkCollision(player)) {
           // In lobby, projectiles pass through players (no damage)
           // Just destroy the projectile visually
-          if (!projectile.pierce) {
+          if (!projectile.pierce && projectile.owner.id !== player.id) {
             projectile.destroy();
           }
         }

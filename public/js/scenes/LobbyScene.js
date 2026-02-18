@@ -1,106 +1,119 @@
-import { Scene } from './Scene.js';
-import { Bullet } from '../entities/Bullet.js';
-import { CONFIG } from '../Constants.js';
+import Scene from './Scene.js';
+import Player from '../entities/Player.js';
+import SkillManager from '../managers/SkillManager.js';
 
-export class LobbyScene extends Scene {
-    constructor(game) {
-        super(game);
-        this.bullets = []; // Itt is lehet lőni, de nem sebez
-        this.startButton = null;
+export default class LobbyScene extends Scene {
+  constructor(game) {
+    super(game);
+    this.players = new Map();
+    this.effects = [];
+    this.isHost = false;
+  }
+
+  enter() {
+    super.enter();
+    this.effects = [];
+  }
+
+  update(deltaTime) {
+    this.players.forEach(player => player.update(deltaTime));
+    this.effects = this.effects.filter(effect => {
+      effect.update(deltaTime);
+      return effect.isAlive;
+    });
+  }
+
+  render(ctx) {
+    ctx.fillStyle = '#0f3460';
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    this.drawGrid(ctx);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(0, 0, ctx.canvas.width, 80);
+    ctx.fillStyle = '#00d2ff';
+    ctx.font = 'bold 36px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('LOBBY - Practice Your Skills!', ctx.canvas.width / 2, 50);
+    ctx.fillStyle = '#fff';
+    ctx.font = '18px Arial';
+    ctx.fillText(`${this.players.size} player(s) connected`, ctx.canvas.width / 2, 75);
+    this.effects.forEach(effect => effect.render(ctx));
+    this.players.forEach(player => player.render(ctx));
+    if (this.isHost && this.players.size > 0) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillRect(0, ctx.canvas.height - 60, ctx.canvas.width, 60);
+      ctx.fillStyle = '#2ecc71';
+      ctx.font = 'bold 24px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('Press START GAME to begin the raid!', ctx.canvas.width / 2, ctx.canvas.height - 25);
     }
+  }
 
-    enter() {
-        console.log("Entering Lobby...");
-        
-        // UI elemek megjelenítése
-        const header = document.getElementById('header');
-        if (header) header.style.display = 'flex';
-
-        this.createStartButton();
-        
-        // Mindenkit feltámasztunk
-        for (const id in this.game.players) {
-            this.game.players[id].hp = CONFIG.PLAYER_HP;
-        }
+  drawGrid(ctx) {
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.lineWidth = 1;
+    const gridSize = 50;
+    for (let x = 0; x < ctx.canvas.width; x += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, ctx.canvas.height);
+      ctx.stroke();
     }
-
-    exit() {
-        // UI eltüntetése
-        const header = document.getElementById('header');
-        if (header) header.style.display = 'none';
-
-        if (this.startButton) {
-            this.startButton.remove();
-        }
-        this.bullets = [];
+    for (let y = 0; y < ctx.canvas.height; y += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(ctx.canvas.width, y);
+      ctx.stroke();
     }
+  }
 
-    createStartButton() {
-        this.startButton = document.createElement('button');
-        this.startButton.innerText = "JÁTÉK INDÍTÁSA";
-        Object.assign(this.startButton.style, {
-            position: 'absolute', top: '50%', left: '50%',
-            transform: 'translate(-50%, -50%)',
-            padding: '20px 50px', fontSize: '30px', fontWeight: 'bold',
-            cursor: 'pointer', backgroundColor: '#27ae60', color: 'white',
-            border: 'none', borderRadius: '10px', zIndex: '1000'
+  handleSocketEvent(eventName, data) {
+    switch (eventName) {
+      case 'player_joined':
+        this.addPlayer(data);
+        console.log(`${data.name} joined!`);
+        break;
+      case 'player_left':
+        this.players.delete(data);
+        break;
+      case 'init_state':
+        Object.values(data.players).forEach(playerData => {
+          if (!playerData.isHost) {
+            this.addPlayer(playerData);
+          }
         });
-
-        this.startButton.onclick = () => {
-            if (Object.keys(this.game.players).length > 0) {
-                // ÁTVÁLTÁS A BOSS HARCRA
-                this.game.changeScene('BOSS_FIGHT');
-            } else {
-                alert("Várj meg valakit!");
-            }
-        };
-        document.body.appendChild(this.startButton);
+        break;
+      case 'game_state':
+        this.updateGameState(data);
+        break;
+      case 'skill_used':
+        SkillManager.handleSkillUsed(data, this.players, this.effects);
+        break;
+      case 'game_started':
+        this.game.changeScene('bossfight');
+        break;
     }
+  }
 
-    update() {
-        const now = Date.now();
-        const { width, height } = this.game.canvas;
+  updateGameState(state) {
+    Object.values(state.players).forEach(playerData => {
+      if (playerData.isHost) return;
+      let player = this.players.get(playerData.id);
+      if (!player) {
+        player = new Player(playerData);
+        this.players.set(playerData.id, player);
+      }
+      player.moveX = playerData.moveX || 0;
+      player.moveY = playerData.moveY || 0;
+    });
+  }
 
-        // Játékosok frissítése
-        for (const id in this.game.players) {
-            const p = this.game.players[id];
-            p.update(width, height);
-            
-            // Lövés (csak vizuális móka)
-            if (p.getAction(now)) {
-                this.spawnBullet(p);
-            }
-        }
+  setHost(isHost) {
+    this.isHost = isHost;
+  }
 
-        // Töltények
-        this.bullets.forEach(b => b.update(width, height));
-        this.bullets = this.bullets.filter(b => !b.markedForDeletion);
-    }
-
-    spawnBullet(player) {
-        const len = Math.sqrt(player.aimX**2 + player.aimY**2);
-        if (len === 0) return;
-        
-        this.bullets.push(new Bullet(
-            player.x + (player.aimX/len) * (CONFIG.PLAYER_RADIUS+5),
-            player.y + (player.aimY/len) * (CONFIG.PLAYER_RADIUS+5),
-            player.aimX, player.aimY, player.id
-        ));
-    }
-
-    draw(ctx) {
-        ctx.clearRect(0, 0, this.game.canvas.width, this.game.canvas.height);
-
-        // Háttér szöveg
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.font = 'bold 40px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText("GYAKORLÓ MÓD", this.game.canvas.width/2, this.game.canvas.height/2 - 80);
-        ctx.font = '20px Arial';
-        ctx.fillText("Várd meg a többieket...", this.game.canvas.width/2, this.game.canvas.height/2 - 40);
-
-        // Játékosok és golyók
-        for (const id in this.game.players) this.game.players[id].draw(ctx);
-        this.bullets.forEach(b => b.draw(ctx));
-    }
+  addPlayer(playerData) {
+    if (playerData.isHost) return;
+    const player = new Player(playerData);
+    this.players.set(playerData.id, player);
+  }
 }

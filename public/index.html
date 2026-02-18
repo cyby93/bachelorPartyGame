@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAID NIGHT - The Rescue</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      color: #eee;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container { max-width: 800px; text-align: center; }
+    h1 {
+      font-size: 64px;
+      color: #00d2ff;
+      margin-bottom: 20px;
+      text-shadow: 0 0 20px rgba(0, 210, 255, 0.5);
+    }
+    .subtitle { font-size: 24px; color: #aaa; margin-bottom: 50px; }
+    .buttons {
+      display: flex;
+      gap: 30px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 50px;
+    }
+    .btn {
+      padding: 20px 50px;
+      font-size: 24px;
+      font-weight: bold;
+      border: none;
+      border-radius: 15px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: transform 0.2s, box-shadow 0.2s;
+      color: white;
+    }
+    .btn:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+    .btn-host { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+    .btn-controller { background: linear-gradient(135deg, #00d2ff, #3a7bd5); }
+    .info {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 30px;
+      border-radius: 15px;
+      margin-top: 30px;
+    }
+    .info h2 { color: #00d2ff; margin-bottom: 15px; }
+    .info p { line-height: 1.8; color: #ccc; }
+    .classes {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-top: 30px;
+    }
+    .class-card {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 15px;
+      border-radius: 10px;
+      font-size: 18px;
+    }
+    .emoji { font-size: 32px; display: block; margin-bottom: 5px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 RAID NIGHT</h1>
+    <p class="subtitle">The Rescue - A Local Multiplayer Boss Fight</p>
+    <div class="buttons">
+      <a href="/host.html" class="btn btn-host">🖥️ HOST DISPLAY</a>
+      <a href="/controller.html" class="btn btn-controller">📱 CONTROLLER</a>
+    </div>
+    <div class="info">
+      <h2>How to Play</h2>
+      <p>
+        <strong>1. Host:</strong> Open the HOST DISPLAY on your TV or monitor<br>
+        <strong>2. Players:</strong> Open CONTROLLER on your smartphones<br>
+        <strong>3. Connect:</strong> Enter your name and choose a class<br>
+        <strong>4. Fight:</strong> Team up to defeat Illidan Stormrage!
+      </p>
+      <h2 style="margin-top: 30px;">Choose Your Class</h2>
+      <div class="classes">
+        <div class="class-card"><span class="emoji">⚔️</span>Warrior<br><small>Tank</small></div>
+        <div class="class-card"><span class="emoji">🔨</span>Paladin<br><small>Tank/Heal</small></div>
+        <div class="class-card"><span class="emoji">⚡</span>Shaman<br><small>DPS/Heal</small></div>
+        <div class="class-card"><span class="emoji">🏹</span>Hunter<br><small>DPS</small></div>
+        <div class="class-card"><span class="emoji">✝️</span>Priest<br><small>Healer</small></div>
+        <div class="class-card"><span class="emoji">🔥</span>Mage<br><small>DPS</small></div>
+        <div class="class-card"><span class="emoji">🌿</span>Druid<br><small>Hybrid</small></div>
+        <div class="class-card"><span class="emoji">🗡️</span>Rogue<br><small>DPS</small></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

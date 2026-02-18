@@ -1,97 +1,93 @@
-import { Player } from './entities/Player.js';
-import { LobbyScene } from './scenes/LobbyScene.js';
-import { BossFightScene } from './scenes/BossFightScene.js';
-import { GameOverScene } from './scenes/GameOverScene.js';
+import { GAME_CONFIG } from './Constants.js';
+import LobbyScene from './scenes/LobbyScene.js';
+import BossFightScene from './scenes/BossFightScene.js';
+import GameOverScene from './scenes/GameOverScene.js';
+import AudioManager from './managers/AudioManager.js';
 
-export class Game {
-    constructor(canvas, socket) {
-        this.canvas = canvas;
-        this.ctx = canvas.getContext('2d');
-        this.socket = socket;
-        
-        this.players = {}; // Globális játékos lista (minden scene látja)
+export default class Game {
+  constructor(canvas, socket) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.socket = socket;
+    this.canvas.width = GAME_CONFIG.CANVAS_WIDTH;
+    this.canvas.height = GAME_CONFIG.CANVAS_HEIGHT;
+    this.scenes = {
+      lobby: new LobbyScene(this),
+      bossfight: new BossFightScene(this),
+      gameover: new GameOverScene(this)
+    };
+    this.currentScene = null;
+    this.lastTime = 0;
+    this.isRunning = false;
+    AudioManager.init();
+    this.setupSocketListeners();
+  }
 
-        // Scene regisztráció
-        this.scenes = {
-            'LOBBY': new LobbyScene(this),
-            'BOSS_FIGHT': new BossFightScene(this),
-            'GAME_OVER': new GameOverScene(this)
-        };
-        
-        this.currentScene = null;
+  setupSocketListeners() {
+    this.socket.on('player_joined', (data) => {
+      if (this.currentScene) {
+        this.currentScene.handleSocketEvent('player_joined', data);
+      }
+    });
+    this.socket.on('player_left', (data) => {
+      if (this.currentScene) {
+        this.currentScene.handleSocketEvent('player_left', data);
+      }
+    });
+    this.socket.on('game_state', (data) => {
+      if (this.currentScene) {
+        this.currentScene.handleSocketEvent('game_state', data);
+      }
+    });
+    this.socket.on('skill_used', (data) => {
+      if (this.currentScene) {
+        this.currentScene.handleSocketEvent('skill_used', data);
+      }
+    });
+    this.socket.on('game_started', (data) => {
+      if (this.currentScene) {
+        this.currentScene.handleSocketEvent('game_started', data);
+      }
+    });
+    this.socket.on('init_state', (data) => {
+      if (this.currentScene) {
+        this.currentScene.handleSocketEvent('init_state', data);
+      }
+    });
+  }
 
-        // Setup
-        this.setupNetwork();
-        this.resize();
-        window.addEventListener('resize', () => this.resize());
-
-        // Kezdés a Lobby-ban
-        this.changeScene('LOBBY');
-        
-        // Loop indítása
-        this.loop();
+  changeScene(sceneName, data) {
+    if (this.currentScene) {
+      this.currentScene.exit();
     }
-
-    changeScene(sceneName, params = null) {
-        if (this.currentScene) {
-            this.currentScene.exit();
-        }
-
-        this.currentScene = this.scenes[sceneName];
-        
-        if (this.currentScene) {
-            this.currentScene.enter(params);
-            this.resize(); // Biztosítjuk, hogy a méretek jók (pl. fejléc eltűnés miatt)
-        } else {
-            console.error(`Scene not found: ${sceneName}`);
-        }
+    this.currentScene = this.scenes[sceneName];
+    if (this.currentScene) {
+      this.currentScene.enter(data);
     }
+  }
 
-    resize() {
-        this.canvas.width = window.innerWidth;
-        // Ha van fejléc (csak lobbyban), vonjuk le
-        const header = document.getElementById('header');
-        const headerH = (header && header.style.display !== 'none') ? header.offsetHeight : 0;
-        this.canvas.height = window.innerHeight - headerH;
+  start() {
+    this.isRunning = true;
+    this.changeScene('lobby');
+    this.lastTime = performance.now();
+    this.gameLoop(this.lastTime);
+  }
+
+  gameLoop(currentTime) {
+    if (!this.isRunning) return;
+    const deltaTime = currentTime - this.lastTime;
+    this.lastTime = currentTime;
+    if (this.currentScene) {
+      this.currentScene.update(deltaTime);
     }
-
-    setupNetwork() {
-        this.socket.on('host_player_joined', (data) => {
-            if (!this.players[data.id]) {
-                // Játékos létrehozása (pozíciót majd a scene beállítja pontosan)
-                this.players[data.id] = new Player(data.id, data.name, data.color, 100, 100);
-            }
-        });
-
-        this.socket.on('host_player_left', (data) => {
-            delete this.players[data.id];
-        });
-
-        this.socket.on('host_player_input', (data) => {
-            const player = this.players[data.id];
-            if (player && this.currentScene) {
-                // 1. Frissítjük a játékos belső állapotát (aim, velocity)
-                // Ezt a Player osztály intézi
-                this.currentScene.handleInput(player, data);
-            }
-        });
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    if (this.currentScene) {
+      this.currentScene.render(this.ctx);
     }
+    requestAnimationFrame((time) => this.gameLoop(time));
+  }
 
-    update() {
-        if (this.currentScene) {
-            this.currentScene.update();
-        }
-    }
-
-    draw() {
-        if (this.currentScene) {
-            this.currentScene.draw(this.ctx);
-        }
-    }
-
-    loop() {
-        this.update();
-        this.draw();
-        requestAnimationFrame(() => this.loop());
-    }
+  stop() {
+    this.isRunning = false;
+  }
 }

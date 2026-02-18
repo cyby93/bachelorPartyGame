@@ -1,75 +1,69 @@
 <!DOCTYPE html>
-<html lang="hu">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Legénybúcsú Játék - HOST</title>
-    <style>
-        body {
-            background-color: #1a1a1a;
-            color: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        #header {
-            width: 100%;
-            padding: 10px 20px;
-            display: flex;
-            justify-content: space-between;
-            background: #252525;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-            z-index: 100;
-        }
-        #qrcode-container {
-            background: white;
-            padding: 5px;
-            border-radius: 5px;
-        }
-        canvas {
-            display: block;
-            background: #111;
-            background-image: linear-gradient(#222 1px, transparent 1px), linear-gradient(90deg, #222 1px, transparent 1px);
-            background-size: 50px 50px;
-        }
-    </style>
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAID NIGHT - Host</title>
+  <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-
-    <div id="header">
-        <div>
-            <h2>🔥 Twin-Stick Aréna (Modular)</h2>
-            <p style="margin:0; font-size: 14px; opacity: 0.7;">Csatlakozz: <span id="join-url" style="color: #4CAF50; font-weight:bold;">...</span></p>
+  <div id="host-container">
+    <canvas id="game-canvas"></canvas>
+    <div id="ui-overlay">
+      <div class="boss-health-bar">
+        <div class="boss-name">Illidan Stormrage</div>
+        <div class="health-bar-container">
+          <div class="health-bar-fill" id="boss-hp-bar" style="width: 100%;"></div>
         </div>
-        <div id="qrcode-container">
-            <div id="qrcode"></div>
-        </div>
+      </div>
     </div>
-
-    <canvas id="gameCanvas"></canvas>
-
-    <!-- FONTOS: type="module" -->
-    <script type="module">
-        import { Game } from './js/Game.js';
-
-        // Globális socket inicializálás
-        const socket = io();
-        socket.emit('identify', 'HOST');
-
-        // IP cím és QR kód
-        fetch('/api/ip').then(r => r.json()).then(d => {
-            const url = `http://${d.ip}:${d.port}/controller.html`;
-            document.getElementById('join-url').innerText = url;
-            new QRCode(document.getElementById("qrcode"), { text: url, width: 64, height: 64 });
-        });
-
-        // Játék indítása
-        const canvas = document.getElementById('gameCanvas');
-        const game = new Game(canvas, socket);
-    </script>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module">
+    import Game from './js/Game.js';
+    const socket = io();
+    const canvas = document.getElementById('game-canvas');
+    const game = new Game(canvas, socket);
+    socket.on('connect', () => {
+      console.log('Connected as HOST');
+      socket.emit('join_game', {
+        name: 'Host Display',
+        className: 'WARRIOR',
+        isHost: true
+      });
+      game.scenes.lobby.setHost(true);
+    });
+    socket.on('game_state', (state) => {
+      if (state.boss) {
+        const hpBar = document.getElementById('boss-hp-bar');
+        const hpPercent = (state.boss.hp / state.boss.maxHp) * 100;
+        hpBar.style.width = hpPercent + '%';
+      }
+    });
+    game.start();
+    const startButton = document.createElement('button');
+    startButton.textContent = 'START GAME';
+    startButton.style.position = 'absolute';
+    startButton.style.bottom = '20px';
+    startButton.style.left = '50%';
+    startButton.style.transform = 'translateX(-50%)';
+    startButton.style.padding = '15px 40px';
+    startButton.style.fontSize = '24px';
+    startButton.style.fontWeight = 'bold';
+    startButton.style.border = 'none';
+    startButton.style.borderRadius = '10px';
+    startButton.style.background = 'linear-gradient(135deg, #2ecc71, #27ae60)';
+    startButton.style.color = 'white';
+    startButton.style.cursor = 'pointer';
+    startButton.style.zIndex = '1000';
+    startButton.addEventListener('click', () => {
+      socket.emit('start_game');
+      startButton.style.display = 'none';
+    });
+    document.body.appendChild(startButton);
+    socket.on('game_started', () => {
+      startButton.style.display = 'none';
+    });
+  </script>
 </body>
 </html>

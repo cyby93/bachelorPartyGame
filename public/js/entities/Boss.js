@@ -1,121 +1,124 @@
-import { CONFIG } from '../Constants.js';
+import { BOSS_CONFIG, GAME_CONFIG } from '../Constants.js';
 
-export class Boss {
-    constructor(x, y) {
-        this.x = x;
-        this.y = y;
-        this.vx = CONFIG.BOSS_SPEED;
-        this.vy = CONFIG.BOSS_SPEED;
-        
-        this.hp = CONFIG.BOSS_HP;
-        this.maxHp = CONFIG.BOSS_HP;
-        this.radius = CONFIG.BOSS_RADIUS;
-        
-        this.lastShotTime = 0;
-        this.lastMoveChange = 0;
-        this.hitFlash = 0;
-    }
+export default class Boss {
+  constructor() {
+    const config = BOSS_CONFIG.ILLIDAN;
+    this.name = config.name;
+    this.x = GAME_CONFIG.CANVAS_WIDTH / 2;
+    this.y = GAME_CONFIG.CANVAS_HEIGHT / 2;
+    this.hp = config.maxHp;
+    this.maxHp = config.maxHp;
+    this.radius = GAME_CONFIG.BOSS_COLLISION_RADIUS;
+    this.speed = config.speed;
+    this.abilities = config.abilities;
+    this.phases = config.phases;
+    this.currentPhase = 0;
+    this.target = null;
+    this.angle = 0;
+    this.abilityCooldowns = this.abilities.map(() => 0);
+    this.nextAbilityTime = Date.now() + 2000;
+  }
 
-    update(canvasWidth, canvasHeight, players, now) {
-        if (this.hp <= 0) return null; // Halott boss nem csinál semmit
-
-        // --- 1. MOZGÁS ---
-        // Időnként irányt vált (pl. 2 másodpercenként)
-        if (now - this.lastMoveChange > 2000) {
-            const angle = Math.random() * Math.PI * 2;
-            this.vx = Math.cos(angle) * CONFIG.BOSS_SPEED;
-            this.vy = Math.sin(angle) * CONFIG.BOSS_SPEED;
-            this.lastMoveChange = now;
+  update(deltaTime, players) {
+    const hpPercent = this.hp / this.maxHp;
+    for (let i = this.phases.length - 1; i >= 0; i--) {
+      if (hpPercent <= this.phases[i].threshold) {
+        if (this.currentPhase !== i) {
+          this.currentPhase = i;
+          this.speed = this.phases[i].speed;
         }
-
-        this.x += this.vx;
-        this.y += this.vy;
-
-        // Képernyőn belül tartás (visszapattan a falról)
-        if (this.x < this.radius || this.x > canvasWidth - this.radius) this.vx *= -1;
-        if (this.y < this.radius || this.y > canvasHeight - this.radius) this.vy *= -1;
-
-        // --- 2. TÁMADÁS ---
-        if (now - this.lastShotTime > CONFIG.BOSS_FIRE_RATE) {
-            const target = this.findNearestPlayer(players);
-            
-            if (target) {
-                this.lastShotTime = now;
-                // Visszaadjuk a célt a Game motornak, hogy lőjön oda
-                return { 
-                    x: target.x, 
-                    y: target.y 
-                }; 
-            }
-        }
-        
-        if (this.hitFlash > 0) this.hitFlash--;
-        return null;
+        break;
+      }
     }
-
-    findNearestPlayer(players) {
-        let nearest = null;
-        let minDist = Infinity;
-
-        for (const id in players) {
-            const p = players[id];
-            if (p.hp <= 0) continue; // Halottra nem lövünk
-
-            const dx = this.x - p.x;
-            const dy = this.y - p.y;
-            const dist = dx*dx + dy*dy; // Gyökvonás nélkül is jó összehasonlításra
-
-            if (dist < minDist) {
-                minDist = dist;
-                nearest = p;
-            }
-        }
-        return nearest;
+    this.target = this.findNearestPlayer(players);
+    if (this.target) {
+      const dx = this.target.x - this.x;
+      const dy = this.target.y - this.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > 100) {
+        this.x += (dx / dist) * this.speed;
+        this.y += (dy / dist) * this.speed;
+      }
+      this.angle = Math.atan2(dy, dx);
     }
+    this.x = Math.max(this.radius, Math.min(GAME_CONFIG.CANVAS_WIDTH - this.radius, this.x));
+    this.y = Math.max(this.radius, Math.min(GAME_CONFIG.CANVAS_HEIGHT - this.radius, this.y));
+  }
 
-    takeDamage(amount) {
-        this.hp -= amount;
-        this.hitFlash = 5;
+  findNearestPlayer(players) {
+    let nearest = null;
+    let minDist = Infinity;
+    for (const player of players) {
+      if (player.isDead) continue;
+      const dx = player.x - this.x;
+      const dy = player.y - this.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < minDist) {
+        minDist = dist;
+        nearest = player;
+      }
     }
+    return nearest;
+  }
 
-    draw(ctx) {
-        if (this.hp <= 0) return;
+  render(ctx) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+    ctx.fillStyle = '#8b0000';
+    ctx.strokeStyle = '#ff0000';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#4a0000';
+    ctx.beginPath();
+    ctx.moveTo(-this.radius * 0.5, -this.radius);
+    ctx.lineTo(-this.radius * 0.7, -this.radius * 1.5);
+    ctx.lineTo(-this.radius * 0.3, -this.radius * 0.8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(this.radius * 0.5, -this.radius);
+    ctx.lineTo(this.radius * 0.7, -this.radius * 1.5);
+    ctx.lineTo(this.radius * 0.3, -this.radius * 0.8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#00ff00';
+    ctx.beginPath();
+    ctx.arc(-this.radius * 0.3, -this.radius * 0.2, 5, 0, Math.PI * 2);
+    ctx.arc(this.radius * 0.3, -this.radius * 0.2, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    this.drawHealthBar(ctx);
+    ctx.fillStyle = '#ff0000';
+    ctx.font = 'bold 16px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(this.name, this.x, this.y - this.radius - 20);
+  }
 
-        ctx.save();
-        ctx.translate(this.x, this.y);
+  drawHealthBar(ctx) {
+    const barWidth = 100;
+    const barHeight = 8;
+    const x = this.x - barWidth / 2;
+    const y = this.y - this.radius - 35;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(x, y, barWidth, barHeight);
+    const hpPercent = this.hp / this.maxHp;
+    ctx.fillStyle = '#e74c3c';
+    ctx.fillRect(x, y, barWidth * hpPercent, barHeight);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, barWidth, barHeight);
+    ctx.fillStyle = '#fff';
+    ctx.font = '10px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${Math.ceil(this.hp)} / ${this.maxHp}`, this.x, y - 3);
+  }
 
-        // Test
-        ctx.fillStyle = (this.hitFlash > 0) ? 'white' : CONFIG.BOSS_COLOR;
-        ctx.beginPath();
-        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Körvonal
-        ctx.strokeStyle = '#5b2c6f'; // Sötétebb lila
-        ctx.lineWidth = 4;
-        ctx.stroke();
-
-        // Szem (hogy látszódjon merre néz/mozog épp)
-        // Egyszerűsítve: csak egy "gonosz" jel a közepén
-        ctx.fillStyle = 'black';
-        ctx.beginPath();
-        ctx.arc(-15, -10, 5, 0, Math.PI*2); // Bal szem
-        ctx.arc(15, -10, 5, 0, Math.PI*2);  // Jobb szem
-        ctx.fill();
-
-        // HP Csík (Boss felett nagyban)
-        const hpPercent = Math.max(0, this.hp / this.maxHp);
-        
-        ctx.fillStyle = 'red';
-        ctx.fillRect(-40, -this.radius - 20, 80, 10);
-        ctx.fillStyle = '#0f0';
-        ctx.fillRect(-40, -this.radius - 20, 80 * hpPercent, 10);
-        
-        // Keret a HP csíknak
-        ctx.strokeStyle = 'white';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(-40, -this.radius - 20, 80, 10);
-
-        ctx.restore();
-    }
+  takeDamage(amount) {
+    this.hp = Math.max(0, this.hp - amount);
+    return this.hp <= 0;
+  }
 }

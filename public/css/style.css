@@ -1,0 +1,265 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+body {
+  font-family: 'Arial', sans-serif;
+  background: #1a1a2e;
+  color: #eee;
+  overflow: hidden;
+}
+
+#host-container {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+#game-canvas {
+  background: #0f3460;
+  border: 3px solid #16213e;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+#ui-overlay {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  right: 20px;
+  pointer-events: none;
+}
+
+.boss-health-bar {
+  background: rgba(0, 0, 0, 0.7);
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.boss-name {
+  font-size: 24px;
+  font-weight: bold;
+  color: #ff4757;
+  margin-bottom: 5px;
+}
+
+.health-bar-container {
+  width: 100%;
+  height: 30px;
+  background: #2d2d2d;
+  border-radius: 15px;
+  overflow: hidden;
+  border: 2px solid #555;
+}
+
+.health-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff4757, #ff6348);
+  transition: width 0.3s ease;
+}
+
+#controller-container {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#connection-screen {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+#connection-screen h1 {
+  font-size: 32px;
+  margin-bottom: 30px;
+  color: #00d2ff;
+}
+
+#connection-screen input {
+  width: 100%;
+  max-width: 300px;
+  padding: 15px;
+  font-size: 18px;
+  border: 2px solid #00d2ff;
+  border-radius: 10px;
+  background: #16213e;
+  color: #eee;
+  margin-bottom: 15px;
+}
+
+#connection-screen select {
+  width: 100%;
+  max-width: 300px;
+  padding: 15px;
+  font-size: 18px;
+  border: 2px solid #00d2ff;
+  border-radius: 10px;
+  background: #16213e;
+  color: #eee;
+  margin-bottom: 20px;
+}
+
+#connection-screen button {
+  padding: 15px 40px;
+  font-size: 20px;
+  font-weight: bold;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #00d2ff, #3a7bd5);
+  color: white;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+#connection-screen button:active {
+  transform: scale(0.95);
+}
+
+#game-screen {
+  display: none;
+  width: 100%;
+  height: 100%;
+  flex-direction: row;
+}
+
+#move-zone {
+  flex: 1;
+  background: linear-gradient(135deg, #1e3c72, #2a5298);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 2px solid #00d2ff;
+}
+
+#move-zone::before {
+  content: 'MOVE';
+  position: absolute;
+  font-size: 24px;
+  color: rgba(255, 255, 255, 0.3);
+  font-weight: bold;
+}
+
+#skill-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 2px;
+  background: #000;
+}
+
+.skill-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.8);
+  overflow: hidden;
+}
+
+.skill-cell.skill-0 {
+  background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+}
+
+.skill-cell.skill-1 {
+  background: linear-gradient(135deg, #4ecdc4, #44a08d);
+}
+
+.skill-cell.skill-2 {
+  background: linear-gradient(135deg, #f7b731, #f39c12);
+}
+
+.skill-cell.skill-3 {
+  background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+}
+
+.skill-cell.on-cooldown {
+  opacity: 0.4;
+}
+
+.skill-cell .cooldown-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.7);
+  height: 0%;
+  transition: height 0.1s linear;
+}
+
+.skill-name {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 14px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.skill-icon {
+  font-size: 48px;
+  text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+}
+
+#player-info {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 10px;
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 1000;
+}
+
+#player-info.visible {
+  display: flex;
+}
+
+.player-name {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.player-hp {
+  font-size: 16px;
+  color: #ff4757;
+}
+
+#waiting-screen {
+  display: none;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+#waiting-screen h2 {
+  font-size: 28px;
+  color: #00d2ff;
+  margin-bottom: 20px;
+}
+
+#waiting-screen p {
+  font-size: 18px;
+  color: #aaa;
+}

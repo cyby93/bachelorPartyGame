@@ -1,24 +1,20 @@
-export class Scene {
-    constructor(game) {
-        this.game = game; // Hozzáférés a fő motorhoz (canvas, játékosok, socket)
-    }
+export default class Scene {
+  constructor(game) {
+    this.game = game;
+    this.isActive = false;
+  }
 
-    /** Akkor fut le, amikor belépünk ebbe a jelenetbe */
-    enter() {}
+  enter() {
+    this.isActive = true;
+  }
 
-    /** Akkor fut le, amikor kilépünk a jelenetből (takarítás) */
-    exit() {}
+  exit() {
+    this.isActive = false;
+  }
 
-    /** Játéklogika frissítése (mozgás, ütközés) */
-    update() {}
+  update(deltaTime) {}
 
-    /** Kirajzolás a vászonra */
-    draw(ctx) {}
+  render(ctx) {}
 
-    /** Input kezelés (ha a scene-nek speciális input kell) */
-    handleInput(player, data) {
-        // Alapértelmezetten a játékos kezeli a saját mozgását, 
-        // de itt felülírhatjuk (pl. menüben navigálás)
-        player.handleInput(data);
-    }
+  handleSocketEvent(eventName, data) {}
 }

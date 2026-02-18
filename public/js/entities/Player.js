@@ -21,20 +21,53 @@ export default class Player {
     this.buffs = [];
     this.angle = 0;
     this.radius = GAME_CONFIG.PLAYER_COLLISION_RADIUS;
+    this.color = this.classData.color;
+    this.speed = this.classData.speed;
+    
+    // New ability system properties
+    this.castState = null;
+    this.shieldState = null;
+    this.isDashing = false;
+    this.dashStartTime = 0;
+    this.dashDuration = 0;
+    this.dashVelocity = null;
+    this.activeEffects = [];
+    this.originalSpeed = this.speed;
+    this.originalStats = {
+      speed: this.speed,
+      maxHp: this.maxHp,
+      armor: 0
+    };
+    this.isShielding = false;
+    this.isCasting = false;
+    this.isStunned = false;
+    this.isRooted = false;
+    this.tempShield = 0;
   }
 
   update(deltaTime) {
     if (this.isDead) return;
-    const speed = this.classData.speed;
-    this.vx = this.moveX * speed;
-    this.vy = this.moveY * speed;
+    
+    // Get current speed (may be modified by effects)
+    let currentSpeed = this.speed;
+    
+    // Apply rooted/stunned effects
+    if (this.isRooted || this.isStunned) {
+      currentSpeed = 0;
+    }
+    
+    this.vx = this.moveX * currentSpeed;
+    this.vy = this.moveY * currentSpeed;
     this.x += this.vx;
     this.y += this.vy;
     this.x = Math.max(this.radius, Math.min(GAME_CONFIG.CANVAS_WIDTH - this.radius, this.x));
     this.y = Math.max(this.radius, Math.min(GAME_CONFIG.CANVAS_HEIGHT - this.radius, this.y));
+    
     if (this.moveX !== 0 || this.moveY !== 0) {
       this.angle = Math.atan2(this.moveY, this.moveX);
     }
+    
+    // Update legacy buffs
     this.buffs = this.buffs.filter(buff => buff.endTime > Date.now());
   }
 

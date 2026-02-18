@@ -8,7 +8,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3100;
 
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
@@ -66,8 +66,18 @@ io.on('connection', (socket) => {
         player.moveY = data.move.y;
       }
       
-      if (data.skill !== undefined) {
-        // Broadcast skill usage
+      // Handle new ability system input format
+      if (data.skill !== undefined && data.inputData) {
+        // Broadcast skill usage with new format
+        io.emit('skill_used', {
+          playerId: socket.id,
+          skillIndex: data.skill,
+          inputData: data.inputData,
+          timestamp: Date.now()
+        });
+      }
+      // Handle legacy format for backward compatibility
+      else if (data.skill !== undefined) {
         io.emit('skill_used', {
           playerId: socket.id,
           skillIndex: data.skill,
@@ -95,6 +105,27 @@ io.on('connection', (socket) => {
       
       io.emit('game_started', gameState);
       console.log('Game started!');
+    }
+  });
+
+  // Restart game (host only)
+  socket.on('restart_game', () => {
+    if (gameState.players[socket.id]?.isHost) {
+      // Reset game state
+      gameState.gameStarted = false;
+      gameState.gameOver = false;
+      gameState.boss = null;
+      
+      // Reset all players
+      Object.values(gameState.players).forEach(player => {
+        player.hp = player.maxHp;
+        player.isDead = false;
+        player.x = 400 + Math.random() * 200;
+        player.y = 300 + Math.random() * 200;
+      });
+      
+      io.emit('restart_game', gameState);
+      console.log('Game restarted!');
     }
   });
 

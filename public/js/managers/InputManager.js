@@ -43,6 +43,8 @@ class InputManager {
       let touchStartPos = { x: 0, y: 0 };
       let joystick = null;
       let isDragging = false;
+      let holdInterval = null;
+
       cell.addEventListener('touchstart', (e) => {
         e.preventDefault();
         if (this.skillCooldowns[i] > Date.now()) {
@@ -52,6 +54,8 @@ class InputManager {
         const touch = e.touches[0];
         touchStartPos = { x: touch.clientX, y: touch.clientY };
         isDragging = false;
+
+        // Create joystick
         joystick = nipplejs.create({
           zone: cell,
           mode: 'static',
@@ -59,40 +63,96 @@ class InputManager {
           color: 'rgba(255, 255, 255, 0.7)',
           size: 80
         });
+
+        // Send START action
+        this.socket.emit('player_input', {
+          skill: i,
+          inputData: {
+            action: 'START',
+            vector: { x: 1, y: 0 },
+            intensity: 0
+          }
+        });
+
+        // Set up HOLD updates for cast abilities
+        holdInterval = setInterval(() => {
+          if (joystick) {
+            const data = joystick.get();
+            let vector = { x: 1, y: 0 };
+            let intensity = 0;
+
+            if (data && data.vector) {
+              vector = {
+                x: data.vector.x,
+                y: -data.vector.y
+              };
+              intensity = Math.min(1, data.distance / (INPUT_CONFIG.JOYSTICK_SIZE * 0.8));
+            }
+
+            this.socket.emit('player_input', {
+              skill: i,
+              inputData: {
+                action: 'HOLD',
+                vector: vector,
+                intensity: intensity
+              }
+            });
+          }
+        }, 50);  // Update every 50ms
+
         joystick.on('move', (evt, data) => {
           isDragging = true;
         });
       });
+
       cell.addEventListener('touchend', (e) => {
         e.preventDefault();
+        
+        // Clear hold interval
+        if (holdInterval) {
+          clearInterval(holdInterval);
+          holdInterval = null;
+        }
+
         const touchDuration = Date.now() - touchStartTime;
+        
         if (joystick) {
           const data = joystick.get();
-          let aim = null;
+          let vector = { x: 1, y: 0 };
+          let intensity = 0;
+
           if (isDragging && data && data.vector) {
             if (data.distance < INPUT_CONFIG.JOYSTICK_SIZE * INPUT_CONFIG.DEADZONE) {
               console.log(`Skill ${i} cancelled`);
               joystick.destroy();
               return;
             }
-            aim = {
+            vector = {
               x: data.vector.x,
               y: -data.vector.y
             };
-          } else if (touchDuration < INPUT_CONFIG.TAP_THRESHOLD) {
-            aim = null;
-          } else {
-            joystick.destroy();
-            return;
+            intensity = Math.min(1, data.distance / (INPUT_CONFIG.JOYSTICK_SIZE * 0.8));
           }
+
+          // Send RELEASE action
           this.socket.emit('player_input', {
             skill: i,
-            aim: aim
+            inputData: {
+              action: 'RELEASE',
+              vector: vector,
+              intensity: intensity
+            }
           });
+
           joystick.destroy();
         }
       });
+
       cell.addEventListener('touchcancel', (e) => {
+        if (holdInterval) {
+          clearInterval(holdInterval);
+          holdInterval = null;
+        }
         if (joystick) {
           joystick.destroy();
         }

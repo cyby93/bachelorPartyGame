@@ -8,7 +8,37 @@
 </head>
 <body>
   <div id="host-container">
+    <!-- Lobby Sidebar (hidden by default) -->
+    <div id="lobby-sidebar" style="display: none;">
+      <div class="sidebar-content">
+        <h1 class="game-title">RAID NIGHT</h1>
+        <div class="server-info">
+          <h3>Server IP</h3>
+          <p id="server-ip">Loading...</p>
+        </div>
+        <div class="qr-code-container">
+          <div id="qr-code"></div>
+          <p class="qr-hint">Scan to join!</p>
+        </div>
+        <div class="player-list">
+          <h3>Players Connected</h3>
+          <div id="player-list-items">
+            <p class="waiting-text">Waiting for players...</p>
+          </div>
+        </div>
+        <button id="start-game-btn" class="start-button" disabled>
+          START GAME
+        </button>
+      </div>
+    </div>
+    
     <canvas id="game-canvas"></canvas>
+    
+    <!-- Restart button (hidden by default) -->
+    <button id="restart-game-btn" class="restart-button" style="display: none;">
+      RESTART GAME
+    </button>
+    
     <div id="ui-overlay">
       <div class="boss-health-bar">
         <div class="boss-name">Illidan Stormrage</div>
@@ -19,11 +49,14 @@
     </div>
   </div>
   <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/config/SkillDatabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script type="module">
     import Game from './js/Game.js';
     const socket = io();
     const canvas = document.getElementById('game-canvas');
     const game = new Game(canvas, socket);
+    
     socket.on('connect', () => {
       console.log('Connected as HOST');
       socket.emit('join_game', {
@@ -32,7 +65,23 @@
         isHost: true
       });
       game.scenes.lobby.setHost(true);
+      
+      // Get server IP and generate QR code
+      const serverIP = window.location.hostname + ':' + window.location.port;
+      document.getElementById('server-ip').textContent = serverIP;
+      
+      // Generate QR code
+      const qrContainer = document.getElementById('qr-code');
+      qrContainer.innerHTML = ''; // Clear any existing QR code
+      new QRCode(qrContainer, {
+        text: window.location.origin + '/controller.html',
+        width: 150,
+        height: 150,
+        colorDark: '#000000',
+        colorLight: '#ffffff'
+      });
     });
+    
     socket.on('game_state', (state) => {
       if (state.boss) {
         const hpBar = document.getElementById('boss-hp-bar');
@@ -40,30 +89,61 @@
         hpBar.style.width = hpPercent + '%';
       }
     });
-    game.start();
-    const startButton = document.createElement('button');
-    startButton.textContent = 'START GAME';
-    startButton.style.position = 'absolute';
-    startButton.style.bottom = '20px';
-    startButton.style.left = '50%';
-    startButton.style.transform = 'translateX(-50%)';
-    startButton.style.padding = '15px 40px';
-    startButton.style.fontSize = '24px';
-    startButton.style.fontWeight = 'bold';
-    startButton.style.border = 'none';
-    startButton.style.borderRadius = '10px';
-    startButton.style.background = 'linear-gradient(135deg, #2ecc71, #27ae60)';
-    startButton.style.color = 'white';
-    startButton.style.cursor = 'pointer';
-    startButton.style.zIndex = '1000';
+    
+    // Start button functionality
+    const startButton = document.getElementById('start-game-btn');
     startButton.addEventListener('click', () => {
       socket.emit('start_game');
-      startButton.style.display = 'none';
     });
-    document.body.appendChild(startButton);
+    
     socket.on('game_started', () => {
       startButton.style.display = 'none';
     });
+    
+    // Restart button functionality
+    const restartButton = document.getElementById('restart-game-btn');
+    restartButton.addEventListener('click', () => {
+      socket.emit('restart_game');
+      restartButton.style.display = 'none';
+    });
+    
+    // Show restart button when in result scene
+    setInterval(() => {
+      if (game.currentScene && game.currentScene.constructor.name === 'ResultScene') {
+        restartButton.style.display = 'block';
+      } else {
+        restartButton.style.display = 'none';
+      }
+    }, 100);
+    
+    // Update player list
+    socket.on('init_state', (state) => {
+      updatePlayerList(state.players);
+    });
+    
+    socket.on('player_joined', (data) => {
+      // Will be handled by game state updates
+    });
+    
+    function updatePlayerList(players) {
+      const listContainer = document.getElementById('player-list-items');
+      const playerArray = Object.values(players).filter(p => !p.isHost);
+      
+      if (playerArray.length === 0) {
+        listContainer.innerHTML = '<p class="waiting-text">Waiting for players...</p>';
+        startButton.disabled = true;
+      } else {
+        listContainer.innerHTML = playerArray.map(p => 
+          `<div class="player-item">
+            <span class="player-name">${p.name}</span>
+            <span class="player-class">${p.className}</span>
+          </div>`
+        ).join('');
+        startButton.disabled = false;
+      }
+    }
+    
+    game.start();
   </script>
 </body>
 </html>

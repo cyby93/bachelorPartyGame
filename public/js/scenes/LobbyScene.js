@@ -7,16 +7,70 @@ export default class LobbyScene extends Scene {
     super(game);
     this.players = new Map();
     this.effects = [];
+    this.projectiles = [];
     this.isHost = false;
+    this.friendlyFireEnabled = false; // Disable friendly fire in lobby
+    
+    // Initialize ability system components for lobby
+    this.skillManager = new SkillManager();
   }
 
   enter() {
     super.enter();
     this.effects = [];
+    
+    // Enable split-screen layout
+    const container = document.getElementById('host-container');
+    if (container) {
+      container.classList.add('split-screen-layout');
+    }
+    
+    // Show sidebar
+    const sidebar = document.getElementById('lobby-sidebar');
+    if (sidebar) {
+      sidebar.style.display = 'block';
+    }
+  }
+
+  exit() {
+    super.exit();
+    
+    // Disable split-screen layout
+    const container = document.getElementById('host-container');
+    if (container) {
+      container.classList.remove('split-screen-layout');
+    }
+    
+    // Hide sidebar
+    const sidebar = document.getElementById('lobby-sidebar');
+    if (sidebar) {
+      sidebar.style.display = 'none';
+    }
   }
 
   update(deltaTime) {
     this.players.forEach(player => player.update(deltaTime));
+    
+    // Update projectiles
+    this.projectiles = this.projectiles.filter(projectile => {
+      projectile.update(deltaTime);
+      
+      if (!projectile.isAlive) return false;
+      
+      // Check collisions with players (but don't apply damage - friendly fire disabled)
+      this.players.forEach(player => {
+        if (projectile.checkCollision(player)) {
+          // In lobby, projectiles pass through players (no damage)
+          // Just destroy the projectile visually
+          if (!projectile.pierce) {
+            projectile.destroy();
+          }
+        }
+      });
+      
+      return projectile.isAlive;
+    });
+    
     this.effects = this.effects.filter(effect => {
       effect.update(deltaTime);
       return effect.isAlive;
@@ -36,6 +90,10 @@ export default class LobbyScene extends Scene {
     ctx.fillStyle = '#fff';
     ctx.font = '18px Arial';
     ctx.fillText(`${this.players.size} player(s) connected`, ctx.canvas.width / 2, 75);
+    
+    // Render projectiles
+    this.projectiles.forEach(projectile => projectile.render(ctx));
+    
     this.effects.forEach(effect => effect.render(ctx));
     this.players.forEach(player => player.render(ctx));
     if (this.isHost && this.players.size > 0) {
@@ -86,10 +144,24 @@ export default class LobbyScene extends Scene {
         this.updateGameState(data);
         break;
       case 'skill_used':
-        SkillManager.handleSkillUsed(data, this.players, this.effects);
+        // Handle new ability system format
+        if (data.inputData) {
+          const player = this.players.get(data.playerId);
+          if (player) {
+            this.skillManager.handleSkill(this, player, data.skillIndex, data.inputData);
+          }
+        }
+        // Handle legacy format for backward compatibility
+        else {
+          SkillManager.handleSkillUsed(data, this.players, this.effects);
+        }
         break;
       case 'game_started':
-        this.game.changeScene('bossfight');
+        // Transition to Trash Mob scene (not boss fight)
+        this.game.changeScene('trashMob', {
+          players: this.players,
+          startTime: Date.now()
+        });
         break;
     }
   }

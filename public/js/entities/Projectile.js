@@ -6,6 +6,7 @@ export default class Projectile {
     this.y = config.y;
     this.vx = config.vx || 0;
     this.vy = config.vy || 0;
+    this.speed = config.speed || Math.sqrt(this.vx * this.vx + this.vy * this.vy);
     this.damage = config.damage || 10;
     this.radius = config.radius || 8;
     this.color = config.color || '#ffff00';
@@ -13,15 +14,43 @@ export default class Projectile {
     this.lifetime = config.lifetime || 3000;
     this.createdAt = Date.now();
     this.isAlive = true;
+    
+    // Enhanced properties for ability system
+    this.pierce = config.pierce || false;
+    this.range = config.range || 500;
+    this.distanceTraveled = 0;
+    this.healAmount = config.healAmount || 0;  // For healing projectiles
+    this.effectType = config.effectType || 'DAMAGE';  // DAMAGE, HEAL, etc.
+    this.onImpact = config.onImpact || null;  // For AOE on impact (e.g., Pyroblast)
   }
 
   update(deltaTime) {
     if (!this.isAlive) return;
+    
+    // Calculate distance moved this frame
+    const dx = this.vx;
+    const dy = this.vy;
+    const distanceThisFrame = Math.sqrt(dx * dx + dy * dy);
+    
+    // Update position
     this.x += this.vx;
     this.y += this.vy;
+    
+    // Update distance traveled
+    this.distanceTraveled += distanceThisFrame;
+    
+    // Check if exceeded range
+    if (this.distanceTraveled >= this.range) {
+      this.isAlive = false;
+      return;
+    }
+    
+    // Check bounds
     if (this.x < 0 || this.x > GAME_CONFIG.CANVAS_WIDTH || this.y < 0 || this.y > GAME_CONFIG.CANVAS_HEIGHT) {
       this.isAlive = false;
     }
+    
+    // Check lifetime
     if (Date.now() - this.createdAt > this.lifetime) {
       this.isAlive = false;
     }
@@ -53,6 +82,20 @@ export default class Projectile {
     const dy = this.y - target.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
     return distance < (this.radius + (target.radius || 20));
+  }
+
+  /**
+   * Handle collision with a target
+   * @param {Object} target - The entity hit
+   * @returns {boolean} - True if projectile should be destroyed
+   */
+  onCollision(target) {
+    // If pierce is enabled, don't destroy the projectile
+    if (this.pierce) {
+      return false;
+    }
+    // Otherwise, destroy on collision
+    return true;
   }
 
   destroy() {

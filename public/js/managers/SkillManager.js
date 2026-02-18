@@ -9,6 +9,7 @@ import AOEHandler from '../handlers/AOEHandler.js';
 import DashHandler from '../handlers/DashHandler.js';
 import CollisionSystem from '../systems/CollisionSystem.js';
 import EffectSystem from '../systems/EffectSystem.js';
+import { normalizeClassName } from '../Constants.js';
 
 // Load SkillDatabase - check both module and global scope
 let SkillDatabase;
@@ -123,9 +124,16 @@ class SkillManager {
   getSkillConfig(className, skillIndex) {
     if (!className || skillIndex === undefined) return null;
 
-    const classSkills = SkillDatabase[className];
+    // Normalize class name to handle case variations
+    const normalizedClassName = normalizeClassName(className);
+    if (!normalizedClassName) {
+      console.warn('SkillManager.getSkillConfig: Invalid class name:', className);
+      return null;
+    }
+
+    const classSkills = SkillDatabase[normalizedClassName];
     if (!classSkills || !Array.isArray(classSkills)) {
-      console.warn('SkillManager.getSkillConfig: No skills found for class:', className);
+      console.warn('SkillManager.getSkillConfig: No skills found for class:', normalizedClassName);
       return null;
     }
 

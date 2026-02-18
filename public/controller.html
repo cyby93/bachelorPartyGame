@@ -12,14 +12,14 @@
       <h1>🎮 RAID NIGHT</h1>
       <input type="text" id="player-name" placeholder="Enter your name" maxlength="15">
       <select id="class-select">
-        <option value="WARRIOR">⚔️ Warrior (Tank)</option>
-        <option value="PALADIN">🔨 Paladin (Tank/Heal)</option>
-        <option value="SHAMAN">⚡ Shaman (DPS/Heal)</option>
-        <option value="HUNTER">🏹 Hunter (DPS)</option>
-        <option value="PRIEST">✝️ Priest (Healer)</option>
-        <option value="MAGE">🔥 Mage (DPS)</option>
-        <option value="DRUID">🌿 Druid (Hybrid)</option>
-        <option value="ROGUE">🗡️ Rogue (DPS)</option>
+        <option value="Warrior">⚔️ Warrior (Tank)</option>
+        <option value="Paladin">🔨 Paladin (Tank/Heal)</option>
+        <option value="Shaman">⚡ Shaman (DPS/Heal)</option>
+        <option value="Hunter">🏹 Hunter (DPS)</option>
+        <option value="Priest">✝️ Priest (Healer)</option>
+        <option value="Mage">🔥 Mage (DPS)</option>
+        <option value="Druid">🌿 Druid (Hybrid)</option>
+        <option value="Rogue">🗡️ Rogue (DPS)</option>
       </select>
       <button id="join-button">JOIN GAME</button>
     </div>
@@ -62,7 +62,7 @@
   <script src="/js/config/SkillDatabase.js"></script>
   <script type="module">
     import InputManager from './js/managers/InputManager.js';
-    import { CLASSES } from './js/Constants.js';
+    import { CLASSES, CLASS_NAMES } from './js/Constants.js';
     const socket = io();
     let inputManager = null;
     let playerData = null;
@@ -75,7 +75,7 @@
     const classSelect = document.getElementById('class-select');
     joinButton.addEventListener('click', () => {
       const name = playerNameInput.value.trim() || 'Player';
-      const className = classSelect.value;
+      const className = CLASS_NAMES[classSelect.value];
       socket.emit('join_game', {
         name: name,
         className: className,

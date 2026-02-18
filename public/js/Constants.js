@@ -9,8 +9,51 @@ export const GAME_CONFIG = {
   REVIVE_DISTANCE: 80
 };
 
+// Class name normalization - maps any case variant to the canonical form
+export const CLASS_NAMES = {
+  // Canonical uppercase keys (used in SkillDatabase)
+  WARRIOR: 'Warrior',
+  PALADIN: 'Paladin',
+  SHAMAN: 'Shaman',
+  HUNTER: 'Hunter',
+  PRIEST: 'Priest',
+  MAGE: 'Mage',
+  DRUID: 'Druid',
+  ROGUE: 'Rogue',
+  
+  // Sentence case variants (used in HTML)
+  Warrior: 'Warrior',
+  Paladin: 'Paladin',
+  Shaman: 'Shaman',
+  Hunter: 'Hunter',
+  Priest: 'Priest',
+  Mage: 'Mage',
+  Druid: 'Druid',
+  Rogue: 'Rogue',
+  
+  // Lowercase variants (for safety)
+  warrior: 'Warrior',
+  paladin: 'Paladin',
+  shaman: 'Shaman',
+  hunter: 'Hunter',
+  priest: 'Priest',
+  mage: 'Mage',
+  druid: 'Druid',
+  rogue: 'Rogue'
+};
+
+/**
+ * Normalize class name to canonical form (Sentence case)
+ * @param {string} className - Class name in any case
+ * @returns {string} Normalized class name
+ */
+export function normalizeClassName(className) {
+  if (!className) return null;
+  return CLASS_NAMES[className] || CLASS_NAMES[className.toUpperCase()] || null;
+}
+
 export const CLASSES = {
-  WARRIOR: {
+  [CLASS_NAMES.WARRIOR]: {
     name: 'Warrior',
     color: '#3498db',
     hp: 150,
@@ -22,7 +65,7 @@ export const CLASSES = {
       { name: 'Whirlwind', cooldown: 12000, type: 'aoe', damage: 30, radius: 100, icon: '🌀' }
     ]
   },
-  PALADIN: {
+  [CLASS_NAMES.PALADIN]: {
     name: 'Paladin',
     color: '#f39c12',
     hp: 140,
@@ -34,7 +77,7 @@ export const CLASSES = {
       { name: 'Consecration', cooldown: 10000, type: 'aoe', damage: 20, radius: 120, icon: '⭐' }
     ]
   },
-  SHAMAN: {
+  [CLASS_NAMES.SHAMAN]: {
     name: 'Shaman',
     color: '#9b59b6',
     hp: 110,
@@ -46,7 +89,7 @@ export const CLASSES = {
       { name: 'Chain Lightning', cooldown: 8000, type: 'projectile', damage: 35, speed: 7, icon: '⛈️' }
     ]
   },
-  HUNTER: {
+  [CLASS_NAMES.HUNTER]: {
     name: 'Hunter',
     color: '#27ae60',
     hp: 100,
@@ -58,7 +101,7 @@ export const CLASSES = {
       { name: 'Multi-Shot', cooldown: 7000, type: 'projectile', damage: 20, speed: 9, icon: '🎯' }
     ]
   },
-  PRIEST: {
+  [CLASS_NAMES.PRIEST]: {
     name: 'Priest',
     color: '#ecf0f1',
     hp: 90,
@@ -70,7 +113,7 @@ export const CLASSES = {
       { name: 'Mass Resurrect', cooldown: 30000, type: 'revive', range: 300, icon: '👼' }
     ]
   },
-  MAGE: {
+  [CLASS_NAMES.MAGE]: {
     name: 'Mage',
     color: '#e74c3c',
     hp: 85,
@@ -82,7 +125,7 @@ export const CLASSES = {
       { name: 'Pyroblast', cooldown: 15000, type: 'projectile', damage: 80, speed: 4, icon: '☄️' }
     ]
   },
-  DRUID: {
+  [CLASS_NAMES.DRUID]: {
     name: 'Druid',
     color: '#16a085',
     hp: 120,
@@ -94,7 +137,7 @@ export const CLASSES = {
       { name: 'Starfall', cooldown: 18000, type: 'aoe', damage: 40, radius: 150, icon: '⭐' }
     ]
   },
-  ROGUE: {
+  [CLASS_NAMES.ROGUE]: {
     name: 'Rogue',
     color: '#34495e',
     hp: 95,

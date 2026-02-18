@@ -13,7 +13,8 @@ const SkillDatabase = {
       cooldown: 1000,
       damage: 50,
       range: 80,
-      angle: Math.PI / 3  // 60 degrees cone
+      angle: Math.PI / 3,  // 60 degrees cone
+      icon: '⚔️'
     },
     { // S2: Thunder Clap
       name: 'Thunder Clap',
@@ -26,7 +27,8 @@ const SkillDatabase = {
       effectParams: { 
         speedMultiplier: 0.5, 
         duration: 2000 
-      }
+      },
+      icon: '🌀'
     },
     { // S3: Charge
       name: 'Charge',
@@ -38,7 +40,8 @@ const SkillDatabase = {
       effectParams: { 
         stunned: true, 
         duration: 1000 
-      }
+      },
+      icon: '💨'
     },
     { // S4: Shield Wall
       name: 'Shield Wall',
@@ -48,7 +51,8 @@ const SkillDatabase = {
       effectParams: { 
         damageReduction: 0.9, 
         arc: Math.PI * 2  // 360 degrees protection
-      }
+      },
+        icon: '🛡️'
     }
   ],
 
@@ -59,7 +63,8 @@ const SkillDatabase = {
       cooldown: 1200,
       damage: 45,
       range: 70,
-      angle: Math.PI / 4  // 45 degrees cone
+      angle: Math.PI / 4,  // 45 degrees cone
+      icon: '🔨'
     },
     { // S2: Judgement
       name: 'Judgement',
@@ -69,14 +74,16 @@ const SkillDatabase = {
       speed: 400,
       radius: 15,
       range: 400,
-      pierce: false
+      pierce: false,
+      icon: '✨'
     },
     { // S3: Divine Shield
       name: 'Divine Shield',
       type: 'SHIELD',
-      cooldown: 12000,
+      cooldown: 0,
       arc: Math.PI / 2,  // 90 degrees
-      duration: 3000
+      duration: 3000,
+      icon: '🔆'
     },
     { // S4: Consecration
       name: 'Consecration',
@@ -88,7 +95,8 @@ const SkillDatabase = {
       duration: 5000,
       tickRate: 500,  // Damage/heal every 0.5s
       effectType: 'DUAL',  // Damages enemies, heals allies
-      healAmount: 10
+      healAmount: 10,
+      icon: '⭐'
     }
   ],
 
@@ -101,7 +109,8 @@ const SkillDatabase = {
       speed: 600,
       radius: 10,
       range: 500,
-      pierce: false
+      pierce: false,
+      icon: '⚡'
     },
     { // S2: Chain Heal
       name: 'Chain Heal',
@@ -113,7 +122,8 @@ const SkillDatabase = {
       radius: 12,
       range: 400,
       pierce: false,
-      effectType: 'HEAL'
+      effectType: 'HEAL',
+      icon: '🌊'
     },
     { // S3: Ghost Wolf
       name: 'Ghost Wolf',
@@ -122,7 +132,8 @@ const SkillDatabase = {
       duration: 3000,
       effectParams: {
         speedMultiplier: 1.5  // +50% speed
-      }
+      },
+      icon: '🔥'
     },
     { // S4: Bloodlust
       name: 'Bloodlust',
@@ -135,7 +146,8 @@ const SkillDatabase = {
       effectParams: {
         speedMultiplier: 1.3,  // +30% speed
         fireRateMultiplier: 1.3  // +30% fire rate
-      }
+      },
+      icon: '⛈️'
     }
   ],
 
@@ -148,7 +160,8 @@ const SkillDatabase = {
       speed: 700,
       radius: 8,
       range: 600,
-      pierce: false
+      pierce: false,
+      icon: '🏹'
     },
     { // S2: Multi-Shot
       name: 'Multi-Shot',
@@ -160,8 +173,9 @@ const SkillDatabase = {
       radius: 8,
       range: 500,
       pierce: false,
-      projectileCount: 3,
-      spreadAngle: Math.PI / 6  // 30 degrees total spread
+      projectileCount: 6,
+      spreadAngle: Math.PI / 2,  // 30 degrees total spread
+      icon: '🎯'
     },
     { // S3: Disengage
       name: 'Disengage',
@@ -169,7 +183,8 @@ const SkillDatabase = {
       subtype: 'BACKWARDS',
       cooldown: 8000,
       speed: 1000,
-      distance: 250
+      distance: 250,
+      icon: '🐺'
     },
     { // S4: Explosive Trap
       name: 'Explosive Trap',
@@ -180,7 +195,8 @@ const SkillDatabase = {
       radius: 120,
       speed: 500,
       range: 400,
-      triggerType: 'ENEMY_TOUCH'
+      triggerType: 'ENEMY_TOUCH',
+      icon: '🪤'
     }
   ],
 
@@ -193,7 +209,8 @@ const SkillDatabase = {
       speed: 450,
       radius: 10,
       range: 450,
-      pierce: false
+      pierce: false,
+      icon: '✝️'
     },
     { // S2: Flash Heal
       name: 'Flash Heal',
@@ -204,7 +221,8 @@ const SkillDatabase = {
       radius: 80,
       speed: 600,
       range: 350,
-      effectType: 'HEAL'
+      effectType: 'HEAL',
+      icon: '💚'
     },
     { // S3: Power Word: Shield
       name: 'Power Word: Shield',
@@ -214,7 +232,8 @@ const SkillDatabase = {
       duration: 10000,
       effectParams: {
         shield: 100  // Temporary HP
-      }
+      },
+      icon: '🔮'
     },
     { // S4: Mass Resurrection
       name: 'Mass Resurrection',
@@ -227,7 +246,8 @@ const SkillDatabase = {
         radius: 300,
         effectType: 'REVIVE',
         healPercent: 0.5  // Revive with 50% HP
-      }
+      },
+      icon: '👼'
     }
   ],
 
@@ -240,7 +260,8 @@ const SkillDatabase = {
       speed: 500,
       radius: 12,
       range: 550,
-      pierce: false
+      pierce: false,
+      icon: '🔥'
     },
     { // S2: Frost Nova
       name: 'Frost Nova',
@@ -252,14 +273,16 @@ const SkillDatabase = {
       effectParams: {
         rooted: true,  // Movement speed = 0
         duration: 2000
-      }
+      },
+      icon: '❄️'
     },
     { // S3: Blink
       name: 'Blink',
       type: 'DASH',
       subtype: 'TELEPORT',
       cooldown: 12000,
-      distance: 150
+      distance: 150,
+      icon: '✨'
     },
     { // S4: Pyroblast
       name: 'Pyroblast',
@@ -279,7 +302,8 @@ const SkillDatabase = {
           damage: 100,
           radius: 100
         }
-      }
+      },
+      icon: '☄️'
     }
   ],
 
@@ -292,7 +316,8 @@ const SkillDatabase = {
       speed: 550,
       radius: 11,
       range: 500,
-      pierce: false
+      pierce: false,
+      icon: '🌿'
     },
     { // S2: Bear Form
       name: 'Bear Form',
@@ -310,14 +335,16 @@ const SkillDatabase = {
           range: 60,
           angle: Math.PI / 4
         }
-      }
+      },
+      icon: '🐻'
     },
     { // S3: Cat Dash
       name: 'Cat Dash',
       type: 'DASH',
       cooldown: 6000,
       speed: 1200,
-      distance: 200
+      distance: 200,
+      icon: '🍃'
     },
     { // S4: Tranquility
       name: 'Tranquility',
@@ -333,7 +360,8 @@ const SkillDatabase = {
         healAmount: 20,
         tickRate: 500,  // Heal every 0.5s
         channeled: true
-      }
+      },
+      icon: '⭐'
     }
   ],
 
@@ -344,7 +372,8 @@ const SkillDatabase = {
       cooldown: 800,
       damage: 70,
       range: 50,  // Very short range
-      angle: Math.PI / 6  // 30 degrees cone
+      angle: Math.PI / 6,  // 30 degrees cone
+      icon: '🗡️'
     },
     { // S2: Fan of Knives
       name: 'Fan of Knives',
@@ -357,7 +386,8 @@ const SkillDatabase = {
       radius: 8,
       range: 200,
       pierce: false,
-      pattern: 'CIRCULAR'  // 8 knives in circle
+      pattern: 'CIRCULAR',  // 8 knives in circle
+      icon: '👤'
     },
     { // S3: Sprint
       name: 'Sprint',
@@ -366,7 +396,8 @@ const SkillDatabase = {
       duration: 3000,
       effectParams: {
         speedMultiplier: 2.0  // +100% speed
-      }
+      },
+      icon: '☠️'
     },
     { // S4: Ambush
       name: 'Ambush',
@@ -379,17 +410,21 @@ const SkillDatabase = {
         damageMultiplier: 3.0,  // Next attack 3x damage
         opacity: 0.3,  // Semi-transparent
         breaksOnAttack: true
-      }
+      },
+      icon: '💀'
     }
   ]
 };
 
-// Export for use in other modules
+// Export for ES6 modules
+export default SkillDatabase;
+
+// Export for CommonJS (Node.js)
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = SkillDatabase;
 }
 
-// Also expose globally for browser
+// Also expose globally for browser (for backward compatibility)
 if (typeof window !== 'undefined') {
   window.SkillDatabase = SkillDatabase;
 }

@@ -9,17 +9,8 @@ import AOEHandler from '../handlers/AOEHandler.js';
 import DashHandler from '../handlers/DashHandler.js';
 import CollisionSystem from '../systems/CollisionSystem.js';
 import EffectSystem from '../systems/EffectSystem.js';
-import { normalizeClassName } from '../Constants.js';
-
-// Load SkillDatabase - check both module and global scope
-let SkillDatabase;
-if (typeof window !== 'undefined' && window.SkillDatabase) {
-  SkillDatabase = window.SkillDatabase;
-} else {
-  // Fallback to empty object if not loaded
-  SkillDatabase = {};
-  console.warn('SkillDatabase not loaded, using empty database');
-}
+import { normalizeClassName } from '../config/ClassConfig.js';
+import SkillDatabase from '../config/SkillDatabase.js';
 
 class SkillManager {
   constructor() {
@@ -72,7 +63,7 @@ class SkillManager {
 
     // Route to appropriate handler based on skill type
     let success = false;
-
+      console.log(config);
     switch (config.type) {
       case 'PROJECTILE':
         success = this.handleProjectile(scene, player, config, normalizedInput);
@@ -107,9 +98,19 @@ class SkillManager {
         return false;
     }
 
-    // Start cooldown if successful
+    // Start cooldown if successful and notify controller
     if (success) {
       this.startCooldown(player, skillIndex, config.cooldown);
+      
+      // Emit cooldown notification to the player's controller via socket
+      if (scene.game && scene.game.socket) {
+        scene.game.socket.emit('skill_cooldown', {
+          playerId: player.id,
+          skillIndex: skillIndex,
+          cooldownDuration: config.cooldown,
+          cooldownEnd: Date.now() + config.cooldown
+        });
+      }
     }
 
     return success;
@@ -210,6 +211,7 @@ class SkillManager {
    * Handle projectile abilities
    */
   handleProjectile(scene, player, config, inputData) {
+    if(['START', 'RELEASE'].includes(inputData.action)) return false;
     const speed = config.speed || 500;
     const projectile = new Projectile({
       x: player.x,
@@ -265,7 +267,8 @@ class SkillManager {
    * Handle melee abilities
    */
   handleMelee(scene, player, config, inputData) {
-    return this.meleeHandler.execute(scene, player, config, inputData.vector);
+      if(['START', 'RELEASE'].includes(inputData.action)) return false;
+      return this.meleeHandler.execute(scene, player, config, inputData.vector);
   }
 
   /**
@@ -310,6 +313,7 @@ class SkillManager {
       } else {
         this.shieldHandler.updateAngle(player, angle);
       }
+      console.log(player.shieldState)
       return true;
     } else if (inputData.action === 'RELEASE') {
       this.shieldHandler.deactivate(player);

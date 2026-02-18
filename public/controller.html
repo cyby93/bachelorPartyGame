@@ -59,7 +59,7 @@
   </div>
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.9.0/nipplejs.min.js"></script>
-  <script src="/js/config/SkillDatabase.js"></script>
+  <script type="module" src="/js/config/SkillDatabase.js"></script>
   <script type="module">
     import InputManager from './js/managers/InputManager.js';
     import { CLASSES, CLASS_NAMES } from './js/Constants.js';
@@ -109,11 +109,10 @@
         document.getElementById('info-hp').textContent = `HP: ${Math.ceil(player.hp)}/${classData.hp}`;
       }
     });
-    socket.on('skill_used', (data) => {
+    socket.on('skill_cooldown', (data) => {
+      // Only update cooldown if this is for our player
       if (data.playerId === socket.id && inputManager) {
-        const classData = CLASSES[playerData.className];
-        const skill = classData.skills[data.skillIndex];
-        inputManager.updateCooldown(data.skillIndex, Date.now() + skill.cooldown);
+        inputManager.updateCooldown(data.skillIndex, data.cooldownEnd);
       }
     });
     document.addEventListener('touchmove', (e) => {

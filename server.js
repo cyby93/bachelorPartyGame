@@ -90,6 +90,12 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Handle skill cooldown notifications from host
+  socket.on('skill_cooldown', (data) => {
+    // Broadcast cooldown to all clients (especially the player's controller)
+    io.emit('skill_cooldown', data);
+  });
+
   // Start game (host only)
   socket.on('start_game', () => {
     if (gameState.players[socket.id]?.isHost) {

@@ -49,7 +49,7 @@
     </div>
   </div>
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/config/SkillDatabase.js"></script>
+  <script type="module" src="/js/config/SkillDatabase.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script type="module">
     import Game from './js/Game.js';
@@ -63,7 +63,7 @@
       console.log('Connected as HOST');
       socket.emit('join_game', {
         name: 'Host Display',
-        className: 'WARRIOR',
+        className: 'Warrior',
         isHost: true
       });
       game.scenes.lobby.setHost(true);
@@ -87,6 +87,7 @@
     socket.on('game_state', (state) => {
       if (state.boss) {
         const hpBar = document.getElementById('boss-hp-bar');
+        if(!hpBar) return;
         const hpPercent = (state.boss.hp / state.boss.maxHp) * 100;
         hpBar.style.width = hpPercent + '%';
       }

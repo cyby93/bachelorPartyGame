@@ -1,12 +1,15 @@
 import Scene from './Scene.js';
 import Player from '../entities/Player.js';
 import SkillManager from '../managers/SkillManager.js';
+import VisualEffectsRenderer from '../systems/VisualEffectsRenderer.js';
 
 export default class LobbyScene extends Scene {
   constructor(game) {
     super(game);
     this.players = new Map();
     this.effects = [];
+    this.visualEffectsRenderer = new VisualEffectsRenderer();
+    
     this.projectiles = [];
     this.isHost = false;
     this.friendlyFireEnabled = false; // Disable friendly fire in lobby
@@ -95,8 +98,18 @@ export default class LobbyScene extends Scene {
     // Render projectiles
     this.projectiles.forEach(projectile => projectile.render(ctx));
     
+    // Render visualEffects
     this.effects.forEach(effect => effect.render(ctx));
-    this.players.forEach(player => player.render(ctx));
+
+    this.effects.forEach(effect => effect.render(ctx));
+    this.players.forEach(player => {
+      player.render(ctx)
+       // Render shield
+      if (player.shieldState && player.shieldState.active) {
+        this.visualEffectsRenderer.renderShield(ctx, player);
+      }
+   
+    });
     if (this.isHost && this.players.size > 0) {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
       ctx.fillRect(0, ctx.canvas.height - 60, ctx.canvas.width, 60);

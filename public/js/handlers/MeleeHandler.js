@@ -149,7 +149,7 @@ export default class MeleeHandler {
       range: config.range,
       angle: config.angle,
       color: player.color || '#ffffff',
-      duration: 200  // Visual effect lasts 200ms
+      duration: 400  // Visual effect lasts 200ms
     });
     
     // Add to scene's visual effects

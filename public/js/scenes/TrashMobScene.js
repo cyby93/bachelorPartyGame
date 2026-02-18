@@ -200,10 +200,7 @@ export default class TrashMobScene extends Scene {
     
     // Render projectiles
     this.projectiles.forEach(projectile => projectile.render(ctx));
-    
-    // Render legacy effects
-    this.effects.forEach(effect => effect.render(ctx));
-    
+        
     // Render visual effects
     this.visualEffectsList.forEach(effect => effect.render(ctx));
     

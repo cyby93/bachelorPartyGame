@@ -7,6 +7,7 @@ class InputManager {
     this.skillJoysticks = [];
     this.skillTouchStart = [0, 0, 0, 0];
     this.skillCooldowns = [0, 0, 0, 0];
+    this.skillHoldIntervals = [null, null, null, null];
   }
 
   initMoveJoystick(zoneId) {
@@ -38,33 +39,39 @@ class InputManager {
   initSkillGrid() {
     for (let i = 0; i < 4; i++) {
       const cell = document.querySelector(`.skill-cell.skill-${i}`);
-      if (!cell) continue;
-      let touchStartTime = 0;
-      let touchStartPos = { x: 0, y: 0 };
-      let joystick = null;
-      let isDragging = false;
-      let holdInterval = null;
+      if (!cell) {
+        console.error(`Skill cell ${i} not found during initialization`);
+        continue;
+      }
 
-      cell.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        if (this.skillCooldowns[i] > Date.now()) {
-          return;
-        }
-        touchStartTime = Date.now();
-        const touch = e.touches[0];
-        touchStartPos = { x: touch.clientX, y: touch.clientY };
-        isDragging = false;
+      // Create persistent dynamic joystick
+      const joystick = nipplejs.create({
+        zone: cell,
+        treshold: 0.3,
+        mode: 'dynamic',
+        color: 'rgba(255, 255, 255, 0.7)',
+        size: INPUT_CONFIG.JOYSTICK_SIZE
+      });
 
-        // Create joystick
-        joystick = nipplejs.create({
-          zone: cell,
-          mode: 'static',
-          position: { left: '50%', top: '50%' },
-          color: 'rgba(255, 255, 255, 0.7)',
-          size: 80
-        });
+      if (!joystick) {
+        console.error(`Failed to create joystick for skill ${i}`);
+        this.skillJoysticks[i] = null;
+        continue;
+      }
 
-        // Send START action
+      this.skillJoysticks[i] = joystick;
+
+      // Store current joystick state for HOLD updates
+      let currentVector = { x: 1, y: 0 };
+      let currentIntensity = 0;
+
+      // Register 'start' event handler
+      joystick.on('start', (evt, data) => {
+        // Reset state
+        currentVector = { x: 1, y: 0 };
+        currentIntensity = 0;
+
+        // Emit START action (no cooldown check - server will validate)
         this.socket.emit('player_input', {
           skill: i,
           inputData: {
@@ -74,88 +81,83 @@ class InputManager {
           }
         });
 
-        // Set up HOLD updates for cast abilities
-        holdInterval = setInterval(() => {
-          if (joystick) {
-            const data = joystick.get();
-            let vector = { x: 1, y: 0 };
-            let intensity = 0;
-
-            if (data && data.vector) {
-              vector = {
-                x: data.vector.x,
-                y: -data.vector.y
-              };
-              intensity = Math.min(1, data.distance / (INPUT_CONFIG.JOYSTICK_SIZE * 0.8));
-            }
-
-            this.socket.emit('player_input', {
-              skill: i,
-              inputData: {
-                action: 'HOLD',
-                vector: vector,
-                intensity: intensity
-              }
-            });
-          }
-        }, 50);  // Update every 50ms
-
-        joystick.on('move', (evt, data) => {
-          isDragging = true;
-        });
-      });
-
-      cell.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        
-        // Clear hold interval
-        if (holdInterval) {
-          clearInterval(holdInterval);
-          holdInterval = null;
-        }
-
-        const touchDuration = Date.now() - touchStartTime;
-        
-        if (joystick) {
-          const data = joystick.get();
-          let vector = { x: 1, y: 0 };
-          let intensity = 0;
-
-          if (isDragging && data && data.vector) {
-            if (data.distance < INPUT_CONFIG.JOYSTICK_SIZE * INPUT_CONFIG.DEADZONE) {
-              console.log(`Skill ${i} cancelled`);
-              joystick.destroy();
-              return;
-            }
-            vector = {
-              x: data.vector.x,
-              y: -data.vector.y
-            };
-            intensity = Math.min(1, data.distance / (INPUT_CONFIG.JOYSTICK_SIZE * 0.8));
-          }
-
-          // Send RELEASE action
+        // Start HOLD interval
+        this.skillHoldIntervals[i] = setInterval(() => {
           this.socket.emit('player_input', {
             skill: i,
             inputData: {
-              action: 'RELEASE',
-              vector: vector,
-              intensity: intensity
+              action: 'HOLD',
+              vector: currentVector,
+              intensity: currentIntensity
             }
           });
+        }, 50);
+      });
 
-          joystick.destroy();
+      // Register 'move' event handler
+      joystick.on('move', (evt, data) => {
+        if (data && data.vector) {
+          // Transform vector (nipplejs uses positive Y for down, game expects negative)
+          currentVector = {
+            x: data.vector.x,
+            y: -data.vector.y
+          };
+          
+          // Normalize vector
+          const magnitude = Math.sqrt(currentVector.x * currentVector.x + currentVector.y * currentVector.y);
+          if (magnitude > 0) {
+            currentVector.x /= magnitude;
+            currentVector.y /= magnitude;
+          }
+
+          // Calculate intensity
+          currentIntensity = Math.min(1.0, data.distance / (INPUT_CONFIG.JOYSTICK_SIZE * 0.8));
         }
       });
 
-      cell.addEventListener('touchcancel', (e) => {
-        if (holdInterval) {
-          clearInterval(holdInterval);
-          holdInterval = null;
+      // Register 'end' event handler
+      joystick.on('end', (evt, data) => {
+        // Clear HOLD interval
+        if (this.skillHoldIntervals[i]) {
+          clearInterval(this.skillHoldIntervals[i]);
+          this.skillHoldIntervals[i] = null;
         }
-        if (joystick) {
-          joystick.destroy();
+
+        // Check deadzone
+        if (data && data.distance < INPUT_CONFIG.JOYSTICK_SIZE * INPUT_CONFIG.DEADZONE) {
+          console.log(`Skill ${i} cancelled (deadzone)`);
+          return;
         }
+
+        // Calculate final vector and intensity
+        let finalVector = { x: 1, y: 0 };
+        let finalIntensity = 0;
+
+        if (data && data.vector) {
+          finalVector = {
+            x: data.vector.x,
+            y: -data.vector.y
+          };
+          
+          // Normalize vector
+          const magnitude = Math.sqrt(finalVector.x * finalVector.x + finalVector.y * finalVector.y);
+          if (magnitude > 0) {
+            finalVector.x /= magnitude;
+            finalVector.y /= magnitude;
+          }
+
+          finalIntensity = Math.min(1.0, data.distance / (INPUT_CONFIG.JOYSTICK_SIZE * 0.8));
+        }
+
+        // Emit RELEASE action
+        this.socket.emit('player_input', {
+          skill: i,
+          inputData: {
+            action: 'RELEASE',
+            vector: finalVector,
+            intensity: finalIntensity
+          }
+        });
       });
     }
   }
@@ -186,7 +188,19 @@ class InputManager {
     if (this.moveJoystick) {
       this.moveJoystick.destroy();
     }
-    this.skillJoysticks.forEach(j => j && j.destroy());
+    
+    // Destroy all skill joysticks
+    this.skillJoysticks.forEach((joystick, index) => {
+      if (joystick) {
+        joystick.destroy();
+      }
+      
+      // Clear any remaining HOLD intervals
+      if (this.skillHoldIntervals[index]) {
+        clearInterval(this.skillHoldIntervals[index]);
+        this.skillHoldIntervals[index] = null;
+      }
+    });
   }
 }
 

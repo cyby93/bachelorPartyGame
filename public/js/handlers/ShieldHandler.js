@@ -128,36 +128,6 @@ export default class ShieldHandler {
       player.shieldState.angle = angle;
     }
   }
-
-  /**
-   * Render shield visual
-   * @param {CanvasRenderingContext2D} ctx - Canvas context
-   * @param {Player} player - The player
-   */
-  renderShield(ctx, player) {
-    if (!player || !player.shieldState || !player.shieldState.active) return;
-
-    const shieldState = player.shieldState;
-    const radius = 35;
-
-    ctx.save();
-    ctx.translate(player.x, player.y);
-    ctx.rotate(shieldState.angle);
-
-    // Shield arc
-    ctx.fillStyle = 'rgba(100, 150, 255, 0.3)';
-    ctx.strokeStyle = 'rgba(100, 150, 255, 0.8)';
-    ctx.lineWidth = 3;
-
-    ctx.beginPath();
-    ctx.arc(0, 0, radius, -shieldState.arc / 2, shieldState.arc / 2);
-    ctx.lineTo(0, 0);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.restore();
-  }
 }
 
 // Export for use in other modules

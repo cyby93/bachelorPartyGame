@@ -287,7 +287,7 @@ const SkillDatabase = {
     { // S4: Pyroblast
       name: 'Pyroblast',
       type: 'CAST',
-      cooldown: 20000,
+      cooldown: 500,
       castTime: 1500,
       payload: {
         type: 'PROJECTILE',
@@ -350,7 +350,7 @@ const SkillDatabase = {
       name: 'Tranquility',
       type: 'CAST',
       subtype: 'CHANNELED',
-      cooldown: 90000,
+      cooldown: 500,
       castTime: 4000,
       payload: {
         type: 'AOE',

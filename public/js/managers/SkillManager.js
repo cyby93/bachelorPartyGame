@@ -211,7 +211,7 @@ class SkillManager {
    * Handle projectile abilities
    */
   handleProjectile(scene, player, config, inputData) {
-    if(['START', 'RELEASE'].includes(inputData.action)) return false;
+    // if(['START', 'RELEASE'].includes(inputData.action)) return false;
     const speed = config.speed || 500;
     const projectile = new Projectile({
       x: player.x,
@@ -229,6 +229,8 @@ class SkillManager {
       effectType: config.effectType || 'DAMAGE',
       onImpact: config.onImpact || null
     });
+            console.log(projectile)
+
 
     if (!scene.projectiles) {
       scene.projectiles = [];
@@ -268,6 +270,7 @@ class SkillManager {
    */
   handleMelee(scene, player, config, inputData) {
       if(['START', 'RELEASE'].includes(inputData.action)) return false;
+      console.log('handlemelee')
       return this.meleeHandler.execute(scene, player, config, inputData.vector);
   }
 
@@ -283,7 +286,7 @@ class SkillManager {
         // console.log('startcast')
       } else {
         // Update cast
-        const completed = this.castHandler.updateCast(player, 16);  // Assuming ~60 FPS
+        const completed = this.castHandler.updateCast(player, inputData, 16);  // Assuming ~60 FPS
                 // console.log('updateCast')
         if (completed) {
           return this.castHandler.completeCast(scene, player, this);
@@ -291,7 +294,7 @@ class SkillManager {
       }
     } else if (inputData.action === 'RELEASE') {
       if (player.castState && player.castState.active) {
-        const completed = this.castHandler.updateCast(player, 0);
+        const completed = this.castHandler.updateCast(player, inputData, 0);
         if (completed) {
           return this.castHandler.completeCast(scene, player, this);
         } else {
@@ -328,6 +331,7 @@ class SkillManager {
    * Handle AOE abilities
    */
   handleAOE(scene, player, config, inputData) {
+    console.log(config)
     if (config.subtype === 'AOE_SELF') {
       this.aoeHandler.executeSelf(scene, player, config);
     } else if (config.subtype === 'AOE_LOBBED') {
@@ -457,6 +461,7 @@ class SkillManager {
   }
 
   static createAOE(player, skill, angle, effects) {
+    console.log(skill)
     const distance = skill.range || 100;
     const aoe = new AOEEffect({
       x: player.x + Math.cos(angle) * distance,

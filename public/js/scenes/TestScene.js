@@ -2,7 +2,6 @@ import Scene from './Scene.js';
 import Player from '../entities/Player.js';
 import Enemy from '../entities/Enemy.js';
 import SkillManager from '../managers/SkillManager.js';
-import VisualEffectsRenderer from '../systems/VisualEffectsRenderer.js';
 import { GAME_CONFIG } from '../Constants.js';
 
 /**
@@ -21,7 +20,6 @@ export default class TestScene extends Scene {
     
     // Initialize ability system components
     this.skillManager = new SkillManager();
-    this.visualEffectsRenderer = new VisualEffectsRenderer();
   }
 
   /**

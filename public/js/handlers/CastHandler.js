@@ -54,11 +54,12 @@ export default class CastHandler {
    * @param {number} deltaTime - Time since last update
    * @returns {boolean} True if cast completed
    */
-  updateCast(player, deltaTime) {
+  updateCast(player, inputData, deltaTime) {
     if (!player || !player.castState || !player.castState.active) {
       return false;
     }
-
+    player.castState.inputData = inputData;
+    
     const castState = player.castState;
     const elapsed = Date.now() - castState.startTime;
     const progress = Math.min(elapsed / castState.castTime, 1.0);
@@ -112,7 +113,6 @@ export default class CastHandler {
    * @returns {boolean} True if payload executed successfully
    */
   completeCast(scene, player, skillManager) {
-    console.log(player)
     if (!player || !player.castState || !player.castState.active) {
       return false;
     }
@@ -155,8 +155,8 @@ export default class CastHandler {
     // Route payload to appropriate handler based on type
     switch (payloadConfig.type) {
       case 'PROJECTILE':
-        if (skillManager.projectileHandler) {
-          return skillManager.projectileHandler.spawn(scene, player, payloadConfig, inputData.vector);
+        if (skillManager.handleProjectile) {
+          return skillManager.handleProjectile(scene, player, payloadConfig, inputData);
         }
         break;
       

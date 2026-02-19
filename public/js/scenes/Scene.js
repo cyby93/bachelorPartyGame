@@ -1,9 +1,15 @@
+import VisualEffectsRenderer from '../systems/VisualEffectsRenderer.js';
+
 export default class Scene {
   constructor(game) {
     this.game = game;
     this.isActive = false;
     this.projectiles = [];
     this.meleeAttacks = [];
+    this.aoeEffects = [];
+
+    this.visualEffectsRenderer = new VisualEffectsRenderer();
+
   }
 
   enter() {
@@ -114,6 +120,16 @@ export default class Scene {
     if (!this.meleeAttacks) return;
     
     this.meleeAttacks.forEach(meleeEffect => meleeEffect.render(ctx));
+  }
+
+    /**
+   * Renders all AOE effects
+   * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
+   */
+  renderAoeEffects(ctx) {
+    if (!this.aoeEffects) return;
+    
+    this.aoeEffects.forEach(effect => effect.render(ctx));
   }
 
   handleSocketEvent(eventName, data) {}

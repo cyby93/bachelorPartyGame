@@ -54,6 +54,7 @@ export default class LobbyScene extends Scene {
     this.players.forEach(player => player.update(deltaTime));
     
     this.meleeAttacks.forEach(meleeAttack => meleeAttack.update(deltaTime))
+    this.aoeEffects.forEach(meleeAttack => meleeAttack.update(deltaTime))
 
     // Update projectiles
     this.projectiles = this.projectiles.filter(projectile => {
@@ -96,6 +97,12 @@ export default class LobbyScene extends Scene {
     // === Projectiles ===
     this.renderProjectiles(ctx);
     
+    // === Melee ===
+    this.renderMeleeEffects(ctx);
+
+    // === AOE effects ===
+    this.renderAoeEffects(ctx);
+
     // === Players ===
     this.renderPlayers(ctx);
     

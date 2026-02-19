@@ -142,7 +142,7 @@ export default class MeleeHandler {
     if (!scene || !player || !direction || !config) return;
     
     // Create a melee attack visual effect
-    const meleeAttackEffect = new MeleeAttack({
+    const meleeAttack = new MeleeAttack({
       x: player.x,
       y: player.y,
       direction: direction,
@@ -152,11 +152,7 @@ export default class MeleeHandler {
       duration: 400  // Visual effect lasts 200ms
     });
     
-    // Add to scene's visual effects
-    if (!scene.meleeEffects) {
-      scene.meleeEffects = [];
-    }
-    scene.meleeEffects.push(meleeAttackEffect);
+    scene.meleeAttacks.push(meleeAttack);
   }
 }
 

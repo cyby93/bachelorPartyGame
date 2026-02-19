@@ -47,6 +47,10 @@ export default class VisualEffectsRenderer {
     ctx.fillText(`${Math.floor(progress * 100)}%`, player.x, y - 2);
   }
 
+  renderAoeEffect(ctx, player) {
+    // AGENT_IMPLEMENTATION_HERE
+  }
+
   /**
    * Render shield visual
    * @param {CanvasRenderingContext2D} ctx - Canvas context

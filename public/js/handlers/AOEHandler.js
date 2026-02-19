@@ -309,10 +309,7 @@ export default class AOEHandler {
       duration: config.duration || 500
     });
 
-    if (!scene.visualEffects) {
-      scene.visualEffects = [];
-    }
-    scene.visualEffects.push(aoeEffect);
+    scene.aoeEffects.push(aoeEffect);
   }
 }
 

@@ -1,14 +1,11 @@
 import Scene from './Scene.js';
 import Player from '../entities/Player.js';
 import SkillManager from '../managers/SkillManager.js';
-import VisualEffectsRenderer from '../systems/VisualEffectsRenderer.js';
 
 export default class LobbyScene extends Scene {
   constructor(game) {
     super(game);
     this.players = new Map();
-    this.effects = [];
-    this.visualEffectsRenderer = new VisualEffectsRenderer();
     
     this.projectiles = [];
     this.isHost = false;
@@ -20,7 +17,6 @@ export default class LobbyScene extends Scene {
 
   enter() {
     super.enter();
-    this.effects = [];
     
     // Enable split-screen layout
     const container = document.getElementById('host-container');
@@ -54,6 +50,8 @@ export default class LobbyScene extends Scene {
   update(deltaTime) {
     this.players.forEach(player => player.update(deltaTime));
     
+    this.meleeEffects.forEach(mellee => mellee.update(deltaTime))
+
     // Update projectiles
     this.projectiles = this.projectiles.filter(projectile => {
       // return true;
@@ -74,17 +72,14 @@ export default class LobbyScene extends Scene {
       
       return projectile.isAlive;
     });
-    
-    this.effects = this.effects.filter(effect => {
-      effect.update(deltaTime);
-      return effect.isAlive;
-    });
   }
 
   render(ctx) {
-    ctx.fillStyle = '#0f3460';
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    this.drawGrid(ctx);
+    // === Background ===
+    this.renderBackground(ctx);
+    this.renderGrid(ctx);
+    
+    // === UI Elements - Header ===
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     ctx.fillRect(0, 0, ctx.canvas.width, 80);
     ctx.fillStyle = '#00d2ff';
@@ -95,25 +90,13 @@ export default class LobbyScene extends Scene {
     ctx.font = '18px Arial';
     ctx.fillText(`${this.players.size} player(s) connected`, ctx.canvas.width / 2, 75);
     
-    // Render projectiles
-    this.projectiles.forEach(projectile => projectile.render(ctx));
+    // === Projectiles ===
+    this.renderProjectiles(ctx);
     
-    // Render visualEffects
-    this.effects.forEach(effect => effect.render(ctx));
-
-    this.players.forEach(player => {
-      player.render(ctx)
-       // Render shield
-      if (player.shieldState && player.shieldState.active) {
-        this.visualEffectsRenderer.renderShield(ctx, player);
-      }
-        //  console.log(player.castState)
-      // Render cast bars
-      if (player.castState) {
-        this.visualEffectsRenderer.renderCastBar(ctx, player);
-      }
-
-    });
+    // === Players ===
+    this.renderPlayers(ctx);
+    
+    // === UI Elements - Start Prompt ===
     if (this.isHost && this.players.size > 0) {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
       ctx.fillRect(0, ctx.canvas.height - 60, ctx.canvas.width, 60);
@@ -121,24 +104,6 @@ export default class LobbyScene extends Scene {
       ctx.font = 'bold 24px Arial';
       ctx.textAlign = 'center';
       ctx.fillText('Press START GAME to begin the raid!', ctx.canvas.width / 2, ctx.canvas.height - 25);
-    }
-  }
-
-  drawGrid(ctx) {
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-    ctx.lineWidth = 1;
-    const gridSize = 50;
-    for (let x = 0; x < ctx.canvas.width; x += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, ctx.canvas.height);
-      ctx.stroke();
-    }
-    for (let y = 0; y < ctx.canvas.height; y += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(ctx.canvas.width, y);
-      ctx.stroke();
     }
   }
 
@@ -162,16 +127,12 @@ export default class LobbyScene extends Scene {
         this.updateGameState(data);
         break;
       case 'skill_used':
-        // Handle new ability system format
+        // Handle ability system format
         if (data.inputData) {
           const player = this.players.get(data.playerId);
           if (player) {
             this.skillManager.handleSkill(this, player, data.skillIndex, data.inputData);
           }
-        }
-        // Handle legacy format for backward compatibility
-        else {
-          SkillManager.handleSkillUsed(data, this.players, this.effects);
         }
         break;
       case 'game_started':

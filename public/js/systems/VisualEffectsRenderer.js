@@ -20,7 +20,6 @@ export default class VisualEffectsRenderer {
     const progress = player.castState.progress;
     console.log(player)
     if (!player || player.castState.progress === undefined) return;
-    console.log('renderCastBar', player, progress)
 
     const barWidth = 60;
     const barHeight = 6;

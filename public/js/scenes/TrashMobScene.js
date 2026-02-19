@@ -14,8 +14,6 @@ export default class TrashMobScene extends Scene {
     this.players = new Map();
     this.enemies = [];
     this.projectiles = [];
-    this.effects = [];
-    this.effects = [];
     this.killCount = 0;
     this.spawnTimer = 0;
     this.startTime = 0;
@@ -23,7 +21,7 @@ export default class TrashMobScene extends Scene {
     // Initialize ability system components
     this.skillManager = new SkillManager();
     this.effectSystem = new EffectSystem();
-    this.visualEffects = new VisualEffectsRenderer();
+    this.visualEffectsRenderer = new VisualEffectsRenderer();
     this.castHandler = new CastHandler();
     this.shieldHandler = new ShieldHandler();
     this.dashHandler = new DashHandler();
@@ -50,8 +48,6 @@ export default class TrashMobScene extends Scene {
     // Clear enemies
     this.enemies = [];
     this.projectiles = [];
-    this.effects = [];
-    this.effects = [];
     
     console.log('Trash Mob scene started! Defeat 50 enemies to progress.');
   }
@@ -160,18 +156,6 @@ export default class TrashMobScene extends Scene {
     // Remove dead enemies
     this.enemies = this.enemies.filter(enemy => !enemy.isDead);
     
-    // Update legacy effects
-    this.effects = this.effects.filter(effect => {
-      effect.update(deltaTime);
-      return effect.isAlive;
-    });
-    
-    // Update visual effects
-    this.effects = this.effects.filter(effect => {
-      effect.update(deltaTime);
-      return effect.isAlive;
-    });
-    
     // Win condition
     if (this.killCount >= 50) {
       const elapsedTime = now - this.startTime;
@@ -189,84 +173,31 @@ export default class TrashMobScene extends Scene {
     }
   }
 
-  draw(ctx, width, height) {
-    // Render fullscreen canvas background
-    ctx.fillStyle = '#0f3460';
-    ctx.fillRect(0, 0, width, height);
-    this.drawGrid(ctx);
+  render(ctx) {
+    // === Background ===
+    this.renderBackground(ctx);
+    this.renderGrid(ctx);
     
-    // Render enemies
+    // === Enemies ===
     this.enemies.forEach(enemy => enemy.render(ctx));
     
-    // Render projectiles
-    this.projectiles.forEach(projectile => projectile.render(ctx));
-        
-    // // Render visual effects
-    // this.visualEffectsList.forEach(effect => effect.render(ctx));
+    // === Projectiles ===
+    this.renderProjectiles(ctx);
     
-    // Render players
-    this.players.forEach(player => {
-      player.render(ctx);
-      
-      // Render cast bar
-      if (player.castState && player.castState.active) {
-        const progress = this.castHandler.getCastProgress(player);
-        this.visualEffects.renderCastBar(ctx, player, progress);
-      }
-      
-      // Render shield
-      if (player.shieldState && player.shieldState.active) {
-        this.visualEffects.renderShield(ctx, player);
-      }
-      console.log(player.castState)
-      // Render cast bars
-      if (player.castState) {
-        this.visualEffects.renderCastBar(ctx, player);
-      }
-
-      // Render dash trail
-      if (player.isDashing) {
-        this.visualEffects.renderDashTrail(ctx, player);
-      }
-      
-      // Render effect indicators
-      if (player.activeEffects && player.activeEffects.length > 0) {
-        this.visualEffects.renderEffectIndicators(ctx, player);
-      }
-    });
+    // === Players ===
+    this.renderPlayers(ctx);
     
-    // Render "WAVE PROGRESS: X / 50" UI at top-center
+    // === UI Elements ===
+    // Wave progress indicator
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(width / 2 - 150, 10, 300, 60);
+    ctx.fillRect(ctx.canvas.width / 2 - 150, 10, 300, 60);
     ctx.fillStyle = '#00d2ff';
     ctx.font = 'bold 24px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('WAVE PROGRESS', width / 2, 40);
+    ctx.fillText('WAVE PROGRESS', ctx.canvas.width / 2, 40);
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 32px Arial';
-    ctx.fillText(`${this.killCount} / 50`, width / 2, 70);
-  }
-
-  render(ctx) {
-    this.draw(ctx, ctx.canvas.width, ctx.canvas.height);
-  }
-
-  drawGrid(ctx) {
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-    ctx.lineWidth = 1;
-    const gridSize = 50;
-    for (let x = 0; x < ctx.canvas.width; x += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, ctx.canvas.height);
-      ctx.stroke();
-    }
-    for (let y = 0; y < ctx.canvas.height; y += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(ctx.canvas.width, y);
-      ctx.stroke();
-    }
+    ctx.fillText(`${this.killCount} / 50`, ctx.canvas.width / 2, 70);
   }
 
   spawnEnemy() {
@@ -316,16 +247,12 @@ export default class TrashMobScene extends Scene {
         this.updateGameState(data);
         break;
       case 'skill_used':
-        // Handle new ability system format
+        // Handle ability system format
         if (data.inputData) {
           const player = this.players.get(data.playerId);
           if (player) {
             this.skillManager.handleSkill(this, player, data.skillIndex, data.inputData);
           }
-        }
-        // Handle legacy format for backward compatibility
-        else {
-          SkillManager.handleSkillUsed(data, this.players, this.effects);
         }
         break;
       case 'player_joined':

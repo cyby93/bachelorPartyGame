@@ -15,7 +15,6 @@ export default class BossFightScene extends Scene {
     super(game);
     this.players = new Map();
     this.boss = null;
-    this.effects = [];
     this.tombstones = new Map();
     this.reviveAttempts = new Map();
     
@@ -46,7 +45,6 @@ export default class BossFightScene extends Scene {
     if (!this.boss) {
       this.boss = new Boss();
     }
-    this.effects = [];
     this.tombstones.clear();
     this.reviveAttempts.clear();
     console.log('Boss fight started!');
@@ -146,33 +144,6 @@ export default class BossFightScene extends Scene {
       return projectile.isAlive;
     });
     
-    // Update legacy effects
-    this.effects = this.effects.filter(effect => {
-      effect.update(deltaTime);
-      if (!effect.isAlive) return false;
-      if (effect.checkCollision && effect.damage && effect.checkCollision(this.boss)) {
-        const isDead = this.boss.takeDamage(effect.damage);
-        
-        // Track damage for MVP (if effect has owner)
-        if (effect.owner && effect.owner.id) {
-          this.game.trackDamage(effect.owner.id, effect.damage);
-        }
-        
-        effect.destroy();
-        if (isDead) {
-          // Win condition - transition to result scene
-          const totalTime = Date.now() - this.game.gameStats.startTime;
-          this.game.changeScene('result', {
-            victory: true,
-            totalTime: totalTime,
-            totalKills: this.game.gameStats.totalKills
-          });
-        }
-        return false;
-      }
-      return effect.isAlive;
-    });
-    
     // Update visual effects
     this.visualEffectsList = this.visualEffectsList.filter(effect => {
       effect.update(deltaTime);
@@ -221,69 +192,27 @@ export default class BossFightScene extends Scene {
   }
 
   render(ctx) {
-    ctx.fillStyle = '#0f3460';
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    this.drawGrid(ctx);
+    // === Background ===
+    this.renderBackground(ctx);
+    this.renderGrid(ctx);
     
+    // === Enemies (Boss) ===
     if (this.boss) {
       this.boss.render(ctx);
     }
     
-    // Render projectiles
-    this.projectiles.forEach(projectile => projectile.render(ctx));
+    // === Projectiles ===
+    this.renderProjectiles(ctx);
     
-    // Render legacy effects
-    this.effects.forEach(effect => effect.render(ctx));
-    
-    // Render visual effects
+    // === Visual Effects ===
     this.visualEffectsList.forEach(effect => effect.render(ctx));
     
-    // Render players
-    this.players.forEach(player => {
-      player.render(ctx);
-      
-      // Render cast bar
-      if (player.castState && player.castState.active) {
-        const progress = this.castHandler.getCastProgress(player);
-        this.visualEffects.renderCastBar(ctx, player, progress);
-      }
-      
-      // Render shield
-      if (player.shieldState && player.shieldState.active) {
-        this.visualEffects.renderShield(ctx, player);
-      }
-      
-      // Render dash trail
-      if (player.isDashing) {
-        this.visualEffects.renderDashTrail(ctx, player);
-      }
-      
-      // Render effect indicators
-      if (player.activeEffects && player.activeEffects.length > 0) {
-        this.visualEffects.renderEffectIndicators(ctx, player);
-      }
-    });
+    // === Players ===
+    this.renderPlayers(ctx);
     
+    // === UI Elements ===
     // Render tombstones
     this.tombstones.forEach(tombstone => tombstone.render(ctx));
-  }
-
-  drawGrid(ctx) {
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-    ctx.lineWidth = 1;
-    const gridSize = 50;
-    for (let x = 0; x < ctx.canvas.width; x += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, ctx.canvas.height);
-      ctx.stroke();
-    }
-    for (let y = 0; y < ctx.canvas.height; y += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(ctx.canvas.width, y);
-      ctx.stroke();
-    }
   }
 
   handleSocketEvent(eventName, data) {
@@ -292,16 +221,12 @@ export default class BossFightScene extends Scene {
         this.updateGameState(data);
         break;
       case 'skill_used':
-        // Handle new ability system format
+        // Handle ability system format
         if (data.inputData) {
           const player = this.players.get(data.playerId);
           if (player) {
             this.skillManager.handleSkill(this, player, data.skillIndex, data.inputData);
           }
-        }
-        // Handle legacy format for backward compatibility
-        else {
-          SkillManager.handleSkillUsed(data, this.players, this.effects);
         }
         break;
       case 'player_joined':

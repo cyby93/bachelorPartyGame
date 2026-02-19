@@ -54,9 +54,9 @@ class SkillManager {
     }
 
     // Check cooldown
-    // if (this.isOnCooldown(player, skillIndex)) {
-    //   return false;
-    // }
+    if (this.isOnCooldown(player, skillIndex)) {
+      return false;
+    }
 
     // Normalize input data
     const normalizedInput = this.normalizeInputData(inputData);

@@ -112,6 +112,7 @@ export default class CastHandler {
    * @returns {boolean} True if payload executed successfully
    */
   completeCast(scene, player, skillManager) {
+    console.log(player)
     if (!player || !player.castState || !player.castState.active) {
       return false;
     }

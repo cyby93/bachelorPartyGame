@@ -1,6 +1,7 @@
 import Scene from './Scene.js';
 import Player from '../entities/Player.js';
 import SkillManager from '../managers/SkillManager.js';
+import VisualEffectsRenderer from "../systems/VisualEffectsRenderer.js";
 
 export default class LobbyScene extends Scene {
   constructor(game) {
@@ -8,6 +9,8 @@ export default class LobbyScene extends Scene {
     this.players = new Map();
     
     this.projectiles = [];
+        this.visualEffectsRenderer = new VisualEffectsRenderer();
+
     this.isHost = false;
     this.friendlyFireEnabled = false; // Disable friendly fire in lobby
     
@@ -50,7 +53,7 @@ export default class LobbyScene extends Scene {
   update(deltaTime) {
     this.players.forEach(player => player.update(deltaTime));
     
-    this.meleeEffects.forEach(mellee => mellee.update(deltaTime))
+    this.meleeAttacks.forEach(meleeAttack => meleeAttack.update(deltaTime))
 
     // Update projectiles
     this.projectiles = this.projectiles.filter(projectile => {
@@ -140,6 +143,12 @@ export default class LobbyScene extends Scene {
         this.game.changeScene('trashMob', {
           players: this.players,
           startTime: Date.now()
+        });
+        break;
+      case 'enter_test_scene':
+        // Transition to Test scene
+        this.game.changeScene('test', {
+          players: this.players
         });
         break;
     }

@@ -137,6 +137,44 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Enter test scene (host only)
+  socket.on('enter_test_scene', () => {
+    if (gameState.players[socket.id]?.isHost) {
+      io.emit('enter_test_scene');
+      console.log('Entering test scene');
+    }
+  });
+
+  // Back to lobby from test scene (host only)
+  socket.on('back_to_lobby', () => {
+    if (gameState.players[socket.id]?.isHost) {
+      io.emit('back_to_lobby');
+      console.log('Returning to lobby');
+    }
+  });
+
+  // Change all players' classes (host only)
+  // Used in test scene for rapid class switching during ability testing
+  socket.on('change_all_classes', (data) => {
+    if (gameState.players[socket.id]?.isHost) {
+      const { className } = data;
+      
+      // Update all players' classes
+      Object.values(gameState.players).forEach(player => {
+        if (!player.isHost) {
+          player.className = className;
+          player.classData = CLASSES[CLASS_NAMES[className]];
+          // Reset cooldowns
+          player.cooldowns = [0, 0, 0, 0];
+        }
+      });
+      
+      // Broadcast class change
+      io.emit('all_classes_changed', { className });
+      console.log(`All players changed to ${className}`);
+    }
+  });
+
   // Handle revive attempts
   socket.on('revive_attempt', (data) => {
     io.emit('revive_progress', data);

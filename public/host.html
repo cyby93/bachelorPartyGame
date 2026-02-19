@@ -29,6 +29,9 @@
         <button id="start-game-btn" class="start-button" disabled>
           START GAME
         </button>
+        <button id="enter-test-scene-btn" class="start-button" style="margin-top: 10px; background: linear-gradient(135deg, #9b59b6, #8e44ad);">
+          ENTER TEST SCENE
+        </button>
       </div>
     </div>
     
@@ -38,6 +41,28 @@
     <button id="restart-game-btn" class="restart-button" style="display: none;">
       RESTART GAME
     </button>
+    
+    <!-- Test Scene Controls (hidden by default) -->
+    <div id="test-scene-controls" style="display: none;">
+      <div class="test-controls-content">
+        <h3>Test Scene Controls</h3>
+        <div class="control-group">
+          <label for="class-selector">Change All Classes:</label>
+          <select id="class-selector">
+            <option value="Warrior">Warrior</option>
+            <option value="Paladin">Paladin</option>
+            <option value="Shaman">Shaman</option>
+            <option value="Hunter">Hunter</option>
+            <option value="Priest">Priest</option>
+            <option value="Mage">Mage</option>
+            <option value="Druid">Druid</option>
+            <option value="Rogue">Rogue</option>
+          </select>
+          <button id="apply-class-btn" class="test-button">Apply to All</button>
+        </div>
+        <button id="back-to-lobby-btn" class="test-button secondary">Back to Lobby</button>
+      </div>
+    </div>
     
     <div id="ui-overlay">
       <!-- <div class="boss-health-bar">
@@ -67,6 +92,7 @@
         isHost: true
       });
       game.scenes.lobby.setHost(true);
+      game.scenes.test.setHost(true);
       
       // Get server IP and generate QR code
       const serverIP = window.location.hostname + ':' + window.location.port;
@@ -99,6 +125,13 @@
       socket.emit('start_game');
     });
     
+    // Enter test scene button functionality
+    const enterTestSceneBtn = document.getElementById('enter-test-scene-btn');
+    enterTestSceneBtn.addEventListener('click', () => {
+      socket.emit('enter_test_scene');
+      console.log('Entering test scene');
+    });
+    
     socket.on('game_started', () => {
       startButton.style.display = 'none';
     });
@@ -117,7 +150,31 @@
       } else {
         restartButton.style.display = 'none';
       }
+      
+      // Show test scene controls when in test scene
+      const testControls = document.getElementById('test-scene-controls');
+      if (game.currentScene && game.currentScene.constructor.name === 'TestScene') {
+        testControls.style.display = 'block';
+      } else {
+        testControls.style.display = 'none';
+      }
     }, 100);
+    
+    // Test scene controls
+    const applyClassBtn = document.getElementById('apply-class-btn');
+    const backToLobbyBtn = document.getElementById('back-to-lobby-btn');
+    const classSelector = document.getElementById('class-selector');
+    
+    applyClassBtn.addEventListener('click', () => {
+      const selectedClass = classSelector.value;
+      socket.emit('change_all_classes', { className: selectedClass });
+      console.log(`Changing all players to ${selectedClass}`);
+    });
+    
+    backToLobbyBtn.addEventListener('click', () => {
+      socket.emit('back_to_lobby');
+      console.log('Returning to lobby');
+    });
     
     // Update player list
     socket.on('init_state', (state) => {

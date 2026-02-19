@@ -21,7 +21,7 @@ export default class TrashMobScene extends Scene {
     // Initialize ability system components
     this.skillManager = new SkillManager();
     this.effectSystem = new EffectSystem();
-    this.visualEffectsRenderer = new VisualEffectsRenderer();
+    // this.visualEffectsRenderer = new VisualEffectsRenderer();
     this.castHandler = new CastHandler();
     this.shieldHandler = new ShieldHandler();
     this.dashHandler = new DashHandler();

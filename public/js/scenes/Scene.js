@@ -2,9 +2,8 @@ export default class Scene {
   constructor(game) {
     this.game = game;
     this.isActive = false;
-    this.visualEffectsRenderer = null; // Will be initialized by subclasses
     this.projectiles = [];
-    this.meleeEffects = [];
+    this.meleeAttacks = [];
   }
 
   enter() {
@@ -61,7 +60,8 @@ export default class Scene {
    */
   renderPlayerVisualEffects(ctx, player) {
     if (!this.visualEffectsRenderer) return;
-    
+        // console.log(player)
+
     // Render cast bar
     if (player.castState && player.castState.active) {
       this.visualEffectsRenderer.renderCastBar(ctx, player);
@@ -106,14 +106,14 @@ export default class Scene {
     this.projectiles.forEach(projectile => projectile.render(ctx));
   }
 
-    /**
+  /**
    * Renders all melee effects
    * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
    */
-  renderProjectiles(ctx) {
-    if (!this.meleeEffects) return;
+  renderMeleeEffects(ctx) {
+    if (!this.meleeAttacks) return;
     
-    this.meleeEffects.forEach(meleeEffect => meleeEffect.render(ctx));
+    this.meleeAttacks.forEach(meleeEffect => meleeEffect.render(ctx));
   }
 
   handleSocketEvent(eventName, data) {}

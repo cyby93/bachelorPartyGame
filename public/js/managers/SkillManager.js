@@ -285,23 +285,20 @@ class SkillManager {
         // Update cast
         const completed = this.castHandler.updateCast(player, 16);  // Assuming ~60 FPS
                 // console.log('updateCast')
-if (completed) {
-          this.castHandler.completeCast(scene, player, this);
+        if (completed) {
+          return this.castHandler.completeCast(scene, player, this);
         }
       }
-      return true;
     } else if (inputData.action === 'RELEASE') {
       if (player.castState && player.castState.active) {
         const completed = this.castHandler.updateCast(player, 0);
         if (completed) {
-          this.castHandler.completeCast(scene, player, this);
+          return this.castHandler.completeCast(scene, player, this);
         } else {
           this.castHandler.cancelCast(player);
         }
       }
               // console.log('stopCast')
-
-      return true;
     }
     return false;
   }
@@ -318,7 +315,7 @@ if (completed) {
       } else {
         this.shieldHandler.updateAngle(player, angle);
       }
-      console.log(player.shieldState)
+      // console.log(player.shieldState)
       return true;
     } else if (inputData.action === 'RELEASE') {
       this.shieldHandler.deactivate(player);

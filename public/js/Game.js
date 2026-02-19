@@ -1,5 +1,6 @@
 import { GAME_CONFIG } from './Constants.js';
 import LobbyScene from './scenes/LobbyScene.js';
+import TestScene from './scenes/TestScene.js';
 import TrashMobScene from './scenes/TrashMobScene.js';
 import BossFightScene from './scenes/BossFightScene.js';
 import ResultScene from './scenes/ResultScene.js';
@@ -15,6 +16,7 @@ export default class Game {
     this.canvas.height = GAME_CONFIG.CANVAS_HEIGHT;
     this.scenes = {
       lobby: new LobbyScene(this),
+      test: new TestScene(this),
       trashMob: new TrashMobScene(this),
       bossFight: new BossFightScene(this),
       result: new ResultScene(this),
@@ -65,6 +67,21 @@ export default class Game {
     this.socket.on('init_state', (data) => {
       if (this.currentScene) {
         this.currentScene.handleSocketEvent('init_state', data);
+      }
+    });
+    this.socket.on('enter_test_scene', () => {
+      if (this.currentScene) {
+        this.currentScene.handleSocketEvent('enter_test_scene');
+      }
+    });
+    this.socket.on('back_to_lobby', () => {
+      if (this.currentScene) {
+        this.currentScene.handleSocketEvent('back_to_lobby');
+      }
+    });
+    this.socket.on('all_classes_changed', (data) => {
+      if (this.currentScene) {
+        this.currentScene.handleSocketEvent('all_classes_changed', data);
       }
     });
   }

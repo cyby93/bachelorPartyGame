@@ -170,4 +170,24 @@ export default class Player {
     this.isDead = false;
     this.hp = this.maxHp * 0.4;
   }
+
+  changeClass(className) {
+    this.className = className;
+    this.classData = CLASSES[className];
+    this.color = this.classData.color;
+    this.speed = this.classData.speed;
+    this.originalSpeed = this.speed;
+
+    // Reset cooldowns
+    this.cooldowns = [0, 0, 0, 0];
+
+    // Update max HP but keep current HP percentage
+    const hpPercent = this.hp / this.maxHp;
+    this.maxHp = this.classData.hp;
+    this.hp = Math.min(this.hp, this.maxHp * hpPercent);
+
+    // Update original stats
+    this.originalStats.speed = this.speed;
+    this.originalStats.maxHp = this.maxHp;
+  }
 }

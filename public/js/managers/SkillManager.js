@@ -54,16 +54,16 @@ class SkillManager {
     }
 
     // Check cooldown
-    if (this.isOnCooldown(player, skillIndex)) {
-      return false;
-    }
+    // if (this.isOnCooldown(player, skillIndex)) {
+    //   return false;
+    // }
 
     // Normalize input data
     const normalizedInput = this.normalizeInputData(inputData);
 
     // Route to appropriate handler based on skill type
     let success = false;
-      console.log(config);
+      // console.log(config);
     switch (config.type) {
       case 'PROJECTILE':
         success = this.handleProjectile(scene, player, config, normalizedInput);
@@ -275,14 +275,17 @@ class SkillManager {
    * Handle cast abilities
    */
   handleCast(scene, player, config, inputData) {
+    // console.log('handleCast', player, config)
     if (inputData.action === 'START' || inputData.action === 'HOLD') {
       if (!player.castState || !player.castState.active) {
         // Start cast
         this.castHandler.startCast(player, config, inputData);
+        // console.log('startcast')
       } else {
         // Update cast
         const completed = this.castHandler.updateCast(player, 16);  // Assuming ~60 FPS
-        if (completed) {
+                // console.log('updateCast')
+if (completed) {
           this.castHandler.completeCast(scene, player, this);
         }
       }
@@ -296,6 +299,8 @@ class SkillManager {
           this.castHandler.cancelCast(player);
         }
       }
+              // console.log('stopCast')
+
       return true;
     }
     return false;

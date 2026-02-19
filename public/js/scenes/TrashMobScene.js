@@ -15,7 +15,7 @@ export default class TrashMobScene extends Scene {
     this.enemies = [];
     this.projectiles = [];
     this.effects = [];
-    this.visualEffectsList = [];
+    this.effects = [];
     this.killCount = 0;
     this.spawnTimer = 0;
     this.startTime = 0;
@@ -51,7 +51,7 @@ export default class TrashMobScene extends Scene {
     this.enemies = [];
     this.projectiles = [];
     this.effects = [];
-    this.visualEffectsList = [];
+    this.effects = [];
     
     console.log('Trash Mob scene started! Defeat 50 enemies to progress.');
   }
@@ -167,7 +167,7 @@ export default class TrashMobScene extends Scene {
     });
     
     // Update visual effects
-    this.visualEffectsList = this.visualEffectsList.filter(effect => {
+    this.effects = this.effects.filter(effect => {
       effect.update(deltaTime);
       return effect.isAlive;
     });
@@ -201,8 +201,8 @@ export default class TrashMobScene extends Scene {
     // Render projectiles
     this.projectiles.forEach(projectile => projectile.render(ctx));
         
-    // Render visual effects
-    this.visualEffectsList.forEach(effect => effect.render(ctx));
+    // // Render visual effects
+    // this.visualEffectsList.forEach(effect => effect.render(ctx));
     
     // Render players
     this.players.forEach(player => {
@@ -218,7 +218,12 @@ export default class TrashMobScene extends Scene {
       if (player.shieldState && player.shieldState.active) {
         this.visualEffects.renderShield(ctx, player);
       }
-      
+      console.log(player.castState)
+      // Render cast bars
+      if (player.castState) {
+        this.visualEffects.renderCastBar(ctx, player);
+      }
+
       // Render dash trail
       if (player.isDashing) {
         this.visualEffects.renderDashTrail(ctx, player);

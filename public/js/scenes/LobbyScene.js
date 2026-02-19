@@ -101,14 +101,18 @@ export default class LobbyScene extends Scene {
     // Render visualEffects
     this.effects.forEach(effect => effect.render(ctx));
 
-    this.effects.forEach(effect => effect.render(ctx));
     this.players.forEach(player => {
       player.render(ctx)
        // Render shield
       if (player.shieldState && player.shieldState.active) {
         this.visualEffectsRenderer.renderShield(ctx, player);
       }
-   
+        //  console.log(player.castState)
+      // Render cast bars
+      if (player.castState) {
+        this.visualEffectsRenderer.renderCastBar(ctx, player);
+      }
+
     });
     if (this.isHost && this.players.size > 0) {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';

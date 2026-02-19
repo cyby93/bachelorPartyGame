@@ -62,16 +62,17 @@ export default class CastHandler {
     const castState = player.castState;
     const elapsed = Date.now() - castState.startTime;
     const progress = Math.min(elapsed / castState.castTime, 1.0);
+    castState.progress = progress
 
     // Check for movement (interrupts cast)
-    if (castState.originalX !== undefined && castState.originalY !== undefined) {
-      const moved = Math.abs(player.x - castState.originalX) > 1 || 
-                    Math.abs(player.y - castState.originalY) > 1;
-      if (moved) {
-        this.cancelCast(player);
-        return false;
-      }
-    }
+    // if (castState.originalX !== undefined && castState.originalY !== undefined) {
+    //   const moved = Math.abs(player.x - castState.originalX) > 1 || 
+    //                 Math.abs(player.y - castState.originalY) > 1;
+    //   if (moved) {
+    //     this.cancelCast(player);
+    //     return false;
+    //   }
+    // }
 
     // Check if cast completed
     if (elapsed >= castState.castTime) {

@@ -6,10 +6,9 @@ import VisualEffectsRenderer from "../systems/VisualEffectsRenderer.js";
 export default class LobbyScene extends Scene {
   constructor(game) {
     super(game);
-    this.players = new Map();
     
     this.projectiles = [];
-        this.visualEffectsRenderer = new VisualEffectsRenderer();
+    this.visualEffectsRenderer = new VisualEffectsRenderer();
 
     this.isHost = false;
     this.friendlyFireEnabled = false; // Disable friendly fire in lobby
@@ -50,15 +49,11 @@ export default class LobbyScene extends Scene {
     }
   }
 
-  update(deltaTime) {
-    this.players.forEach(player => player.update(deltaTime));
-    
-    this.meleeAttacks.forEach(meleeAttack => meleeAttack.update(deltaTime))
-    this.aoeEffects.forEach(meleeAttack => meleeAttack.update(deltaTime))
-
-    // Update projectiles
+  /**
+   * Override projectile update to handle lobby-specific collision logic
+   */
+  updateProjectiles(deltaTime) {
     this.projectiles = this.projectiles.filter(projectile => {
-      // return true;
       projectile.update(deltaTime);
       
       if (!projectile.isAlive) return false;
@@ -78,12 +73,11 @@ export default class LobbyScene extends Scene {
     });
   }
 
-  render(ctx) {
-    // === Background ===
-    this.renderBackground(ctx);
-    this.renderGrid(ctx);
-    
-    // === UI Elements - Header ===
+  /**
+   * Override to render lobby-specific UI
+   */
+  renderUI(ctx) {
+    // Header
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     ctx.fillRect(0, 0, ctx.canvas.width, 80);
     ctx.fillStyle = '#00d2ff';
@@ -94,19 +88,7 @@ export default class LobbyScene extends Scene {
     ctx.font = '18px Arial';
     ctx.fillText(`${this.players.size} player(s) connected`, ctx.canvas.width / 2, 75);
     
-    // === Projectiles ===
-    this.renderProjectiles(ctx);
-    
-    // === Melee ===
-    this.renderMeleeEffects(ctx);
-
-    // === AOE effects ===
-    this.renderAoeEffects(ctx);
-
-    // === Players ===
-    this.renderPlayers(ctx);
-    
-    // === UI Elements - Start Prompt ===
+    // Start prompt
     if (this.isHost && this.players.size > 0) {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
       ctx.fillRect(0, ctx.canvas.height - 60, ctx.canvas.width, 60);

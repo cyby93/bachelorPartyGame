@@ -11,9 +11,7 @@ import DashHandler from '../handlers/DashHandler.js';
 export default class TrashMobScene extends Scene {
   constructor(game) {
     super(game);
-    this.players = new Map();
     this.enemies = [];
-    this.projectiles = [];
     this.killCount = 0;
     this.spawnTimer = 0;
     this.startTime = 0;
@@ -21,7 +19,6 @@ export default class TrashMobScene extends Scene {
     // Initialize ability system components
     this.skillManager = new SkillManager();
     this.effectSystem = new EffectSystem();
-    // this.visualEffectsRenderer = new VisualEffectsRenderer();
     this.castHandler = new CastHandler();
     this.shieldHandler = new ShieldHandler();
     this.dashHandler = new DashHandler();
@@ -59,7 +56,10 @@ export default class TrashMobScene extends Scene {
     this.projectiles = [];
   }
 
-  update(deltaTime) {
+  /**
+   * Override to add enemy spawning and player state updates
+   */
+  updateEntities(deltaTime) {
     const now = Date.now();
     
     // Spawn timer
@@ -77,7 +77,30 @@ export default class TrashMobScene extends Scene {
       enemy.update(deltaTime, this.players);
     });
     
-    // Update players
+    // Remove dead enemies
+    this.enemies = this.enemies.filter(enemy => !enemy.isDead);
+    
+    // Win condition
+    if (this.killCount >= 50) {
+      const elapsedTime = now - this.startTime;
+      this.game.changeScene('bossFight', {
+        elapsedTime: elapsedTime,
+        killCount: this.killCount
+      });
+      return;
+    }
+    
+    // Lose condition
+    const allDead = Array.from(this.players.values()).every(p => p.isDead);
+    if (allDead && this.players.size > 0) {
+      this.transitionToResult(false, now);
+    }
+  }
+
+  /**
+   * Override to add player ability system updates
+   */
+  updatePlayers(deltaTime) {
     this.players.forEach(player => {
       player.update(deltaTime);
       
@@ -116,8 +139,12 @@ export default class TrashMobScene extends Scene {
         player.deathTracked = false;
       }
     });
-    
-    // Update projectiles and check collisions with enemies
+  }
+
+  /**
+   * Override to add enemy collision detection
+   */
+  updateProjectiles(deltaTime) {
     this.projectiles = this.projectiles.filter(projectile => {
       projectile.update(deltaTime);
       
@@ -152,42 +179,19 @@ export default class TrashMobScene extends Scene {
       
       return projectile.isAlive;
     });
-    
-    // Remove dead enemies
-    this.enemies = this.enemies.filter(enemy => !enemy.isDead);
-    
-    // Win condition
-    if (this.killCount >= 50) {
-      const elapsedTime = now - this.startTime;
-      this.game.changeScene('bossFight', {
-        elapsedTime: elapsedTime,
-        killCount: this.killCount
-      });
-      return;
-    }
-    
-    // Lose condition
-    const allDead = Array.from(this.players.values()).every(p => p.isDead);
-    if (allDead && this.players.size > 0) {
-      this.transitionToResult(false, now);
-    }
   }
 
-  render(ctx) {
-    // === Background ===
-    this.renderBackground(ctx);
-    this.renderGrid(ctx);
-    
-    // === Enemies ===
+  /**
+   * Override to render enemies
+   */
+  renderEntities(ctx) {
     this.enemies.forEach(enemy => enemy.render(ctx));
-    
-    // === Projectiles ===
-    this.renderProjectiles(ctx);
-    
-    // === Players ===
-    this.renderPlayers(ctx);
-    
-    // === UI Elements ===
+  }
+
+  /**
+   * Override to render trash mob UI
+   */
+  renderUI(ctx) {
     // Wave progress indicator
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     ctx.fillRect(ctx.canvas.width / 2 - 150, 10, 300, 60);

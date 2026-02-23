@@ -13,7 +13,6 @@ import { GAME_CONFIG } from '../Constants.js';
 export default class BossFightScene extends Scene {
   constructor(game) {
     super(game);
-    this.players = new Map();
     this.boss = null;
     this.tombstones = new Map();
     this.reviveAttempts = new Map();
@@ -25,7 +24,6 @@ export default class BossFightScene extends Scene {
     this.dashHandler = new DashHandler();
     this.effectSystem = new EffectSystem();
     this.visualEffects = new VisualEffectsRenderer();
-    this.projectiles = [];
     this.visualEffectsList = [];
   }
 
@@ -50,10 +48,10 @@ export default class BossFightScene extends Scene {
     console.log('Boss fight started!');
   }
 
-  update(deltaTime) {
-    if (!this.boss) return;
-    
-    // Update players
+  /**
+   * Override to add player ability system updates
+   */
+  updatePlayers(deltaTime) {
     this.players.forEach(player => {
       player.update(deltaTime);
       
@@ -88,16 +86,12 @@ export default class BossFightScene extends Scene {
         this.game.trackDeath(player.id);
       }
     });
-    
-    // Update boss
-    this.boss.update(deltaTime, Array.from(this.players.values()));
-    
-    // Update boss effects
-    if (this.boss.activeEffects) {
-      this.effectSystem.updateEffects(this.boss, deltaTime);
-    }
-    
-    // Update projectiles
+  }
+
+  /**
+   * Override to add boss collision detection
+   */
+  updateProjectiles(deltaTime) {
     this.projectiles = this.projectiles.filter(projectile => {
       projectile.update(deltaTime);
       
@@ -143,6 +137,21 @@ export default class BossFightScene extends Scene {
       
       return projectile.isAlive;
     });
+  }
+
+  /**
+   * Override to add boss, visual effects, revive attempts, and game over logic
+   */
+  updateEntities(deltaTime) {
+    if (!this.boss) return;
+    
+    // Update boss
+    this.boss.update(deltaTime, Array.from(this.players.values()));
+    
+    // Update boss effects
+    if (this.boss.activeEffects) {
+      this.effectSystem.updateEffects(this.boss, deltaTime);
+    }
     
     // Update visual effects
     this.visualEffectsList = this.visualEffectsList.filter(effect => {
@@ -191,27 +200,23 @@ export default class BossFightScene extends Scene {
     }
   }
 
-  render(ctx) {
-    // === Background ===
-    this.renderBackground(ctx);
-    this.renderGrid(ctx);
-    
-    // === Enemies (Boss) ===
+  /**
+   * Override to render boss before other entities
+   */
+  renderBeforeEntities(ctx) {
     if (this.boss) {
       this.boss.render(ctx);
     }
-    
-    // === Projectiles ===
-    this.renderProjectiles(ctx);
-    
-    // === Visual Effects ===
+  }
+
+  /**
+   * Override to render visual effects and tombstones
+   */
+  renderEntities(ctx) {
+    // Visual effects
     this.visualEffectsList.forEach(effect => effect.render(ctx));
     
-    // === Players ===
-    this.renderPlayers(ctx);
-    
-    // === UI Elements ===
-    // Render tombstones
+    // Tombstones
     this.tombstones.forEach(tombstone => tombstone.render(ctx));
   }
 

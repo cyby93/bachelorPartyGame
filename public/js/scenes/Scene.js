@@ -7,9 +7,9 @@ export default class Scene {
     this.projectiles = [];
     this.meleeAttacks = [];
     this.aoeEffects = [];
+    this.players = new Map();
 
     this.visualEffectsRenderer = new VisualEffectsRenderer();
-
   }
 
   enter() {
@@ -20,9 +20,119 @@ export default class Scene {
     this.isActive = false;
   }
 
-  update(deltaTime) {}
+  /**
+   * Base update method - calls all common update logic
+   * Override updateEntities() in child scenes for custom logic
+   */
+  update(deltaTime) {
+    // Update players
+    this.updatePlayers(deltaTime);
+    
+    // Update projectiles
+    this.updateProjectiles(deltaTime);
+    
+    // Update melee attacks
+    this.updateMeleeAttacks(deltaTime);
+    
+    // Update AOE effects
+    this.updateAoeEffects(deltaTime);
+    
+    // Hook for child scene custom logic
+    this.updateEntities(deltaTime);
+  }
 
-  render(ctx) {}
+  /**
+   * Base render method - calls all common rendering logic
+   * Override renderEntities() in child scenes for custom rendering
+   */
+  render(ctx) {
+    // Background
+    this.renderBackground(ctx);
+    this.renderGrid(ctx);
+    
+    // Hook for child scene custom background elements
+    this.renderBeforeEntities(ctx);
+    
+    // Projectiles (render before players for proper layering)
+    this.renderProjectiles(ctx);
+    
+    // Melee effects
+    this.renderMeleeEffects(ctx);
+    
+    // AOE effects
+    this.renderAoeEffects(ctx);
+    
+    // Players
+    this.renderPlayers(ctx);
+    
+    // Hook for child scene custom entities
+    this.renderEntities(ctx);
+    
+    // Hook for child scene UI elements
+    this.renderUI(ctx);
+  }
+
+  /**
+   * Update all players - can be overridden for custom player update logic
+   */
+  updatePlayers(deltaTime) {
+    if (!this.players) return;
+    this.players.forEach(player => player.update(deltaTime));
+  }
+
+  /**
+   * Update all projectiles - can be overridden for custom collision logic
+   */
+  updateProjectiles(deltaTime) {
+    this.projectiles = this.projectiles.filter(projectile => {
+      projectile.update(deltaTime);
+      return projectile.isAlive;
+    });
+  }
+
+  /**
+   * Update all melee attacks
+   */
+  updateMeleeAttacks(deltaTime) {
+    this.meleeAttacks = this.meleeAttacks.filter(meleeAttack => {
+      meleeAttack.update(deltaTime);
+      return meleeAttack.isAlive;
+    });
+  }
+
+  /**
+   * Update all AOE effects
+   */
+  updateAoeEffects(deltaTime) {
+    this.aoeEffects = this.aoeEffects.filter(effect => {
+      effect.update(deltaTime);
+      return effect.isAlive;
+    });
+  }
+
+  /**
+   * Hook for child scenes to add custom entity updates (enemies, boss, etc.)
+   * Override this in child scenes
+   */
+  updateEntities(deltaTime) {}
+
+  /**
+   * Hook for child scenes to render custom elements before entities
+   * Override this in child scenes
+   */
+  renderBeforeEntities(ctx) {}
+
+  /**
+   * Hook for child scenes to render custom entities (enemies, boss, etc.)
+   * Override this in child scenes
+   */
+  renderEntities(ctx) {}
+
+  /**
+   * Hook for child scenes to render UI elements
+   * Override this in child scenes
+   */
+  renderUI(ctx) {}
 
   /**
    * Renders the background color

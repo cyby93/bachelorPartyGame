@@ -11,9 +11,6 @@ import { GAME_CONFIG } from '../Constants.js';
 export default class TestScene extends Scene {
   constructor(game) {
     super(game);
-    this.players = new Map();
-    this.projectiles = [];
-    this.meleeAttacks = [];
     this.testEnemy = null;
     this.isHost = false;
     this.enemyRespawnTimer = null;
@@ -64,20 +61,9 @@ export default class TestScene extends Scene {
   }
 
   /**
-   * Update scene state
-   * @param {number} deltaTime - Time elapsed since last frame
+   * Override to add test enemy collision detection
    */
-  update(deltaTime) {
-    // Update players
-    this.players.forEach(player => player.update(deltaTime));
-    
-    // Update melee effects
-    this.meleeAttacks = this.meleeAttacks.filter(melee => {
-      melee.update(deltaTime);
-      return melee.isAlive;
-    });
-
-    // Update projectiles and check collisions with test enemy
+  updateProjectiles(deltaTime) {
     this.projectiles = this.projectiles.filter(projectile => {
       projectile.update(deltaTime);
       
@@ -101,7 +87,12 @@ export default class TestScene extends Scene {
       
       return projectile.isAlive;
     });
-    
+  }
+
+  /**
+   * Override to add test enemy melee collision detection
+   */
+  updateEntities(deltaTime) {
     // Check melee effect collisions with test enemy
     this.meleeAttacks.forEach(melee => {
       if (this.testEnemy && !this.testEnemy.isDead && melee.checkCollision(this.testEnemy)) {
@@ -118,27 +109,12 @@ export default class TestScene extends Scene {
   }
 
   /**
-   * Render the test scene
-   * @param {CanvasRenderingContext2D} ctx - Canvas rendering context
+   * Override to render test enemy
    */
-  render(ctx) {
-    // Background
-    this.renderBackground(ctx);
-    this.renderGrid(ctx);
-    
-    // Test enemy
+  renderEntities(ctx) {
     if (this.testEnemy) {
       this.testEnemy.render(ctx);
     }
-    
-    // Projectiles
-    this.renderProjectiles(ctx);
-    
-    // Melee effects
-    this.renderMeleeEffects(ctx);
-    
-    // Players
-    this.renderPlayers(ctx);
   }
 
   /**

@@ -226,8 +226,3 @@ export default class CastHandler {
     ctx.fillText(`${Math.floor(progress * 100)}%`, player.x, y - 2);
   }
 }
-
-// Export for use in other modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = CastHandler;
-}

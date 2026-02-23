@@ -158,8 +158,3 @@ export default class DashHandler {
     return { x: validX, y: validY };
   }
 }
-
-// Export for use in other modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = DashHandler;
-}

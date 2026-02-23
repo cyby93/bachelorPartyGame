@@ -312,8 +312,3 @@ export default class AOEHandler {
     scene.aoeEffects.push(aoeEffect);
   }
 }
-
-// Export for use in other modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = AOEHandler;
-}

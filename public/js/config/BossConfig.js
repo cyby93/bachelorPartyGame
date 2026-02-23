@@ -21,8 +21,3 @@ export const BOSS_CONFIG = {
     ]
   }
 };
-
-// Export for CommonJS (Node.js)
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { BOSS_CONFIG };
-}

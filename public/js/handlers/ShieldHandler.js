@@ -129,8 +129,3 @@ export default class ShieldHandler {
     }
   }
 }
-
-// Export for use in other modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = ShieldHandler;
-}

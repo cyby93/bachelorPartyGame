@@ -155,8 +155,3 @@ export default class MeleeHandler {
     scene.meleeAttacks.push(meleeAttack);
   }
 }
-
-// Export for use in other modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = MeleeHandler;
-}

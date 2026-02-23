@@ -418,13 +418,3 @@ const SkillDatabase = {
 
 // Export for ES6 modules
 export default SkillDatabase;
-
-// Export for CommonJS (Node.js)
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = SkillDatabase;
-}
-
-// Also expose globally for browser (for backward compatibility)
-if (typeof window !== 'undefined') {
-  window.SkillDatabase = SkillDatabase;
-}

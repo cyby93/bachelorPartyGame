@@ -19,8 +19,3 @@ export const INPUT_CONFIG = {
   DEADZONE: 0.2,
   JOYSTICK_SIZE: 100
 };
-
-// Export for CommonJS (Node.js)
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { GAME_CONFIG, INPUT_CONFIG };
-}

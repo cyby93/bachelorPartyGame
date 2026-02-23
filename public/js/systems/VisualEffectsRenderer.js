@@ -239,8 +239,3 @@ export default class VisualEffectsRenderer {
     this.dashTrails = [];
   }
 }
-
-// Export for use in other modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = VisualEffectsRenderer;
-}

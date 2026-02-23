@@ -1,22 +1,24 @@
-export default class AOEEffect {
+import Ability from './Ability.js';
+
+export default class AOEEffect extends Ability {
   constructor(config) {
-    this.x = config.x;
-    this.y = config.y;
-    this.damage = config.damage || 20;
-    this.radius = config.radius || 80;
-    this.color = config.color || '#f39c12';
-    this.owner = config.owner;
-    this.lifetime = config.lifetime || 500;
-    this.createdAt = Date.now();
-    this.isAlive = true;
+    // Call parent constructor with base properties
+    super({
+      x: config.x,
+      y: config.y,
+      owner: config.owner,
+      lifetime: config.lifetime !== undefined ? config.lifetime : 500,
+      radius: config.radius !== undefined ? config.radius : 80,
+      color: config.color !== undefined ? config.color : '#f39c12'
+    });
+    
+    // Initialize AOE-specific properties
+    this.damage = config.damage !== undefined ? config.damage : 20;
     this.hasDealtDamage = false;
   }
 
-  update(deltaTime) {
-    if (!this.isAlive) return;
-    if (Date.now() - this.createdAt > this.lifetime) {
-      this.isAlive = false;
-    }
+  _update(deltaTime) {
+    // AOE effects don't need additional update logic beyond lifetime checking
   }
 
   render(ctx) {
@@ -46,10 +48,6 @@ export default class AOEEffect {
     const dy = this.y - target.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
     return distance < (this.radius + (target.radius || 20));
-  }
-
-  destroy() {
-    this.isAlive = false;
   }
 
   markDamageDealt() {

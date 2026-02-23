@@ -1,21 +1,23 @@
 import { GAME_CONFIG } from '../Constants.js';
+import Ability from './Ability.js';
 
-export default class Projectile {
+export default class Projectile extends Ability {
   constructor(config) {
-    this.x = config.x;
-    this.y = config.y;
+    // Call parent constructor with base properties
+    super({
+      x: config.x,
+      y: config.y,
+      owner: config.owner,
+      lifetime: config.lifetime !== undefined ? config.lifetime : 30000,
+      radius: config.radius !== undefined ? config.radius : 8,
+      color: config.color !== undefined ? config.color : '#ffff00'
+    });
+    
+    // Initialize projectile-specific properties
     this.vx = config.vx || 0;
     this.vy = config.vy || 0;
     this.speed = config.speed || Math.sqrt(this.vx * this.vx + this.vy * this.vy);
     this.damage = config.damage || 10;
-    this.radius = config.radius || 8;
-    this.color = config.color || '#ffff00';
-    this.owner = config.owner;
-    this.lifetime = config.lifetime || 30000;
-    this.createdAt = Date.now();
-    this.isAlive = true;
-    
-    // Enhanced properties for ability system
     this.pierce = config.pierce || false;
     this.range = config.range || 500;
     this.distanceTraveled = 0;
@@ -24,9 +26,7 @@ export default class Projectile {
     this.onImpact = config.onImpact || null;  // For AOE on impact (e.g., Pyroblast)
   }
 
-  update(deltaTime) {
-    if (!this.isAlive) return;
-    
+  _update(deltaTime) {
     // Calculate distance moved this frame
     const dx = this.vx;
     const dy = this.vy;
@@ -47,11 +47,6 @@ export default class Projectile {
     
     // Check bounds
     if (this.x < 0 || this.x > GAME_CONFIG.CANVAS_WIDTH || this.y < 0 || this.y > GAME_CONFIG.CANVAS_HEIGHT) {
-      this.isAlive = false;
-    }
-    
-    // Check lifetime
-    if (Date.now() - this.createdAt > this.lifetime) {
       this.isAlive = false;
     }
   }
@@ -96,9 +91,5 @@ export default class Projectile {
     }
     // Otherwise, destroy on collision
     return true;
-  }
-
-  destroy() {
-    this.isAlive = false;
   }
 }

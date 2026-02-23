@@ -1,21 +1,20 @@
-export default class HealEffect {
+import Ability from './Ability.js';
+
+export default class HealEffect extends Ability {
   constructor(config) {
-    this.x = config.x;
-    this.y = config.y;
-    this.amount = config.amount || 30;
-    this.radius = config.radius || 15;
-    this.owner = config.owner;
-    this.lifetime = config.lifetime || 500;
-    this.createdAt = Date.now();
-    this.isAlive = true;
+    super({
+      x: config.x,
+      y: config.y,
+      owner: config.owner,
+      lifetime: config.lifetime !== undefined ? config.lifetime : 500,
+      radius: config.radius !== undefined ? config.radius : 15,
+      color: config.color !== undefined ? config.color : '#2ecc71'
+    });
+    this.amount = config.amount !== undefined ? config.amount : 30;
   }
 
-  update(deltaTime) {
-    if (!this.isAlive) return;
+  _update(deltaTime) {
     this.y -= 0.5;
-    if (Date.now() - this.createdAt > this.lifetime) {
-      this.isAlive = false;
-    }
   }
 
   render(ctx) {
@@ -43,7 +42,11 @@ export default class HealEffect {
     ctx.restore();
   }
 
-  destroy() {
-    this.isAlive = false;
+  checkCollision(target) {
+    if (!this.isAlive || !target) return false;
+    const dx = this.x - target.x;
+    const dy = this.y - target.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    return distance < (this.radius + (target.radius || 20));
   }
 }

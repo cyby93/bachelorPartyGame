@@ -1,26 +1,28 @@
-export default class MeleeAttack {
+import Ability from './Ability.js';
+
+export default class MeleeAttack extends Ability {
   constructor(config) {
-    this.x = config.x;
-    this.y = config.y;
-    this.damage = config.damage || 15;
-    this.radius = config.radius || 20;
-    this.range = config.range || 80;  // Attack range
-    this.coneAngle = config.angle || Math.PI / 3;  // Cone angle in radians
+    // Call parent constructor with base properties
+    super({
+      x: config.x,
+      y: config.y,
+      owner: config.owner,
+      lifetime: config.lifetime !== undefined ? config.lifetime : 200,
+      radius: config.radius !== undefined ? config.radius : 20,
+      color: config.color !== undefined ? config.color : '#ff6b6b'
+    });
+    
+    // Initialize melee-specific properties
+    this.damage = config.damage !== undefined ? config.damage : 15;
+    this.range = config.range !== undefined ? config.range : 80;  // Attack range
+    this.coneAngle = config.angle !== undefined ? config.angle : Math.PI / 3;  // Cone angle in radians
     this.direction = config.direction || { x: 1, y: 0 };  // Attack direction
-    this.color = config.color || '#ff6b6b';
-    this.owner = config.owner;
-    this.lifetime = config.lifetime || 200;
-    this.duration = config.duration || 200;
-    this.createdAt = Date.now();
-    this.isAlive = true;
+    this.duration = config.duration !== undefined ? config.duration : 200;
     this.angle = Math.atan2(this.direction.y, this.direction.x);
   }
 
-  update(deltaTime) {
-    if (!this.isAlive) return;
-    if (Date.now() - this.createdAt > this.lifetime) {
-      this.isAlive = false;
-    }
+  _update(deltaTime) {
+    // Melee attacks don't need additional update logic beyond lifetime checking
   }
 
   render(ctx) {

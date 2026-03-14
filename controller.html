@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>RAID NIGHT — Controller</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; background: #0f1923; color: #fff; font-family: 'Segoe UI', Arial, sans-serif; touch-action: none; }
+
+    /* ── Screens ── */
+    .screen { display: none; height: 100%; flex-direction: column; align-items: center; justify-content: center; padding: 24px; gap: 16px; }
+    .screen.active { display: flex; }
+
+    /* ── Join screen ── */
+    #join-screen h1   { font-size: 28px; color: #00d2ff; letter-spacing: 2px; }
+    #join-screen p    { font-size: 13px; color: #7fa8c0; }
+    input, select     { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #1e3a4a; background: #16202a; color: #fff; font-size: 16px; }
+    select option     { background: #16202a; }
+    #join-btn         { width: 100%; padding: 14px; border-radius: 8px; border: none; font-size: 18px; font-weight: bold; background: linear-gradient(135deg, #00d2ff, #0070a8); color: #fff; cursor: pointer; }
+
+    /* ── Waiting screen ── */
+    #wait-screen h2   { color: #00d2ff; font-size: 22px; }
+    #wait-screen p    { color: #7fa8c0; font-size: 14px; text-align: center; }
+
+    /* ── Game screen ── */
+    #game-screen      { padding: 0; position: relative; }
+
+    #hud {
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 48px; background: rgba(0,0,0,0.6);
+      display: flex; align-items: center; padding: 0 12px; gap: 12px; z-index: 10;
+    }
+    #hud-name  { font-size: 14px; font-weight: bold; flex: 1; }
+    #hud-hp    { font-size: 13px; color: #2ecc71; }
+
+    #controls  { position: absolute; top: 48px; left: 0; right: 0; bottom: 0; display: flex; }
+
+    /* Left half — movement zone */
+    #move-zone { flex: 1; position: relative; border-right: 1px solid rgba(255,255,255,0.05); }
+
+    /* Right half — skill grid */
+    #skill-grid {
+      flex: 1;
+      display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
+      gap: 2px; background: #000;
+    }
+
+    .skill-btn {
+      background: #16202a;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+      cursor: pointer; user-select: none; position: relative; overflow: hidden;
+      transition: background 0.1s;
+    }
+    .skill-btn:active { background: #1e3a4a; }
+
+    .skill-icon  { font-size: 28px; line-height: 1; }
+    .skill-name  { font-size: 10px; color: #7fa8c0; text-align: center; padding: 0 4px; }
+
+    /* Cooldown overlay — filled from bottom, shrinks as cooldown expires */
+    .cd-overlay {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: rgba(0,0,0,0.65);
+      height: 0%; transition: none;
+      pointer-events: none;
+    }
+    .skill-btn.on-cd .cd-overlay { height: 100%; }
+
+    /* Dead overlay */
+    #dead-overlay {
+      display: none;
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.75);
+      align-items: center; justify-content: center;
+      flex-direction: column; gap: 8px; z-index: 20;
+      text-align: center;
+    }
+    #dead-overlay.visible { display: flex; }
+    #dead-overlay h2 { color: #e74c3c; font-size: 22px; }
+    #dead-overlay p  { color: #aaa; font-size: 13px; }
+  </style>
+</head>
+<body>
+
+  <!-- ── Join screen ── -->
+  <div id="join-screen" class="screen active">
+    <h1>⚔️ RAID NIGHT</h1>
+    <p>Enter your name and choose a class</p>
+    <input id="name-input" type="text" placeholder="Your name" maxlength="15" autocomplete="off">
+    <select id="class-select">
+      <option value="Warrior">⚔️  Warrior — Tank</option>
+      <option value="Paladin">🔨  Paladin — Tank / Heal</option>
+      <option value="Shaman"> ⚡  Shaman  — DPS / Heal</option>
+      <option value="Hunter"> 🏹  Hunter  — Ranged DPS</option>
+      <option value="Priest"> ✝️  Priest  — Healer</option>
+      <option value="Mage">   🔥  Mage    — Glass Cannon</option>
+      <option value="Druid">  🌿  Druid   — Hybrid</option>
+      <option value="Rogue">  🗡️  Rogue   — Assassin</option>
+    </select>
+    <button id="join-btn">JOIN GAME</button>
+  </div>
+
+  <!-- ── Waiting screen ── -->
+  <div id="wait-screen" class="screen">
+    <h2>⏳ Waiting for host…</h2>
+    <p id="wait-class-info"></p>
+    <p style="margin-top:12px;color:#555;font-size:12px;">The host will start the game when everyone is ready.</p>
+  </div>
+
+  <!-- ── Game screen ── -->
+  <div id="game-screen" class="screen">
+    <div id="hud">
+      <span id="hud-name">—</span>
+      <span id="hud-hp">HP: —</span>
+    </div>
+
+    <div id="controls">
+      <div id="move-zone"></div>
+
+      <div id="skill-grid">
+        <!-- Populated by JS from SkillDatabase -->
+      </div>
+    </div>
+
+    <div id="dead-overlay">
+      <h2>💀 YOU DIED</h2>
+      <p>Stay close to an ally to be revived.</p>
+    </div>
+  </div>
+
+  <!-- nipplejs for virtual joysticks -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.9.0/nipplejs.min.js"></script>
+  <script type="module" src="./client/controller/main.js"></script>
+</body>
+</html>

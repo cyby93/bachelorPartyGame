@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(find . -maxdepth 1 -name \"*.md\" | sort && find .kiro -name \"*.md\" 2>/dev/null | sort)",
-      "Bash(cd D:/Games/bachelorPartyGame && rm \\\\\n  ABILITY_SYSTEM_INTEGRATION_GUIDE.md \\\\\n  AGENT_ABILITY_SYSTEM_SPECIFICATION.md \\\\\n  AGENT_INSTRUCTIONS.md \\\\\n  AGENT_SCENE_SPECIFICATIONS.md \\\\\n  CONFIG_REFACTOR_SUMMARY.md \\\\\n  COOLDOWN_REFACTOR_SUMMARY.md \\\\\n  INTEGRATION_COMPLETE.md \\\\\n  README.md \\\\\n  SCENE_BASE_CLASS_REFACTOR.md \\\\\n  SKILL_REFERENCE.md \\\\\n  SKILLDATABASE_IMPORT_SUMMARY.md \\\\\n  SYSTEM_ARCHITECTURE.md \\\\\n  TEST_INTEGRATION.md && \\\\\nrm -rf .kiro/specs && \\\\\nrm -f .kiro/steering/product.md .kiro/steering/structure.md .kiro/steering/tech.md)"
+      "Bash(cd D:/Games/bachelorPartyGame && rm \\\\\n  ABILITY_SYSTEM_INTEGRATION_GUIDE.md \\\\\n  AGENT_ABILITY_SYSTEM_SPECIFICATION.md \\\\\n  AGENT_INSTRUCTIONS.md \\\\\n  AGENT_SCENE_SPECIFICATIONS.md \\\\\n  CONFIG_REFACTOR_SUMMARY.md \\\\\n  COOLDOWN_REFACTOR_SUMMARY.md \\\\\n  INTEGRATION_COMPLETE.md \\\\\n  README.md \\\\\n  SCENE_BASE_CLASS_REFACTOR.md \\\\\n  SKILL_REFERENCE.md \\\\\n  SKILLDATABASE_IMPORT_SUMMARY.md \\\\\n  SYSTEM_ARCHITECTURE.md \\\\\n  TEST_INTEGRATION.md && \\\\\nrm -rf .kiro/specs && \\\\\nrm -f .kiro/steering/product.md .kiro/steering/structure.md .kiro/steering/tech.md)",
+      "Bash(cd D:/Games/bachelorPartyGame && rm -rf public server.js jest.config.js)",
+      "Bash(cd D:/Games/bachelorPartyGame && npm install 2>&1)"
     ]
   }
 }

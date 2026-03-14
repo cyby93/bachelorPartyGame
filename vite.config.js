@@ -6,6 +6,7 @@ export default defineConfig({
 
   build: {
     outDir: 'dist',
+    target: 'esnext',
     rollupOptions: {
       input: {
         host:       './index.html',

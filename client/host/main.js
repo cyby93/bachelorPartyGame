@@ -1,91 +1,96 @@
 /**
  * client/host/main.js
- * Phase 1 — server connection, player list, protocol smoke-test.
- * Phase 2 will replace the canvas placeholder with a full PixiJS renderer.
+ * Host display entry point.
+ *
+ * Responsibilities:
+ *  - Bootstrap PixiJS via HostGame
+ *  - Manage the DOM sidebar (player list, QR code, start/restart button)
+ *  - Wire all socket events to HostGame + DOM
  */
 
-import { io }     from 'socket.io-client'
-import { EVENTS } from '../../shared/protocol.js'
+import { io }      from 'socket.io-client'
+import { EVENTS }  from '../../shared/protocol.js'
 import { CLASSES } from '../../shared/ClassConfig.js'
+import HostGame    from './HostGame.js'
 
-// ── Socket connection ──────────────────────────────────────────────────────
+// ── PixiJS game init (top-level await — supported in Vite ESM) ─────────────
+const game = new HostGame()
+await game.init(document.getElementById('canvas-wrap'))
+
+// ── Socket ─────────────────────────────────────────────────────────────────
 const socket = io()
 
 // ── DOM refs ───────────────────────────────────────────────────────────────
-const badge      = document.getElementById('conn-badge')
-const serverIpEl = document.getElementById('server-ip')
-const playerList = document.getElementById('player-list')
-const waitingMsg = document.getElementById('waiting-msg')
-const startBtn   = document.getElementById('start-btn')
-const qrWrap     = document.getElementById('qr-code')
-const canvas     = document.getElementById('game-canvas')
-const ctx        = canvas.getContext('2d')
+const badge        = document.getElementById('conn-badge')
+const serverIpEl   = document.getElementById('server-ip')
+const playerListEl = document.getElementById('player-list')
+const startBtn     = document.getElementById('start-btn')
+const qrWrap       = document.getElementById('qr-code')
 
-// ── Canvas placeholder (Phase 2 will swap this for PixiJS) ────────────────
-canvas.width  = 1024
-canvas.height = 768
+// ── DOM helpers ────────────────────────────────────────────────────────────
 
-function drawPlaceholder(playerCount) {
-  ctx.fillStyle = '#0a1018'
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
+function renderDOMPlayerList() {
+  const players = Object.values(game.knownState.players).filter(p => !p.isHost)
 
-  // Grid
-  ctx.strokeStyle = 'rgba(255,255,255,0.04)'
-  ctx.lineWidth = 1
-  for (let x = 0; x < canvas.width;  x += 50) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke() }
-  for (let y = 0; y < canvas.height; y += 50) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y);  ctx.stroke() }
-
-  ctx.textAlign    = 'center'
-  ctx.fillStyle    = 'rgba(0, 210, 255, 0.15)'
-  ctx.font         = 'bold 48px Arial'
-  ctx.fillText('RAID NIGHT', canvas.width / 2, canvas.height / 2 - 20)
-  ctx.font         = '18px Arial'
-  ctx.fillStyle    = 'rgba(255,255,255,0.2)'
-  ctx.fillText(`${playerCount} player${playerCount !== 1 ? 's' : ''} connected — waiting to start`, canvas.width / 2, canvas.height / 2 + 24)
-}
-
-// ── Local state ────────────────────────────────────────────────────────────
-const players = new Map()   // id → DTO
-
-function renderPlayerList() {
-  const list = Array.from(players.values()).filter(p => !p.isHost)
-
-  if (list.length === 0) {
-    playerList.innerHTML = '<p id="waiting-msg">Waiting for players…</p>'
-    startBtn.disabled = true
-  } else {
-    playerList.innerHTML = list.map(p => {
-      const color = CLASSES[p.className]?.color ?? '#fff'
-      return `
-        <div class="player-item" style="border-left-color:${color}">
-          <span class="pname">${p.name}</span>
-          <span class="pclass" style="color:${color}">${p.className}</span>
-        </div>`
-    }).join('')
-    startBtn.disabled = false
+  if (players.length === 0) {
+    playerListEl.innerHTML = '<p id="waiting-msg">Waiting for players…</p>'
+    if (startBtn.dataset.scene === 'lobby') startBtn.disabled = true
+    return
   }
 
-  drawPlaceholder(list.length)
+  playerListEl.innerHTML = players.map(p => {
+    const color = CLASSES[p.className]?.color ?? '#aaa'
+    return `
+      <div class="player-item" style="border-left-color:${color}">
+        <span class="pname">${p.name}</span>
+        <span class="pclass" style="color:${color}">${p.className}</span>
+      </div>`
+  }).join('')
+
+  if (startBtn.dataset.scene === 'lobby') startBtn.disabled = false
+}
+
+function setSceneControls(scene) {
+  startBtn.dataset.scene = scene
+
+  if (scene === 'lobby') {
+    startBtn.textContent = 'START GAME'
+    startBtn.disabled    = Object.values(game.knownState.players).filter(p => !p.isHost).length === 0
+    startBtn.style.display = ''
+    startBtn.onclick     = () => socket.emit(EVENTS.START_GAME)
+  } else if (scene === 'result' || scene === 'gameover') {
+    startBtn.textContent   = 'RESTART GAME'
+    startBtn.disabled      = false
+    startBtn.style.display = ''
+    startBtn.onclick       = () => socket.emit(EVENTS.RESTART_GAME)
+  } else {
+    // In-game: hide the button
+    startBtn.style.display = 'none'
+  }
 }
 
 // ── Socket events ──────────────────────────────────────────────────────────
+
 socket.on('connect', () => {
   badge.textContent = 'Connected'
   badge.classList.add('connected')
 
-  const origin   = window.location.origin
-  const controllerUrl = origin + '/controller'
-
-  // Display join URL
+  // Display the controller URL and generate QR code
+  const controllerUrl = `${window.location.origin}/controller`
   serverIpEl.textContent = controllerUrl.replace(/^https?:\/\//, '')
 
-  // QR code
-  qrWrap.innerHTML = ''
   if (typeof QRCode !== 'undefined') {
-    new QRCode(qrWrap, { text: controllerUrl, width: 150, height: 150, colorDark: '#000', colorLight: '#fff' })
+    qrWrap.innerHTML = ''
+    new QRCode(qrWrap, {
+      text:       controllerUrl,
+      width:      150,
+      height:     150,
+      colorDark:  '#000000',
+      colorLight: '#ffffff',
+    })
   }
 
-  // Join as host
+  // Register as the host player
   socket.emit(EVENTS.JOIN, { name: 'Host Display', className: 'Warrior', isHost: true })
 })
 
@@ -95,39 +100,27 @@ socket.on('disconnect', () => {
 })
 
 socket.on(EVENTS.INIT, state => {
-  players.clear()
-  Object.values(state.players).forEach(p => players.set(p.id, p))
-  renderPlayerList()
+  game.receiveFullState(state)
+  game.switchScene(state.scene ?? 'lobby')
+  setSceneControls(state.scene ?? 'lobby')
+  renderDOMPlayerList()
 })
 
 socket.on(EVENTS.PLAYER_JOINED, player => {
-  players.set(player.id, player)
-  renderPlayerList()
+  game.addPlayer(player)
+  renderDOMPlayerList()
 })
 
 socket.on(EVENTS.PLAYER_LEFT, id => {
-  players.delete(id)
-  renderPlayerList()
+  game.removePlayer(id)
+  renderDOMPlayerList()
 })
 
 socket.on(EVENTS.STATE_DELTA, delta => {
-  // Merge delta into local player map
-  Object.values(delta.players ?? {}).forEach(d => {
-    const existing = players.get(d.id)
-    if (existing) Object.assign(existing, d)
-  })
-  // Phase 2: pass state to PixiJS renderer here
+  game.receiveState(delta)
 })
 
 socket.on(EVENTS.SCENE_CHANGE, ({ scene }) => {
-  console.log('[host] scene →', scene)
-  // Phase 2: trigger scene transition in PixiJS renderer
+  game.switchScene(scene)
+  setSceneControls(scene)
 })
-
-// ── Host controls ──────────────────────────────────────────────────────────
-startBtn.addEventListener('click', () => {
-  socket.emit(EVENTS.START_GAME)
-})
-
-// Initial draw
-drawPlaceholder(0)

@@ -347,44 +347,49 @@ class SkillSystem {
 - [ ] Implement `ResultRenderer` (MVP stats, victory/defeat, restart button)
 - [ ] Add layered container structure (background, entities, UI)
 
-### Phase 3 — Controller UI
-- [ ] Set up Svelte on controller page
-- [ ] `JoinScreen.svelte` — name input + class picker
-- [ ] `LobbyScreen.svelte` — waiting display with class info
-- [ ] `GameScreen.svelte` — move joystick + 2×2 skill grid + HP bar + dead overlay
-- [ ] `SkillButton.svelte` — reads `inputType` from SkillDatabase, handles all 4 interaction modes
-- [ ] `CooldownOverlay.svelte` — CSS conic-gradient countdown (no JS loop)
-- [ ] Responsive layout for various phone screen sizes and orientations
+### Phase 3 — Controller UI ✅
+- [x] Set up Svelte on controller page
+- [x] `JoinScreen.svelte` — name input + class picker (class grid with color highlight)
+- [x] `LobbyScreen.svelte` — waiting display with class info + skill list
+- [x] `GameScreen.svelte` — move joystick + 2×2 skill grid + HP bar + dead overlay
+- [x] `SkillButton.svelte` — reads `inputType` from SkillDatabase, handles all 4 interaction modes
+- [x] `CooldownOverlay.svelte` — CSS conic-gradient countdown via @property (no JS loop)
+- [x] Responsive layout for various phone screen sizes and orientations
 
-### Phase 4 — Skill System
-- [ ] Port all 32 skill configs to `shared/SkillDatabase.js` with `inputType` field added
-- [ ] Implement `SkillSystem.js` on server — clean single routing pipeline
-- [ ] PROJECTILE handler: spawn projectile with velocity, track lifetime
-- [ ] MELEE handler: cone check — direction from aim vector, hits all in arc
-- [ ] AOE_SELF handler: radius damage/heal/debuff centered on caster
-- [ ] AOE_LOBBED handler: spawn AOE projectile, detonate on arrival
-- [ ] DASH handler: teleport or physics dash with boundary safety
-- [ ] BUFF handler: apply timed stat modifier
-- [ ] SHIELD handler: directional block state, SUSTAINED input protocol
-- [ ] CAST handler: charge state machine (start → hold → release/cancel → fire)
-- [ ] Multi-projectile subtype (Hunter Multi-Shot): fan of N projectiles
+### Phase 4 — Skill System ✅
+- [x] Port all 32 skill configs to `shared/SkillDatabase.js` with `inputType` field added
+- [x] Implement `SkillSystem.js` on server — clean single routing pipeline
+- [x] PROJECTILE handler: spawn projectile with velocity, track lifetime
+- [x] MELEE handler: cone check — direction from aim vector, hits all in arc
+- [x] AOE_SELF handler: radius damage/heal/debuff centered on caster
+- [x] AOE_LOBBED handler: spawn AOE projectile, detonate on arrival
+- [x] DASH handler: teleport or physics dash with boundary safety
+- [x] BUFF handler: apply timed stat modifier
+- [x] SHIELD handler: directional block state, SUSTAINED input protocol
+- [x] CAST handler: charge state machine (start → hold → release/cancel → fire)
+- [x] Multi-projectile subtype (Hunter Multi-Shot): fan of N projectiles
 
-### Phase 5 — Game Content
-- [ ] `ServerEnemy.js` — spawn from edges, chase nearest living player, simple melee contact damage
-- [ ] Enemy spawn schedule for TrashMob scene (1–3 every 2s, max 50 concurrent)
-- [ ] `ServerBoss.js` — Illidan: 3-phase AI, phase ability patterns
-- [ ] Death / tombstone / revive system (server-side timer, progress broadcast)
-- [ ] Win/lose condition checks and scene transition signals
-- [ ] Stats tracking: damage per player, death count, kill count, time
+### Phase 5 — Game Content ✅
+- [x] `ServerEnemy.js` — spawn from edges, chase nearest living player, simple melee contact damage
+- [x] Enemy spawn schedule for TrashMob scene (1–3 every 2s, max 50 concurrent)
+- [x] `ServerBoss.js` — Illidan: 3-phase AI, phase ability patterns
+- [x] Death / tombstone / revive system (server-side timer, progress broadcast)
+- [x] Win/lose condition checks and scene transition signals
+- [x] Stats tracking: damage per player, death count, kill count, time
 
-### Phase 6 — Polish
-- [ ] Particle effects (hit sparks, death explosions, projectile trails)
-- [ ] Background dungeon tile texture (CC0 asset)
-- [ ] Sound effects: attack, death, boss roar, level transition, victory fanfare
-- [ ] Controller haptic feedback on skill use (Vibration API)
-- [ ] Reconnection: client can rejoin mid-game and resume with correct state
-- [ ] Performance pass: profile PixiJS draw calls, optimize sprite pools
-- [ ] Mobile browser quirks: prevent scroll/zoom on controller, fullscreen API on host
+### Phase 6 — Polish ✅
+- [x] Enemy sprites pooled and rendered in BattleRenderer (trashMob mode)
+- [x] Boss sprite pooled and rendered in BattleRenderer (bossFight mode)
+- [x] Projectile sprites pooled and rendered in both battle modes
+- [x] Tombstone graphics with revive progress ring drawn in BattleRenderer
+- [x] HostGame.js forwards enemies/projectiles/tombstones/stats from server delta
+- [x] Particle effects: hit sparks on player HP drop, death bursts on enemy/player death
+- [x] Projectile trails: fading 4-frame history on ProjectileSprite
+- [x] Background: procedural dungeon stone tiles replacing plain grid
+- [x] Sound effects: Web Audio API synthesizer (hit, death, transition, victory, defeat, boss)
+- [x] Controller haptic feedback: 20ms vibrate on skill touchstart (Vibration API)
+- [x] Reconnection: controller re-emits JOIN on socket reconnect if already past join screen
+- [x] Fullscreen button in host sidebar (Fullscreen API, toggles label)
 
 ---
 

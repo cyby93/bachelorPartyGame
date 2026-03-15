@@ -11,8 +11,13 @@
  */
 
 import { Container, Graphics, Text } from 'pixi.js'
-import { GAME_CONFIG }  from '../../../shared/GameConfig.js'
-import PlayerSprite     from '../entities/PlayerSprite.js'
+import { GAME_CONFIG }   from '../../../shared/GameConfig.js'
+import { CLASSES }       from '../../../shared/ClassConfig.js'
+import PlayerSprite      from '../entities/PlayerSprite.js'
+import EnemySprite       from '../entities/EnemySprite.js'
+import BossSprite        from '../entities/BossSprite.js'
+import ProjectileSprite  from '../entities/ProjectileSprite.js'
+import ParticleSystem    from '../systems/ParticleSystem.js'
 
 const { CANVAS_WIDTH: W, CANVAS_HEIGHT: H } = GAME_CONFIG
 const KILL_GOAL = GAME_CONFIG.ENEMY_KILL_GOAL
@@ -27,10 +32,25 @@ export default class BattleRenderer {
     this._entityRoot         = new Container()
     this._uiRoot             = new Container()
 
-    // Sub-containers for future entity types (Phase 5)
+    // Sub-containers in Z order: enemies behind boss behind players
     this.enemyContainer      = new Container()
     this.bossContainer       = new Container()
     this.projectileContainer = new Container()    // lives in fx layer
+
+    // Sprite pools
+    this.enemySprites  = new Map()   // id → EnemySprite
+    this.projSprites   = new Map()   // id → ProjectileSprite
+    this.bossSprite    = null
+    this.tombstoneGfx  = new Map()   // playerId → Graphics
+
+    // Particle system (created in enter())
+    this.particles     = null
+
+    // Previous-frame tracking for event detection
+    this._prevPlayerHp  = {}   // id → hp
+    this._prevEnemyIds  = new Set()
+    this._prevBossPhase = 1
+    this._prevBossHp    = Infinity
 
     // Add entity sub-containers in Z order: enemies behind boss behind players
     this._entityRoot.addChild(this.enemyContainer, this.bossContainer)
@@ -43,12 +63,37 @@ export default class BattleRenderer {
     this.game.layers.fx.addChild(this.projectileContainer)
     this.game.layers.ui.addChild(this._uiRoot)
 
+    this.particles = new ParticleSystem(this.game.layers.fx)
     this._buildUI()
   }
 
   exit() {
     this.playerSprites.forEach(s => s.destroy())
     this.playerSprites.clear()
+
+    // Destroy enemy sprites
+    this.enemySprites.forEach(s => s.destroy())
+    this.enemySprites.clear()
+
+    // Destroy projectile sprites
+    this.projSprites.forEach(s => s.destroy())
+    this.projSprites.clear()
+
+    // Destroy boss sprite
+    if (this.bossSprite) {
+      this.bossSprite.destroy()
+      this.bossSprite = null
+    }
+
+    // Destroy tombstones
+    this.tombstoneGfx.forEach(gfx => gfx.destroy())
+    this.tombstoneGfx.clear()
+
+    if (this.particles) { this.particles.destroy(); this.particles = null }
+    this._prevPlayerHp  = {}
+    this._prevEnemyIds  = new Set()
+    this._prevBossPhase = 1
+    this._prevBossHp    = Infinity
 
     this.game.layers.entities.removeChild(this._entityRoot)
     this.game.layers.fx.removeChild(this.projectileContainer)
@@ -60,20 +105,20 @@ export default class BattleRenderer {
     // Re-add sub-containers (they were removed by removeChildren above)
     this._entityRoot.addChild(this.enemyContainer, this.bossContainer)
 
-    this._killText     = null
-    this._killFill     = null
-    this._bossHpFill   = null
-    this._lastKills    = -1
+    this._killText      = null
+    this._killFill      = null
+    this._bossHpFill    = null
+    this._lastKills     = -1
     this._lastBossHpPct = -1
   }
 
   // ── Per-frame update ──────────────────────────────────────────────────────
 
-  update() {
+  update(dt = 0.016) {
     const state     = this.game.knownState
     const activeIds = new Set()
 
-    // Update players
+    // Update players + detect HP changes for hit sparks
     Object.values(state.players).forEach(p => {
       if (p.isHost) return
       activeIds.add(p.id)
@@ -85,7 +130,20 @@ export default class BattleRenderer {
       }
 
       const pos = this.game.getRenderPos(p)
-      this.playerSprites.get(p.id).update(p, pos)
+      this.playerSprites.get(p.id).update(p, pos, dt)
+
+      // Hit spark when player HP drops
+      const prevHp = this._prevPlayerHp[p.id]
+      if (prevHp != null && p.hp < prevHp && !p.isDead) {
+        const color = CLASSES[p.className]?.color ?? '#ffffff'
+        this.particles?.hitSpark(pos.x, pos.y, color)
+      }
+      // Death burst when player just died
+      if (prevHp != null && prevHp > 0 && p.isDead) {
+        const color = CLASSES[p.className]?.color ?? '#ffffff'
+        this.particles?.deathBurst(pos.x, pos.y, color)
+      }
+      this._prevPlayerHp[p.id] = p.hp
     })
 
     // Remove gone players
@@ -96,6 +154,99 @@ export default class BattleRenderer {
         this.playerSprites.delete(id)
       }
     })
+
+    // ── Update enemies (trashMob only) ─────────────────────────────────────
+    if (this.mode === 'trashMob') {
+      const activeEnemyIds = new Set((state.enemies ?? []).map(e => e.id))
+
+      for (const e of (state.enemies ?? [])) {
+        if (!this.enemySprites.has(e.id)) {
+          const s = new EnemySprite(e)
+          this.enemySprites.set(e.id, s)
+          this.enemyContainer.addChild(s.container)
+        }
+        this.enemySprites.get(e.id).update(e)
+      }
+
+      this.enemySprites.forEach((s, id) => {
+        if (!activeEnemyIds.has(id)) {
+          // Enemy just died — burst at last known position
+          const pos = s.container.position
+          this.particles?.deathBurst(pos.x, pos.y, 0xc0392b)
+          this.enemyContainer.removeChild(s.container)
+          s.destroy()
+          this.enemySprites.delete(id)
+        }
+      })
+    }
+
+    // ── Update boss (bossFight only) ────────────────────────────────────────
+    if (this.mode === 'bossFight' && state.boss) {
+      if (!this.bossSprite) {
+        this.bossSprite = new BossSprite()
+        this.bossContainer.addChild(this.bossSprite.container)
+      }
+      this.bossSprite.update(state.boss)
+
+      if (state.boss.isDead && this.bossSprite) {
+        this.bossContainer.removeChild(this.bossSprite.container)
+        this.bossSprite.destroy()
+        this.bossSprite = null
+      }
+    }
+
+    // ── Update projectiles (both modes) ─────────────────────────────────────
+    const activeProjIds = new Set((state.projectiles ?? []).map(p => p.id))
+
+    for (const proj of (state.projectiles ?? [])) {
+      if (!this.projSprites.has(proj.id)) {
+        const s = new ProjectileSprite(proj)
+        this.projSprites.set(proj.id, s)
+        this.projectileContainer.addChild(s.container)
+      }
+      this.projSprites.get(proj.id).update(proj)
+    }
+
+    this.projSprites.forEach((s, id) => {
+      if (!activeProjIds.has(id)) {
+        this.projectileContainer.removeChild(s.container)
+        s.destroy()
+        this.projSprites.delete(id)
+      }
+    })
+
+    // ── Update tombstones ───────────────────────────────────────────────────
+    const activeTombIds = new Set((state.tombstones ?? []).map(t => t.id))
+
+    for (const tomb of (state.tombstones ?? [])) {
+      if (!this.tombstoneGfx.has(tomb.id)) {
+        const gfx = new Graphics()
+        this.tombstoneGfx.set(tomb.id, gfx)
+        this._uiRoot.addChild(gfx)
+      }
+      const gfx = this.tombstoneGfx.get(tomb.id)
+      gfx.clear()
+      // Tombstone cross
+      gfx.rect(tomb.x - 3, tomb.y - 20, 6, 24)
+      gfx.rect(tomb.x - 10, tomb.y - 14, 20, 6)
+      gfx.fill({ color: 0x888888, alpha: 0.8 })
+      // Revive progress ring
+      if (tomb.progress > 0) {
+        gfx.arc(tomb.x, tomb.y + 14, 14, -Math.PI / 2, -Math.PI / 2 + tomb.progress * Math.PI * 2)
+        gfx.stroke({ color: 0x00ff88, width: 3 })
+      }
+    }
+
+    this.tombstoneGfx.forEach((gfx, id) => {
+      if (!activeTombIds.has(id)) {
+        this._uiRoot.removeChild(gfx)
+        gfx.destroy()
+        this.tombstoneGfx.delete(id)
+      }
+    })
+
+    // Tick particles
+    this.particles?.update(dt)
 
     // Trash mob: update kill counter
     if (this.mode === 'trashMob' && this._killText) {

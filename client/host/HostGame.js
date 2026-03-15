@@ -48,16 +48,28 @@ export default class HostGame {
       this.app.stage.addChild(this.layers[name])
     }
 
-    // ── Permanent background + grid (drawn once, never cleared) ──────────
+    // ── Dungeon tile background (drawn once) ─────────────────────────────
     const { CANVAS_WIDTH: W, CANVAS_HEIGHT: H } = GAME_CONFIG
     const bgGfx = new Graphics()
+    const TILE  = 64
 
-    bgGfx.rect(0, 0, W, H)
-    bgGfx.fill(0x0a1018)
+    // Pseudo-random tile shading (seeded for consistency)
+    let seed = 13
+    const rand = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 0xffffffff }
 
-    for (let x = 0; x <= W; x += 50) bgGfx.moveTo(x, 0).lineTo(x, H)
-    for (let y = 0; y <= H; y += 50) bgGfx.moveTo(0, y).lineTo(W, y)
-    bgGfx.stroke({ color: 0xffffff, alpha: 0.04, width: 1 })
+    const cols = Math.ceil(W / TILE)
+    const rows = Math.ceil(H / TILE)
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const v = Math.floor(12 + rand() * 10)
+        bgGfx.rect(c * TILE, r * TILE, TILE - 1, TILE - 1)
+        bgGfx.fill((v << 16) | (v << 8) | v)
+      }
+    }
+    // Tile border lines
+    for (let x = 0; x <= W; x += TILE) bgGfx.moveTo(x, 0).lineTo(x, H)
+    for (let y = 0; y <= H; y += TILE) bgGfx.moveTo(0, y).lineTo(W, y)
+    bgGfx.stroke({ color: 0x000000, alpha: 0.4, width: 1 })
 
     this.layers.bg.addChild(bgGfx)
 
@@ -72,8 +84,8 @@ export default class HostGame {
 
     this.switchScene('lobby')
 
-    // ── Tick ─────────────────────────────────────────────────────────────
-    this.app.ticker.add(() => this.activeRenderer?.update())
+    // ── Tick — pass delta-time (seconds) to renderers ────────────────────
+    this.app.ticker.add(ticker => this.activeRenderer?.update(ticker.deltaMS / 1000))
   }
 
   // ── Scene management ──────────────────────────────────────────────────────
@@ -116,9 +128,13 @@ export default class HostGame {
       Object.assign(p, d)
     })
 
-    // Forward boss / kill count updates if present
-    if (delta.boss)      this.knownState.boss      = { ...(this.knownState.boss ?? {}), ...delta.boss }
-    if (delta.killCount != null) this.knownState.killCount = delta.killCount
+    // Forward boss / kill count / entities updates if present
+    if (delta.boss)                this.knownState.boss       = { ...(this.knownState.boss ?? {}), ...delta.boss }
+    if (delta.killCount != null)   this.knownState.killCount  = delta.killCount
+    if (delta.enemies   != null)   this.knownState.enemies    = delta.enemies
+    if (delta.projectiles != null) this.knownState.projectiles = delta.projectiles
+    if (delta.tombstones  != null) this.knownState.tombstones  = delta.tombstones
+    if (delta.stats       != null) this.knownState.stats       = delta.stats
   }
 
   addPlayer(dto) {

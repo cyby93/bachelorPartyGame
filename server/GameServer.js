@@ -2,7 +2,10 @@ import { EVENTS }        from '../shared/protocol.js'
 import { GAME_CONFIG }   from '../shared/GameConfig.js'
 import { CLASSES, resolveClassName } from '../shared/ClassConfig.js'
 import ServerPlayer      from './entities/ServerPlayer.js'
+import ServerEnemy       from './entities/ServerEnemy.js'
+import ServerBoss        from './entities/ServerBoss.js'
 import CooldownSystem    from './systems/CooldownSystem.js'
+import SkillSystem       from './systems/SkillSystem.js'
 
 /**
  * GameServer — authoritative game simulation.
@@ -22,7 +25,23 @@ export default class GameServer {
     // Per-player input queue: filled by socket handlers, drained each tick
     this.inputQueues = new Map()    // socketId → Array<InputEvent>
 
-    this.cooldowns = new CooldownSystem()
+    this.cooldowns   = new CooldownSystem()
+    this.skillSystem = new SkillSystem()
+
+    // Game entities
+    this.projectiles   = new Map()  // id → projectile plain object
+    this.enemies       = new Map()  // id → ServerEnemy
+    this.boss          = null
+
+    this._enemyIdSeq = 0
+    this._lastSpawn  = 0
+    this.killCount   = 0
+
+    // Stats tracking
+    this.stats = { damage: {}, deaths: {}, kills: 0, startTime: 0 }
+
+    // Revive tracking: deadPlayerId → { reviverId, startedAt }
+    this.reviveTimers = new Map()
 
     this.tick      = 0
     this.lastTick  = Date.now()
@@ -34,7 +53,7 @@ export default class GameServer {
     )
   }
 
-  // ── Connection handling ────────────────────────────────────────────────
+  // ── Connection handling ────────────────────────────────────────────────────
 
   handleConnection(socket) {
     console.log(`[+] connected   ${socket.id}`)
@@ -47,7 +66,7 @@ export default class GameServer {
     socket.on('disconnect',        ()   => this._onDisconnect(socket))
   }
 
-  // ── Socket event handlers ──────────────────────────────────────────────
+  // ── Socket event handlers ──────────────────────────────────────────────────
 
   _onJoin(socket, data) {
     const { name, className, isHost } = data ?? {}
@@ -87,12 +106,23 @@ export default class GameServer {
     queue.push({
       type:   'skill',
       index:  Number(data?.index) || 0,
-      vector: data?.vector ?? { x: 1, y: 0 }
+      vector: data?.vector ?? { x: 1, y: 0 },
+      action: data?.action ?? undefined,
     })
   }
 
   _onStartGame(socket) {
     if (!this.players.get(socket.id)?.isHost) return
+
+    // Reset stats and clear leftover state
+    this.killCount   = 0
+    this.stats       = { damage: {}, deaths: {}, kills: 0, startTime: Date.now() }
+    this.projectiles.clear()
+    this.enemies.clear()
+    this.boss        = null
+    this.reviveTimers.clear()
+    this._lastSpawn  = 0
+
     this._changeScene('trashMob')
   }
 
@@ -102,12 +132,25 @@ export default class GameServer {
     // Reset all players to full HP / alive
     this.players.forEach(p => {
       if (!p.isHost) {
-        p.hp     = p.maxHp
-        p.isDead = false
+        p.hp          = p.maxHp
+        p.isDead      = false
+        p.activeCast  = null
+        p.shieldActive = false
+        p.activeEffects = []
+        p.rebuildStats()
         p.x = GAME_CONFIG.CANVAS_WIDTH  / 2 + (Math.random() - 0.5) * 300
         p.y = GAME_CONFIG.CANVAS_HEIGHT / 2 + (Math.random() - 0.5) * 200
       }
     })
+
+    // Clear all game entities
+    this.projectiles.clear()
+    this.enemies.clear()
+    this.boss          = null
+    this.killCount     = 0
+    this.stats         = { damage: {}, deaths: {}, kills: 0, startTime: 0 }
+    this.reviveTimers.clear()
+    this._lastSpawn    = 0
 
     this._changeScene('lobby')
   }
@@ -123,19 +166,39 @@ export default class GameServer {
     this.io.emit(EVENTS.PLAYER_LEFT, socket.id)
   }
 
-  // ── Scene management ───────────────────────────────────────────────────
+  // ── Scene management ───────────────────────────────────────────────────────
 
   _changeScene(name) {
     this.scene = name
     console.log(`[~] scene → ${name}`)
     this.io.emit(EVENTS.SCENE_CHANGE, { scene: name })
+
+    // Clean up on return to lobby
+    if (name === 'lobby') {
+      this.enemies.clear()
+      this.projectiles.clear()
+      this.boss = null
+      this.reviveTimers.clear()
+    }
   }
 
-  // ── Tick loop ──────────────────────────────────────────────────────────
+  // ── Game state accessor ────────────────────────────────────────────────────
+
+  _gs() {
+    return {
+      players:     this.players,
+      projectiles: this.projectiles,
+      enemies:     this.enemies,
+      boss:        this.boss,
+      stats:       this.stats,
+    }
+  }
+
+  // ── Tick loop ──────────────────────────────────────────────────────────────
 
   _gameTick() {
     const now = Date.now()
-    const dt  = Math.min((now - this.lastTick) / 1000, 0.1)  // seconds, capped at 100 ms
+    const dt  = Math.min((now - this.lastTick) / 1000, 0.1)
     this.lastTick = now
     this.tick++
 
@@ -155,54 +218,332 @@ export default class GameServer {
       }
 
       if (lastMove) player.setMoveInput(lastMove.x, lastMove.y)
-
       queue.length = 0
     })
 
-    // 2. Update all entities
+    // 2. Update players
     this.players.forEach(p => p.update(dt))
 
-    // 3. Future phases will update enemies, boss, projectiles here
+    // 3. Update enemies + boss + skill ticks
+    if (this.scene === 'trashMob' || this.scene === 'bossFight') {
+      const gs = this._gs()
+      this.skillSystem.tick(gs, dt)
+
+      if (this.scene === 'trashMob') {
+        this._updateEnemies(dt, now)
+        this._spawnEnemies(now)
+        this._checkRevive(now)
+        this._checkTrashMobWin()
+        this._checkAllDead()
+      } else if (this.scene === 'bossFight') {
+        this._updateBoss(dt, now)
+        this._checkRevive(now)
+        this._checkBossWin()
+        this._checkAllDead()
+      }
+    }
 
     // 4. Broadcast delta state
     this.io.emit(EVENTS.STATE_DELTA, this._deltaState())
   }
 
-  /**
-   * Skill input handler.
-   * Phase 4 will wire this to SkillSystem. For now it validates and logs.
-   */
+  // ── Skill processing ────────────────────────────────────────────────────────
+
   _processSkillInput(player, input) {
     if (player.isDead) return
-    const { index, vector } = input
+
+    const { index, vector, action } = input
+    const config = player.getSkillConfig(index)
+    if (!config) return
+
+    // SHIELD is SUSTAINED — bypass cooldown entirely
+    if (config.type === 'SHIELD') {
+      const gs = this._gs()
+      this.skillSystem.execute(gs, player, config, index, vector ?? { x: 1, y: 0 }, action)
+      return
+    }
+
+    if (player.isStunned) return
 
     if (this.cooldowns.isOnCooldown(player.id, index)) return
+    this.cooldowns.start(player.id, index, config.cooldown)
 
-    const skillConfig = player.getSkillConfig(index)
-    if (!skillConfig) return
-
-    // Placeholder: start cooldown and broadcast it
-    this.cooldowns.start(player.id, index, skillConfig.cooldown)
-
-    const expiresAt = Date.now() + skillConfig.cooldown
+    const expiresAt = Date.now() + config.cooldown
     this.io.emit(EVENTS.COOLDOWN, { playerId: player.id, skillIndex: index, expiresAt })
 
-    // TODO Phase 4: pass to SkillSystem for actual effect execution
+    const gs = this._gs()
+    this.skillSystem.execute(gs, player, config, index, vector ?? { x: 1, y: 0 }, action)
   }
 
-  // ── State serialisation ────────────────────────────────────────────────
+  // ── Enemy management ────────────────────────────────────────────────────────
+
+  _spawnEnemies(now) {
+    const SPAWN_INTERVAL = 2000
+    if (now - this._lastSpawn < SPAWN_INTERVAL) return
+
+    // Don't overspawn
+    const total = this.enemies.size + this.killCount
+    if (total >= GAME_CONFIG.ENEMY_KILL_GOAL + 10) return
+
+    this._lastSpawn = now
+
+    const count = Math.floor(Math.random() * 3) + 1   // 1-3
+
+    for (let i = 0; i < count; i++) {
+      const { x, y } = this._randomEdgePos(30)
+      const id = ++this._enemyIdSeq
+      this.enemies.set(id, new ServerEnemy({ id, x, y }))
+    }
+  }
+
+  _randomEdgePos(margin) {
+    const W = GAME_CONFIG.CANVAS_WIDTH
+    const H = GAME_CONFIG.CANVAS_HEIGHT
+    const edge = Math.floor(Math.random() * 4)
+
+    switch (edge) {
+      case 0: return { x: margin + Math.random() * (W - 2 * margin), y: margin }                  // top
+      case 1: return { x: margin + Math.random() * (W - 2 * margin), y: H - margin }              // bottom
+      case 2: return { x: margin,     y: margin + Math.random() * (H - 2 * margin) }              // left
+      default: return { x: W - margin, y: margin + Math.random() * (H - 2 * margin) }             // right
+    }
+  }
+
+  _updateEnemies(dt, now) {
+    this.enemies.forEach((e, id) => {
+      if (e.isDead) {
+        this.enemies.delete(id)
+        this.killCount++
+        // Sync kills to stats
+        this.stats.kills = this.killCount
+        return
+      }
+
+      e.update(dt, this.players)
+
+      // Contact damage to players (rate-limited: once per 500ms per enemy)
+      if (now - e._lastContactDamage > 500) {
+        this.players.forEach(p => {
+          if (p.isHost || p.isDead) return
+          const dist = Math.hypot(p.x - e.x, p.y - e.y)
+          if (dist <= p.constructor && false) return // type safety unused
+          const combined = (GAME_CONFIG.PLAYER_RADIUS + e.radius)
+          if (dist <= combined) {
+            e._lastContactDamage = now
+            p.takeDamage(15)
+            if (!this.stats.deaths) this.stats.deaths = {}
+            if (p.isDead) {
+              this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
+            }
+          }
+        })
+      }
+    })
+  }
+
+  // ── Boss management ─────────────────────────────────────────────────────────
+
+  _updateBoss(dt, now) {
+    if (!this.boss) return
+
+    this.boss.update(dt, this.players)
+
+    const attacks = this.boss.updateAbilities(dt, this.players, now)
+    for (const attack of attacks) {
+      if (attack.type === 'beam') {
+        // Damage the nearest player within beam range
+        const target = attack.target
+        if (target && !target.isDead) {
+          const d = Math.hypot(target.x - this.boss.x, target.y - this.boss.y)
+          if (d < 350) {
+            target.takeDamage(attack.damage ?? 30)
+            if (target.isDead) this.stats.deaths[target.id] = (this.stats.deaths[target.id] ?? 0) + 1
+          }
+        }
+      } else if (attack.type === 'aoe') {
+        // Radius damage to all players within ability radius
+        const r = attack.radius ?? 100
+        this.players.forEach(p => {
+          if (p.isHost || p.isDead) return
+          const d = Math.hypot(p.x - attack.bossX, p.y - attack.bossY)
+          if (d <= r + GAME_CONFIG.PLAYER_RADIUS) {
+            p.takeDamage(attack.damage ?? 25)
+            if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
+          }
+        })
+      } else if (attack.type === 'charge') {
+        // Damage nearest player
+        const target = attack.target
+        if (target && !target.isDead) {
+          target.takeDamage(attack.damage ?? 40)
+          if (target.isDead) this.stats.deaths[target.id] = (this.stats.deaths[target.id] ?? 0) + 1
+        }
+      }
+    }
+
+    // Contact damage: per-player rate-limited
+    this.players.forEach(p => {
+      if (p.isHost || p.isDead) return
+      const d = Math.hypot(p.x - this.boss.x, p.y - this.boss.y)
+      if (d <= GAME_CONFIG.BOSS_RADIUS + GAME_CONFIG.PLAYER_RADIUS + 5) {
+        if (!p._lastBossContact) p._lastBossContact = 0
+        if (now - p._lastBossContact > 500) {
+          p._lastBossContact = now
+          p.takeDamage(5)
+          if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
+        }
+      }
+    })
+  }
+
+  // ── Revive mechanic ─────────────────────────────────────────────────────────
+
+  _checkRevive(now) {
+    const deadPlayers  = []
+    const alivePlayers = []
+
+    this.players.forEach(p => {
+      if (p.isHost) return
+      if (p.isDead) deadPlayers.push(p)
+      else          alivePlayers.push(p)
+    })
+
+    deadPlayers.forEach(dead => {
+      // Find closest alive player within REVIVE_DISTANCE
+      let reviver = null
+      for (const alive of alivePlayers) {
+        const d = Math.hypot(alive.x - dead.x, alive.y - dead.y)
+        if (d <= GAME_CONFIG.REVIVE_DISTANCE) { reviver = alive; break }
+      }
+
+      if (!reviver) {
+        this.reviveTimers.delete(dead.id)
+        return
+      }
+
+      const existing = this.reviveTimers.get(dead.id)
+      if (!existing || existing.reviverId !== reviver.id) {
+        this.reviveTimers.set(dead.id, { reviverId: reviver.id, startedAt: now })
+        return
+      }
+
+      const elapsed = now - existing.startedAt
+      if (elapsed >= GAME_CONFIG.REVIVE_TIME) {
+        dead.revive()
+        this.reviveTimers.delete(dead.id)
+        console.log(`[~] revived ${dead.name}`)
+      }
+    })
+  }
+
+  // ── Win / lose conditions ───────────────────────────────────────────────────
+
+  _checkTrashMobWin() {
+    if (this.killCount >= GAME_CONFIG.ENEMY_KILL_GOAL) {
+      console.log('[~] TrashMob complete — spawning boss')
+
+      // Reset all non-host players to full HP and scatter them
+      this.players.forEach(p => {
+        if (p.isHost) return
+        p.hp          = p.maxHp
+        p.isDead      = false
+        p.activeCast  = null
+        p.shieldActive = false
+        p.activeEffects = []
+        p.rebuildStats()
+        p.x = GAME_CONFIG.CANVAS_WIDTH  / 2 + (Math.random() - 0.5) * 400
+        p.y = GAME_CONFIG.CANVAS_HEIGHT / 2 + (Math.random() - 0.5) * 250
+      })
+
+      this.enemies.clear()
+      this.projectiles.clear()
+      this.reviveTimers.clear()
+      this.boss = new ServerBoss()
+
+      this._changeScene('bossFight')
+    }
+  }
+
+  _checkBossWin() {
+    if (this.boss?.isDead) {
+      console.log('[~] Boss defeated — victory!')
+      this._changeScene('result')
+    }
+  }
+
+  _checkAllDead() {
+    let livingCount = 0
+    this.players.forEach(p => {
+      if (!p.isHost && !p.isDead) livingCount++
+    })
+    if (livingCount === 0 && this.players.size > 0) {
+      console.log('[~] All players dead — game over')
+      this._changeScene('gameover')
+    }
+  }
+
+  // ── State serialisation ────────────────────────────────────────────────────
 
   /** Full snapshot — sent once to a joining player. */
   _fullState() {
     const players = {}
     this.players.forEach((p, id) => { players[id] = p.toDTO() })
-    return { players, scene: this.scene, tick: this.tick }
+    return {
+      players,
+      scene:     this.scene,
+      tick:      this.tick,
+      killCount: this.killCount,
+      boss:      this.boss ? this.boss.toDTO() : null,
+    }
   }
 
   /** Delta snapshot — broadcast every tick. Only includes changed fields. */
   _deltaState() {
     const players = {}
     this.players.forEach((p, id) => { players[id] = p.toDeltaDTO() })
-    return { players, scene: this.scene, tick: this.tick }
+
+    const projectiles = []
+    this.projectiles.forEach(proj => {
+      if (proj.isAlive) {
+        projectiles.push({
+          id:     proj.id,
+          x:      Math.round(proj.x),
+          y:      Math.round(proj.y),
+          radius: proj.radius,
+          color:  proj.color,
+        })
+      }
+    })
+
+    const enemies = []
+    this.enemies.forEach(e => {
+      if (!e.isDead) enemies.push(e.toDTO())
+    })
+
+    // Build tombstones (dead players with revive progress)
+    const tombstones = []
+    this.players.forEach(p => {
+      if (!p.isDead || p.isHost) return
+      const timer = this.reviveTimers.get(p.id)
+      tombstones.push({
+        id:       p.id,
+        x:        Math.round(p.x),
+        y:        Math.round(p.y),
+        progress: timer
+          ? Math.min(1, (Date.now() - timer.startedAt) / GAME_CONFIG.REVIVE_TIME)
+          : 0,
+      })
+    })
+
+    return {
+      tick:        this.tick,
+      players,
+      projectiles,
+      enemies,
+      boss:        this.boss ? this.boss.toDTO() : null,
+      killCount:   this.killCount,
+      tombstones,
+      stats:       this.stats,
+    }
   }
 }

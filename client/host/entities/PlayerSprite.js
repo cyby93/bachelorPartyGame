@@ -82,6 +82,14 @@ export default class PlayerSprite {
     this._maxHp  = data.maxHp ?? this._classData.hp
     this._lastHp = -1         // force first draw
     this._updateHpBar(data.hp ?? this._maxHp)
+
+    // ── Hit flash ────────────────────────────────────────────────────────────
+    this._flashGfx = new Graphics()
+    this._flashGfx.circle(0, 0, R + 2)
+    this._flashGfx.fill({ color: 0xffffff, alpha: 1 })
+    this._flashGfx.alpha = 0
+    this._body.addChild(this._flashGfx)
+    this._flashTimer = 0   // seconds remaining
   }
 
   // ── Drawing helpers ────────────────────────────────────────────────────────
@@ -141,11 +149,25 @@ export default class PlayerSprite {
    * @param {object} state     - latest known server state for this player
    * @param {object} renderPos - interpolated { x, y }
    */
-  update(state, renderPos) {
+  update(state, renderPos, dt = 0) {
     this.container.position.set(renderPos.x, renderPos.y)
     this._body.rotation = state.angle ?? 0
 
-    if (state.hp != null) this._updateHpBar(state.hp)
+    if (state.hp != null) {
+      // Trigger flash when HP drops
+      if (state.hp < this._lastHp && this._lastHp !== -1) {
+        this._flashTimer = 0.1
+      }
+      this._updateHpBar(state.hp)
+    }
+
+    // Tick flash
+    if (this._flashTimer > 0) {
+      this._flashTimer = Math.max(0, this._flashTimer - dt)
+      this._flashGfx.alpha = this._flashTimer / 0.1
+    } else {
+      this._flashGfx.alpha = 0
+    }
 
     // Dead: fade out
     this.container.alpha = state.isDead ? 0.2 : 1.0

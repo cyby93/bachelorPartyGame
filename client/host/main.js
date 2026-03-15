@@ -8,24 +8,41 @@
  *  - Wire all socket events to HostGame + DOM
  */
 
-import { io }      from 'socket.io-client'
-import { EVENTS }  from '../../shared/protocol.js'
-import { CLASSES } from '../../shared/ClassConfig.js'
-import HostGame    from './HostGame.js'
+import { io }         from 'socket.io-client'
+import { EVENTS }     from '../../shared/protocol.js'
+import { CLASSES }    from '../../shared/ClassConfig.js'
+import HostGame       from './HostGame.js'
+import AudioSystem    from './systems/AudioSystem.js'
 
 // ── PixiJS game init (top-level await — supported in Vite ESM) ─────────────
-const game = new HostGame()
+const game  = new HostGame()
+const audio = new AudioSystem()
 await game.init(document.getElementById('canvas-wrap'))
 
 // ── Socket ─────────────────────────────────────────────────────────────────
 const socket = io()
 
 // ── DOM refs ───────────────────────────────────────────────────────────────
-const badge        = document.getElementById('conn-badge')
-const serverIpEl   = document.getElementById('server-ip')
-const playerListEl = document.getElementById('player-list')
-const startBtn     = document.getElementById('start-btn')
-const qrWrap       = document.getElementById('qr-code')
+const badge          = document.getElementById('conn-badge')
+const serverIpEl     = document.getElementById('server-ip')
+const playerListEl   = document.getElementById('player-list')
+const startBtn       = document.getElementById('start-btn')
+const qrWrap         = document.getElementById('qr-code')
+const fullscreenBtn  = document.getElementById('fullscreen-btn')
+
+// ── Fullscreen ─────────────────────────────────────────────────────────────
+fullscreenBtn?.addEventListener('click', () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {})
+  } else {
+    document.exitFullscreen().catch(() => {})
+  }
+})
+document.addEventListener('fullscreenchange', () => {
+  if (fullscreenBtn) {
+    fullscreenBtn.textContent = document.fullscreenElement ? '✕ Exit Fullscreen' : '⛶ Fullscreen'
+  }
+})
 
 // ── DOM helpers ────────────────────────────────────────────────────────────
 
@@ -74,6 +91,7 @@ function setSceneControls(scene) {
 socket.on('connect', () => {
   badge.textContent = 'Connected'
   badge.classList.add('connected')
+  audio.init()   // safe to call here — connect fires after a user interaction (page load)
 
   // Display the controller URL and generate QR code
   const controllerUrl = `${window.location.origin}/controller`
@@ -123,4 +141,8 @@ socket.on(EVENTS.STATE_DELTA, delta => {
 socket.on(EVENTS.SCENE_CHANGE, ({ scene }) => {
   game.switchScene(scene)
   setSceneControls(scene)
+
+  if (scene === 'trashMob' || scene === 'bossFight') audio.playTransition()
+  else if (scene === 'result')  audio.playVictory()
+  else if (scene === 'gameover') audio.playDefeat()
 })

@@ -1,5 +1,6 @@
 import { GAME_CONFIG }            from '../../shared/GameConfig.js'
 import { CLASSES, resolveClassName } from '../../shared/ClassConfig.js'
+import { rebuildStats }            from '../systems/SkillSystem.js'
 
 /**
  * ServerPlayer — authoritative player state.
@@ -26,8 +27,21 @@ export default class ServerPlayer {
 
     this.isDead = false
 
-    // Active timed effects  (Phase 4)
+    // Active timed effects
     this.activeEffects = []
+
+    // Cast state (set by SkillSystem)
+    this.activeCast   = null
+    this.shieldActive = false
+
+    // Derived stats (rebuilt by rebuildStats after every effect change)
+    this.speedMult       = 1
+    this.damageMult      = 1
+    this.damageReduction = 0
+    this.shieldAbsorb    = 0
+    this.isRooted        = false
+    this.isStunned       = false
+    this.isInvisible     = false
 
     // Shadow values for delta detection
     this._prev = this._snapshot()
@@ -46,11 +60,11 @@ export default class ServerPlayer {
   // ── Per-tick update ───────────────────────────────────────────────────
 
   update(dt) {
-    if (this.isDead) return
+    if (this.isDead || this.isRooted || this.isStunned) return
 
     // Speed was originally tuned at 60 FPS (pixels per frame).
     // Multiply by 60 to convert to pixels-per-second, then scale by dt (seconds).
-    const pps = this.speed * 60
+    const pps = this.speed * this.speedMult * 60
     this.x += this.moveX * pps * dt
     this.y += this.moveY * pps * dt
 
@@ -89,6 +103,11 @@ export default class ServerPlayer {
     return CLASSES[this.className]?.skills?.[index] ?? null
   }
 
+  /** Rebuild derived stats — delegates to the shared helper. */
+  rebuildStats() {
+    rebuildStats(this)
+  }
+
   // ── Serialisation ─────────────────────────────────────────────────────
 
   /** Full DTO — sent once on join. */
@@ -115,13 +134,24 @@ export default class ServerPlayer {
   toDeltaDTO() {
     const cur  = this._snapshot()
     const prev = this._prev
-    const delta = { id: this.id }
+    const delta = { id: this.id, isDead: cur.isDead }
 
     if (cur.x      !== prev.x)      delta.x      = cur.x
     if (cur.y      !== prev.y)      delta.y      = cur.y
     if (cur.angle  !== prev.angle)  delta.angle  = cur.angle
     if (cur.hp     !== prev.hp)     delta.hp     = cur.hp
-    if (cur.isDead !== prev.isDead) delta.isDead = cur.isDead
+
+    // Visibility state change
+    if (cur.isInvisible !== prev.isInvisible) delta.isInvisible = cur.isInvisible
+
+    // Shield state
+    if (cur.shieldActive !== prev.shieldActive) delta.shieldActive = cur.shieldActive
+
+    // Cast progress (0-1), only if actively casting
+    if (this.activeCast) {
+      const elapsed = Date.now() - this.activeCast.startedAt
+      delta.castProgress = Math.min(1, elapsed / (this.activeCast.config.castTime ?? 1000))
+    }
 
     this._prev = cur
     return delta
@@ -129,11 +159,13 @@ export default class ServerPlayer {
 
   _snapshot() {
     return {
-      x:      Math.round(this.x),
-      y:      Math.round(this.y),
-      angle:  +this.angle.toFixed(3),
-      hp:     Math.ceil(this.hp),
-      isDead: this.isDead,
+      x:           Math.round(this.x),
+      y:           Math.round(this.y),
+      angle:       +this.angle.toFixed(3),
+      hp:          Math.ceil(this.hp),
+      isDead:      this.isDead,
+      isInvisible: this.isInvisible,
+      shieldActive: this.shieldActive,
     }
   }
 }

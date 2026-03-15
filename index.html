@@ -44,6 +44,12 @@
     }
     #start-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
+    #fullscreen-btn {
+      padding: 8px; border-radius: 6px; border: 1px solid #1e3a4a;
+      background: #0f1923; color: #7fa8c0; cursor: pointer; font-size: 13px;
+    }
+    #fullscreen-btn:hover { background: #1e3a4a; color: #fff; }
+
     #canvas-wrap { flex: 1; display: flex; align-items: center; justify-content: center; background: #0a1018; }
     canvas        { display: block; }
 
@@ -78,6 +84,7 @@
     </div>
 
     <button id="start-btn" disabled>START GAME</button>
+    <button id="fullscreen-btn" title="Toggle fullscreen">⛶ Fullscreen</button>
   </div>
 
   <div id="canvas-wrap">

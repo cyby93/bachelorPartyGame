@@ -3,7 +3,7 @@
   import MoveJoystick  from '../components/MoveJoystick.svelte'
   import SkillButton   from '../components/SkillButton.svelte'
 
-  let { playerName = '', className = '', isDead = false, cooldowns = [0,0,0,0], onmove, onskill } = $props()
+  let { playerName = '', className = '', isDead = false, cooldowns = [0,0,0,0], onmove, onskill, onaim } = $props()
 
   // Grid order: SK2 SK4 / SK1 SK3  (2×2, top row = skills 1,3; bottom = 0,2)
   // Per PLAN layout:
@@ -38,6 +38,7 @@
           index={skillIdx}
           expiresAt={cooldowns[skillIdx] ?? 0}
           {onskill}
+          {onaim}
         />
       {/each}
     </div>
@@ -63,7 +64,7 @@
 
   /* ── HUD ── */
   .hud {
-    height: 48px;
+    height: 36px;
     background: rgba(0, 0, 0, 0.65);
     display: flex;
     align-items: center;
@@ -74,14 +75,14 @@
   }
 
   .hud-name {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: bold;
     white-space: nowrap;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     flex: 0 0 auto;
-    max-width: 90px;
+    max-width: 120px;
   }
 
   /* ── Controls ── */

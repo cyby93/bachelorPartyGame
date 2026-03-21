@@ -64,6 +64,12 @@ export default class GameServer {
     socket.on(EVENTS.JOIN,         data => this._onJoin(socket, data))
     socket.on(EVENTS.INPUT_MOVE,   data => this._onInputMove(socket, data))
     socket.on(EVENTS.INPUT_SKILL,  data => this._onInputSkill(socket, data))
+    socket.on(EVENTS.INPUT_AIM,    ({ vector }) => {
+      const player = this.players.get(socket.id)
+      if (player && vector) {
+        player.angle = Math.atan2(vector.y, vector.x)
+      }
+    })
     socket.on(EVENTS.START_GAME,   ()   => this._onStartGame(socket))
     socket.on(EVENTS.RESTART_GAME, ()   => this._onRestartGame(socket))
     socket.on('disconnect',        ()   => this._onDisconnect(socket))

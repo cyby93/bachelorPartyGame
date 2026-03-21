@@ -13,7 +13,8 @@
       "Bash(node -e \"const s = require\\('./node_modules/svelte/package.json'\\); const p = require\\('./node_modules/@sveltejs/vite-plugin-svelte/package.json'\\); console.log\\('svelte:', s.version, '| plugin:', p.version\\)\")",
       "Bash(npx vite:*)",
       "Bash(npm show:*)",
-      "Bash(node -e \"const p = JSON.parse\\(require\\('fs'\\).readFileSync\\('package.json'\\)\\); console.log\\('vite:', p.devDependencies.vite\\); console.log\\('svelte:', p.devDependencies.svelte\\); console.log\\('@sveltejs/vite-plugin-svelte:', p.devDependencies['@sveltejs/vite-plugin-svelte']\\);\")"
+      "Bash(node -e \"const p = JSON.parse\\(require\\('fs'\\).readFileSync\\('package.json'\\)\\); console.log\\('vite:', p.devDependencies.vite\\); console.log\\('svelte:', p.devDependencies.svelte\\); console.log\\('@sveltejs/vite-plugin-svelte:', p.devDependencies['@sveltejs/vite-plugin-svelte']\\);\")",
+      "Bash(find \"D:/Games/bachelorPartyGame/client/host\" -type f \\\\\\( -name \"*.svelte\" -o -name \"*.js\" \\\\\\) 2>/dev/null | head -20)"
     ]
   }
 }

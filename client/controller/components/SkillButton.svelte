@@ -3,83 +3,93 @@
    * SkillButton — handles all 4 inputType interaction modes.
    *
    * inputType:
-   *   INSTANT    — tap to fire (no direction needed)
-   *   DIRECTIONAL — drag to aim, release fires with normalised direction vector
+   *   INSTANT     — tap to fire (no direction needed)
+   *   DIRECTIONAL — nipplejs drag to aim, release fires with normalised direction vector
    *   TARGETED    — same interaction as DIRECTIONAL (drag → release)
    *   SUSTAINED   — touchstart emits action:'START', touchend emits action:'END'
    */
 
+  import { onDestroy } from 'svelte'
+  import nipplejs from 'nipplejs'
   import CooldownOverlay from './CooldownOverlay.svelte'
 
-  let { skill = null, index = 0, expiresAt = 0, onskill } = $props()
+  let { skill = null, index = 0, expiresAt = 0, onskill, onaim } = $props()
 
   let btnEl        = null
   let lastVector   = { x: 1, y: 0 }
   let lastDistance = 0
-  let startX       = 0
-  let startY       = 0
   let held         = $state(false)  // SUSTAINED visual state
 
-  // ── Touch handlers per inputType ──────────────────────────────────────────
+  // ── nipplejs for DIRECTIONAL / TARGETED ───────────────────────────────────
+
+  $effect(() => {
+    const type = skill?.inputType
+    if (!btnEl || (type !== 'DIRECTIONAL' && type !== 'TARGETED')) return
+
+    const j = nipplejs.create({
+      zone:  btnEl,
+      mode:  'dynamic',
+      color: 'rgba(255,255,255,0.5)',
+      size:  70,
+    })
+
+    j.on('start', () => {
+      navigator.vibrate?.(20)
+      lastVector   = { x: 1, y: 0 }
+      lastDistance = 0
+    })
+
+    j.on('move', (_, data) => {
+      if (data.vector) {
+        lastVector = { x: data.vector.x, y: -data.vector.y }
+      }
+      lastDistance = data.distance ?? 0
+      onaim?.({ vector: lastVector })
+    })
+
+    j.on('end', () => {
+      if (lastDistance > 8) {
+        onskill?.({ index, vector: lastVector })
+      }
+      lastDistance = 0
+    })
+
+    return () => { j.destroy() }
+  })
+
+  // ── Touch handlers for INSTANT / SUSTAINED ────────────────────────────────
 
   function onTouchStart(e) {
+    const type = skill?.inputType
+    if (type === 'DIRECTIONAL' || type === 'TARGETED') return  // nipplejs owns it
     e.preventDefault()
-
-    if (!skill) return
-    const type = skill.inputType
-
-    // Haptic feedback on all skill inputs
     navigator.vibrate?.(20)
 
     if (type === 'INSTANT') {
       onskill?.({ index, vector: { x: 1, y: 0 } })
-
-    } else if (type === 'DIRECTIONAL' || type === 'TARGETED') {
-      const t = e.touches[0]
-      startX = t.clientX
-      startY = t.clientY
-      lastVector   = { x: 1, y: 0 }
-      lastDistance = 0
-
     } else if (type === 'SUSTAINED') {
       held = true
       onskill?.({ index, vector: { x: 1, y: 0 }, action: 'START' })
     }
   }
 
-  function onTouchMove(e) {
-    e.preventDefault()
-    if (!skill) return
-    const type = skill.inputType
-    if (type !== 'DIRECTIONAL' && type !== 'TARGETED') return
-
-    const t    = e.touches[0]
-    const dx   = t.clientX - startX
-    const dy   = t.clientY - startY
-    const dist = Math.hypot(dx, dy)
-    lastDistance = dist
-    if (dist > 0) lastVector = { x: dx / dist, y: -(dy / dist) }
-  }
-
   function onTouchEnd(e) {
+    const type = skill?.inputType
+    if (type === 'DIRECTIONAL' || type === 'TARGETED') return
     e.preventDefault()
-    if (!skill) return
-    const type = skill.inputType
-
-    if ((type === 'DIRECTIONAL' || type === 'TARGETED') && lastDistance > 8) {
-      onskill?.({ index, vector: lastVector })
-    } else if (type === 'SUSTAINED' && held) {
+    if (type === 'SUSTAINED' && held) {
       held = false
       onskill?.({ index, vector: { x: 1, y: 0 }, action: 'END' })
     }
   }
 
   function onTouchCancel(e) {
-    if (skill?.inputType === 'SUSTAINED' && held) {
+    const type = skill?.inputType
+    if (type === 'DIRECTIONAL' || type === 'TARGETED') return
+    if (type === 'SUSTAINED' && held) {
       held = false
       onskill?.({ index, vector: { x: 1, y: 0 }, action: 'END' })
     }
-    lastDistance = 0
   }
 </script>
 
@@ -89,7 +99,6 @@
   class:on-cd={expiresAt > Date.now()}
   bind:this={btnEl}
   ontouchstart={onTouchStart}
-  ontouchmove={onTouchMove}
   ontouchend={onTouchEnd}
   ontouchcancel={onTouchCancel}
 >
@@ -107,7 +116,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: 6px;
     cursor: pointer;
     user-select: none;
     position: relative;
@@ -125,6 +134,6 @@
     border: 2px solid #00d2ff;
   }
 
-  .skill-icon { font-size: 28px; line-height: 1; }
-  .skill-name { font-size: 10px; color: #7fa8c0; text-align: center; padding: 0 4px; }
+  .skill-icon { font-size: 32px; line-height: 1; }
+  .skill-name { font-size: 11px; color: #7fa8c0; text-align: center; padding: 0 4px; }
 </style>

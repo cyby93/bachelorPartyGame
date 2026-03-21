@@ -8,6 +8,9 @@
   // ── Screens: 'join' | 'lobby' | 'game' | 'end'
   let screen = $state('join')
 
+  // ── Orientation
+  let isPortrait = $state(false)
+
   // ── Player state
   let myId        = $state(null)
   let playerName  = $state('')
@@ -21,7 +24,20 @@
   // ── Socket (plain let — must NOT be Proxy-wrapped)
   let socket
 
+  function enterFullscreenLandscape() {
+    document.documentElement.requestFullscreen({ navigationUI: 'hide' })
+      .then(() => screen.orientation?.lock('landscape').catch(() => {}))
+      .catch(() => {})
+  }
+
   onMount(() => {
+    const mq = window.matchMedia('(orientation: portrait)')
+    isPortrait = mq.matches
+    mq.addEventListener('change', e => {
+      isPortrait = e.matches
+      if (!e.matches) enterFullscreenLandscape()
+    })
+
     socket = io()
     socket.on('connect', () => {
       myId = socket.id
@@ -77,7 +93,19 @@
   function handleSkill({ index, vector, action }) {
     socket.emit(EVENTS.INPUT_SKILL, { index, vector, action })
   }
+
+  function handleAim({ vector }) {
+    socket.emit(EVENTS.INPUT_AIM, { vector })
+  }
 </script>
+
+{#if isPortrait}
+  <div class="rotate-overlay">
+    <span class="rotate-icon">⟳</span>
+    <p>Rotate your phone to landscape</p>
+    <button onclick={enterFullscreenLandscape}>Tap to go fullscreen</button>
+  </div>
+{/if}
 
 <div class="app">
   {#if screen === 'join'}
@@ -91,6 +119,7 @@
       {cooldowns}
       onmove={handleMove}
       onskill={handleSkill}
+      onaim={handleAim}
     />
 
   {:else if screen === 'end'}
@@ -116,4 +145,42 @@
     color: #7fa8c0;
     font-size: 18px;
   }
+
+  .rotate-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: #0f1923;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    color: #fff;
+    text-align: center;
+    padding: 24px;
+  }
+
+  .rotate-icon {
+    font-size: 64px;
+    display: block;
+    animation: spin 2s linear infinite;
+  }
+
+  .rotate-overlay p {
+    font-size: 18px;
+    color: #aad4e8;
+  }
+
+  .rotate-overlay button {
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: 1px solid #1e3a4a;
+    background: #16202a;
+    color: #00d2ff;
+    font-size: 15px;
+    cursor: pointer;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
 </style>

@@ -50,8 +50,8 @@
     }
     #fullscreen-btn:hover { background: #1e3a4a; color: #fff; }
 
-    #canvas-wrap { flex: 1; display: flex; align-items: center; justify-content: center; background: #0a1018; }
-    canvas        { display: block; }
+    #canvas-wrap { flex: 1; display: flex; align-items: center; justify-content: center; background: #0a1018; min-height: 0; overflow: hidden; }
+    canvas        { display: block; max-width: 100% !important; max-height: 100% !important; width: auto !important; height: auto !important; }
 
     /* Connection badge */
     #conn-badge {

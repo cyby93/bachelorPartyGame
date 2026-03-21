@@ -121,10 +121,12 @@ export default class HostGame {
         }
         return
       }
-      // Save previous position before overwriting with server update
-      if (d.x != null) p._prevX = p.x
-      if (d.y != null) p._prevY = p.y
-      p._recvAt = now
+      // Only update interpolation state when position actually changed
+      if (d.x != null || d.y != null) {
+        p._prevX  = p.x
+        p._prevY  = p.y
+        p._recvAt = now
+      }
       Object.assign(p, d)
     })
 
@@ -138,7 +140,12 @@ export default class HostGame {
   }
 
   addPlayer(dto) {
-    if (this.knownState.players[dto.id]) return
+    const existing = this.knownState.players[dto.id]
+    if (existing) {
+      // Merge full DTO in case player was first seen only via STATE_DELTA (which lacks name/className/isHost)
+      Object.assign(existing, dto)
+      return
+    }
     const now = performance.now()
     this.knownState.players[dto.id] = { ...dto, _prevX: dto.x, _prevY: dto.y, _recvAt: now }
     this.activeRenderer?.onPlayerAdded?.(this.knownState.players[dto.id])

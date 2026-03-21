@@ -21,6 +21,7 @@ await game.init(document.getElementById('canvas-wrap'))
 
 // ── Socket ─────────────────────────────────────────────────────────────────
 const socket = io()
+console.log(socket);
 
 // ── DOM refs ───────────────────────────────────────────────────────────────
 const badge          = document.getElementById('conn-badge')
@@ -92,21 +93,29 @@ socket.on('connect', () => {
   badge.textContent = 'Connected'
   badge.classList.add('connected')
   audio.init()   // safe to call here — connect fires after a user interaction (page load)
+    console.log('Connected')
 
-  // Display the controller URL and generate QR code
-  const controllerUrl = `${window.location.origin}/controller`
-  serverIpEl.textContent = controllerUrl.replace(/^https?:\/\//, '')
-
-  if (typeof QRCode !== 'undefined') {
-    qrWrap.innerHTML = ''
-    new QRCode(qrWrap, {
-      text:       controllerUrl,
-      width:      150,
-      height:     150,
-      colorDark:  '#000000',
-      colorLight: '#ffffff',
+  // Display the controller URL and generate QR code using the LAN IP
+  fetch('/api/network-url')
+    .then(r => r.json())
+    .then(({ url }) => {
+      serverIpEl.textContent = url.replace(/^https?:\/\//, '')
+      if (typeof QRCode !== 'undefined') {
+        qrWrap.innerHTML = ''
+        new QRCode(qrWrap, {
+          text:       url,
+          width:      150,
+          height:     150,
+          colorDark:  '#000000',
+          colorLight: '#ffffff',
+        })
+      }
     })
-  }
+    .catch(() => {
+      // Fallback to current origin if the API is unreachable
+      const url = `${window.location.origin}/controller`
+      serverIpEl.textContent = url.replace(/^https?:\/\//, '')
+    })
 
   // Register as the host player
   socket.emit(EVENTS.JOIN, { name: 'Host Display', className: 'Warrior', isHost: true })
@@ -118,6 +127,8 @@ socket.on('disconnect', () => {
 })
 
 socket.on(EVENTS.INIT, state => {
+    console.log('JSON.stringify(player)')
+
   game.receiveFullState(state)
   game.switchScene(state.scene ?? 'lobby')
   setSceneControls(state.scene ?? 'lobby')
@@ -125,6 +136,7 @@ socket.on(EVENTS.INIT, state => {
 })
 
 socket.on(EVENTS.PLAYER_JOINED, player => {
+  console.log(JSON.stringify(player))
   game.addPlayer(player)
   renderDOMPlayerList()
 })
@@ -135,7 +147,10 @@ socket.on(EVENTS.PLAYER_LEFT, id => {
 })
 
 socket.on(EVENTS.STATE_DELTA, delta => {
+  const before = Object.keys(game.knownState.players).length
   game.receiveState(delta)
+  const after  = Object.keys(game.knownState.players).length
+  if (after !== before) renderDOMPlayerList()
 })
 
 socket.on(EVENTS.SCENE_CHANGE, ({ scene }) => {

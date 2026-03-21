@@ -4,6 +4,7 @@ import { CLASSES, resolveClassName } from '../shared/ClassConfig.js'
 import ServerPlayer      from './entities/ServerPlayer.js'
 import ServerEnemy       from './entities/ServerEnemy.js'
 import ServerBoss        from './entities/ServerBoss.js'
+import TrainingDummy     from './entities/TrainingDummy.js'
 import CooldownSystem    from './systems/CooldownSystem.js'
 import SkillSystem       from './systems/SkillSystem.js'
 
@@ -51,6 +52,8 @@ export default class GameServer {
       () => this._gameTick(),
       1000 / GAME_CONFIG.TICK_RATE
     )
+
+    this._spawnTrainingDummy()
   }
 
   // ── Connection handling ────────────────────────────────────────────────────
@@ -179,7 +182,12 @@ export default class GameServer {
       this.projectiles.clear()
       this.boss = null
       this.reviveTimers.clear()
+      this._spawnTrainingDummy()
     }
+  }
+
+  _spawnTrainingDummy() {
+    this.enemies.set('training-dummy', new TrainingDummy())
   }
 
   // ── Game state accessor ────────────────────────────────────────────────────
@@ -225,6 +233,14 @@ export default class GameServer {
     this.players.forEach(p => p.update(dt))
 
     // 3. Update enemies + boss + skill ticks
+    // Lobby: run skill ticks so projectiles can hit the training dummy
+    if (this.scene === 'lobby') {
+      const gs = this._gs()
+      this.skillSystem.tick(gs, dt)
+      const dummy = this.enemies.get('training-dummy')
+      if (dummy) dummy.update(dt)
+    }
+
     if (this.scene === 'trashMob' || this.scene === 'bossFight') {
       const gs = this._gs()
       this.skillSystem.tick(gs, dt)

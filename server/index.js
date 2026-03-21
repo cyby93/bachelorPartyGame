@@ -12,7 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app    = express()
 const server = http.createServer(app)
 
-const isDev = process.env.NODE_ENV === 'development'
+const isDev = process.env.NODE_ENV !== 'production'
 const PORT  = process.env.PORT || 3100
 
 const io = new Server(server, {
@@ -28,6 +28,12 @@ if (!isDev) {
   app.get('/',           (_, res) => res.sendFile(path.join(distDir, 'index.html')))
   app.get('/controller', (_, res) => res.sendFile(path.join(distDir, 'controller.html')))
 }
+
+// Expose the LAN controller URL so the host page can generate the correct QR code
+app.get('/api/network-url', (_, res) => {
+  const clientPort = isDev ? 5173 : PORT
+  res.json({ url: `http://${ip.address()}:${clientPort}/controller` })
+})
 
 const gameServer = new GameServer(io)
 

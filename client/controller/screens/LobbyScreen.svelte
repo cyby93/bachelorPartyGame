@@ -1,8 +1,7 @@
 <script>
   import { CLASSES } from '../../../shared/ClassConfig.js'
 
-  export let playerName = ''
-  export let className  = ''
+  let { playerName = '', className = '' } = $props()
 
   const CLASS_ICONS = {
     Warrior: '⚔️', Paladin: '🔨', Shaman: '⚡',  Hunter: '🏹',
@@ -16,9 +15,9 @@
     Druid:   'Hybrid',       Rogue:   'Assassin',
   }
 
-  $: cls       = CLASSES[className]
-  $: skills    = cls?.skills ?? []
-  $: classColor = cls?.color ?? '#00d2ff'
+  let cls        = $derived(CLASSES[className])
+  let skills     = $derived(cls?.skills ?? [])
+  let classColor = $derived(cls?.color ?? '#00d2ff')
 </script>
 
 <div class="lobby">

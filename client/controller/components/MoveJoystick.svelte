@@ -1,8 +1,8 @@
 <script>
-  import { createEventDispatcher, onMount, onDestroy } from 'svelte'
+  import { onMount, onDestroy } from 'svelte'
   import nipplejs from 'nipplejs'
 
-  const dispatch = createEventDispatcher()
+  let { onmove } = $props()
 
   let zoneEl   = null
   let joystick = null
@@ -17,12 +17,12 @@
 
     joystick.on('move', (_, data) => {
       if (data.vector) {
-        dispatch('move', { x: data.vector.x, y: -data.vector.y })
+        onmove?.({ x: data.vector.x, y: -data.vector.y })
       }
     })
 
     joystick.on('end', () => {
-      dispatch('move', { x: 0, y: 0 })
+      onmove?.({ x: 0, y: 0 })
     })
   })
 

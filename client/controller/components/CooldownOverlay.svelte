@@ -9,22 +9,24 @@
    * @property is supported in all modern mobile browsers (Chrome 85+, Safari 16.4+).
    */
 
-  export let expiresAt = 0   // ms timestamp; 0 = not on cooldown
+  import { untrack } from 'svelte'
 
-  let animKey    = 0         // incremented to force Svelte re-render / restart animation
-  let duration   = 0         // ms
-  let active     = false
+  let { expiresAt = 0 } = $props()  // ms timestamp; 0 = not on cooldown
 
-  $: {
+  let animKey  = $state(0)   // incremented to force Svelte re-render / restart animation
+  let duration = $state(0)   // ms
+  let active   = $state(false)
+
+  $effect(() => {
     const now = Date.now()
     if (expiresAt > now) {
       duration = expiresAt - now
       active   = true
-      animKey  = animKey + 1
+      untrack(() => animKey++)
     } else {
       active = false
     }
-  }
+  })
 </script>
 
 {#if active}

@@ -2,27 +2,23 @@
   import { onMount, onDestroy } from 'svelte'
   import { io } from 'socket.io-client'
   import { EVENTS } from '../../shared/protocol.js'
-  import { CLASSES } from '../../shared/ClassConfig.js'
   import JoinScreen   from './screens/JoinScreen.svelte'
-  import LobbyScreen  from './screens/LobbyScreen.svelte'
   import GameScreen   from './screens/GameScreen.svelte'
 
   // ── Screens: 'join' | 'lobby' | 'game' | 'end'
-  let screen = 'join'
+  let screen = $state('join')
 
   // ── Player state
-  let myId        = null
-  let playerName  = ''
-  let className   = ''
-  let maxHp       = 0
-  let currentHp   = 0
-  let isDead      = false
-  let cooldowns   = [0, 0, 0, 0]  // expiresAt timestamps per skill slot
+  let myId        = $state(null)
+  let playerName  = $state('')
+  let className   = $state('')
+  let isDead      = $state(false)
+  let cooldowns   = $state([0, 0, 0, 0])  // expiresAt timestamps per skill slot
 
   // ── End state
-  let endMessage  = ''
+  let endMessage  = $state('')
 
-  // ── Socket
+  // ── Socket (plain let — must NOT be Proxy-wrapped)
   let socket
 
   onMount(() => {
@@ -32,8 +28,6 @@
       // Reconnect: if already past the join screen, re-register with the server
       if (screen !== 'join' && playerName && className) {
         socket.emit(EVENTS.JOIN, { name: playerName, className, isHost: false })
-        maxHp     = CLASSES[className].hp
-        currentHp = maxHp
       }
     })
 
@@ -55,8 +49,7 @@
       if (!myId) return
       const me = delta.players?.[myId]
       if (!me) return
-      if (me.hp     != null) currentHp = me.hp
-      if (me.isDead != null) isDead    = me.isDead
+      if (me.isDead != null) isDead = me.isDead
     })
 
     socket.on(EVENTS.COOLDOWN, data => {
@@ -69,42 +62,35 @@
 
   // ── Actions passed down to children
 
-  function handleJoin({ detail: { name, cls } }) {
-    playerName  = name
-    className   = cls
-    maxHp       = CLASSES[cls].hp
-    currentHp   = maxHp
+  function handleJoin({ name, cls }) {
+    playerName = name
+    className  = cls
 
     socket.emit(EVENTS.JOIN, { name, className: cls, isHost: false })
     screen = 'lobby'
   }
 
-  function handleMove({ detail: vec }) {
+  function handleMove(vec) {
     socket.emit(EVENTS.INPUT_MOVE, vec)
   }
 
-  function handleSkill({ detail: { index, vector, action } }) {
+  function handleSkill({ index, vector, action }) {
     socket.emit(EVENTS.INPUT_SKILL, { index, vector, action })
   }
 </script>
 
 <div class="app">
   {#if screen === 'join'}
-    <JoinScreen on:join={handleJoin} />
+    <JoinScreen onjoin={handleJoin} />
 
-  {:else if screen === 'lobby'}
-    <LobbyScreen {playerName} {className} />
-
-  {:else if screen === 'game'}
+  {:else if screen === 'lobby' || screen === 'game'}
     <GameScreen
       {playerName}
       {className}
-      {maxHp}
-      {currentHp}
       {isDead}
       {cooldowns}
-      on:move={handleMove}
-      on:skill={handleSkill}
+      onmove={handleMove}
+      onskill={handleSkill}
     />
 
   {:else if screen === 'end'}

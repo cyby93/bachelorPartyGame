@@ -9,31 +9,43 @@
 import { Container, Text } from 'pixi.js'
 import { GAME_CONFIG }    from '../../../shared/GameConfig.js'
 import PlayerSprite       from '../entities/PlayerSprite.js'
+import EnemySprite        from '../entities/EnemySprite.js'
+import ProjectileSprite   from '../entities/ProjectileSprite.js'
 
 export default class LobbyRenderer {
   constructor(game) {
     this.game          = game
     this.playerSprites = new Map()   // id → PlayerSprite
+    this.enemySprites  = new Map()   // id → EnemySprite
+    this.projSprites   = new Map()   // id → ProjectileSprite
 
     // Root containers for this renderer's content
-    this._entityRoot = new Container()
-    this._uiRoot     = new Container()
+    this._entityRoot         = new Container()
+    this._uiRoot             = new Container()
+    this._projectileContainer = new Container()
   }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   enter() {
     this.game.layers.entities.addChild(this._entityRoot)
+    this.game.layers.fx.addChild(this._projectileContainer)
     this.game.layers.ui.addChild(this._uiRoot)
     this._buildUI()
   }
 
   exit() {
-    // Destroy all player sprites
     this.playerSprites.forEach(s => s.destroy())
     this.playerSprites.clear()
 
+    this.enemySprites.forEach(s => s.destroy())
+    this.enemySprites.clear()
+
+    this.projSprites.forEach(s => s.destroy())
+    this.projSprites.clear()
+
     this.game.layers.entities.removeChild(this._entityRoot)
+    this.game.layers.fx.removeChild(this._projectileContainer)
     this.game.layers.ui.removeChild(this._uiRoot)
 
     this._entityRoot.removeChildren()
@@ -69,6 +81,47 @@ export default class LobbyRenderer {
         this._entityRoot.removeChild(sprite.container)
         sprite.destroy()
         this.playerSprites.delete(id)
+      }
+    })
+
+    // ── Update training dummy / enemies ────────────────────────────────────
+    const activeEnemyIds = new Set((this.game.knownState.enemies ?? []).map(e => e.id))
+
+    for (const e of (this.game.knownState.enemies ?? [])) {
+      if (!this.enemySprites.has(e.id)) {
+        const s = new EnemySprite(e)
+        if (e.isDummy) s.container.tint = 0xf1c40f   // gold tint for training dummy
+        this.enemySprites.set(e.id, s)
+        this._entityRoot.addChild(s.container)
+      }
+      this.enemySprites.get(e.id).update(e)
+    }
+
+    this.enemySprites.forEach((s, id) => {
+      if (!activeEnemyIds.has(id)) {
+        this._entityRoot.removeChild(s.container)
+        s.destroy()
+        this.enemySprites.delete(id)
+      }
+    })
+
+    // ── Update projectiles ─────────────────────────────────────────────────
+    const activeProjIds = new Set((this.game.knownState.projectiles ?? []).map(p => p.id))
+
+    for (const proj of (this.game.knownState.projectiles ?? [])) {
+      if (!this.projSprites.has(proj.id)) {
+        const s = new ProjectileSprite(proj)
+        this.projSprites.set(proj.id, s)
+        this._projectileContainer.addChild(s.container)
+      }
+      this.projSprites.get(proj.id).update(proj)
+    }
+
+    this.projSprites.forEach((s, id) => {
+      if (!activeProjIds.has(id)) {
+        this._projectileContainer.removeChild(s.container)
+        s.destroy()
+        this.projSprites.delete(id)
       }
     })
 

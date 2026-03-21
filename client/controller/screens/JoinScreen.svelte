@@ -1,11 +1,10 @@
 <script>
-  import { createEventDispatcher } from 'svelte'
   import { CLASS_NAMES, CLASSES } from '../../../shared/ClassConfig.js'
 
-  const dispatch = createEventDispatcher()
+  let { onjoin } = $props()
 
-  let name      = ''
-  let className = CLASS_NAMES[0]
+  let name      = $state('')
+  let className = $state(CLASS_NAMES[0])
 
   const CLASS_ICONS = {
     Warrior: '⚔️',
@@ -31,7 +30,7 @@
 
   function join() {
     const trimmed = name.trim() || 'Player'
-    dispatch('join', { name: trimmed, cls: className })
+    onjoin?.({ name: trimmed, cls: className })
   }
 </script>
 
@@ -58,7 +57,7 @@
         class="class-card"
         class:active
         style="--class-color: {CLASSES[cls].color}"
-        on:click={() => className = cls}
+        onclick={() => className = cls}
       >
         <span class="icon">{CLASS_ICONS[cls]}</span>
         <span class="cls-name">{cls}</span>
@@ -73,7 +72,7 @@
     <span>⚡ {CLASSES[className].speed}x Speed</span>
   </div>
 
-  <button class="join-btn" on:click={join}>JOIN GAME</button>
+  <button class="join-btn" onclick={join}>JOIN GAME</button>
 </div>
 
 <style>

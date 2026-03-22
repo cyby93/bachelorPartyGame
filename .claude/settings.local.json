@@ -14,7 +14,8 @@
       "Bash(npx vite:*)",
       "Bash(npm show:*)",
       "Bash(node -e \"const p = JSON.parse\\(require\\('fs'\\).readFileSync\\('package.json'\\)\\); console.log\\('vite:', p.devDependencies.vite\\); console.log\\('svelte:', p.devDependencies.svelte\\); console.log\\('@sveltejs/vite-plugin-svelte:', p.devDependencies['@sveltejs/vite-plugin-svelte']\\);\")",
-      "Bash(find \"D:/Games/bachelorPartyGame/client/host\" -type f \\\\\\( -name \"*.svelte\" -o -name \"*.js\" \\\\\\) 2>/dev/null | head -20)"
+      "Bash(find \"D:/Games/bachelorPartyGame/client/host\" -type f \\\\\\( -name \"*.svelte\" -o -name \"*.js\" \\\\\\) 2>/dev/null | head -20)",
+      "Bash(node -e \"import\\('./server/GameServer.js'\\).then\\(\\(\\) => console.log\\('OK'\\)\\).catch\\(e => console.error\\(e.message\\)\\)\" 2>&1)"
     ]
   }
 }

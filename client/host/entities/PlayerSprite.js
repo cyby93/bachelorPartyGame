@@ -16,6 +16,7 @@
 import { Container, Graphics, Text } from 'pixi.js'
 import { CLASSES }     from '../../../shared/ClassConfig.js'
 import { GAME_CONFIG } from '../../../shared/GameConfig.js'
+import OverheadDisplay from '../systems/OverheadDisplay.js'
 
 const R     = GAME_CONFIG.PLAYER_RADIUS
 const BAR_W = 44
@@ -90,6 +91,13 @@ export default class PlayerSprite {
     this._flashGfx.alpha = 0
     this._body.addChild(this._flashGfx)
     this._flashTimer = 0   // seconds remaining
+
+    // ── Overhead display (cast bar + status icons) ──────────────────────────
+    this.overhead = new OverheadDisplay(this.container, {
+      yOffset: -R - 18,
+      showCastBar: true,
+      showStatusIcons: true,
+    })
   }
 
   // ── Drawing helpers ────────────────────────────────────────────────────────
@@ -171,9 +179,17 @@ export default class PlayerSprite {
 
     // Dead: fade out
     this.container.alpha = state.isDead ? 0.2 : 1.0
+
+    // Update overhead display
+    this.overhead.updateCastBar(state.castProgress ?? 0)
+    if (state.effects) {
+      this.overhead.setStatusIcons(state.effects)
+    }
+    this.overhead.update(dt)
   }
 
   destroy() {
+    this.overhead.destroy()
     this.container.destroy({ children: true })
   }
 }

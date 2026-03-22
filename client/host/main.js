@@ -161,3 +161,13 @@ socket.on(EVENTS.SCENE_CHANGE, ({ scene }) => {
   else if (scene === 'result')  audio.playVictory()
   else if (scene === 'gameover') audio.playDefeat()
 })
+
+// ── VFX events ───────────────────────────────────────────────────────────
+
+socket.on(EVENTS.SKILL_FIRED, data => {
+  game.activeRenderer?.onSkillFired?.(data)
+})
+
+socket.on(EVENTS.EFFECT_DAMAGE, data => {
+  game.activeRenderer?.onEffectDamage?.(data)
+})

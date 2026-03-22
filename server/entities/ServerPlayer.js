@@ -153,7 +153,15 @@ export default class ServerPlayer {
       delta.castProgress = Math.min(1, elapsed / (this.activeCast.config.castTime ?? 1000))
     }
 
+    // Include compact effects summary when activeEffects changes
+    const effectKeys = this.activeEffects.map(e => e.source)
+    const prevEffectKeys = (this._prev._effectKeys ?? [])
+    if (effectKeys.length !== prevEffectKeys.length || effectKeys.some((k, i) => k !== prevEffectKeys[i])) {
+      delta.effects = this.activeEffects.map(e => ({ src: e.source, params: e.params }))
+    }
+
     this._prev = cur
+    this._prev._effectKeys = effectKeys
     return delta
   }
 

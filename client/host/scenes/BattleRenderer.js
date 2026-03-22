@@ -6,8 +6,8 @@
  * - trashMob:  shows kill counter progress bar
  * - bossFight: shows boss HP bar
  *
- * Enemy, boss, and projectile sprite pools are wired up here as empty
- * containers; Phase 4 (skills) and Phase 5 (content) will populate them.
+ * Integrates VFXManager for all visual effects:
+ *   particles, one-shot effects, ground zones, auras, floating text
  */
 
 import { Container, Graphics, Text } from 'pixi.js'
@@ -17,7 +17,7 @@ import PlayerSprite      from '../entities/PlayerSprite.js'
 import EnemySprite       from '../entities/EnemySprite.js'
 import BossSprite        from '../entities/BossSprite.js'
 import ProjectileSprite  from '../entities/ProjectileSprite.js'
-import ParticleSystem    from '../systems/ParticleSystem.js'
+import VFXManager        from '../systems/VFXManager.js'
 
 const { CANVAS_WIDTH: W, CANVAS_HEIGHT: H } = GAME_CONFIG
 const KILL_GOAL = GAME_CONFIG.ENEMY_KILL_GOAL
@@ -43,8 +43,8 @@ export default class BattleRenderer {
     this.bossSprite    = null
     this.tombstoneGfx  = new Map()   // playerId → Graphics
 
-    // Particle system (created in enter())
-    this.particles     = null
+    // VFX manager (created in enter())
+    this.vfx = null
 
     // Previous-frame tracking for event detection
     this._prevPlayerHp  = {}   // id → hp
@@ -63,7 +63,7 @@ export default class BattleRenderer {
     this.game.layers.fx.addChild(this.projectileContainer)
     this.game.layers.ui.addChild(this._uiRoot)
 
-    this.particles = new ParticleSystem(this.game.layers.fx)
+    this.vfx = new VFXManager(this.game.layers)
     this._buildUI()
   }
 
@@ -89,7 +89,7 @@ export default class BattleRenderer {
     this.tombstoneGfx.forEach(gfx => gfx.destroy())
     this.tombstoneGfx.clear()
 
-    if (this.particles) { this.particles.destroy(); this.particles = null }
+    if (this.vfx) { this.vfx.destroy(); this.vfx = null }
     this._prevPlayerHp  = {}
     this._prevEnemyIds  = new Set()
     this._prevBossPhase = 1
@@ -130,25 +130,32 @@ export default class BattleRenderer {
       }
 
       const pos = this.game.getRenderPos(p)
-      this.playerSprites.get(p.id).update(p, pos, dt)
+      const sprite = this.playerSprites.get(p.id)
+      sprite.update(p, pos, dt)
 
       // Hit spark when player HP drops
       const prevHp = this._prevPlayerHp[p.id]
       if (prevHp != null && p.hp < prevHp && !p.isDead) {
         const color = CLASSES[p.className]?.color ?? '#ffffff'
-        this.particles?.hitSpark(pos.x, pos.y, color)
+        this.vfx?.particles.hitSpark(pos.x, pos.y, color)
       }
       // Death burst when player just died
       if (prevHp != null && prevHp > 0 && p.isDead) {
         const color = CLASSES[p.className]?.color ?? '#ffffff'
-        this.particles?.deathBurst(pos.x, pos.y, color)
+        this.vfx?.triggerDeath(pos.x, pos.y, color)
       }
       this._prevPlayerHp[p.id] = p.hp
+
+      // Sync auras for this player
+      if (this.vfx && p.effects) {
+        this.vfx.auras.sync(p.id, sprite.container, p.effects, GAME_CONFIG.PLAYER_RADIUS)
+      }
     })
 
     // Remove gone players
     this.playerSprites.forEach((sprite, id) => {
       if (!activeIds.has(id)) {
+        this.vfx?.auras.removeEntity(id)
         this._entityRoot.removeChild(sprite.container)
         sprite.destroy()
         this.playerSprites.delete(id)
@@ -172,7 +179,7 @@ export default class BattleRenderer {
         if (!activeEnemyIds.has(id)) {
           // Enemy just died — burst at last known position
           const pos = s.container.position
-          this.particles?.deathBurst(pos.x, pos.y, 0xc0392b)
+          this.vfx?.triggerDeath(pos.x, pos.y, 0xc0392b)
           this.enemyContainer.removeChild(s.container)
           s.destroy()
           this.enemySprites.delete(id)
@@ -245,8 +252,11 @@ export default class BattleRenderer {
       }
     })
 
-    // Tick particles
-    this.particles?.update(dt)
+    // ── Sync ground effect zones ────────────────────────────────────────────
+    this.vfx?.ground.sync(state.aoeZones)
+
+    // ── Tick VFX ────────────────────────────────────────────────────────────
+    this.vfx?.update(dt)
 
     // Trash mob: update kill counter
     if (this.mode === 'trashMob' && this._killText) {
@@ -268,6 +278,48 @@ export default class BattleRenderer {
     }
   }
 
+  // ── Event handlers (called from main.js via socket events) ───────────────
+
+  /**
+   * Handle skill:fired event — trigger VFX at skill position.
+   */
+  onSkillFired(data) {
+    this.vfx?.triggerSkillVFX(data)
+  }
+
+  /**
+   * Handle effect:damage event — spawn floating damage/heal number.
+   */
+  onEffectDamage(data) {
+    if (!this.vfx) return
+    const { targetId, amount, type } = data
+
+    // Find target position from known sprites
+    let x, y
+    const playerSprite = this.playerSprites.get(targetId)
+    if (playerSprite) {
+      x = playerSprite.container.x
+      y = playerSprite.container.y
+    } else {
+      const enemySprite = this.enemySprites.get(targetId)
+      if (enemySprite) {
+        x = enemySprite.container.x
+        y = enemySprite.container.y
+      } else if (this.bossSprite) {
+        // Check boss
+        const state = this.game.knownState
+        if (state.boss && (state.boss.id === targetId || targetId === 'boss')) {
+          x = this.bossSprite.container.x
+          y = this.bossSprite.container.y
+        }
+      }
+    }
+
+    if (x != null && y != null) {
+      this.vfx.spawnDamageNumber(x, y - 20, amount, type)
+    }
+  }
+
   // ── Reactive hooks ────────────────────────────────────────────────────────
 
   onPlayerAdded(p) {
@@ -280,6 +332,7 @@ export default class BattleRenderer {
   onPlayerRemoved(id) {
     const sprite = this.playerSprites.get(id)
     if (!sprite) return
+    this.vfx?.auras.removeEntity(id)
     this._entityRoot.removeChild(sprite.container)
     sprite.destroy()
     this.playerSprites.delete(id)

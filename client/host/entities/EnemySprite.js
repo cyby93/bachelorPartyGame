@@ -6,6 +6,7 @@
 
 import { Container, Graphics } from 'pixi.js'
 import { GAME_CONFIG } from '../../../shared/GameConfig.js'
+import OverheadDisplay from '../systems/OverheadDisplay.js'
 
 const R = GAME_CONFIG.ENEMY_RADIUS
 
@@ -37,6 +38,13 @@ export default class EnemySprite {
     this._maxHp  = data.maxHp ?? 30
     this._lastHp = -1
     this._updateHpBar(data.hp ?? this._maxHp)
+
+    // Overhead display (damage numbers only — no cast bar or status icons)
+    this.overhead = new OverheadDisplay(this.container, {
+      yOffset: -R - 6,
+      showCastBar: false,
+      showStatusIcons: false,
+    })
   }
 
   _updateHpBar(hp) {
@@ -57,6 +65,7 @@ export default class EnemySprite {
   }
 
   destroy() {
+    this.overhead.destroy()
     this.container.destroy({ children: true })
   }
 }

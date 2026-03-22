@@ -131,6 +131,7 @@ export default class GameServer {
     this.boss        = null
     this.reviveTimers.clear()
     this._lastSpawn  = 0
+    this.skillSystem.activeZones = []
 
     this._changeScene('trashMob')
   }
@@ -160,6 +161,7 @@ export default class GameServer {
     this.stats         = { damage: {}, deaths: {}, kills: 0, startTime: 0 }
     this.reviveTimers.clear()
     this._lastSpawn    = 0
+    this.skillSystem.activeZones = []
 
     this._changeScene('lobby')
   }
@@ -205,6 +207,7 @@ export default class GameServer {
       enemies:     this.enemies,
       boss:        this.boss,
       stats:       this.stats,
+      io:          this.io,
     }
   }
 
@@ -295,6 +298,22 @@ export default class GameServer {
 
     const gs = this._gs()
     this.skillSystem.execute(gs, player, config, index, vector ?? { x: 1, y: 0 }, action)
+
+    // Emit skill fired event for VFX
+    const classColor = CLASSES[player.className]?.color ?? '#ffffff'
+    const v = vector ?? { x: 1, y: 0 }
+    this.io.emit(EVENTS.SKILL_FIRED, {
+      playerId:  player.id,
+      skillName: config.name,
+      type:      config.type,
+      subtype:   config.subtype ?? null,
+      x:         Math.round(player.x),
+      y:         Math.round(player.y),
+      angle:     Math.atan2(v.y, v.x),
+      radius:    config.radius ?? 0,
+      range:     config.range ?? 0,
+      color:     classColor,
+    })
   }
 
   // ── Enemy management ────────────────────────────────────────────────────────
@@ -480,6 +499,7 @@ export default class GameServer {
       this.enemies.clear()
       this.projectiles.clear()
       this.reviveTimers.clear()
+      this.skillSystem.activeZones = []
       this.boss = new ServerBoss()
 
       this._changeScene('bossFight')
@@ -566,6 +586,7 @@ export default class GameServer {
       killCount:   this.killCount,
       tombstones,
       stats:       this.stats,
+      aoeZones:    this.skillSystem.getZonesDTO(),
     }
   }
 }

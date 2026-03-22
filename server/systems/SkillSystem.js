@@ -74,6 +74,8 @@ export default class SkillSystem {
   constructor() {
     this._collision = new CollisionSystem()
     this._projSeq   = 0
+    this._zoneSeq   = 0
+    this.activeZones = []   // persistent AOE ground zones
   }
 
   // ── Public API ─────────────────────────────────────────────────────────────
@@ -112,6 +114,7 @@ export default class SkillSystem {
     this._tickProjectiles(gs, dt)
     this._tickEffects(gs)
     this._tickCasts(gs)
+    this._tickZones(gs)
   }
 
   // ── Skill handlers ─────────────────────────────────────────────────────────
@@ -165,7 +168,15 @@ export default class SkillSystem {
 
   _executeAOE(gs, player, config, v) {
     if (config.subtype === 'AOE_SELF') {
-      this._executeAOEAtPoint(gs, player, config, player.x, player.y)
+      // If skill has both duration and tickRate, create a persistent ground zone
+      if (config.duration && config.tickRate) {
+        const color = CLASSES[player.className]?.color ?? '#ffff00'
+        this.addZone(player.id, config, player.x, player.y, color)
+        // Also fire immediately for the first tick
+        this._executeAOEAtPoint(gs, player, config, player.x, player.y)
+      } else {
+        this._executeAOEAtPoint(gs, player, config, player.x, player.y)
+      }
     } else if (config.subtype === 'AOE_LOBBED') {
       // Spawn a lobbed projectile that detonates at target
       const targetX = player.x + v.x * (config.range ?? 300)
@@ -313,7 +324,11 @@ export default class SkillSystem {
       gs.players.forEach(p => {
         if (p.isDead || p.isHost) return
         if (this._collision.distance({ x: cx, y: cy }, { x: p.x, y: p.y }) <= radius) {
-          p.heal(config.healAmount ?? 0)
+          const amount = config.healAmount ?? 0
+          p.heal(amount)
+          if (gs.io && amount > 0) {
+            gs.io.emit('effect:damage', { targetId: p.id, amount, type: 'heal', sourceSkill: config.name ?? null })
+          }
         }
       })
       return
@@ -343,7 +358,11 @@ export default class SkillSystem {
       gs.players.forEach(p => {
         if (p.isDead || p.isHost) return
         if (this._collision.distance({ x: cx, y: cy }, { x: p.x, y: p.y }) <= radius) {
-          p.heal(config.healAmount ?? 0)
+          const amount = config.healAmount ?? 0
+          p.heal(amount)
+          if (gs.io && amount > 0) {
+            gs.io.emit('effect:damage', { targetId: p.id, amount, type: 'heal', sourceSkill: config.name ?? null })
+          }
         }
       })
       return
@@ -396,7 +415,7 @@ export default class SkillSystem {
 
   // ── Damage helper ──────────────────────────────────────────────────────────
 
-  _dealDamage(gs, attacker, target, amount) {
+  _dealDamage(gs, attacker, target, amount, sourceSkill) {
     if (amount <= 0) return
     if (target.isDead) return
 
@@ -424,6 +443,16 @@ export default class SkillSystem {
 
     const wasDead = target.isDead
     target.takeDamage(finalAmount)
+
+    // Emit damage event for VFX
+    if (gs.io) {
+      gs.io.emit('effect:damage', {
+        targetId: target.id,
+        amount: finalAmount,
+        type: 'damage',
+        sourceSkill: sourceSkill ?? null,
+      })
+    }
 
     // Track damage dealt
     if (attacker) {
@@ -533,7 +562,11 @@ export default class SkillSystem {
     if (proj.effectType === 'HEAL') {
       // Heal projectile — only hits players
       if (target.isPlayer) {
-        target.heal(proj.healAmount ?? 0)
+        const amount = proj.healAmount ?? 0
+        target.heal(amount)
+        if (gs.io && amount > 0) {
+          gs.io.emit('effect:damage', { targetId: target.id, amount, type: 'heal', sourceSkill: null })
+        }
       }
     } else {
       const owner = gs.players.get(proj.ownerId)
@@ -609,6 +642,57 @@ export default class SkillSystem {
         }
       }
     })
+  }
+
+  _tickZones(gs) {
+    const now = Date.now()
+    for (let i = this.activeZones.length - 1; i >= 0; i--) {
+      const zone = this.activeZones[i]
+      if (now >= zone.expiresAt) {
+        this.activeZones.splice(i, 1)
+        continue
+      }
+      // Tick damage/heal at tickRate intervals
+      if (now - zone.lastTick >= zone.tickRate) {
+        zone.lastTick = now
+        const owner = gs.players.get(zone.ownerId)
+        this._executeAOEAtPoint(gs, owner, zone.config, zone.x, zone.y)
+      }
+    }
+  }
+
+  /**
+   * Create a persistent AOE ground zone.
+   */
+  addZone(ownerId, config, x, y, color) {
+    const id = ++this._zoneSeq
+    this.activeZones.push({
+      id,
+      ownerId,
+      config,
+      x, y,
+      radius: config.radius ?? 100,
+      color,
+      createdAt: Date.now(),
+      expiresAt: Date.now() + (config.duration ?? 5000),
+      tickRate: config.tickRate ?? 500,
+      lastTick: Date.now(),
+    })
+    return id
+  }
+
+  /** Serialise active zones for delta state. */
+  getZonesDTO() {
+    const now = Date.now()
+    return this.activeZones.map(z => ({
+      id: z.id,
+      x: Math.round(z.x),
+      y: Math.round(z.y),
+      radius: z.radius,
+      color: z.color,
+      remaining: Math.max(0, z.expiresAt - now),
+      duration: z.expiresAt - z.createdAt,
+    }))
   }
 
   _executeCastPayload(gs, player, payload, vector) {

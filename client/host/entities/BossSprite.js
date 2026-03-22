@@ -6,6 +6,7 @@
 
 import { Container, Graphics, Text } from 'pixi.js'
 import { GAME_CONFIG } from '../../../shared/GameConfig.js'
+import OverheadDisplay from '../systems/OverheadDisplay.js'
 
 const R     = GAME_CONFIG.BOSS_RADIUS
 const BAR_W = 100
@@ -66,6 +67,13 @@ export default class BossSprite {
     this._lastHpPct = -1
     this._wingTime  = 0
     this._updateHpBar(1.0)
+
+    // Overhead display (damage numbers only)
+    this.overhead = new OverheadDisplay(this.container, {
+      yOffset: -R - 26,
+      showCastBar: false,
+      showStatusIcons: false,
+    })
   }
 
   _updateHpBar(pct) {
@@ -92,6 +100,7 @@ export default class BossSprite {
   }
 
   destroy() {
+    this.overhead.destroy()
     this.container.destroy({ children: true })
   }
 }

@@ -137,6 +137,7 @@ export default class HostGame {
     if (delta.projectiles != null) this.knownState.projectiles = delta.projectiles
     if (delta.tombstones  != null) this.knownState.tombstones  = delta.tombstones
     if (delta.stats       != null) this.knownState.stats       = delta.stats
+    if (delta.aoeZones    != null) this.knownState.aoeZones    = delta.aoeZones
   }
 
   addPlayer(dto) {

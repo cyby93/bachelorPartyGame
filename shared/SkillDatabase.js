@@ -54,11 +54,10 @@ const SkillDatabase = {
     },
     {
       name:      'Shield Wall',
-      type:      'BUFF',
-      inputType: 'INSTANT',
+      type:      'SHIELD',
+      inputType: 'DIRECTIONAL',
       cooldown:  30000,
-      duration:  5000,
-      effectParams: { damageReduction: 0.9, arc: Math.PI * 2 },
+      arc:       Math.PI,        // 180° block arc
       icon:      '🛡️'
     }
   ],
@@ -90,10 +89,9 @@ const SkillDatabase = {
     {
       name:      'Divine Shield',
       type:      'SHIELD',
-      inputType: 'SUSTAINED',
-      cooldown:  0,
+      inputType: 'DIRECTIONAL',
+      cooldown:  8000,
       arc:       Math.PI / 2,   // 90° block arc
-      duration:  3000,
       icon:      '🔆'
     },
     {

@@ -98,7 +98,7 @@ export default class SkillSystem {
       case 'AOE':        return this._executeAOE(gs, player, config, v)
       case 'DASH':       return this._executeDash(gs, player, config, v)
       case 'BUFF':       return this._executeBuff(gs, player, config, skillIndex)
-      case 'SHIELD':     return this._executeShield(player, action)
+      case 'SHIELD':     return this._executeShield(player, config, vector, action, skillIndex)
       case 'CAST':       return this._executeCast(gs, player, config, v)
       default:
         console.warn(`[SkillSystem] Unknown skill type: ${config.type}`)
@@ -294,11 +294,16 @@ export default class SkillSystem {
     rebuildStats(player)
   }
 
-  _executeShield(player, action) {
+  _executeShield(player, config, vector, action, skillIndex) {
     if (action === 'START') {
-      player.shieldActive = true
+      const v = normalize(vector ?? { x: 1, y: 0 })
+      player.shieldActive     = true
+      player.shieldAngle      = Math.atan2(v.y, v.x)
+      player.shieldArc        = config.arc ?? Math.PI / 2
+      player.shieldSkillIndex = skillIndex
     } else if (action === 'END') {
-      player.shieldActive = false
+      player.shieldActive     = false
+      player.shieldSkillIndex = -1
     }
   }
 

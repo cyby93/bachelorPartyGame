@@ -68,6 +68,9 @@ export default class GameServer {
       const player = this.players.get(socket.id)
       if (player && vector) {
         player.angle = Math.atan2(vector.y, vector.x)
+        if (player.shieldActive) {
+          player.shieldAngle = player.angle
+        }
       }
     })
     socket.on(EVENTS.START_GAME,   ()   => this._onStartGame(socket))
@@ -281,10 +284,20 @@ export default class GameServer {
     const config = player.getSkillConfig(index)
     if (!config) return
 
-    // SHIELD is SUSTAINED — bypass cooldown entirely
+    // SHIELD: START bypasses cooldown; END triggers cooldown
     if (config.type === 'SHIELD') {
-      const gs = this._gs()
-      this.skillSystem.execute(gs, player, config, index, vector ?? { x: 1, y: 0 }, action)
+      if (action === 'START') {
+        if (this.cooldowns.isOnCooldown(player.id, index)) return
+        const gs = this._gs()
+        this.skillSystem.execute(gs, player, config, index, vector ?? { x: 1, y: 0 }, action)
+      } else if (action === 'END') {
+        const gs = this._gs()
+        this.skillSystem.execute(gs, player, config, index, vector ?? { x: 1, y: 0 }, action)
+        // Start cooldown on release
+        this.cooldowns.start(player.id, index, config.cooldown)
+        const expiresAt = Date.now() + config.cooldown
+        this.io.emit(EVENTS.COOLDOWN, { playerId: player.id, skillIndex: index, expiresAt })
+      }
       return
     }
 
@@ -391,6 +404,7 @@ export default class GameServer {
           if (dist <= p.constructor && false) return // type safety unused
           const combined = (GAME_CONFIG.PLAYER_RADIUS + e.radius)
           if (dist <= combined) {
+            if (p.isShieldBlocking(e.x, e.y)) return  // shield blocks
             e._lastContactDamage = now
             p.takeDamage(15)
             if (!this.stats.deaths) this.stats.deaths = {}
@@ -413,30 +427,28 @@ export default class GameServer {
     const attacks = this.boss.updateAbilities(dt, this.players, now)
     for (const attack of attacks) {
       if (attack.type === 'beam') {
-        // Damage the nearest player within beam range
         const target = attack.target
         if (target && !target.isDead) {
           const d = Math.hypot(target.x - this.boss.x, target.y - this.boss.y)
-          if (d < 350) {
+          if (d < 350 && !target.isShieldBlocking(this.boss.x, this.boss.y)) {
             target.takeDamage(attack.damage ?? 30)
             if (target.isDead) this.stats.deaths[target.id] = (this.stats.deaths[target.id] ?? 0) + 1
           }
         }
       } else if (attack.type === 'aoe') {
-        // Radius damage to all players within ability radius
         const r = attack.radius ?? 100
         this.players.forEach(p => {
           if (p.isHost || p.isDead) return
           const d = Math.hypot(p.x - attack.bossX, p.y - attack.bossY)
           if (d <= r + GAME_CONFIG.PLAYER_RADIUS) {
+            if (p.isShieldBlocking(attack.bossX, attack.bossY)) return
             p.takeDamage(attack.damage ?? 25)
             if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
           }
         })
       } else if (attack.type === 'charge') {
-        // Damage nearest player
         const target = attack.target
-        if (target && !target.isDead) {
+        if (target && !target.isDead && !target.isShieldBlocking(this.boss.x, this.boss.y)) {
           target.takeDamage(attack.damage ?? 40)
           if (target.isDead) this.stats.deaths[target.id] = (this.stats.deaths[target.id] ?? 0) + 1
         }
@@ -448,6 +460,7 @@ export default class GameServer {
       if (p.isHost || p.isDead) return
       const d = Math.hypot(p.x - this.boss.x, p.y - this.boss.y)
       if (d <= GAME_CONFIG.BOSS_RADIUS + GAME_CONFIG.PLAYER_RADIUS + 5) {
+        if (p.isShieldBlocking(this.boss.x, this.boss.y)) return
         if (!p._lastBossContact) p._lastBossContact = 0
         if (now - p._lastBossContact > 500) {
           p._lastBossContact = now

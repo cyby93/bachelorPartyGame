@@ -92,6 +92,12 @@ export default class PlayerSprite {
     this._body.addChild(this._flashGfx)
     this._flashTimer = 0   // seconds remaining
 
+    // ── Shield arc ────────────────────────────────────────────────────────
+    this._shieldGfx = new Graphics()
+    this._shieldGfx.alpha = 0   // hidden by default
+    this.container.addChild(this._shieldGfx)
+    this._shieldVisible = false
+
     // ── Overhead display (cast bar + status icons) ──────────────────────────
     this.overhead = new OverheadDisplay(this.container, {
       yOffset: -R - 18,
@@ -151,6 +157,26 @@ export default class PlayerSprite {
     }
   }
 
+  // ── Shield arc drawing ─────────────────────────────────────────────────────
+
+  _drawShieldArc(angle, arc) {
+    const g = this._shieldGfx
+    const shieldRadius = R + 12
+    const halfArc = arc / 2
+
+    g.clear()
+
+    // Semi-transparent filled arc
+    g.moveTo(0, 0)
+    g.arc(0, 0, shieldRadius, angle - halfArc, angle + halfArc)
+    g.lineTo(0, 0)
+    g.fill({ color: 0x00d2ff, alpha: 0.2 })
+
+    // Bright arc outline
+    g.arc(0, 0, shieldRadius, angle - halfArc, angle + halfArc)
+    g.stroke({ color: 0x00d2ff, width: 3, alpha: 0.8 })
+  }
+
   // ── Per-frame update ───────────────────────────────────────────────────────
 
   /**
@@ -179,6 +205,16 @@ export default class PlayerSprite {
 
     // Dead: fade out
     this.container.alpha = state.isDead ? 0.2 : 1.0
+
+    // Shield arc
+    const shieldOn = !!state.shieldActive
+    if (shieldOn) {
+      this._drawShieldArc(state.shieldAngle ?? 0, state.shieldArc ?? Math.PI / 2)
+      this._shieldGfx.alpha = 1
+    } else if (this._shieldVisible) {
+      this._shieldGfx.alpha = 0
+    }
+    this._shieldVisible = shieldOn
 
     // Update overhead display
     this.overhead.updateCastBar(state.castProgress ?? 0)

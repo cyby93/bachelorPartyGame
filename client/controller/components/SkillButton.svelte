@@ -25,8 +25,9 @@
   let castTimer   = null
   let isCasting   = false
 
-  const isCastHold = $derived(skill?.type === 'CAST' && skill?.inputType === 'DIRECTIONAL')
-  const castTime   = $derived(skill?.castTime ?? 1500)
+  const isCastHold   = $derived(skill?.type === 'CAST' && skill?.inputType === 'DIRECTIONAL')
+  const isShieldHold = $derived(skill?.type === 'SHIELD' && skill?.inputType === 'DIRECTIONAL')
+  const castTime     = $derived(skill?.castTime ?? 1500)
 
   function startCast() {
     if (isCasting) return
@@ -93,7 +94,13 @@
       lastDistance = data.distance ?? 0
       onaim?.({ vector: lastVector })
 
-      if (isCastHold) {
+      if (isShieldHold) {
+        // Activate shield when joystick dragged past threshold
+        if (lastDistance > 8 && !held && expiresAt <= Date.now()) {
+          held = true
+          onskill?.({ index, vector: lastVector, action: 'START' })
+        }
+      } else if (isCastHold) {
         if (lastDistance > 8 && !isCasting && expiresAt <= Date.now()) {
           startCast()
         } else if (lastDistance <= 8 && isCasting) {
@@ -110,7 +117,10 @@
         autoFireInterval = null
       }
 
-      if (isCastHold) {
+      if (isShieldHold && held) {
+        held = false
+        onskill?.({ index, vector: lastVector, action: 'END' })
+      } else if (isCastHold) {
         cancelCast()
       } else if (!isFiller && lastDistance > 8) {
         onskill?.({ index, vector: lastVector })
@@ -120,6 +130,10 @@
 
     return () => {
       if (autoFireInterval) clearInterval(autoFireInterval)
+      if (held) {
+        held = false
+        onskill?.({ index, vector: lastVector, action: 'END' })
+      }
       cancelCast()
       j.destroy()
     }

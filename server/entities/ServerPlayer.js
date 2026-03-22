@@ -33,6 +33,9 @@ export default class ServerPlayer {
     // Cast state (set by SkillSystem)
     this.activeCast   = null
     this.shieldActive = false
+    this.shieldAngle  = 0          // radians — direction shield faces
+    this.shieldArc    = 0          // radians — total arc width
+    this.shieldSkillIndex = -1     // which skill slot holds the active shield
 
     // Derived stats (rebuilt by rebuildStats after every effect change)
     this.speedMult       = 1
@@ -97,6 +100,22 @@ export default class ServerPlayer {
     this.hp     = Math.floor(this.maxHp * 0.4)
   }
 
+  // ── Shield helpers ───────────────────────────────────────────────────
+
+  /**
+   * Returns true if an attack coming from (attackerX, attackerY) is blocked
+   * by the player's active directional shield.
+   */
+  isShieldBlocking(attackerX, attackerY) {
+    if (!this.shieldActive) return false
+    const dx = attackerX - this.x
+    const dy = attackerY - this.y
+    const attackAngle = Math.atan2(dy, dx)
+    let diff = Math.abs(attackAngle - this.shieldAngle)
+    if (diff > Math.PI) diff = Math.PI * 2 - diff
+    return diff <= this.shieldArc / 2
+  }
+
   // ── Skill helpers ─────────────────────────────────────────────────────
 
   getSkillConfig(index) {
@@ -146,6 +165,10 @@ export default class ServerPlayer {
 
     // Shield state
     if (cur.shieldActive !== prev.shieldActive) delta.shieldActive = cur.shieldActive
+    if (cur.shieldActive) {
+      delta.shieldAngle = cur.shieldAngle
+      delta.shieldArc   = cur.shieldArc
+    }
 
     // Cast progress (0-1), only if actively casting
     if (this.activeCast) {
@@ -177,6 +200,8 @@ export default class ServerPlayer {
       isDead:      this.isDead,
       isInvisible: this.isInvisible,
       shieldActive: this.shieldActive,
+      shieldAngle: +this.shieldAngle.toFixed(3),
+      shieldArc:   +this.shieldArc.toFixed(3),
     }
   }
 }

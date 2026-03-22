@@ -99,7 +99,7 @@ export default class SkillSystem {
       case 'DASH':       return this._executeDash(gs, player, config, v)
       case 'BUFF':       return this._executeBuff(gs, player, config, skillIndex)
       case 'SHIELD':     return this._executeShield(player, action)
-      case 'CAST':       return this._executeCast(player, config, v)
+      case 'CAST':       return this._executeCast(gs, player, config, v)
       default:
         console.warn(`[SkillSystem] Unknown skill type: ${config.type}`)
     }
@@ -302,8 +302,15 @@ export default class SkillSystem {
     }
   }
 
-  _executeCast(player, config, v) {
+  _executeCast(gs, player, config, v) {
     if (player.activeCast != null) return   // already casting
+
+    // DIRECTIONAL casts were pre-cast on the controller — fire immediately
+    if (config.inputType === 'DIRECTIONAL') {
+      this._executeCastPayload(gs, player, config.payload, v)
+      return
+    }
+
     player.activeCast = {
       config,
       vector: v,

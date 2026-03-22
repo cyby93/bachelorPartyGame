@@ -288,6 +288,27 @@ export default class GameServer {
       return
     }
 
+    // Cast-on-hold: controller-driven cast bar for CAST + DIRECTIONAL skills
+    if (config.type === 'CAST' && config.inputType === 'DIRECTIONAL') {
+      if (action === 'CAST_START') {
+        // Visual-only cast bar — no cooldown, no execution yet
+        if (player.activeCast != null) return
+        player.activeCast = {
+          config,
+          vector: vector ?? { x: 1, y: 0 },
+          startedAt: Date.now(),
+          isChanneled: false,
+        }
+        return
+      }
+      if (action === 'CAST_CANCEL') {
+        player.activeCast = null
+        return
+      }
+      // No action = cast completed on controller — clear visual cast, proceed to fire
+      player.activeCast = null
+    }
+
     if (player.isStunned) return
 
     if (this.cooldowns.isOnCooldown(player.id, index)) return

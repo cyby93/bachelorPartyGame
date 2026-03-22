@@ -20,11 +20,50 @@
   let lastDistance = 0
   let held         = $state(false)  // SUSTAINED visual state
 
+  // ── Cast-on-hold state (CAST + DIRECTIONAL, e.g. Pyroblast) ──────────────
+
+  let castTimer   = null
+  let isCasting   = false
+
+  const isCastHold = $derived(skill?.type === 'CAST' && skill?.inputType === 'DIRECTIONAL')
+  const castTime   = $derived(skill?.castTime ?? 1500)
+
+  function startCast() {
+    if (isCasting) return
+    isCasting = true
+
+    // Tell server to show cast bar on host display
+    onskill?.({ index, vector: lastVector, action: 'CAST_START' })
+
+    // Fire when castTime elapses
+    castTimer = setTimeout(() => {
+      if (isCasting) {
+        isCasting = false
+        castTimer = null
+        onskill?.({ index, vector: lastVector })
+      }
+    }, castTime)
+  }
+
+  function cancelCast() {
+    const wasCasting = isCasting
+    if (castTimer) { clearTimeout(castTimer); castTimer = null }
+    isCasting = false
+    // Tell server to hide cast bar on host display
+    if (wasCasting) {
+      onskill?.({ index, vector: lastVector, action: 'CAST_CANCEL' })
+    }
+  }
+
   // ── nipplejs for DIRECTIONAL / TARGETED ───────────────────────────────────
+
+  let autoFireInterval = null
 
   $effect(() => {
     const type = skill?.inputType
     if (!btnEl || (type !== 'DIRECTIONAL' && type !== 'TARGETED')) return
+
+    const isFiller = skill?.type === 'PROJECTILE' || skill?.type === 'MELEE'
 
     const j = nipplejs.create({
       zone:  btnEl,
@@ -37,6 +76,14 @@
       navigator.vibrate?.(20)
       lastVector   = { x: 1, y: 0 }
       lastDistance = 0
+
+      if (isFiller) {
+        autoFireInterval = setInterval(() => {
+          if (lastDistance > 8 && expiresAt <= Date.now()) {
+            onskill?.({ index, vector: lastVector })
+          }
+        }, 100)
+      }
     })
 
     j.on('move', (_, data) => {
@@ -45,16 +92,37 @@
       }
       lastDistance = data.distance ?? 0
       onaim?.({ vector: lastVector })
+
+      if (isCastHold) {
+        if (lastDistance > 8 && !isCasting && expiresAt <= Date.now()) {
+          startCast()
+        } else if (lastDistance <= 8 && isCasting) {
+          cancelCast()
+        }
+      } else if (isFiller && lastDistance > 8 && expiresAt <= Date.now()) {
+        onskill?.({ index, vector: lastVector })
+      }
     })
 
     j.on('end', () => {
-      if (lastDistance > 8) {
+      if (autoFireInterval) {
+        clearInterval(autoFireInterval)
+        autoFireInterval = null
+      }
+
+      if (isCastHold) {
+        cancelCast()
+      } else if (!isFiller && lastDistance > 8) {
         onskill?.({ index, vector: lastVector })
       }
       lastDistance = 0
     })
 
-    return () => { j.destroy() }
+    return () => {
+      if (autoFireInterval) clearInterval(autoFireInterval)
+      cancelCast()
+      j.destroy()
+    }
   })
 
   // ── Touch handlers for INSTANT / SUSTAINED ────────────────────────────────

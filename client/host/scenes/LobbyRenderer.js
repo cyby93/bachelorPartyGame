@@ -11,6 +11,7 @@ import { GAME_CONFIG }    from '../../../shared/GameConfig.js'
 import PlayerSprite       from '../entities/PlayerSprite.js'
 import EnemySprite        from '../entities/EnemySprite.js'
 import ProjectileSprite   from '../entities/ProjectileSprite.js'
+import VFXManager         from '../systems/VFXManager.js'
 
 export default class LobbyRenderer {
   constructor(game) {
@@ -31,6 +32,7 @@ export default class LobbyRenderer {
     this.game.layers.entities.addChild(this._entityRoot)
     this.game.layers.fx.addChild(this._projectileContainer)
     this.game.layers.ui.addChild(this._uiRoot)
+    this.vfx = new VFXManager(this.game.layers)
     this._buildUI()
   }
 
@@ -44,6 +46,8 @@ export default class LobbyRenderer {
     this.projSprites.forEach(s => s.destroy())
     this.projSprites.clear()
 
+    if (this.vfx) { this.vfx.destroy(); this.vfx = null }
+
     this.game.layers.entities.removeChild(this._entityRoot)
     this.game.layers.fx.removeChild(this._projectileContainer)
     this.game.layers.ui.removeChild(this._uiRoot)
@@ -55,7 +59,7 @@ export default class LobbyRenderer {
 
   // ── Per-frame update ──────────────────────────────────────────────────────
 
-  update() {
+  update(dt = 0.016) {
     const players    = this.game.knownState.players
     const activeIds  = new Set()
 
@@ -125,6 +129,9 @@ export default class LobbyRenderer {
       }
     })
 
+    // Tick VFX animations
+    this.vfx?.update(dt)
+
     // Update player count text
     if (this._countText) {
       const n = activeIds.size
@@ -149,6 +156,35 @@ export default class LobbyRenderer {
     this._entityRoot.removeChild(sprite.container)
     sprite.destroy()
     this.playerSprites.delete(id)
+  }
+
+  // ── VFX event handlers (called from main.js via socket events) ────────────
+
+  onSkillFired(data) {
+    this.vfx?.triggerSkillVFX(data)
+  }
+
+  onEffectDamage(data) {
+    if (!this.vfx) return
+    const { targetId, amount, type } = data
+
+    // Find target position from known sprites
+    let x, y
+    const playerSprite = this.playerSprites.get(targetId)
+    if (playerSprite) {
+      x = playerSprite.container.x
+      y = playerSprite.container.y
+    } else {
+      const enemySprite = this.enemySprites.get(targetId)
+      if (enemySprite) {
+        x = enemySprite.container.x
+        y = enemySprite.container.y
+      }
+    }
+
+    if (x != null && y != null) {
+      this.vfx.spawnDamageNumber(x, y - 20, amount, type)
+    }
   }
 
   // ── Private UI builder ────────────────────────────────────────────────────

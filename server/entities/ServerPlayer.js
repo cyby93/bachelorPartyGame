@@ -151,6 +151,8 @@ export default class ServerPlayer {
     if (this.activeCast) {
       const elapsed = Date.now() - this.activeCast.startedAt
       delta.castProgress = Math.min(1, elapsed / (this.activeCast.config.castTime ?? 1000))
+    } else if (this._prev._wasCasting) {
+      delta.castProgress = null   // explicitly clear — tells client to hide cast bar
     }
 
     // Include compact effects summary when activeEffects changes
@@ -162,6 +164,7 @@ export default class ServerPlayer {
 
     this._prev = cur
     this._prev._effectKeys = effectKeys
+    this._prev._wasCasting = !!this.activeCast
     return delta
   }
 

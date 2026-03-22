@@ -1,21 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find . -maxdepth 1 -name \"*.md\" | sort && find .kiro -name \"*.md\" 2>/dev/null | sort)",
-      "Bash(cd D:/Games/bachelorPartyGame && rm \\\\\n  ABILITY_SYSTEM_INTEGRATION_GUIDE.md \\\\\n  AGENT_ABILITY_SYSTEM_SPECIFICATION.md \\\\\n  AGENT_INSTRUCTIONS.md \\\\\n  AGENT_SCENE_SPECIFICATIONS.md \\\\\n  CONFIG_REFACTOR_SUMMARY.md \\\\\n  COOLDOWN_REFACTOR_SUMMARY.md \\\\\n  INTEGRATION_COMPLETE.md \\\\\n  README.md \\\\\n  SCENE_BASE_CLASS_REFACTOR.md \\\\\n  SKILL_REFERENCE.md \\\\\n  SKILLDATABASE_IMPORT_SUMMARY.md \\\\\n  SYSTEM_ARCHITECTURE.md \\\\\n  TEST_INTEGRATION.md && \\\\\nrm -rf .kiro/specs && \\\\\nrm -f .kiro/steering/product.md .kiro/steering/structure.md .kiro/steering/tech.md)",
-      "Bash(cd D:/Games/bachelorPartyGame && rm -rf public server.js jest.config.js)",
-      "Bash(cd D:/Games/bachelorPartyGame && npm install 2>&1)",
-      "Bash(npm run:*)",
-      "Bash(git add:*)",
-      "Bash(npm install:*)",
-      "Bash(git commit:*)",
-      "Bash(ls -la \"D:\\\\Games\\\\bachelorPartyGame\" | grep -E \"^\\\\-.*\\\\.\\(md|txt|json\\)$\")",
-      "Bash(node -e \"const s = require\\('./node_modules/svelte/package.json'\\); const p = require\\('./node_modules/@sveltejs/vite-plugin-svelte/package.json'\\); console.log\\('svelte:', s.version, '| plugin:', p.version\\)\")",
-      "Bash(npx vite:*)",
-      "Bash(npm show:*)",
-      "Bash(node -e \"const p = JSON.parse\\(require\\('fs'\\).readFileSync\\('package.json'\\)\\); console.log\\('vite:', p.devDependencies.vite\\); console.log\\('svelte:', p.devDependencies.svelte\\); console.log\\('@sveltejs/vite-plugin-svelte:', p.devDependencies['@sveltejs/vite-plugin-svelte']\\);\")",
-      "Bash(find \"D:/Games/bachelorPartyGame/client/host\" -type f \\\\\\( -name \"*.svelte\" -o -name \"*.js\" \\\\\\) 2>/dev/null | head -20)",
-      "Bash(node -e \"import\\('./server/GameServer.js'\\).then\\(\\(\\) => console.log\\('OK'\\)\\).catch\\(e => console.error\\(e.message\\)\\)\" 2>&1)"
+      "Bash(git *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(node *)",
+      "Bash(ls *)",
+      "Bash(find *)"
     ]
   }
 }

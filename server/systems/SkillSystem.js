@@ -155,6 +155,19 @@ export default class SkillSystem {
       if (e.isDead) return
       if (this._collision.inCone({ x: player.x, y: player.y }, v, halfAngle, config.range, { x: e.x, y: e.y })) {
         this._dealDamage(gs, player, e, config.damage ?? 0)
+        // Apply debuff if effectParams present (e.g. Frost Strike slow)
+        if (config.effectParams) {
+          const ep = config.effectParams
+          e.activeEffects = e.activeEffects ?? []
+          e.activeEffects.push({
+            source: 'melee_debuff',
+            params: ep,
+            expiresAt: Date.now() + (ep.duration ?? 2000),
+          })
+          if (ep.stunned) e.isStunned = true
+          if (ep.rooted)  e.isRooted  = true
+          if (ep.speedMultiplier != null) e.speedMult = (e.speedMult ?? 1) * ep.speedMultiplier
+        }
       }
     })
 
@@ -310,8 +323,25 @@ export default class SkillSystem {
   _executeCast(gs, player, config, v) {
     if (player.activeCast != null) return   // already casting
 
+    // BEAM subtype: find target in aim direction, start channeled drain
+    if (config.subtype === 'BEAM') {
+      const target = this._findBeamTarget(gs, player, v, config.range ?? 250)
+      if (!target) return   // no valid target — skill fizzles
+
+      player.activeCast = {
+        config,
+        vector: v,
+        startedAt: Date.now(),
+        isChanneled: true,
+        lastChannelTick: Date.now(),
+        beamTargetId: target.id,
+        beamRange: config.range ?? 250,
+      }
+      return
+    }
+
     // DIRECTIONAL casts were pre-cast on the controller — fire immediately
-    if (config.inputType === 'DIRECTIONAL') {
+    if (config.inputType === 'DIRECTIONAL' && config.subtype !== 'CHANNELED') {
       this._executeCastPayload(gs, player, config.payload, v)
       return
     }
@@ -388,6 +418,31 @@ export default class SkillSystem {
           p.revive()
         }
       })
+      return
+    }
+
+    if (effectType === 'FEAR') {
+      // Fear all trash mobs in radius (boss immune)
+      const fearDuration = config.fearDuration ?? 2500
+      gs.enemies.forEach(e => {
+        if (e.isDead) return
+        if (this._collision.distance({ x: cx, y: cy }, { x: e.x, y: e.y }) <= radius + e.radius) {
+          e.activeEffects = e.activeEffects ?? []
+          e.activeEffects.push({
+            source: 'fear',
+            ownerId: player?.id,
+            params: {
+              feared: true,
+              fearSource: { x: cx, y: cy },
+              sourceSkill: config.name,
+            },
+            expiresAt: Date.now() + fearDuration,
+          })
+          e.isFeared = true
+          e.fearSource = { x: cx, y: cy }
+        }
+      })
+      // Boss is immune — no effect
       return
     }
 
@@ -525,6 +580,11 @@ export default class SkillSystem {
           const aoCfg = proj.aoeConfig
           if (aoCfg) {
             const owner = gs.players.get(proj.ownerId)
+            // Create persistent zone if config has duration + tickRate
+            if (aoCfg.duration && aoCfg.tickRate) {
+              const color = owner ? (CLASSES[owner.className]?.color ?? '#ffff00') : '#ffff00'
+              this.addZone(proj.ownerId, aoCfg, proj.x, proj.y, color)
+            }
             this._executeAOEAtPoint(gs, owner ?? null, aoCfg, proj.x, proj.y)
           }
           proj.isAlive = false
@@ -580,9 +640,40 @@ export default class SkillSystem {
           gs.io.emit('effect:damage', { targetId: target.id, amount, type: 'heal', sourceSkill: null })
         }
       }
+    } else if (proj.effectType === 'GRIP') {
+      // Pull enemy toward caster (boss immune)
+      if (!target.isPlayer && target.id !== 'boss') {
+        const owner = gs.players.get(proj.ownerId)
+        if (owner) {
+          target.pullTarget = { x: owner.x, y: owner.y, speed: 600 }
+          target.activeEffects = target.activeEffects ?? []
+          target.activeEffects.push({
+            source: 'grip',
+            ownerId: owner.id,
+            params: { isPull: true },
+            expiresAt: Date.now() + 1000,   // safety timeout
+          })
+        }
+      }
     } else {
       const owner = gs.players.get(proj.ownerId)
       this._dealDamage(gs, owner, target, proj.damage ?? 0)
+
+      // Apply DoT if configured
+      if (proj.dot && !target.isPlayer) {
+        target.activeEffects = target.activeEffects ?? []
+        target.activeEffects.push({
+          source: 'dot',
+          ownerId: proj.ownerId,
+          params: {
+            damagePerTick: proj.dot.damagePerTick,
+            tickRate: proj.dot.tickRate,
+            sourceSkill: proj.dot.sourceSkill ?? null,
+          },
+          expiresAt: Date.now() + (proj.dot.duration ?? 4000),
+          lastDamageTick: Date.now(),
+        })
+      }
 
       // Secondary AOE on impact (e.g. Pyroblast)
       if (proj.onImpact) {
@@ -612,16 +703,40 @@ export default class SkillSystem {
 
     // Also tick enemy effects
     gs.enemies.forEach(e => {
+      if (e.isDead) return
       if (!e.activeEffects?.length) return
+
+      // Tick DoT damage on enemies
+      for (const eff of e.activeEffects) {
+        if (eff.params?.damagePerTick && eff.params?.tickRate) {
+          if (!eff.lastDamageTick) eff.lastDamageTick = now
+          if (now - eff.lastDamageTick >= eff.params.tickRate) {
+            eff.lastDamageTick = now
+            const owner = eff.ownerId ? gs.players.get(eff.ownerId) : null
+            this._dealDamage(gs, owner, e, eff.params.damagePerTick, eff.params.sourceSkill)
+          }
+        }
+      }
+
       const before = e.activeEffects.length
       e.activeEffects = e.activeEffects.filter(eff => eff.expiresAt > now)
       if (e.activeEffects.length !== before) {
         // Re-evaluate status effects for enemy
         e.isStunned = e.activeEffects.some(eff => eff.params?.stunned)
         e.isRooted  = e.activeEffects.some(eff => eff.params?.rooted)
+        e.isFeared  = e.activeEffects.some(eff => eff.params?.feared)
         e.speedMult = 1
         for (const eff of e.activeEffects) {
           if (eff.params?.speedMultiplier != null) e.speedMult *= eff.params.speedMultiplier
+        }
+
+        // Update fear source from active fear effects
+        const fearEffect = e.activeEffects.find(eff => eff.params?.feared)
+        e.fearSource = fearEffect?.params?.fearSource ?? null
+
+        // Clear pull target if pull effect expired
+        if (!e.activeEffects.some(eff => eff.params?.isPull)) {
+          e.pullTarget = null
         }
       }
     })
@@ -633,6 +748,37 @@ export default class SkillSystem {
       if (!p.activeCast) return
       const cast = p.activeCast
       const elapsed = now - cast.startedAt
+
+      // BEAM channeling — drain life style
+      if (cast.beamTargetId != null) {
+        const target = this._resolveTarget(gs, cast.beamTargetId)
+        // End beam if target dead, gone, or out of range
+        if (!target || target.isDead) {
+          p.activeCast = null
+          return
+        }
+        const dist = Math.hypot(target.x - p.x, target.y - p.y)
+        if (dist > cast.beamRange * 1.3) {   // 30% leeway
+          p.activeCast = null
+          return
+        }
+
+        const tickRate = cast.config.tickRate ?? 500
+        if (now - cast.lastChannelTick >= tickRate) {
+          cast.lastChannelTick = now
+          const dmg = cast.config.damagePerTick ?? 0
+          const heal = cast.config.healPerTick ?? 0
+          if (dmg > 0) this._dealDamage(gs, p, target, dmg, cast.config.name)
+          if (heal > 0) {
+            p.heal(heal)
+            if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount: heal, type: 'heal', sourceSkill: cast.config.name })
+          }
+        }
+        if (elapsed >= cast.config.castTime) {
+          p.activeCast = null
+        }
+        return
+      }
 
       if (cast.isChanneled) {
         // Fire payload on each channel tick
@@ -737,6 +883,38 @@ export default class SkillSystem {
 
   // ── Internal projectile spawner ────────────────────────────────────────────
 
+  /** Find first enemy in the aim direction within range (for BEAM targeting). */
+  _findBeamTarget(gs, player, v, range) {
+    let best = null
+    let bestDist = Infinity
+
+    const checkTarget = (target) => {
+      if (target.isDead) return
+      const dx = target.x - player.x
+      const dy = target.y - player.y
+      const dist = Math.hypot(dx, dy)
+      if (dist > range || dist < 5) return
+      // Check angle — must be within ~45° of aim direction
+      const dot = (dx * v.x + dy * v.y) / dist
+      if (dot < 0.5) return   // cos(60°) ≈ 0.5
+      if (dist < bestDist) { bestDist = dist; best = target }
+    }
+
+    gs.enemies.forEach(e => checkTarget(e))
+    if (gs.boss && !gs.boss.isDead) checkTarget(gs.boss)
+
+    return best
+  }
+
+  /** Resolve a target by id from enemies or boss. */
+  _resolveTarget(gs, targetId) {
+    if (targetId === 'boss') return gs.boss
+    for (const e of gs.enemies.values()) {
+      if (e.id === targetId) return e
+    }
+    return null
+  }
+
   _spawnProjectile(gs, player, config, overrides) {
     const id = ++this._projSeq
     gs.projectiles.set(id, {
@@ -760,6 +938,7 @@ export default class SkillSystem {
       targetX:     0,
       targetY:     0,
       onImpact:    overrides.onImpact ?? null,
+      dot:         config.dot        ?? null,
     })
   }
 }

@@ -20,6 +20,9 @@ export default class ServerEnemy {
     this.activeEffects = []
     this.isRooted      = false
     this.isStunned     = false
+    this.isFeared      = false
+    this.fearSource    = null      // { x, y } — position to flee from
+    this.pullTarget    = null      // { x, y, speed } — destination to pull toward
     this.speedMult     = 1
 
     // Contact damage rate-limiter
@@ -34,6 +37,41 @@ export default class ServerEnemy {
 
   update(dt, players) {
     if (this.isDead || this.isRooted || this.isStunned) return
+
+    // Pull overrides all other movement
+    if (this.pullTarget) {
+      const dx = this.pullTarget.x - this.x
+      const dy = this.pullTarget.y - this.y
+      const dist = Math.hypot(dx, dy)
+      if (dist < 15) {
+        // Arrived at pull destination
+        this.x = this.pullTarget.x
+        this.y = this.pullTarget.y
+        this.pullTarget = null
+      } else {
+        const pullSpeed = (this.pullTarget.speed ?? 600) * dt
+        this.x += (dx / dist) * pullSpeed
+        this.y += (dy / dist) * pullSpeed
+      }
+      this._clampToArena()
+      return
+    }
+
+    const effectiveSpeed = this.speed * (this.speedMult ?? 1)
+    const pps = effectiveSpeed * 60
+
+    // Feared: flee from fear source
+    if (this.isFeared && this.fearSource) {
+      const dx = this.x - this.fearSource.x
+      const dy = this.y - this.fearSource.y
+      const dist = Math.hypot(dx, dy)
+      if (dist > 2) {
+        this.x += (dx / dist) * pps * dt
+        this.y += (dy / dist) * pps * dt
+      }
+      this._clampToArena()
+      return
+    }
 
     // Chase nearest living non-host player
     let nearest = null
@@ -50,12 +88,12 @@ export default class ServerEnemy {
     const dist = Math.hypot(dx, dy)
     if (dist < 2) return
 
-    const effectiveSpeed = this.speed * (this.speedMult ?? 1)
-    const pps = effectiveSpeed * 60
     this.x += (dx / dist) * pps * dt
     this.y += (dy / dist) * pps * dt
+    this._clampToArena()
+  }
 
-    // Clamp to arena
+  _clampToArena() {
     this.x = Math.max(this.radius, Math.min(GAME_CONFIG.CANVAS_WIDTH  - this.radius, this.x))
     this.y = Math.max(this.radius, Math.min(GAME_CONFIG.CANVAS_HEIGHT - this.radius, this.y))
   }

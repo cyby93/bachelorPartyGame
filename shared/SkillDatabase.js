@@ -56,7 +56,7 @@ const SkillDatabase = {
       name:      'Shield Wall',
       type:      'SHIELD',
       inputType: 'DIRECTIONAL',
-      cooldown:  30000,
+      cooldown:  5000,
       arc:       Math.PI,        // 180° block arc
       icon:      '🛡️'
     }
@@ -90,7 +90,7 @@ const SkillDatabase = {
       name:      'Divine Shield',
       type:      'SHIELD',
       inputType: 'DIRECTIONAL',
-      cooldown:  8000,
+      cooldown:  3000,
       arc:       Math.PI / 2,   // 90° block arc
       icon:      '🔆'
     },
@@ -142,7 +142,7 @@ const SkillDatabase = {
       name:      'Ghost Wolf',
       type:      'BUFF',
       inputType: 'INSTANT',
-      cooldown:  10000,
+      cooldown:  6000,
       duration:  3000,
       effectParams: { speedMultiplier: 1.5 },
       icon:      '🔥'
@@ -152,7 +152,7 @@ const SkillDatabase = {
       type:      'AOE',
       subtype:   'AOE_SELF',
       inputType: 'INSTANT',
-      cooldown:  60000,
+      cooldown:  30000,
       radius:    500,
       duration:  8000,
       effectType: 'BUFF',
@@ -229,7 +229,7 @@ const SkillDatabase = {
       icon:      '✝️'
     },
     {
-      name:      'Flash Heal',
+      name:      'Prayer of Mending',
       type:      'AOE',
       subtype:   'AOE_LOBBED',
       inputType: 'TARGETED',
@@ -434,6 +434,116 @@ const SkillDatabase = {
         breaksOnAttack:   true
       },
       icon:      '💀'
+    }
+  ],
+
+  // ── WARLOCK ─────────────────────────────────────────────────────────────
+  Warlock: [
+    {
+      name:      'Shadow Bolt',
+      type:      'PROJECTILE',
+      inputType: 'DIRECTIONAL',
+      cooldown:  900,
+      damage:    35,
+      speed:     550,
+      radius:    10,
+      range:     500,
+      pierce:    false,
+      icon:      '🔮'
+    },
+    {
+      name:      'Corruption',
+      type:      'PROJECTILE',
+      inputType: 'DIRECTIONAL',
+      cooldown:  1500,
+      damage:    10,
+      speed:     500,
+      radius:    10,
+      range:     450,
+      pierce:    false,
+      dot: {
+        damagePerTick: 10,
+        tickRate:      500,
+        duration:      4000,
+        sourceSkill:   'Corruption',
+      },
+      icon:      '☠️'
+    },
+    {
+      name:      'Drain Life',
+      type:      'CAST',
+      subtype:   'BEAM',
+      inputType: 'DIRECTIONAL',
+      cooldown:  500,
+      castTime:  3000,
+      range:     250,
+      tickRate:  500,
+      damagePerTick: 15,
+      healPerTick:   15,
+      icon:      '💜'
+    },
+    {
+      name:      'Fear',
+      type:      'AOE',
+      subtype:   'AOE_SELF',
+      inputType: 'INSTANT',
+      cooldown:  20000,
+      radius:    150,
+      effectType: 'FEAR',
+      fearDuration: 2500,
+      icon:      '😱'
+    }
+  ],
+
+  // ── DEATH KNIGHT ────────────────────────────────────────────────────────
+  DeathKnight: [
+    {
+      name:      'Frost Strike',
+      type:      'MELEE',
+      inputType: 'DIRECTIONAL',
+      cooldown:  1000,
+      damage:    65,
+      range:     50,
+      angle:     Math.PI / 3,   // 60° cone
+      effectParams: { speedMultiplier: 0.6, duration: 1500 },
+      icon:      '❄️'
+    },
+    {
+      name:      'Death Grip',
+      type:      'PROJECTILE',
+      subtype:   'GRIP',
+      inputType: 'DIRECTIONAL',
+      cooldown:  10000,
+      damage:    0,
+      speed:     800,
+      radius:    12,
+      range:     350,
+      pierce:    false,
+      effectType: 'GRIP',
+      icon:      '🪝'
+    },
+    {
+      name:      'Death and Decay',
+      type:      'AOE',
+      subtype:   'AOE_LOBBED',
+      inputType: 'TARGETED',
+      cooldown:  15000,
+      damage:    20,
+      radius:    120,
+      speed:     500,
+      range:     300,
+      duration:  5000,
+      tickRate:  500,
+      icon:      '💀'
+    },
+    {
+      name:      'Anti-Magic Shell',
+      type:      'BUFF',
+      inputType: 'INSTANT',
+      cooldown:  25000,
+      duration:  5000,
+      effectParams: { damageReduction: 0.8, shield: 100 },
+      icon:      '💎'
     }
   ]
 }

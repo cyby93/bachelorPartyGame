@@ -7,25 +7,29 @@
   let className = $state(CLASS_NAMES[0])
 
   const CLASS_ICONS = {
-    Warrior: '⚔️',
-    Paladin: '🔨',
-    Shaman:  '⚡',
-    Hunter:  '🏹',
-    Priest:  '✝️',
-    Mage:    '🔥',
-    Druid:   '🌿',
-    Rogue:   '🗡️',
+    Warrior:     '⚔️',
+    Paladin:     '🔨',
+    Shaman:      '⚡',
+    Hunter:      '🏹',
+    Priest:      '✝️',
+    Mage:        '🔥',
+    Druid:       '🌿',
+    Rogue:       '🗡️',
+    Warlock:     '💀',
+    DeathKnight: '💎',
   }
 
   const ROLES = {
-    Warrior: 'Tank',
-    Paladin: 'Tank / Heal',
-    Shaman:  'DPS / Heal',
-    Hunter:  'Ranged DPS',
-    Priest:  'Healer',
-    Mage:    'Glass Cannon',
-    Druid:   'Hybrid',
-    Rogue:   'Assassin',
+    Warrior:     'Tank',
+    Paladin:     'Tank / Heal',
+    Shaman:      'DPS / Heal',
+    Hunter:      'Ranged DPS',
+    Priest:      'Healer',
+    Mage:        'Glass Cannon',
+    Druid:       'Hybrid',
+    Rogue:       'Assassin',
+    Warlock:     'DoT Caster',
+    DeathKnight: 'Melee Tank',
   }
 
   function join() {
@@ -66,7 +70,7 @@
         onclick={() => className = cls}
       >
         <span class="icon">{CLASS_ICONS[cls]}</span>
-        <span class="cls-name">{cls}</span>
+        <span class="cls-name">{CLASSES[cls].name}</span>
         <span class="role">{ROLES[cls]}</span>
       </button>
     {/each}
@@ -127,7 +131,7 @@
 
   .class-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 6px;
     align-content: center;
   }

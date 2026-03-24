@@ -4,15 +4,17 @@
   let { playerName = '', className = '' } = $props()
 
   const CLASS_ICONS = {
-    Warrior: '⚔️', Paladin: '🔨', Shaman: '⚡',  Hunter: '🏹',
-    Priest:  '✝️', Mage:    '🔥', Druid:  '🌿',  Rogue:  '🗡️',
+    Warrior: '⚔️', Paladin: '🔨', Shaman:      '⚡',  Hunter:  '🏹',
+    Priest:  '✝️', Mage:    '🔥', Druid:       '🌿',  Rogue:   '🗡️',
+    Warlock: '💀', DeathKnight: '💎',
   }
 
   const ROLES = {
-    Warrior: 'Tank',         Paladin: 'Tank / Heal',
-    Shaman:  'DPS / Heal',   Hunter:  'Ranged DPS',
-    Priest:  'Healer',       Mage:    'Glass Cannon',
-    Druid:   'Hybrid',       Rogue:   'Assassin',
+    Warrior:     'Tank',         Paladin:     'Tank / Heal',
+    Shaman:      'DPS / Heal',   Hunter:      'Ranged DPS',
+    Priest:      'Healer',       Mage:        'Glass Cannon',
+    Druid:       'Hybrid',       Rogue:       'Assassin',
+    Warlock:     'DoT Caster',   DeathKnight: 'Melee Tank',
   }
 
   let cls        = $derived(CLASSES[className])
@@ -26,7 +28,7 @@
     <div class="hero" style="--class-color: {classColor}">
       <span class="icon">{CLASS_ICONS[className] ?? '?'}</span>
       <h2>{playerName}</h2>
-      <p class="class-tag">{className} · {ROLES[className]}</p>
+      <p class="class-tag">{cls?.name ?? className} · {ROLES[className]}</p>
     </div>
 
     <div class="stat-row">

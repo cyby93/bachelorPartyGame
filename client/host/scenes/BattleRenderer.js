@@ -46,6 +46,9 @@ export default class BattleRenderer {
     // VFX manager (created in enter())
     this.vfx = null
 
+    // Beam rendering graphics (for Drain Life etc.)
+    this._beamGfx = new Graphics()
+
     // Previous-frame tracking for event detection
     this._prevPlayerHp  = {}   // id → hp
     this._prevEnemyIds  = new Set()
@@ -64,6 +67,7 @@ export default class BattleRenderer {
     this.game.layers.ui.addChild(this._uiRoot)
 
     this.vfx = new VFXManager(this.game.layers)
+    this.game.layers.fx.addChild(this._beamGfx)
     this._buildUI()
   }
 
@@ -90,6 +94,8 @@ export default class BattleRenderer {
     this.tombstoneGfx.clear()
 
     if (this.vfx) { this.vfx.destroy(); this.vfx = null }
+    this.game.layers.fx.removeChild(this._beamGfx)
+    this._beamGfx.clear()
     this._prevPlayerHp  = {}
     this._prevEnemyIds  = new Set()
     this._prevBossPhase = 1
@@ -250,6 +256,38 @@ export default class BattleRenderer {
         gfx.destroy()
         this.tombstoneGfx.delete(id)
       }
+    })
+
+    // ── Draw beam effects (Drain Life etc.) ──────────────────────────────────
+    this._beamGfx.clear()
+    Object.values(state.players).forEach(p => {
+      if (p.isHost || p.isDead || !p.beamTargetId) return
+      const srcSprite = this.playerSprites.get(p.id)
+      if (!srcSprite) return
+
+      // Find target position
+      let tx, ty
+      const enemySprite = this.enemySprites.get(p.beamTargetId)
+      if (enemySprite) {
+        tx = enemySprite.container.x
+        ty = enemySprite.container.y
+      } else if (p.beamTargetId === 'boss' && this.bossSprite) {
+        tx = this.bossSprite.container.x
+        ty = this.bossSprite.container.y
+      }
+      if (tx == null) return
+
+      const sx = srcSprite.container.x
+      const sy = srcSprite.container.y
+      const color = CLASSES[p.className]?.color ?? '#8b5cf6'
+
+      // Draw beam line with glow
+      this._beamGfx.moveTo(sx, sy)
+      this._beamGfx.lineTo(tx, ty)
+      this._beamGfx.stroke({ color, width: 4, alpha: 0.7 })
+      this._beamGfx.moveTo(sx, sy)
+      this._beamGfx.lineTo(tx, ty)
+      this._beamGfx.stroke({ color: '#ffffff', width: 1.5, alpha: 0.5 })
     })
 
     // ── Sync ground effect zones ────────────────────────────────────────────

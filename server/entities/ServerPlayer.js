@@ -174,8 +174,13 @@ export default class ServerPlayer {
     if (this.activeCast) {
       const elapsed = Date.now() - this.activeCast.startedAt
       delta.castProgress = Math.min(1, elapsed / (this.activeCast.config.castTime ?? 1000))
+      // Beam target for VFX
+      if (this.activeCast.beamTargetId != null) {
+        delta.beamTargetId = this.activeCast.beamTargetId
+      }
     } else if (this._prev._wasCasting) {
       delta.castProgress = null   // explicitly clear — tells client to hide cast bar
+      delta.beamTargetId = null   // clear beam
     }
 
     // Include compact effects summary when activeEffects changes

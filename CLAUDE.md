@@ -61,6 +61,7 @@ Both server and client import from `shared/`:
 
 Skill `type` drives `SkillSystem.js` routing: `PROJECTILE`, `MELEE`, `AOE`, `DASH`, `BUFF`, `SHIELD`, `CAST`.
 Skill `inputType` drives controller UI: `INSTANT`, `DIRECTIONAL`, `TARGETED`, `SUSTAINED`.
+→ **Full skill system reference**: `docs/SKILLS.md` — schema, type×subtype matrix, VFX lookup, design guidelines.
 
 ### Scene Flow
 

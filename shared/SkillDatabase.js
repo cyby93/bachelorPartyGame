@@ -4,8 +4,9 @@
  *
  * Fields:
  *   name        – display name
- *   type        – server-side effect handler: PROJECTILE | MELEE | AOE | DASH | BUFF | SHIELD | CAST
- *   subtype     – optional modifier for the handler (AOE_SELF, AOE_LOBBED, MULTI, BACKWARDS, TELEPORT, TOGGLE, TARGETED, CHANNELED)
+ *   type        – server-side effect handler: PROJECTILE | MELEE | AOE | DASH | BUFF | SHIELD | CAST | CHANNEL | TARGETED | SPAWN
+ *   subtype     – optional modifier for the handler (AOE_SELF, AOE_LOBBED, MULTI, BACKWARDS, TELEPORT, TOGGLE, TARGETED, CHANNELED,
+ *                   BEAM, UNTARGETED, HEAL_ALLY, DAMAGE_ENEMY, TOTEM, TRAP, PET)
  *   inputType   – controller interaction: INSTANT | DIRECTIONAL | TARGETED | SUSTAINED
  *                   INSTANT    = single tap, no direction needed
  *                   DIRECTIONAL= drag to aim direction, release to fire
@@ -34,9 +35,9 @@ const SkillDatabase = {
       type:      'AOE',
       subtype:   'AOE_SELF',
       inputType: 'INSTANT',
-      cooldown:  5000,
+      cooldown:  3000,
       damage:    40,
-      radius:    150,
+      radius:    100,
       effectType: 'DEBUFF',
       effectParams: { speedMultiplier: 0.5, duration: 2000 },
       icon:      '🌀'
@@ -99,10 +100,10 @@ const SkillDatabase = {
       type:      'AOE',
       subtype:   'AOE_SELF',
       inputType: 'INSTANT',
-      cooldown:  20000,
+      cooldown:  10000,
       damage:    15,
       radius:    200,
-      duration:  5000,
+      duration:  4000,
       tickRate:  500,
       effectType: 'DUAL',
       healAmount: 10,
@@ -126,25 +127,29 @@ const SkillDatabase = {
     },
     {
       name:      'Chain Heal',
-      type:      'PROJECTILE',
-      subtype:   'TARGETED',
+      type:      'TARGETED',
+      subtype:   'HEAL_ALLY',
       inputType: 'DIRECTIONAL',
       cooldown:  3000,
       healAmount: 50,
-      speed:     800,
-      radius:    12,
       range:     400,
-      pierce:    false,
-      effectType: 'HEAL',
       icon:      '🌊'
     },
     {
-      name:      'Ghost Wolf',
-      type:      'BUFF',
+      name:      'Searing Totem',
+      type:      'SPAWN',
+      subtype:   'TOTEM',
       inputType: 'INSTANT',
-      cooldown:  6000,
-      duration:  3000,
-      effectParams: { speedMultiplier: 1.5 },
+      cooldown:  10000,
+      duration:  15000,
+      totemAbility: {
+        type:     'PROJECTILE',
+        damage:   20,
+        speed:    400,
+        radius:   8,
+        range:    250,
+        tickRate: 1200,
+      },
       icon:      '🔥'
     },
     {
@@ -191,25 +196,35 @@ const SkillDatabase = {
       icon:      '🎯'
     },
     {
-      name:      'Disengage',
-      type:      'DASH',
-      subtype:   'BACKWARDS',
-      inputType: 'DIRECTIONAL',
-      cooldown:  8000,
-      speed:     1000,
-      distance:  250,
+      name:      'Call of the Wild',
+      type:      'SPAWN',
+      subtype:   'PET',
+      inputType: 'INSTANT',
+      cooldown:  20000,
+      duration:  20000,
+      petStats: {
+        hp:          80,
+        speed:       2.0,
+        damage:      25,
+        attackRange: 45,
+        attackRate:  1000,
+      },
       icon:      '🐺'
     },
     {
       name:      'Explosive Trap',
-      type:      'AOE',
-      subtype:   'AOE_LOBBED',
-      inputType: 'TARGETED',
+      type:      'SPAWN',
+      subtype:   'TRAP',
+      inputType: 'INSTANT',
       cooldown:  15000,
-      damage:    80,
-      radius:    120,
-      speed:     500,
-      range:     400,
+      duration:  30000,
+      triggerRadius: 40,
+      trapEffect: {
+        type:       'AOE',
+        damage:     80,
+        radius:     120,
+        effectType: 'DAMAGE',
+      },
       icon:      '🪤'
     }
   ],
@@ -366,19 +381,18 @@ const SkillDatabase = {
     },
     {
       name:      'Tranquility',
-      type:      'CAST',
-      subtype:   'CHANNELED',
+      type:      'CHANNEL',
+      subtype:   'UNTARGETED',
       inputType: 'INSTANT',
       cooldown:  500,
       castTime:  4000,
+      tickRate:  500,
       payload: {
         type:       'AOE',
         subtype:    'AOE_SELF',
         radius:     250,
         effectType: 'HEAL',
         healAmount: 20,
-        tickRate:   500,
-        channeled:  true
       },
       icon:      '⭐'
     }
@@ -409,6 +423,7 @@ const SkillDatabase = {
       range:     200,
       pierce:    false,
       pattern:   'CIRCULAR',
+      effectType: 'DAMAGE',
       icon:      '👤'
     },
     {
@@ -471,7 +486,7 @@ const SkillDatabase = {
     },
     {
       name:      'Drain Life',
-      type:      'CAST',
+      type:      'CHANNEL',
       subtype:   'BEAM',
       inputType: 'DIRECTIONAL',
       cooldown:  500,
@@ -534,6 +549,7 @@ const SkillDatabase = {
       range:     300,
       duration:  5000,
       tickRate:  500,
+      effectType: 'DAMAGE',
       icon:      '💀'
     },
     {

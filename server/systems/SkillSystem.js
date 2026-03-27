@@ -7,6 +7,7 @@
 import CollisionSystem from './CollisionSystem.js'
 import { GAME_CONFIG } from '../../shared/GameConfig.js'
 import { CLASSES }     from '../../shared/ClassConfig.js'
+import ServerMinion    from '../entities/ServerMinion.js'
 
 // ── Standalone helpers ────────────────────────────────────────────────────────
 
@@ -100,6 +101,9 @@ export default class SkillSystem {
       case 'BUFF':       return this._executeBuff(gs, player, config, skillIndex)
       case 'SHIELD':     return this._executeShield(player, config, vector, action, skillIndex)
       case 'CAST':       return this._executeCast(gs, player, config, v)
+      case 'CHANNEL':    return this._executeChannel(gs, player, config, skillIndex, v)
+      case 'TARGETED':   return this._executeTargeted(gs, player, config, v)
+      case 'SPAWN':      this._executeSpawn(gs, player, config, v); break
       default:
         console.warn(`[SkillSystem] Unknown skill type: ${config.type}`)
     }
@@ -114,7 +118,9 @@ export default class SkillSystem {
     this._tickProjectiles(gs, dt)
     this._tickEffects(gs)
     this._tickCasts(gs)
+    this._tickChannels(gs)
     this._tickZones(gs)
+    this._tickMinions(gs, dt)
   }
 
   // ── Skill handlers ─────────────────────────────────────────────────────────
@@ -353,6 +359,97 @@ export default class SkillSystem {
       isChanneled: config.subtype === 'CHANNELED',
       lastChannelTick: Date.now(),
     }
+  }
+
+  _executeChannel(gs, player, config, skillIndex, v) {
+    if (player.activeCast != null) return false   // already casting/channeling
+
+    // BEAM: must find a target first — if none, fizzle without consuming cooldown
+    if (config.subtype === 'BEAM') {
+      const target = this._findBeamTarget(gs, player, v, config.range ?? 250)
+      if (!target) return false
+
+      player.activeCast = {
+        config,
+        vector: v,
+        startedAt:       Date.now(),
+        lastChannelTick: Date.now(),
+        skillIndex,
+        channelStartX:   player.x,
+        channelStartY:   player.y,
+        beamTargetId:    target.id,
+        beamRange:       config.range ?? 250,
+      }
+      return true
+    }
+
+    // UNTARGETED (e.g. Tranquility): activate immediately
+    player.activeCast = {
+      config,
+      vector: v,
+      startedAt:       Date.now(),
+      lastChannelTick: Date.now(),
+      skillIndex,
+      channelStartX:   player.x,
+      channelStartY:   player.y,
+    }
+    return true
+  }
+
+  _executeTargeted(gs, player, config, v) {
+    if (config.subtype === 'HEAL_ALLY') {
+      const target = this._findRayAlly(gs, player, v, config.range ?? 400)
+      if (!target) return false
+      const amount = config.healAmount ?? 0
+      target.heal(amount)
+      if (gs.io && amount > 0) {
+        gs.io.emit('effect:damage', { targetId: target.id, amount, type: 'heal', sourceSkill: config.name })
+      }
+      const color = CLASSES[player.className]?.color ?? '#ffffff'
+      if (gs.io) {
+        gs.io.emit('targeted:hit', {
+          casterX: Math.round(player.x), casterY: Math.round(player.y),
+          targetX: Math.round(target.x), targetY: Math.round(target.y),
+          effectType: 'heal', color,
+        })
+      }
+      return true
+    }
+
+    if (config.subtype === 'DAMAGE_ENEMY') {
+      const target = this._findBeamTarget(gs, player, v, config.range ?? 400)
+      if (!target) return false
+      this._dealDamage(gs, player, target, config.damage ?? 0, config.name)
+      const color = CLASSES[player.className]?.color ?? '#ffffff'
+      if (gs.io) {
+        gs.io.emit('targeted:hit', {
+          casterX: Math.round(player.x), casterY: Math.round(player.y),
+          targetX: Math.round(target.x), targetY: Math.round(target.y),
+          effectType: 'damage', color,
+        })
+      }
+      return true
+    }
+
+    return false
+  }
+
+  _executeSpawn(gs, player, config, v) {
+    if (!gs.minions) return
+
+    // Replace existing minion of same subtype from this player
+    gs.minions.forEach((m, id) => {
+      if (m.ownerId === player.id && m.minionType === config.subtype) {
+        gs.minions.delete(id)
+      }
+    })
+
+    const id = gs.nextMinionId()
+    const color = CLASSES[player.className]?.color ?? '#ffffff'
+    const spawnX = player.x + v.x * 30
+    const spawnY = player.y + v.y * 30
+
+    gs.minions.set(id, new ServerMinion({ id, ownerId: player.id, config, x: spawnX, y: spawnY, color }))
   }
 
   // ── AOE detonation ─────────────────────────────────────────────────────────
@@ -747,9 +844,10 @@ export default class SkillSystem {
     gs.players.forEach(p => {
       if (!p.activeCast) return
       const cast = p.activeCast
+      if (cast.config.type === 'CHANNEL') return   // handled by _tickChannels
       const elapsed = now - cast.startedAt
 
-      // BEAM channeling — drain life style
+      // BEAM channeling — drain life style (legacy CAST/BEAM path)
       if (cast.beamTargetId != null) {
         const target = this._resolveTarget(gs, cast.beamTargetId)
         // End beam if target dead, gone, or out of range
@@ -799,6 +897,73 @@ export default class SkillSystem {
           p.activeCast = null
         }
       }
+    })
+  }
+
+  _tickChannels(gs) {
+    const INTERRUPT_THRESHOLD = 8
+    const now = Date.now()
+    gs.players.forEach(p => {
+      if (!p.activeCast) return
+      const cast = p.activeCast
+      if (cast.config.type !== 'CHANNEL') return
+
+      const elapsed = now - cast.startedAt
+
+      // Player died — cancel silently
+      if (p.isDead) { p.activeCast = null; return }
+
+      // Movement interrupt
+      const moved = Math.hypot(p.x - cast.channelStartX, p.y - cast.channelStartY)
+      if (moved > INTERRUPT_THRESHOLD) {
+        if (gs.cooldowns) {
+          gs.cooldowns.start(p.id, cast.skillIndex, cast.config.cooldown)
+          const expiresAt = now + cast.config.cooldown
+          if (gs.io) gs.io.emit('skill:cooldown', { playerId: p.id, skillIndex: cast.skillIndex, expiresAt })
+        }
+        if (gs.io) gs.io.emit('channel:interrupted', { playerId: p.id })
+        p.activeCast = null
+        return
+      }
+
+      // Natural expiry
+      if (elapsed >= cast.config.castTime) {
+        p.activeCast = null
+        return
+      }
+
+      const tickRate = cast.config.tickRate ?? 500
+      if (now - cast.lastChannelTick < tickRate) return
+      cast.lastChannelTick = now
+
+      // BEAM: drain life from target
+      if (cast.config.subtype === 'BEAM') {
+        const target = this._resolveTarget(gs, cast.beamTargetId)
+        if (!target || target.isDead) { p.activeCast = null; return }
+        const dist = Math.hypot(target.x - p.x, target.y - p.y)
+        if (dist > cast.beamRange * 1.3) { p.activeCast = null; return }
+        const dmg = cast.config.damagePerTick ?? 0
+        const heal = cast.config.healPerTick ?? 0
+        if (dmg > 0) this._dealDamage(gs, p, target, dmg, cast.config.name)
+        if (heal > 0) {
+          p.heal(heal)
+          if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount: heal, type: 'heal', sourceSkill: cast.config.name })
+        }
+        return
+      }
+
+      // UNTARGETED: fire payload around caster each tick
+      if (cast.config.subtype === 'UNTARGETED') {
+        this._executeCastPayload(gs, p, cast.config.payload, cast.vector)
+      }
+    })
+  }
+
+  _tickMinions(gs, dt) {
+    if (!gs.minions) return
+    gs.minions.forEach((m, id) => {
+      if (m.isDead) { gs.minions.delete(id); return }
+      m.update(dt, gs, this)
     })
   }
 
@@ -902,6 +1067,25 @@ export default class SkillSystem {
 
     gs.enemies.forEach(e => checkTarget(e))
     if (gs.boss && !gs.boss.isDead) checkTarget(gs.boss)
+
+    return best
+  }
+
+  /** Find first ally in the aim direction within range (for TARGETED/HEAL_ALLY). */
+  _findRayAlly(gs, player, v, range) {
+    let best = null
+    let bestDist = Infinity
+
+    gs.players.forEach(p => {
+      if (p.isDead || p.isHost || p.id === player.id) return
+      const dx = p.x - player.x
+      const dy = p.y - player.y
+      const dist = Math.hypot(dx, dy)
+      if (dist > range || dist < 5) return
+      const dot = (dx * v.x + dy * v.y) / dist
+      if (dot < 0.5) return
+      if (dist < bestDist) { bestDist = dist; best = p }
+    })
 
     return best
   }

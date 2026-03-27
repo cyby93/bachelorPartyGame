@@ -21,7 +21,9 @@ export const EVENTS = {
   PLAYER_JOINED: 'player:joined',   // { player DTO }
   PLAYER_LEFT:   'player:left',     // socketId string
   SCENE_CHANGE:  'scene:change',    // { scene: 'lobby' | 'trashMob' | 'bossFight' | 'result' | 'gameover' }
-  COOLDOWN:      'skill:cooldown',  // { playerId, skillIndex, expiresAt }
-  SKILL_FIRED:   'skill:fired',     // { playerId, skillName, type, subtype, x, y, angle, radius, range, color }
-  EFFECT_DAMAGE: 'effect:damage',   // { targetId, amount, type: 'damage'|'heal', sourceSkill }
+  COOLDOWN:            'skill:cooldown',       // { playerId, skillIndex, expiresAt }
+  SKILL_FIRED:         'skill:fired',          // { playerId, skillName, type, subtype, x, y, angle, radius, range, color }
+  EFFECT_DAMAGE:       'effect:damage',        // { targetId, amount, type: 'damage'|'heal', sourceSkill }
+  CHANNEL_INTERRUPTED: 'channel:interrupted',  // { playerId }
+  TARGETED_HIT:        'targeted:hit',         // { casterX, casterY, targetX, targetY, effectType, color }
 }

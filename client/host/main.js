@@ -171,3 +171,11 @@ socket.on(EVENTS.SKILL_FIRED, data => {
 socket.on(EVENTS.EFFECT_DAMAGE, data => {
   game.activeRenderer?.onEffectDamage?.(data)
 })
+
+socket.on(EVENTS.TARGETED_HIT, data => {
+  game.activeRenderer?.onTargetedHit?.(data)
+})
+
+socket.on(EVENTS.CHANNEL_INTERRUPTED, data => {
+  game.activeRenderer?.onChannelInterrupted?.(data)
+})

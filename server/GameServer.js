@@ -4,7 +4,7 @@ import { CLASSES, resolveClassName } from '../shared/ClassConfig.js'
 import ServerPlayer      from './entities/ServerPlayer.js'
 import ServerEnemy       from './entities/ServerEnemy.js'
 import ServerBoss        from './entities/ServerBoss.js'
-import TrainingDummy     from './entities/TrainingDummy.js'
+import TrainingDummy, { MovingDummy } from './entities/TrainingDummy.js'
 import CooldownSystem    from './systems/CooldownSystem.js'
 import SkillSystem       from './systems/SkillSystem.js'
 
@@ -34,9 +34,13 @@ export default class GameServer {
     this.enemies       = new Map()  // id → ServerEnemy
     this.boss          = null
 
-    this._enemyIdSeq = 0
-    this._lastSpawn  = 0
-    this.killCount   = 0
+    this._enemyIdSeq  = 0
+    this._minionIdSeq = 0
+    this._lastSpawn   = 0
+    this.killCount    = 0
+
+    // Spawned minions (totems, traps, pets)
+    this.minions = new Map()
 
     // Stats tracking
     this.stats = { damage: {}, deaths: {}, kills: 0, startTime: 0 }
@@ -133,6 +137,7 @@ export default class GameServer {
     this.enemies.clear()
     this.boss        = null
     this.reviveTimers.clear()
+    this.minions.clear()
     this._lastSpawn  = 0
     this.skillSystem.activeZones = []
 
@@ -163,6 +168,7 @@ export default class GameServer {
     this.killCount     = 0
     this.stats         = { damage: {}, deaths: {}, kills: 0, startTime: 0 }
     this.reviveTimers.clear()
+    this.minions.clear()
     this._lastSpawn    = 0
     this.skillSystem.activeZones = []
 
@@ -176,6 +182,7 @@ export default class GameServer {
     this.players.delete(socket.id)
     this.inputQueues.delete(socket.id)
     this.cooldowns.clearPlayer(socket.id)
+    this.minions.forEach((m, id) => { if (m.ownerId === socket.id) this.minions.delete(id) })
 
     this.io.emit(EVENTS.PLAYER_LEFT, socket.id)
   }
@@ -193,24 +200,45 @@ export default class GameServer {
       this.projectiles.clear()
       this.boss = null
       this.reviveTimers.clear()
+      this.minions.clear()
       this._spawnTrainingDummy()
     }
   }
 
   _spawnTrainingDummy() {
+    const W = GAME_CONFIG.CANVAS_WIDTH
+    const H = GAME_CONFIG.CANVAS_HEIGHT
+
     this.enemies.set('training-dummy', new TrainingDummy())
+
+    // Two moving dummies that patrol horizontally, offset left and right
+    this.enemies.set('moving-dummy-1', new MovingDummy({
+      id:     'moving-dummy-1',
+      pointA: { x: W * 0.2, y: H * 0.45 },
+      pointB: { x: W * 0.2, y: H * 0.75 },
+      speed:  1.2,
+    }))
+    this.enemies.set('moving-dummy-2', new MovingDummy({
+      id:     'moving-dummy-2',
+      pointA: { x: W * 0.8, y: H * 0.75 },
+      pointB: { x: W * 0.8, y: H * 0.45 },
+      speed:  1.8,
+    }))
   }
 
   // ── Game state accessor ────────────────────────────────────────────────────
 
   _gs() {
     return {
-      players:     this.players,
-      projectiles: this.projectiles,
-      enemies:     this.enemies,
-      boss:        this.boss,
-      stats:       this.stats,
-      io:          this.io,
+      players:      this.players,
+      projectiles:  this.projectiles,
+      enemies:      this.enemies,
+      boss:         this.boss,
+      stats:        this.stats,
+      io:           this.io,
+      cooldowns:    this.cooldowns,
+      minions:      this.minions,
+      nextMinionId: () => ++this._minionIdSeq,
     }
   }
 
@@ -245,12 +273,11 @@ export default class GameServer {
     this.players.forEach(p => p.update(dt))
 
     // 3. Update enemies + boss + skill ticks
-    // Lobby: run skill ticks so projectiles can hit the training dummy
+    // Lobby: run skill ticks so projectiles can hit training dummies
     if (this.scene === 'lobby') {
       const gs = this._gs()
       this.skillSystem.tick(gs, dt)
-      const dummy = this.enemies.get('training-dummy')
-      if (dummy) dummy.update(dt)
+      this.enemies.forEach(dummy => dummy.update(dt))
     }
 
     if (this.scene === 'trashMob' || this.scene === 'bossFight') {
@@ -323,6 +350,38 @@ export default class GameServer {
     }
 
     if (player.isStunned) return
+
+    // CHANNEL/BEAM: execute first; only apply cooldown if a target was found
+    if (config.type === 'CHANNEL' && config.subtype === 'BEAM') {
+      if (this.cooldowns.isOnCooldown(player.id, index)) return
+      const gs = this._gs()
+      const found = this.skillSystem.execute(gs, player, config, index, vector ?? { x: 1, y: 0 })
+      if (found) {
+        this.cooldowns.start(player.id, index, config.cooldown)
+        const expiresAt = Date.now() + config.cooldown
+        this.io.emit(EVENTS.COOLDOWN, { playerId: player.id, skillIndex: index, expiresAt })
+        const classColor = CLASSES[player.className]?.color ?? '#ffffff'
+        const v = vector ?? { x: 1, y: 0 }
+        this.io.emit(EVENTS.SKILL_FIRED, { playerId: player.id, skillName: config.name, type: config.type, subtype: config.subtype ?? null, x: Math.round(player.x), y: Math.round(player.y), angle: Math.atan2(v.y, v.x), radius: 0, range: config.range ?? 0, color: classColor })
+      }
+      return
+    }
+
+    // TARGETED: execute first; only apply cooldown if a target was found
+    if (config.type === 'TARGETED') {
+      if (this.cooldowns.isOnCooldown(player.id, index)) return
+      const gs = this._gs()
+      const found = this.skillSystem.execute(gs, player, config, index, vector ?? { x: 1, y: 0 })
+      if (found) {
+        this.cooldowns.start(player.id, index, config.cooldown)
+        const expiresAt = Date.now() + config.cooldown
+        this.io.emit(EVENTS.COOLDOWN, { playerId: player.id, skillIndex: index, expiresAt })
+        const classColor = CLASSES[player.className]?.color ?? '#ffffff'
+        const v = vector ?? { x: 1, y: 0 }
+        this.io.emit(EVENTS.SKILL_FIRED, { playerId: player.id, skillName: config.name, type: config.type, subtype: config.subtype ?? null, x: Math.round(player.x), y: Math.round(player.y), angle: Math.atan2(v.y, v.x), radius: 0, range: config.range ?? 0, color: classColor })
+      }
+      return
+    }
 
     if (this.cooldowns.isOnCooldown(player.id, index)) return
     this.cooldowns.start(player.id, index, config.cooldown)
@@ -533,6 +592,7 @@ export default class GameServer {
       this.enemies.clear()
       this.projectiles.clear()
       this.reviveTimers.clear()
+      this.minions.clear()
       this.skillSystem.activeZones = []
       this.boss = new ServerBoss()
 
@@ -611,6 +671,9 @@ export default class GameServer {
       })
     })
 
+    const minions = []
+    this.minions.forEach(m => { if (!m.isDead) minions.push(m.toDTO()) })
+
     return {
       tick:        this.tick,
       players,
@@ -621,6 +684,7 @@ export default class GameServer {
       tombstones,
       stats:       this.stats,
       aoeZones:    this.skillSystem.getZonesDTO(),
+      minions,
     }
   }
 }

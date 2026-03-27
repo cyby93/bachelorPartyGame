@@ -38,10 +38,11 @@ export default class BattleRenderer {
     this.projectileContainer = new Container()    // lives in fx layer
 
     // Sprite pools
-    this.enemySprites  = new Map()   // id → EnemySprite
-    this.projSprites   = new Map()   // id → ProjectileSprite
-    this.bossSprite    = null
-    this.tombstoneGfx  = new Map()   // playerId → Graphics
+    this.enemySprites   = new Map()   // id → EnemySprite
+    this.projSprites    = new Map()   // id → ProjectileSprite
+    this.bossSprite     = null
+    this.tombstoneGfx   = new Map()   // playerId → Graphics
+    this.minionGfx      = new Map()   // minionId → Graphics (simple drawn shapes)
 
     // VFX manager (created in enter())
     this.vfx = null
@@ -55,8 +56,10 @@ export default class BattleRenderer {
     this._prevBossPhase = 1
     this._prevBossHp    = Infinity
 
-    // Add entity sub-containers in Z order: enemies behind boss behind players
-    this._entityRoot.addChild(this.enemyContainer, this.bossContainer)
+    this.minionContainer = new Container()
+
+    // Add entity sub-containers in Z order: minions behind enemies behind boss behind players
+    this._entityRoot.addChild(this.minionContainer, this.enemyContainer, this.bossContainer)
   }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -89,6 +92,10 @@ export default class BattleRenderer {
       this.bossSprite = null
     }
 
+    // Destroy minion graphics
+    this.minionGfx.forEach(gfx => gfx.destroy({ children: true }))
+    this.minionGfx.clear()
+
     // Destroy tombstones
     this.tombstoneGfx.forEach(gfx => gfx.destroy())
     this.tombstoneGfx.clear()
@@ -109,7 +116,7 @@ export default class BattleRenderer {
     this._uiRoot.removeChildren()
 
     // Re-add sub-containers (they were removed by removeChildren above)
-    this._entityRoot.addChild(this.enemyContainer, this.bossContainer)
+    this._entityRoot.addChild(this.minionContainer, this.enemyContainer, this.bossContainer)
 
     this._killText      = null
     this._killFill      = null
@@ -207,6 +214,26 @@ export default class BattleRenderer {
         this.bossSprite = null
       }
     }
+
+    // ── Update minions ───────────────────────────────────────────────────────
+    const activeMinionIds = new Set((state.minions ?? []).map(m => m.id))
+
+    for (const m of (state.minions ?? [])) {
+      if (!this.minionGfx.has(m.id)) {
+        const gfx = this._createMinionGfx(m)
+        this.minionGfx.set(m.id, gfx)
+        this.minionContainer.addChild(gfx)
+      }
+      this._updateMinionGfx(this.minionGfx.get(m.id), m)
+    }
+
+    this.minionGfx.forEach((gfx, id) => {
+      if (!activeMinionIds.has(id)) {
+        this.minionContainer.removeChild(gfx)
+        gfx.destroy({ children: true })
+        this.minionGfx.delete(id)
+      }
+    })
 
     // ── Update projectiles (both modes) ─────────────────────────────────────
     const activeProjIds = new Set((state.projectiles ?? []).map(p => p.id))
@@ -358,6 +385,30 @@ export default class BattleRenderer {
     }
   }
 
+  onTargetedHit(data) {
+    if (!this.vfx) return
+    const { casterX, casterY, targetX, targetY, effectType, color } = data
+    const colorNum = parseInt((color ?? '#ffffff').replace('#', ''), 16)
+    // Draw a brief flash line from caster to target using beam graphics
+    this._beamGfx.clear()
+    this._beamGfx.moveTo(casterX, casterY)
+    this._beamGfx.lineTo(targetX, targetY)
+    this._beamGfx.stroke({ width: 2, color: colorNum, alpha: 0.8 })
+    // Impact flash at target
+    const impactColor = effectType === 'heal' ? '#44ff44' : color
+    this.vfx.triggerImpact(targetX, targetY, impactColor)
+    // Clear line after 200ms
+    setTimeout(() => { if (this._beamGfx) this._beamGfx.clear() }, 200)
+  }
+
+  onChannelInterrupted(data) {
+    const playerSprite = this.playerSprites.get(data.playerId)
+    if (playerSprite && this.vfx) {
+      const { x, y } = playerSprite.container
+      this.vfx.triggerImpact(x, y, '#ff4444')
+    }
+  }
+
   // ── Reactive hooks ────────────────────────────────────────────────────────
 
   onPlayerAdded(p) {
@@ -374,6 +425,123 @@ export default class BattleRenderer {
     this._entityRoot.removeChild(sprite.container)
     sprite.destroy()
     this.playerSprites.delete(id)
+  }
+
+  // ── Minion rendering ─────────────────────────────────────────────────────
+
+  /** Build a Container with static shape + optional dynamic HP bar. */
+  _createMinionGfx(m) {
+    const root  = new Container()
+    const color = m.color ?? '#ffffff'
+
+    if (m.minionType === 'TOTEM') {
+      // Pole
+      const pole = new Graphics()
+      pole.rect(-3, -6, 6, 18)
+      pole.fill(color)
+      root.addChild(pole)
+
+      // Head circle
+      const head = new Graphics()
+      head.circle(0, -15, 9)
+      head.fill(color)
+      head.stroke({ color: '#ffffff', width: 2, alpha: 0.7 })
+      root.addChild(head)
+
+      // Eye dot
+      const eye = new Graphics()
+      eye.circle(0, -15, 4)
+      eye.fill('#ffffff')
+      root.addChild(eye)
+
+      // Base
+      const base = new Graphics()
+      base.rect(-8, 12, 16, 4)
+      base.fill({ color: '#ffffff', alpha: 0.3 })
+      root.addChild(base)
+
+    } else if (m.minionType === 'TRAP') {
+      // Diamond body
+      const diamond = new Graphics()
+      diamond.poly([0, -13, 13, 0, 0, 13, -13, 0])
+      diamond.fill({ color, alpha: 0.5 })
+      diamond.stroke({ color: '#ffdd00', width: 2.5 })
+      root.addChild(diamond)
+
+      // X lines — two separate Graphics so each line strokes independently
+      const line1 = new Graphics()
+      line1.moveTo(-7, -7)
+      line1.lineTo(7, 7)
+      line1.stroke({ color: '#ffdd00', width: 2 })
+      root.addChild(line1)
+
+      const line2 = new Graphics()
+      line2.moveTo(7, -7)
+      line2.lineTo(-7, 7)
+      line2.stroke({ color: '#ffdd00', width: 2 })
+      root.addChild(line2)
+
+      // Center dot
+      const dot = new Graphics()
+      dot.circle(0, 0, 3)
+      dot.fill('#ffdd00')
+      root.addChild(dot)
+
+    } else if (m.minionType === 'PET') {
+      // Body
+      const body = new Graphics()
+      body.circle(0, 2, 11)
+      body.fill(color)
+      body.stroke({ color: '#ffffff', width: 2, alpha: 0.6 })
+      root.addChild(body)
+
+      // Left ear
+      const earL = new Graphics()
+      earL.poly([-9, -5, -4, -14, -1, -5])
+      earL.fill(color)
+      earL.stroke({ color: '#ffffff', width: 1.5, alpha: 0.4 })
+      root.addChild(earL)
+
+      // Right ear
+      const earR = new Graphics()
+      earR.poly([9, -5, 4, -14, 1, -5])
+      earR.fill(color)
+      earR.stroke({ color: '#ffffff', width: 1.5, alpha: 0.4 })
+      root.addChild(earR)
+
+      // HP bar bg
+      const hpBg = new Graphics()
+      hpBg.rect(-12, 16, 24, 4)
+      hpBg.fill('#111111')
+      root.addChild(hpBg)
+
+      // HP bar fill (dynamic)
+      const hpFill = new Graphics()
+      root.addChild(hpFill)
+      root._hpFill = hpFill
+      root._maxHp  = m.maxHp
+      root._lastHp = -1
+    }
+
+    root._minionType = m.minionType
+    root.position.set(m.x, m.y)
+    return root
+  }
+
+  _updateMinionGfx(root, m) {
+    root.position.set(m.x, m.y)
+
+    // PET: update HP bar only when HP changes
+    if (root._minionType === 'PET' && root._hpFill && m.hp !== root._lastHp) {
+      root._lastHp = m.hp
+      const pct = Math.max(0, m.hp / (root._maxHp || 1))
+      root._hpFill.clear()
+      if (pct > 0) {
+        const fillColor = pct > 0.5 ? 0x44ff44 : pct > 0.25 ? 0xffaa00 : 0xff4444
+        root._hpFill.rect(-12, 16, 24 * pct, 4)
+        root._hpFill.fill({ color: fillColor, alpha: 0.95 })
+      }
+    }
   }
 
   // ── UI construction ───────────────────────────────────────────────────────

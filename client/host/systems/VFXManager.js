@@ -79,6 +79,22 @@ export default class VFXManager {
         this.oneShot.impactFlash(x, y, color)
         break
 
+      case 'CHANNEL':
+        // Channel start — same as cast glow
+        this.oneShot.impactFlash(x, y, color)
+        break
+
+      case 'TARGETED':
+        // Instant ray hit — flash at caster origin
+        this.oneShot.impactFlash(x, y, color)
+        break
+
+      case 'SPAWN':
+        // Spawn burst — flash + particles
+        this.oneShot.impactFlash(x, y, color)
+        this.particles.hitSpark(x, y, color)
+        break
+
       default:
         break
     }

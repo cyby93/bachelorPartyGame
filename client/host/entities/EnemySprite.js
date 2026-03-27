@@ -4,7 +4,7 @@
  * Phase 5 will expand this with proper variety and animations.
  */
 
-import { Container, Graphics } from 'pixi.js'
+import { Container, Graphics, Text } from 'pixi.js'
 import { GAME_CONFIG } from '../../../shared/GameConfig.js'
 import OverheadDisplay from '../systems/OverheadDisplay.js'
 
@@ -45,6 +45,23 @@ export default class EnemySprite {
       showCastBar: false,
       showStatusIcons: false,
     })
+
+    // Name label for training dummies (Idle / Ranged / Melee)
+    if (data.dummyName) {
+      const label = new Text({
+        text:  data.dummyName,
+        style: {
+          fontFamily: 'Arial',
+          fontSize:   12,
+          fontWeight: 'bold',
+          fill:       '#f1c40f',
+          align:      'center',
+        },
+      })
+      label.anchor.set(0.5, 1)
+      label.position.set(0, -R - 18)   // above the HP bar
+      this.container.addChild(label)
+    }
   }
 
   _updateHpBar(hp) {

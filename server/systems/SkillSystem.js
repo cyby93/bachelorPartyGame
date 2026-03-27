@@ -738,6 +738,30 @@ export default class SkillSystem {
         }
       }
 
+      // Collision check vs players — for enemy-fired projectiles (e.g. RangedDummy)
+      if (proj.isAlive && proj.isEnemyProj) {
+        gs.players.forEach(p => {
+          if (!proj.isAlive || p.isHost || p.isDead) return
+          if (proj.hit.has(p.id)) return
+          const projCircle   = { x: proj.x, y: proj.y, radius: proj.radius }
+          const playerCircle = { x: p.x,    y: p.y,    radius: GAME_CONFIG.PLAYER_RADIUS }
+          if (!this._collision.circlesOverlap(projCircle, playerCircle)) return
+
+          proj.hit.add(p.id)
+          // Directional shield blocks the projectile entirely
+          if (p.isShieldBlocking(proj.x, proj.y)) {
+            if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount: 0, type: 'blocked', sourceSkill: null })
+          } else {
+            const amount = proj.damage ?? 0
+            if (amount > 0) {
+              p.hp = Math.max(1, p.hp - amount)   // never kill players in lobby
+              if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount, type: 'damage', sourceSkill: null })
+            }
+          }
+          if (!proj.pierce) proj.isAlive = false
+        })
+      }
+
       if (!proj.isAlive) {
         gs.projectiles.delete(id)
       }

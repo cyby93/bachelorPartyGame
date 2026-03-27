@@ -55,12 +55,22 @@ export default class FloatingTextPool {
     }
 
     const displayAmount = Math.round(amount)
-    t.text = type === 'heal' ? `+${displayAmount}` : `${displayAmount}`
-    t.style.fill = type === 'heal' ? '#2ecc71' : '#ff4444'
+    if (type === 'blocked') {
+      t.text = 'Blocked'
+      t.style.fill = '#aaaaaa'
+      t.scale.set(0.85)
+    } else if (type === 'heal') {
+      t.text = `+${displayAmount}`
+      t.style.fill = '#2ecc71'
+      t.scale.set(0.9)
+    } else {
+      t.text = `${displayAmount}`
+      t.style.fill = '#ff4444'
+      t.scale.set(1.0)
+    }
     t.position.set(x + (Math.random() - 0.5) * 16, y)
     t.alpha = 1
     t.visible = true
-    t.scale.set(type === 'heal' ? 0.9 : 1.0)
 
     this._active.push({
       text: t,

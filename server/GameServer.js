@@ -4,7 +4,7 @@ import { CLASSES, resolveClassName } from '../shared/ClassConfig.js'
 import ServerPlayer      from './entities/ServerPlayer.js'
 import ServerEnemy       from './entities/ServerEnemy.js'
 import ServerBoss        from './entities/ServerBoss.js'
-import TrainingDummy, { MovingDummy } from './entities/TrainingDummy.js'
+import TrainingDummy, { RangedDummy, MeleeDummy, MovingDummy } from './entities/TrainingDummy.js'
 import CooldownSystem    from './systems/CooldownSystem.js'
 import SkillSystem       from './systems/SkillSystem.js'
 
@@ -209,20 +209,29 @@ export default class GameServer {
     const W = GAME_CONFIG.CANVAS_WIDTH
     const H = GAME_CONFIG.CANVAS_HEIGHT
 
-    this.enemies.set('training-dummy', new TrainingDummy())
+    // Idle dummy — stationary center-top, takes damage but never dies
+    this.enemies.set('training-dummy', new TrainingDummy({ id: 'training-dummy' }))
 
-    // Two moving dummies that patrol horizontally, offset left and right
-    this.enemies.set('moving-dummy-1', new MovingDummy({
-      id:     'moving-dummy-1',
-      pointA: { x: W * 0.2, y: H * 0.45 },
-      pointB: { x: W * 0.2, y: H * 0.75 },
-      speed:  1.2,
+    // Ranged dummy — stationary left, fires slow projectiles at nearest player
+    this.enemies.set('ranged-dummy', new RangedDummy({
+      id: 'ranged-dummy',
+      x:  W * 0.2,
+      y:  H * 0.5,
     }))
-    this.enemies.set('moving-dummy-2', new MovingDummy({
-      id:     'moving-dummy-2',
-      pointA: { x: W * 0.8, y: H * 0.75 },
-      pointB: { x: W * 0.8, y: H * 0.45 },
-      speed:  1.8,
+
+    // Melee dummy — stationary right, attacks if player walks into melee range
+    this.enemies.set('melee-dummy', new MeleeDummy({
+      id: 'melee-dummy',
+      x:  W * 0.8,
+      y:  H * 0.5,
+    }))
+
+    // Moving dummy — patrols center so players can practice on a moving target
+    this.enemies.set('moving-dummy', new MovingDummy({
+      id:     'moving-dummy',
+      pointA: { x: W * 0.5, y: H * 0.55 },
+      pointB: { x: W * 0.5, y: H * 0.80 },
+      speed:  1.5,
     }))
   }
 
@@ -277,7 +286,7 @@ export default class GameServer {
     if (this.scene === 'lobby') {
       const gs = this._gs()
       this.skillSystem.tick(gs, dt)
-      this.enemies.forEach(dummy => dummy.update(dt))
+      this.enemies.forEach(dummy => dummy.update(dt, gs))
     }
 
     if (this.scene === 'trashMob' || this.scene === 'bossFight') {

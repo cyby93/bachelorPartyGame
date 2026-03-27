@@ -398,21 +398,40 @@ export default class SkillSystem {
 
   _executeTargeted(gs, player, config, v) {
     if (config.subtype === 'HEAL_ALLY') {
-      const target = this._findRayAlly(gs, player, v, config.range ?? 400)
-      if (!target) return false
-      const amount = config.healAmount ?? 0
-      target.heal(amount)
-      if (gs.io && amount > 0) {
-        gs.io.emit('effect:damage', { targetId: target.id, amount, type: 'heal', sourceSkill: config.name })
+      const primaryTarget = this._findRayAlly(gs, player, v, config.range ?? 400)
+      if (!primaryTarget) return false
+
+      const amount      = config.healAmount  ?? 0
+      const maxChains   = config.maxChains   ?? 0
+      const chainRadius = config.chainRadius ?? 200
+      const color       = CLASSES[player.className]?.color ?? '#ffffff'
+
+      const healedIds = new Set([player.id])
+      let prevX   = player.x
+      let prevY   = player.y
+      let current = primaryTarget
+
+      for (let i = 0; i <= maxChains; i++) {
+        current.heal(amount)
+        if (gs.io && amount > 0) {
+          gs.io.emit('effect:damage', { targetId: current.id, amount, type: 'heal', sourceSkill: config.name })
+        }
+        if (gs.io) {
+          gs.io.emit('targeted:hit', {
+            casterX: Math.round(prevX),     casterY: Math.round(prevY),
+            targetX: Math.round(current.x), targetY: Math.round(current.y),
+            effectType: 'heal', color,
+          })
+        }
+        healedIds.add(current.id)
+        prevX = current.x
+        prevY = current.y
+        if (i === maxChains) break
+        const next = this._findChainTarget(gs, current.x, current.y, chainRadius, healedIds)
+        if (!next) break
+        current = next
       }
-      const color = CLASSES[player.className]?.color ?? '#ffffff'
-      if (gs.io) {
-        gs.io.emit('targeted:hit', {
-          casterX: Math.round(player.x), casterY: Math.round(player.y),
-          targetX: Math.round(target.x), targetY: Math.round(target.y),
-          effectType: 'heal', color,
-        })
-      }
+
       return true
     }
 
@@ -1068,6 +1087,19 @@ export default class SkillSystem {
     gs.enemies.forEach(e => checkTarget(e))
     if (gs.boss && !gs.boss.isDead) checkTarget(gs.boss)
 
+    return best
+  }
+
+  /** Find closest alive ally within radius of (pivotX, pivotY), excluding healedIds. */
+  _findChainTarget(gs, pivotX, pivotY, radius, healedIds) {
+    let best     = null
+    let bestDist = Infinity
+    gs.players.forEach(p => {
+      if (p.isDead || p.isHost || healedIds.has(p.id)) return
+      const dist = Math.hypot(p.x - pivotX, p.y - pivotY)
+      if (dist > radius) return
+      if (dist < bestDist) { bestDist = dist; best = p }
+    })
     return best
   }
 

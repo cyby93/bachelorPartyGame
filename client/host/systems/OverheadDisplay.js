@@ -81,8 +81,10 @@ export default class OverheadDisplay {
 
   /**
    * Update cast bar progress. 0 = no cast, 0-1 = casting.
+   * @param {number} progress - 0 to 1
+   * @param {boolean} isChannel - true for channel abilities (green, right-to-left)
    */
-  updateCastBar(progress) {
+  updateCastBar(progress, isChannel = false) {
     if (!this._castBarBg) return
 
     if (progress == null || progress <= 0 || progress >= 1) {
@@ -101,11 +103,23 @@ export default class OverheadDisplay {
     }
 
     this._castBarFill.clear()
-    this._castBarFill.rect(
-      -this._castBarW / 2, this._castBarY,
-      this._castBarW * progress, this._castBarH
-    )
-    this._castBarFill.fill({ color: 0xffcc00, alpha: 0.9 })
+    if (isChannel) {
+      // Channel: green, drains right-to-left (starts full, empties from right)
+      const fillW = this._castBarW * (1 - progress)
+      this._castBarFill.rect(
+        -this._castBarW / 2, this._castBarY,
+        fillW, this._castBarH
+      )
+      this._castBarFill.fill({ color: 0x00ff88, alpha: 0.9 })
+    } else {
+      const fillW = this._castBarW * progress
+      // Cast: yellow, fills left-to-right
+      this._castBarFill.rect(
+        -this._castBarW / 2, this._castBarY,
+        fillW, this._castBarH
+      )
+      this._castBarFill.fill({ color: 0xffcc00, alpha: 0.9 })
+    }
   }
 
   /**

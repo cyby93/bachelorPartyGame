@@ -6,7 +6,7 @@
  * The DOM sidebar handles player list + QR code + start button.
  */
 
-import { Container, Text } from 'pixi.js'
+import { Container, Graphics, Text } from 'pixi.js'
 import { GAME_CONFIG }    from '../../../shared/GameConfig.js'
 import PlayerSprite       from '../entities/PlayerSprite.js'
 import EnemySprite        from '../entities/EnemySprite.js'
@@ -21,9 +21,17 @@ export default class LobbyRenderer {
     this.projSprites   = new Map()   // id → ProjectileSprite
 
     // Root containers for this renderer's content
-    this._entityRoot         = new Container()
-    this._uiRoot             = new Container()
+    this._entityRoot          = new Container()
+    this._uiRoot              = new Container()
     this._projectileContainer = new Container()
+
+    // Beam rendering graphics (flash beams + persistent channel beams)
+    this._beamGfx    = new Graphics()
+    this._flashBeams = []   // [{ x1, y1, x2, y2, color, expiresAt }]
+    this._beamTime   = 0
+
+    this.minionGfx      = new Map()   // minionId → Graphics (simple drawn shapes)
+
   }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -33,6 +41,7 @@ export default class LobbyRenderer {
     this.game.layers.fx.addChild(this._projectileContainer)
     this.game.layers.ui.addChild(this._uiRoot)
     this.vfx = new VFXManager(this.game.layers)
+    this.game.layers.fx.addChild(this._beamGfx)
     this._buildUI()
   }
 
@@ -47,6 +56,9 @@ export default class LobbyRenderer {
     this.projSprites.clear()
 
     if (this.vfx) { this.vfx.destroy(); this.vfx = null }
+    this.game.layers.fx.removeChild(this._beamGfx)
+    this._beamGfx.clear()
+    this._flashBeams = []
 
     this.game.layers.entities.removeChild(this._entityRoot)
     this.game.layers.fx.removeChild(this._projectileContainer)
@@ -129,6 +141,50 @@ export default class LobbyRenderer {
       }
     })
 
+    // Draw persistent channel beams (Drain Life etc.) + timed flash beams
+    this._beamTime = (this._beamTime + dt) % 10
+    this._beamGfx.clear()
+    Object.values(players).forEach(p => {
+      if (p.isHost || p.isDead || !p.beamTargetId) return
+      const srcSprite = this.playerSprites.get(p.id)
+      if (!srcSprite) return
+      let tx, ty
+      const enemySprite = this.enemySprites.get(p.beamTargetId)
+      if (enemySprite) { tx = enemySprite.container.x; ty = enemySprite.container.y }
+      if (tx == null) return
+      const sx = srcSprite.container.x
+      const sy = srcSprite.container.y
+      const t = this._beamTime
+      const pulse = 0.55 + 0.2 * Math.sin(t * 8)
+      this._beamGfx.moveTo(sx, sy)
+      this._beamGfx.lineTo(tx, ty)
+      this._beamGfx.stroke({ color: 0x00ff88, width: 6, alpha: 0.18 })
+      this._beamGfx.moveTo(sx, sy)
+      this._beamGfx.lineTo(tx, ty)
+      this._beamGfx.stroke({ color: 0x00ff88, width: 2.5, alpha: pulse })
+      this._beamGfx.moveTo(sx, sy)
+      this._beamGfx.lineTo(tx, ty)
+      this._beamGfx.stroke({ color: 0xffffff, width: 1, alpha: pulse * 0.55 })
+      const dx = sx - tx
+      const dy = sy - ty
+      for (let i = 0; i < 5; i++) {
+        const frac = ((i / 5) + t * 0.35) % 1
+        const px = tx + dx * frac
+        const py = ty + dy * frac
+        const a = Math.sin(frac * Math.PI) * 0.85
+        this._beamGfx.circle(px, py, 3)
+        this._beamGfx.fill({ color: 0x00ff88, alpha: a })
+      }
+    })
+    const now = Date.now()
+    this._flashBeams = this._flashBeams.filter(b => b.expiresAt > now)
+    this._flashBeams.forEach(b => {
+      const c = parseInt(b.color.replace('#', ''), 16)
+      this._beamGfx.moveTo(b.x1, b.y1)
+      this._beamGfx.lineTo(b.x2, b.y2)
+      this._beamGfx.stroke({ width: 2, color: c, alpha: 0.8 })
+    })
+
     // Tick VFX animations
     this.vfx?.update(dt)
 
@@ -162,6 +218,19 @@ export default class LobbyRenderer {
 
   onSkillFired(data) {
     this.vfx?.triggerSkillVFX(data)
+  }
+
+  onTargetedHit(data) {
+    if (!this.vfx) return
+    const { casterX, casterY, targetX, targetY, effectType, color } = data
+    this._flashBeams.push({
+      x1: casterX, y1: casterY,
+      x2: targetX, y2: targetY,
+      color: color ?? '#ffffff',
+      expiresAt: Date.now() + 300,
+    })
+    const impactColor = effectType === 'heal' ? '#44ff44' : color
+    this.vfx.triggerImpact(targetX, targetY, impactColor)
   }
 
   onEffectDamage(data) {

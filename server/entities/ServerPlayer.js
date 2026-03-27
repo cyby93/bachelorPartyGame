@@ -173,13 +173,15 @@ export default class ServerPlayer {
     // Cast progress (0-1), only if actively casting
     if (this.activeCast) {
       const elapsed = Date.now() - this.activeCast.startedAt
-      delta.castProgress = Math.min(1, elapsed / (this.activeCast.config.castTime ?? 1000))
+      delta.castProgress   = Math.min(1, elapsed / (this.activeCast.config.castTime ?? 1000))
+      delta.isChanneling   = this.activeCast.config.type === 'CHANNEL'
       // Beam target for VFX
       if (this.activeCast.beamTargetId != null) {
         delta.beamTargetId = this.activeCast.beamTargetId
       }
     } else if (this._prev._wasCasting) {
       delta.castProgress = null   // explicitly clear — tells client to hide cast bar
+      delta.isChanneling = false
       delta.beamTargetId = null   // clear beam
     }
 

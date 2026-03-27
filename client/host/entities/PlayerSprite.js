@@ -217,7 +217,7 @@ export default class PlayerSprite {
     this._shieldVisible = shieldOn
 
     // Update overhead display
-    this.overhead.updateCastBar(state.castProgress ?? 0)
+    this.overhead.updateCastBar(state.castProgress ?? 0, state.isChanneling ?? false)
     if (state.effects) {
       this.overhead.setStatusIcons(state.effects)
     }

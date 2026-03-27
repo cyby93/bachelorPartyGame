@@ -48,7 +48,9 @@ export default class BattleRenderer {
     this.vfx = null
 
     // Beam rendering graphics (for Drain Life etc.)
-    this._beamGfx = new Graphics()
+    this._beamGfx  = new Graphics()
+    this._flashBeams = []   // [{ x1, y1, x2, y2, color, expiresAt }]
+    this._beamTime = 0      // running time for beam animation
 
     // Previous-frame tracking for event detection
     this._prevPlayerHp  = {}   // id → hp
@@ -103,6 +105,7 @@ export default class BattleRenderer {
     if (this.vfx) { this.vfx.destroy(); this.vfx = null }
     this.game.layers.fx.removeChild(this._beamGfx)
     this._beamGfx.clear()
+    this._flashBeams = []
     this._prevPlayerHp  = {}
     this._prevEnemyIds  = new Set()
     this._prevBossPhase = 1
@@ -286,6 +289,7 @@ export default class BattleRenderer {
     })
 
     // ── Draw beam effects (Drain Life etc.) ──────────────────────────────────
+    this._beamTime = (this._beamTime + dt) % 10
     this._beamGfx.clear()
     Object.values(state.players).forEach(p => {
       if (p.isHost || p.isDead || !p.beamTargetId) return
@@ -306,15 +310,45 @@ export default class BattleRenderer {
 
       const sx = srcSprite.container.x
       const sy = srcSprite.container.y
-      const color = CLASSES[p.className]?.color ?? '#8b5cf6'
+      const t = this._beamTime
+      const pulse = 0.55 + 0.2 * Math.sin(t * 8)
 
-      // Draw beam line with glow
+      // Outer green glow
       this._beamGfx.moveTo(sx, sy)
       this._beamGfx.lineTo(tx, ty)
-      this._beamGfx.stroke({ color, width: 4, alpha: 0.7 })
+      this._beamGfx.stroke({ color: 0x00ff88, width: 6, alpha: 0.18 })
+
+      // Core green beam
       this._beamGfx.moveTo(sx, sy)
       this._beamGfx.lineTo(tx, ty)
-      this._beamGfx.stroke({ color: '#ffffff', width: 1.5, alpha: 0.5 })
+      this._beamGfx.stroke({ color: 0x00ff88, width: 2.5, alpha: pulse })
+
+      // Bright white core
+      this._beamGfx.moveTo(sx, sy)
+      this._beamGfx.lineTo(tx, ty)
+      this._beamGfx.stroke({ color: 0xffffff, width: 1, alpha: pulse * 0.55 })
+
+      // Flowing dots from target to caster (life being drained)
+      const dx = sx - tx
+      const dy = sy - ty
+      for (let i = 0; i < 5; i++) {
+        const frac = ((i / 5) + t * 0.35) % 1
+        const px = tx + dx * frac
+        const py = ty + dy * frac
+        const a = Math.sin(frac * Math.PI) * 0.85
+        this._beamGfx.circle(px, py, 3)
+        this._beamGfx.fill({ color: 0x00ff88, alpha: a })
+      }
+    })
+
+    // Draw timed flash beams (chain heals, targeted hits)
+    const now = Date.now()
+    this._flashBeams = this._flashBeams.filter(b => b.expiresAt > now)
+    this._flashBeams.forEach(b => {
+      const c = parseInt(b.color.replace('#', ''), 16)
+      this._beamGfx.moveTo(b.x1, b.y1)
+      this._beamGfx.lineTo(b.x2, b.y2)
+      this._beamGfx.stroke({ width: 2, color: c, alpha: 0.8 })
     })
 
     // ── Sync ground effect zones ────────────────────────────────────────────
@@ -388,17 +422,16 @@ export default class BattleRenderer {
   onTargetedHit(data) {
     if (!this.vfx) return
     const { casterX, casterY, targetX, targetY, effectType, color } = data
-    const colorNum = parseInt((color ?? '#ffffff').replace('#', ''), 16)
-    // Draw a brief flash line from caster to target using beam graphics
-    this._beamGfx.clear()
-    this._beamGfx.moveTo(casterX, casterY)
-    this._beamGfx.lineTo(targetX, targetY)
-    this._beamGfx.stroke({ width: 2, color: colorNum, alpha: 0.8 })
+    // Register flash beam — rendered each frame in update() until expiry
+    this._flashBeams.push({
+      x1: casterX, y1: casterY,
+      x2: targetX, y2: targetY,
+      color: color ?? '#ffffff',
+      expiresAt: Date.now() + 300,
+    })
     // Impact flash at target
     const impactColor = effectType === 'heal' ? '#44ff44' : color
     this.vfx.triggerImpact(targetX, targetY, impactColor)
-    // Clear line after 200ms
-    setTimeout(() => { if (this._beamGfx) this._beamGfx.clear() }, 200)
   }
 
   onChannelInterrupted(data) {

@@ -9,7 +9,8 @@
       "Bash(find *)",
       "Bash(grep -r \"shieldActive\" /d/Games/bachelorPartyGame --include=\"*.js\" 2>/dev/null | head -20)",
       "Bash(grep -r \"player.angle\\\\|direction.*angle\\\\|shield.*block\" /d/Games/bachelorPartyGame/server --include=\"*.js\" 2>/dev/null | head -15)",
-      "Bash(grep -r \"EVENTS.INPUT_SKILL\" /d/Games/bachelorPartyGame --include=\"*.js\" -l 2>/dev/null | head -5)"
+      "Bash(grep -r \"EVENTS.INPUT_SKILL\" /d/Games/bachelorPartyGame --include=\"*.js\" -l 2>/dev/null | head -5)",
+      "Bash(grep -r \"bounce\\\\|ricochet\\\\|chain\\\\|multi.*heal\\\\|heal.*chain\" /d/Games/bachelorPartyGame --include=*.js --include=*.md)"
     ]
   }
 }

@@ -62,9 +62,10 @@
 
   $effect(() => {
     const type = skill?.inputType
-    if (!btnEl || (type !== 'DIRECTIONAL' && type !== 'TARGETED')) return
+    if (!btnEl || (type !== 'DIRECTIONAL' && type !== 'TARGETED' && type !== 'AIMED')) return
 
-    const isFiller = skill?.type === 'PROJECTILE' || skill?.type === 'MELEE'
+    // AIMED = aim while held, fire on release (no auto-fire loop)
+    const isFiller = (skill?.type === 'PROJECTILE' || skill?.type === 'MELEE') && type !== 'AIMED'
 
     const j = nipplejs.create({
       zone:  btnEl,

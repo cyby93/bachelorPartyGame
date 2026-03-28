@@ -76,16 +76,19 @@ const SkillDatabase = {
       icon:      '🔨'
     },
     {
-      name:      'Judgement',
+      name:      "Avenger's Shield",
       type:      'PROJECTILE',
-      inputType: 'DIRECTIONAL',
-      cooldown:  4000,
-      damage:    60,
-      speed:     400,
-      radius:    15,
-      range:     400,
+      inputType: 'AIMED',
+      cooldown:  4500,
+      damage:    50,
+      speed:     420,
+      radius:    18,
+      range:     500,
       pierce:    false,
-      icon:      '✨'
+      chain:     2,
+      chainRange: 15000,
+      onHitEffect: { speedMultiplier: 0.5, duration: 2000 },
+      icon:      '🛡️'
     },
     {
       name:      'Divine Shield',

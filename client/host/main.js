@@ -20,7 +20,7 @@ const audio = new AudioSystem()
 await game.init(document.getElementById('canvas-wrap'))
 
 // ── Socket ─────────────────────────────────────────────────────────────────
-const socket = io()
+const socket = io({ transports: ['websocket'] })
 console.log(socket);
 
 // ── DOM refs ───────────────────────────────────────────────────────────────

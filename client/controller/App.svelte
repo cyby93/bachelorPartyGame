@@ -38,7 +38,7 @@
       if (!e.matches) enterFullscreenLandscape()
     })
 
-    socket = io()
+    socket = io({ transports: ['websocket'] })
     socket.on('connect', () => {
       myId = socket.id
       // Reconnect: if already past the join screen, re-register with the server

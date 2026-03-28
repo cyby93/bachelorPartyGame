@@ -770,7 +770,6 @@ export default class SkillSystem {
 
   _handleProjectileHit(gs, proj, target) {
     proj.hit.add(target.id)
-
     if (proj.effectType === 'HEAL') {
       // Heal projectile — only hits players
       if (target.isPlayer) {
@@ -815,6 +814,21 @@ export default class SkillSystem {
         })
       }
 
+      // Apply on-hit debuff (e.g. slow from Avenger's Shield)
+      if (proj.onHitEffect && !target.isPlayer) {
+        const ep = proj.onHitEffect
+        target.activeEffects = target.activeEffects ?? []
+        target.activeEffects.push({
+          source: 'projectile_debuff',
+          ownerId: proj.ownerId,
+          params: ep,
+          expiresAt: Date.now() + (ep.duration ?? 2000),
+        })
+        if (ep.speedMultiplier != null) {
+          target.speedMult = (target.speedMult ?? 1) * ep.speedMultiplier
+        }
+      }
+
       // Secondary AOE on impact (e.g. Pyroblast)
       if (proj.onImpact) {
         this._executeAOEAtPoint(gs, owner ?? null, {
@@ -823,11 +837,66 @@ export default class SkillSystem {
           effectType: 'DAMAGE',
         }, proj.x, proj.y)
       }
+
+      // Chain/ricochet — spawn a new projectile aimed at the next target
+      if (proj.chainLeft > 0) {
+        const nextTarget = this._findRicochetTarget(gs, proj)
+        if (nextTarget) {
+          const dx    = nextTarget.x - proj.x
+          const dy    = nextTarget.y - proj.y
+          const dist  = Math.sqrt(dx * dx + dy * dy)
+          const speed = Math.sqrt(proj.vx * proj.vx + proj.vy * proj.vy)
+          const chainId = ++this._projSeq
+          gs.projectiles.set(chainId, {
+            id:           chainId,
+            x:            proj.x,
+            y:            proj.y,
+            vx:           dist > 0 ? (dx / dist) * speed : proj.vx,
+            vy:           dist > 0 ? (dy / dist) * speed : proj.vy,
+            radius:       proj.radius,
+            range:        dist + 50,
+            distTraveled: 0,
+            ownerId:      proj.ownerId,
+            damage:       proj.damage,
+            healAmount:   proj.healAmount ?? 0,
+            effectType:   proj.effectType,
+            pierce:       false,
+            hit:          new Set(proj.hit),   // copy — excludes already-hit targets
+            color:        proj.color,
+            isAlive:      true,
+            isLobbed:     false,
+            targetX:      0,
+            targetY:      0,
+            onImpact:     proj.onImpact,
+            dot:          proj.dot,
+            chainLeft:    proj.chainLeft - 1,
+            chainRange:   proj.chainRange,
+            onHitEffect:  proj.onHitEffect,
+          })
+        }
+      }
+      // original projectile dies after hitting its target (falls through below)
     }
 
     if (!proj.pierce) {
       proj.isAlive = false
     }
+  }
+
+  _findRicochetTarget(gs, proj) {
+    let nearest = null
+    let nearestDist = proj.chainRange
+
+    for (const enemy of gs.enemies.values()) {
+      if (enemy.isDead || proj.hit.has(enemy.id)) continue
+      const d = this._collision.distance(proj, enemy)
+      if (d < nearestDist) { nearestDist = d; nearest = enemy }
+    }
+    if (gs.boss && !gs.boss.isDead && !proj.hit.has(gs.boss.id)) {
+      const d = this._collision.distance(proj, gs.boss)
+      if (d < nearestDist) { nearestDist = d; nearest = gs.boss }
+    }
+    return nearest
   }
 
   _tickEffects(gs) {
@@ -1179,6 +1248,9 @@ export default class SkillSystem {
       targetY:     0,
       onImpact:    overrides.onImpact ?? null,
       dot:         config.dot        ?? null,
+      chainLeft:   config.chain      ?? 0,
+      chainRange:  config.chainRange ?? 200,
+      onHitEffect: config.onHitEffect ?? null,
     })
   }
 }

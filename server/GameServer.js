@@ -254,6 +254,7 @@ export default class GameServer {
   // ── Tick loop ──────────────────────────────────────────────────────────────
 
   _gameTick() {
+    try {
     const now = Date.now()
     const dt  = Math.min((now - this.lastTick) / 1000, 0.1)
     this.lastTick = now
@@ -309,6 +310,9 @@ export default class GameServer {
 
     // 4. Broadcast delta state
     this.io.emit(EVENTS.STATE_DELTA, this._deltaState())
+    } catch (err) {
+      console.error('[GameTick ERROR]', err)
+    }
   }
 
   // ── Skill processing ────────────────────────────────────────────────────────

@@ -32,7 +32,10 @@ if (!isDev) {
 // Expose the LAN controller URL so the host page can generate the correct QR code
 app.get('/api/network-url', (_, res) => {
   const clientPort = isDev ? 5173 : PORT
-  res.json({ url: `http://${ip.address()}:${clientPort}/controller` })
+  const host = process.env.RAILWAY_PUBLIC_DOMAIN
+    ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+    : `http://${ip.address()}:${clientPort}`
+  res.json({ url: `${host}/controller` })
 })
 
 const gameServer = new GameServer(io)

@@ -2,6 +2,9 @@
   "name": "raid-night",
   "version": "2.0.0",
   "description": "RAID NIGHT - THE RESCUE: Local multiplayer party game",
+  "engines": {
+    "node": ">=20"
+  },
   "type": "module",
   "scripts": {
     "start": "NODE_ENV=production node server/index.js",

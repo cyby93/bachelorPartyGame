@@ -152,7 +152,7 @@
     }
   })
 
-  // ── Touch handlers for INSTANT / SUSTAINED ────────────────────────────────
+  // ── Pointer handlers for INSTANT / SUSTAINED ──────────────────────────────
 
   function onPointerDown(e) {
     const type = skill?.inputType

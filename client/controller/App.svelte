@@ -25,10 +25,20 @@
   // ── Socket (plain let — must NOT be Proxy-wrapped)
   let socket
 
-  function enterFullscreenLandscape() {
-    document.documentElement.requestFullscreen({ navigationUI: 'hide' })
-      .then(() => screen.orientation?.lock('landscape').catch(() => {}))
-      .catch(() => {})
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  const isStandalone = !!window.navigator.standalone
+
+  let isFullscreen = $state(false)
+
+  function toggleFullscreen() {
+    if (isIOS) return
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {})
+    } else {
+      document.documentElement.requestFullscreen({ navigationUI: 'hide' })
+        .then(() => screen.orientation?.lock('landscape').catch(() => {}))
+        .catch(() => {})
+    }
   }
 
   onMount(() => {
@@ -36,7 +46,11 @@
     isPortrait = mq.matches
     mq.addEventListener('change', e => {
       isPortrait = e.matches
-      if (!e.matches) enterFullscreenLandscape()
+      if (!e.matches && !document.fullscreenElement) toggleFullscreen()
+    })
+
+    document.addEventListener('fullscreenchange', () => {
+      isFullscreen = !!document.fullscreenElement
     })
 
     socket = io({ transports: ['websocket'] })
@@ -71,7 +85,7 @@
 
     socket.on(EVENTS.COOLDOWN, data => {
       if (data.playerId !== myId) return
-      cooldowns = cooldowns.map((v, i) => i === data.skillIndex ? data.expiresAt : v)
+      cooldowns = cooldowns.map((v, i) => i === data.skillIndex ? Date.now() + data.durationMs : v)
     })
 
     socket.on(EVENTS.COMBO_POINTS, data => {
@@ -109,8 +123,18 @@
   <div class="rotate-overlay">
     <span class="rotate-icon">⟳</span>
     <p>Rotate your phone to landscape</p>
-    <button onclick={enterFullscreenLandscape}>Tap to go fullscreen</button>
+    {#if isIOS && !isStandalone}
+      <p class="ios-hint">For fullscreen: tap <strong>Share ⬆</strong> → <strong>Add to Home Screen</strong>, then reopen from your home screen</p>
+    {:else if !isIOS}
+      <button onclick={toggleFullscreen}>{isFullscreen ? 'Exit fullscreen' : 'Tap to go fullscreen'}</button>
+    {/if}
   </div>
+{/if}
+
+{#if !isPortrait && !isIOS}
+  <button class="fullscreen-btn" onclick={toggleFullscreen} title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}>
+    {isFullscreen ? '⤡' : '⤢'}
+  </button>
 {/if}
 
 <div class="app">
@@ -188,6 +212,36 @@
     font-size: 15px;
     cursor: pointer;
   }
+
+  .ios-hint {
+    font-size: 14px;
+    color: #aad4e8;
+    max-width: 260px;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  /* Floating fullscreen toggle — landscape only */
+  .fullscreen-btn {
+    position: fixed;
+    top: 8px;
+    right: 8px;
+    z-index: 9998;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 6px;
+    border: 1px solid #1e3a4a;
+    background: rgba(22, 32, 42, 0.75);
+    color: #00d2ff;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.5;
+  }
+  .fullscreen-btn:active { opacity: 1; }
 
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>

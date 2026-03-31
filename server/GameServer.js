@@ -353,8 +353,7 @@ export default class GameServer {
         // Start cooldown on release
         const effectiveCooldown = Math.round(config.cooldown / (player.fireRateMult ?? 1))
         this.cooldowns.start(player.id, index, effectiveCooldown)
-        const expiresAt = Date.now() + effectiveCooldown
-        this.io.emit(EVENTS.COOLDOWN, { playerId: player.id, skillIndex: index, expiresAt })
+        this.io.emit(EVENTS.COOLDOWN, { playerId: player.id, skillIndex: index, durationMs: effectiveCooldown })
       }
       return
     }
@@ -390,8 +389,7 @@ export default class GameServer {
       if (found) {
         const effectiveCooldown = Math.round(config.cooldown / (player.fireRateMult ?? 1))
         this.cooldowns.start(player.id, index, effectiveCooldown)
-        const expiresAt = Date.now() + effectiveCooldown
-        this.io.emit(EVENTS.COOLDOWN, { playerId: player.id, skillIndex: index, expiresAt })
+        this.io.emit(EVENTS.COOLDOWN, { playerId: player.id, skillIndex: index, durationMs: effectiveCooldown })
         const classColor = CLASSES[player.className]?.color ?? '#ffffff'
         const v = vector ?? { x: 1, y: 0 }
         this.io.emit(EVENTS.SKILL_FIRED, { playerId: player.id, skillName: config.name, type: config.type, subtype: config.subtype ?? null, x: Math.round(player.x), y: Math.round(player.y), angle: Math.atan2(v.y, v.x), radius: 0, range: config.range ?? 0, color: classColor })
@@ -407,8 +405,7 @@ export default class GameServer {
       if (found) {
         const effectiveCooldown = Math.round(config.cooldown / (player.fireRateMult ?? 1))
         this.cooldowns.start(player.id, index, effectiveCooldown)
-        const expiresAt = Date.now() + effectiveCooldown
-        this.io.emit(EVENTS.COOLDOWN, { playerId: player.id, skillIndex: index, expiresAt })
+        this.io.emit(EVENTS.COOLDOWN, { playerId: player.id, skillIndex: index, durationMs: effectiveCooldown })
         const classColor = CLASSES[player.className]?.color ?? '#ffffff'
         const v = vector ?? { x: 1, y: 0 }
         this.io.emit(EVENTS.SKILL_FIRED, { playerId: player.id, skillName: config.name, type: config.type, subtype: config.subtype ?? null, x: Math.round(player.x), y: Math.round(player.y), angle: Math.atan2(v.y, v.x), radius: 0, range: config.range ?? 0, color: classColor })
@@ -420,8 +417,7 @@ export default class GameServer {
     const effectiveCooldown = Math.round(config.cooldown / (player.fireRateMult ?? 1))
     this.cooldowns.start(player.id, index, effectiveCooldown)
 
-    const expiresAt = Date.now() + effectiveCooldown
-    this.io.emit(EVENTS.COOLDOWN, { playerId: player.id, skillIndex: index, expiresAt })
+    this.io.emit(EVENTS.COOLDOWN, { playerId: player.id, skillIndex: index, durationMs: effectiveCooldown })
 
     const gs = this._gs()
     this.skillSystem.execute(gs, player, config, index, vector ?? { x: 1, y: 0 }, action)

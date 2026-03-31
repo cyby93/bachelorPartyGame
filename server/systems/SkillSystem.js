@@ -23,37 +23,31 @@ export function rebuildStats(player) {
   player.isRooted        = false
   player.isStunned       = false
   player.isInvisible     = false
-  // shieldAbsorb is accumulated, not reset — handled carefully below
-
-  let shieldAbsorb = 0
-
   for (const effect of player.activeEffects) {
     const p = effect.params ?? {}
     if (p.speedMultiplier    != null) player.speedMult    *= p.speedMultiplier
     if (p.damageMultiplier   != null) player.damageMult   *= p.damageMultiplier
     if (p.fireRateMultiplier != null) player.fireRateMult *= p.fireRateMultiplier
     if (p.damageReduction    != null) player.damageReduction = Math.max(player.damageReduction, p.damageReduction)
-    if (p.shield           != null && !effect.shieldApplied) {
-      effect.shieldApplied = true
-      shieldAbsorb += p.shield
-    } else if (p.shield != null && effect.shieldApplied) {
-      // already counted — keep absorb at current runtime value
-    }
     if (p.rooted)    player.isRooted    = true
     if (p.stunned)   player.isStunned   = true
     if (p.invisible) player.isInvisible = true
   }
 
-  // Re-total shield from all active effects
-  let totalShield = 0
+  // Grant any newly-added shield effects
+  if (player.shieldAbsorb == null) player.shieldAbsorb = 0
   for (const effect of player.activeEffects) {
-    if (effect.params?.shield != null && effect.shieldApplied) {
-      totalShield += effect.params.shield
+    if (effect.params?.shield != null && !effect.shieldApplied) {
+      effect.shieldApplied = true
+      player.shieldAbsorb += effect.params.shield
     }
   }
-  // Preserve remaining absorb — only reset upward if new shields are added
-  if (player.shieldAbsorb == null) player.shieldAbsorb = 0
-  if (totalShield > player.shieldAbsorb) player.shieldAbsorb = totalShield
+  // Clamp to total from currently-active effects so that an expiring effect
+  // zeroes out whatever absorb remained (prevents the timer/absorb desync)
+  const totalShield = player.activeEffects
+    .filter(e => e.params?.shield != null && e.shieldApplied)
+    .reduce((sum, e) => sum + e.params.shield, 0)
+  player.shieldAbsorb = Math.min(player.shieldAbsorb, totalShield)
 }
 
 // ── Normalise a vector to unit length ────────────────────────────────────────
@@ -831,16 +825,8 @@ export default class SkillSystem {
           } else {
             const amount = proj.damage ?? 0
             if (amount > 0) {
-              let remaining = amount
-              if (p.shieldAbsorb > 0) {
-                const absorbed = Math.min(p.shieldAbsorb, remaining)
-                p.shieldAbsorb -= absorbed
-                remaining -= absorbed
-              }
-              if (remaining > 0) {
-                p.hp = Math.max(1, p.hp - remaining)   // never kill players via enemy proj
-              }
-              if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount, type: 'damage', sourceSkill: null })
+              const dealt = p.takeDamage(amount, 1)   // minHp=1: never kill players via enemy proj
+              if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount: dealt, type: 'damage', sourceSkill: null })
             }
           }
           if (!proj.pierce) proj.isAlive = false

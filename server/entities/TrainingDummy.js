@@ -181,11 +181,10 @@ export class MeleeDummy extends TrainingDummy {
         return
       }
 
-      // Deal damage — clamp to 1 so players can never die in lobby
-      const amount = 20
-      target.hp = Math.max(1, target.hp - amount)
+      // Deal damage — minHp=1 so players can never die in lobby
+      const dealt = target.takeDamage(20, 1)
       if (gs.io) {
-        gs.io.emit('effect:damage', { targetId: target.id, amount, type: 'damage', sourceSkill: null })
+        gs.io.emit('effect:damage', { targetId: target.id, amount: dealt, type: 'damage', sourceSkill: null })
       }
     }
   }

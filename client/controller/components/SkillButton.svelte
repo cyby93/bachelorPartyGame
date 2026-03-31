@@ -20,6 +20,7 @@
   let lastDistance = 0
   let held         = $state(false)  // SUSTAINED visual state
   let fired        = $state(false)  // INSTANT fired flash
+  let selfCastTapStart = null       // { x, y } pointer pos on down, for selfCastFallback tap detection
   let firedTimer   = null
 
   function flashFired() {
@@ -156,7 +157,10 @@
 
   function onPointerDown(e) {
     const type = skill?.inputType
-    if (type === 'DIRECTIONAL' || type === 'TARGETED' || type === 'AIMED') return  // nipplejs owns it
+    if (type === 'DIRECTIONAL' || type === 'TARGETED' || type === 'AIMED') {
+      if (skill?.selfCastFallback) selfCastTapStart = { x: e.clientX, y: e.clientY }
+      return  // nipplejs owns dragging
+    }
     e.preventDefault()
     navigator.vibrate?.(20)
 
@@ -179,7 +183,15 @@
 
   function onPointerUp(e) {
     const type = skill?.inputType
-    if (type === 'DIRECTIONAL' || type === 'TARGETED' || type === 'AIMED') return
+    if (type === 'DIRECTIONAL' || type === 'TARGETED' || type === 'AIMED') {
+      if (skill?.selfCastFallback && selfCastTapStart !== null) {
+        const dx = e.clientX - selfCastTapStart.x
+        const dy = e.clientY - selfCastTapStart.y
+        if (Math.hypot(dx, dy) < 15) onskill?.({ index, vector: { x: 0, y: 0 } })
+        selfCastTapStart = null
+      }
+      return
+    }
     e.preventDefault()
     if (autoFireInterval) { clearInterval(autoFireInterval); autoFireInterval = null }
     if (type === 'SUSTAINED' && held) {
@@ -190,7 +202,10 @@
 
   function onPointerCancel(e) {
     const type = skill?.inputType
-    if (type === 'DIRECTIONAL' || type === 'TARGETED' || type === 'AIMED') return
+    if (type === 'DIRECTIONAL' || type === 'TARGETED' || type === 'AIMED') {
+      selfCastTapStart = null
+      return
+    }
     e.preventDefault()
     if (autoFireInterval) { clearInterval(autoFireInterval); autoFireInterval = null }
     if (type === 'SUSTAINED' && held) {

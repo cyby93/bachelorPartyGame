@@ -85,17 +85,29 @@ export default class ServerPlayer {
 
   // ── Combat ────────────────────────────────────────────────────────────
 
-  takeDamage(amount) {
-    if (this.isDead) return
+  /**
+   * Apply damage, respecting shieldAbsorb.
+   * @param {number} amount  Raw damage to apply
+   * @param {number} minHp   HP floor — pass 1 to prevent death (e.g. lobby dummies)
+   * @returns {number}  Actual HP damage dealt (0 if fully absorbed by shield)
+   */
+  takeDamage(amount, minHp = 0) {
+    if (this.isDead) return 0
     let remaining = amount
     if (this.shieldAbsorb > 0) {
       const absorbed = Math.min(this.shieldAbsorb, remaining)
       this.shieldAbsorb -= absorbed
       remaining -= absorbed
-      if (remaining <= 0) return
+      // Shield fully depleted — remove the effect immediately so the visual clears
+      if (this.shieldAbsorb === 0) {
+        this.activeEffects = this.activeEffects.filter(e => e.params?.shield == null)
+      }
+      if (remaining <= 0) return 0
     }
-    this.hp = Math.max(0, this.hp - remaining)
-    if (this.hp === 0) this.isDead = true
+    const dealt = Math.round(remaining)
+    this.hp = Math.max(minHp, this.hp - dealt)
+    if (minHp === 0 && this.hp === 0) this.isDead = true
+    return dealt
   }
 
   heal(amount) {

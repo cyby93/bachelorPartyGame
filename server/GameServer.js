@@ -139,7 +139,8 @@ export default class GameServer {
     this.reviveTimers.clear()
     this.minions.clear()
     this._lastSpawn  = 0
-    this.skillSystem.activeZones = []
+    this.skillSystem.activeZones    = []
+    this.skillSystem._pendingBursts = []
 
     this._changeScene('trashMob')
   }
@@ -158,6 +159,7 @@ export default class GameServer {
         p.rebuildStats()
         p.x = GAME_CONFIG.CANVAS_WIDTH  / 2 + (Math.random() - 0.5) * 300
         p.y = GAME_CONFIG.CANVAS_HEIGHT / 2 + (Math.random() - 0.5) * 200
+        this.cooldowns.clearPlayer(p.id)
       }
     })
 
@@ -170,7 +172,8 @@ export default class GameServer {
     this.reviveTimers.clear()
     this.minions.clear()
     this._lastSpawn    = 0
-    this.skillSystem.activeZones = []
+    this.skillSystem.activeZones    = []
+    this.skillSystem._pendingBursts = []
 
     this._changeScene('lobby')
   }
@@ -334,8 +337,9 @@ export default class GameServer {
         const gs = this._gs()
         this.skillSystem.execute(gs, player, config, index, vector ?? { x: 1, y: 0 }, action)
         // Start cooldown on release
-        this.cooldowns.start(player.id, index, config.cooldown)
-        const expiresAt = Date.now() + config.cooldown
+        const effectiveCooldown = Math.round(config.cooldown / (player.fireRateMult ?? 1))
+        this.cooldowns.start(player.id, index, effectiveCooldown)
+        const expiresAt = Date.now() + effectiveCooldown
         this.io.emit(EVENTS.COOLDOWN, { playerId: player.id, skillIndex: index, expiresAt })
       }
       return
@@ -370,8 +374,9 @@ export default class GameServer {
       const gs = this._gs()
       const found = this.skillSystem.execute(gs, player, config, index, vector ?? { x: 1, y: 0 })
       if (found) {
-        this.cooldowns.start(player.id, index, config.cooldown)
-        const expiresAt = Date.now() + config.cooldown
+        const effectiveCooldown = Math.round(config.cooldown / (player.fireRateMult ?? 1))
+        this.cooldowns.start(player.id, index, effectiveCooldown)
+        const expiresAt = Date.now() + effectiveCooldown
         this.io.emit(EVENTS.COOLDOWN, { playerId: player.id, skillIndex: index, expiresAt })
         const classColor = CLASSES[player.className]?.color ?? '#ffffff'
         const v = vector ?? { x: 1, y: 0 }
@@ -380,14 +385,15 @@ export default class GameServer {
       return
     }
 
-    // TARGETED: execute first; only apply cooldown if a target was found
-    if (config.type === 'TARGETED') {
+    // TARGETED (and BUFF+TARGETED): execute first; only apply cooldown if a target was found
+    if (config.type === 'TARGETED' || (config.type === 'BUFF' && config.subtype === 'TARGETED')) {
       if (this.cooldowns.isOnCooldown(player.id, index)) return
       const gs = this._gs()
       const found = this.skillSystem.execute(gs, player, config, index, vector ?? { x: 1, y: 0 })
       if (found) {
-        this.cooldowns.start(player.id, index, config.cooldown)
-        const expiresAt = Date.now() + config.cooldown
+        const effectiveCooldown = Math.round(config.cooldown / (player.fireRateMult ?? 1))
+        this.cooldowns.start(player.id, index, effectiveCooldown)
+        const expiresAt = Date.now() + effectiveCooldown
         this.io.emit(EVENTS.COOLDOWN, { playerId: player.id, skillIndex: index, expiresAt })
         const classColor = CLASSES[player.className]?.color ?? '#ffffff'
         const v = vector ?? { x: 1, y: 0 }
@@ -397,9 +403,10 @@ export default class GameServer {
     }
 
     if (this.cooldowns.isOnCooldown(player.id, index)) return
-    this.cooldowns.start(player.id, index, config.cooldown)
+    const effectiveCooldown = Math.round(config.cooldown / (player.fireRateMult ?? 1))
+    this.cooldowns.start(player.id, index, effectiveCooldown)
 
-    const expiresAt = Date.now() + config.cooldown
+    const expiresAt = Date.now() + effectiveCooldown
     this.io.emit(EVENTS.COOLDOWN, { playerId: player.id, skillIndex: index, expiresAt })
 
     const gs = this._gs()
@@ -473,7 +480,6 @@ export default class GameServer {
         this.players.forEach(p => {
           if (p.isHost || p.isDead) return
           const dist = Math.hypot(p.x - e.x, p.y - e.y)
-          if (dist <= p.constructor && false) return // type safety unused
           const combined = (GAME_CONFIG.PLAYER_RADIUS + e.radius)
           if (dist <= combined) {
             if (p.isShieldBlocking(e.x, e.y)) return  // shield blocks
@@ -606,7 +612,8 @@ export default class GameServer {
       this.projectiles.clear()
       this.reviveTimers.clear()
       this.minions.clear()
-      this.skillSystem.activeZones = []
+      this.skillSystem.activeZones    = []
+      this.skillSystem._pendingBursts = []
       this.boss = new ServerBoss()
 
       this._changeScene('bossFight')

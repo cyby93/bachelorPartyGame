@@ -490,7 +490,12 @@ export default class BaseRenderer {
     if (!this.vfx) return
     const { targetId, amount, type } = data
     const pos = this._resolveTargetPosition(targetId)
-    if (pos) this.vfx.spawnDamageNumber(pos.x, pos.y - 20, amount, type)
+    if (!pos) return
+    this.vfx.spawnDamageNumber(pos.x, pos.y - 20, amount, type)
+    // Add impact sparks for direct damage hits (AOE, melee, etc. that emit effect:damage)
+    if (type === 'damage' && amount > 0) {
+      this.vfx.particles.hitSpark(pos.x, pos.y, '#ff8844')
+    }
   }
 
   /** No-op in base — override in renderers that support channel interruption. */

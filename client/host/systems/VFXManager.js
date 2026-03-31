@@ -45,6 +45,7 @@ export default class VFXManager {
       case 'AOE':
         if (subtype === 'AOE_SELF' || !subtype) {
           this.oneShot.aoeFlash(x, y, radius || 100, color)
+          this.particles.hitSpark(x, y, color)
         } else if (subtype === 'AOE_LOBBED') {
           // Lobbed AOE flash will trigger on impact via projectile system
           // Show a small indicator at cast position

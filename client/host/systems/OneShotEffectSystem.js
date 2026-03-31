@@ -47,11 +47,11 @@ export default class OneShotEffectSystem {
   }
 
   /**
-   * AOE flash — 0.3s expanding ring that fades.
+   * AOE flash — 0.5s expanding ring that fades.
    */
   aoeFlash(x, y, radius, color) {
     const c = parseColor(color)
-    const duration = 0.3
+    const duration = 0.5
     const gfx = this._getGfx()
     gfx.position.set(x, y)
     gfx.alpha = 1
@@ -64,10 +64,17 @@ export default class OneShotEffectSystem {
       update: (progress) => {
         gfx.clear()
         const r = radius * (0.3 + 0.7 * progress)
+        // Inner burst — fades in first 40% of animation
+        if (progress < 0.4) {
+          const bp = progress / 0.4
+          gfx.circle(0, 0, r * 0.5)
+          gfx.fill({ color: c, alpha: 0.5 * (1 - bp) })
+        }
+        // Expanding ring
         gfx.circle(0, 0, r)
-        gfx.fill({ color: c, alpha: 0.2 * (1 - progress) })
+        gfx.fill({ color: c, alpha: 0.35 * (1 - progress) })
         gfx.circle(0, 0, r)
-        gfx.stroke({ color: c, width: 3, alpha: 0.7 * (1 - progress) })
+        gfx.stroke({ color: c, width: 4, alpha: 0.9 * (1 - progress) })
       }
     })
   }

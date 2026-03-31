@@ -18,6 +18,7 @@ import ServerMinion    from '../entities/ServerMinion.js'
 export function rebuildStats(player) {
   player.speedMult       = 1
   player.damageMult      = 1
+  player.fireRateMult    = 1
   player.damageReduction = 0
   player.isRooted        = false
   player.isStunned       = false
@@ -28,9 +29,10 @@ export function rebuildStats(player) {
 
   for (const effect of player.activeEffects) {
     const p = effect.params ?? {}
-    if (p.speedMultiplier  != null) player.speedMult       *= p.speedMultiplier
-    if (p.damageMultiplier != null) player.damageMult      *= p.damageMultiplier
-    if (p.damageReduction  != null) player.damageReduction  = Math.max(player.damageReduction, p.damageReduction)
+    if (p.speedMultiplier    != null) player.speedMult    *= p.speedMultiplier
+    if (p.damageMultiplier   != null) player.damageMult   *= p.damageMultiplier
+    if (p.fireRateMultiplier != null) player.fireRateMult *= p.fireRateMultiplier
+    if (p.damageReduction    != null) player.damageReduction = Math.max(player.damageReduction, p.damageReduction)
     if (p.shield           != null && !effect.shieldApplied) {
       effect.shieldApplied = true
       shieldAbsorb += p.shield
@@ -73,10 +75,11 @@ function clampPos(x, y, r) {
 
 export default class SkillSystem {
   constructor() {
-    this._collision = new CollisionSystem()
-    this._projSeq   = 0
-    this._zoneSeq   = 0
-    this.activeZones = []   // persistent AOE ground zones
+    this._collision    = new CollisionSystem()
+    this._projSeq      = 0
+    this._zoneSeq      = 0
+    this.activeZones   = []   // persistent AOE ground zones
+    this._pendingBursts = []  // queued consecutive projectiles (BURST subtype)
   }
 
   // ── Public API ─────────────────────────────────────────────────────────────
@@ -91,6 +94,7 @@ export default class SkillSystem {
    * @param {string} action     – 'START' | 'END' | undefined
    */
   execute(gs, player, config, skillIndex, vector, action) {
+    const isSelfCast = !!(config.selfCastFallback && Math.hypot(vector?.x ?? 0, vector?.y ?? 0) < 0.01)
     const v = normalize(vector ?? { x: 1, y: 0 })
 
     switch (config.type) {
@@ -98,11 +102,11 @@ export default class SkillSystem {
       case 'MELEE':      return this._executeMelee(gs, player, config, v)
       case 'AOE':        return this._executeAOE(gs, player, config, v)
       case 'DASH':       return this._executeDash(gs, player, config, v)
-      case 'BUFF':       return this._executeBuff(gs, player, config, skillIndex)
+      case 'BUFF':       return this._executeBuff(gs, player, config, skillIndex, v, isSelfCast)
       case 'SHIELD':     return this._executeShield(player, config, vector, action, skillIndex)
       case 'CAST':       return this._executeCast(gs, player, config, v)
       case 'CHANNEL':    return this._executeChannel(gs, player, config, skillIndex, v)
-      case 'TARGETED':   return this._executeTargeted(gs, player, config, v)
+      case 'TARGETED':   return this._executeTargeted(gs, player, config, v, isSelfCast)
       case 'SPAWN':      this._executeSpawn(gs, player, config, v); break
       default:
         console.warn(`[SkillSystem] Unknown skill type: ${config.type}`)
@@ -116,6 +120,7 @@ export default class SkillSystem {
    */
   tick(gs, dt) {
     this._tickProjectiles(gs, dt)
+    this._tickBursts(gs)
     this._tickEffects(gs)
     this._tickCasts(gs)
     this._tickChannels(gs)
@@ -127,6 +132,23 @@ export default class SkillSystem {
 
   _executeProjectile(gs, player, config, v) {
     const color = CLASSES[player.className]?.color ?? '#ffffff'
+
+    if (config.subtype === 'BURST') {
+      const count    = config.burstCount    ?? 3
+      const interval = config.burstInterval ?? 200
+      const now      = Date.now()
+      for (let i = 0; i < count; i++) {
+        this._pendingBursts.push({
+          spawnAt:  now + i * interval,
+          playerId: player.id,
+          vx:       v.x * config.speed,
+          vy:       v.y * config.speed,
+          config,
+          color,
+        })
+      }
+      return
+    }
 
     if (config.subtype === 'MULTI') {
       // Fan of projectiles
@@ -289,8 +311,24 @@ export default class SkillSystem {
     }
   }
 
-  _executeBuff(gs, player, config, skillIndex) {
+  _executeBuff(gs, player, config, skillIndex, v = { x: 1, y: 0 }, isSelfCast = false) {
     const source = `skill:${skillIndex}`
+
+    // TARGETED: apply buff to an ally (or self on self-cast)
+    if (config.subtype === 'TARGETED') {
+      const target = isSelfCast ? player : this._findAllyForBuff(gs, player, v, config.range ?? 400)
+      if (!target) return false   // no ally in direction — caller skips cooldown
+
+      const existing = target.activeEffects.findIndex(e => e.source === source)
+      if (existing !== -1) target.activeEffects.splice(existing, 1)
+      target.activeEffects.push({
+        source,
+        params:    config.effectParams ?? {},
+        expiresAt: config.duration === -1 ? Infinity : Date.now() + (config.duration ?? 0),
+      })
+      rebuildStats(target)
+      return true
+    }
 
     if (config.subtype === 'TOGGLE') {
       const existing = player.activeEffects.findIndex(e => e.source === source)
@@ -311,6 +349,7 @@ export default class SkillSystem {
       expiresAt: config.duration === -1 ? Infinity : Date.now() + (config.duration ?? 0),
     })
     rebuildStats(player)
+    return true
   }
 
   _executeShield(player, config, vector, action, skillIndex) {
@@ -334,6 +373,7 @@ export default class SkillSystem {
       const target = this._findBeamTarget(gs, player, v, config.range ?? 250)
       if (!target) return   // no valid target — skill fizzles
 
+      const frm = player.fireRateMult ?? 1
       player.activeCast = {
         config,
         vector: v,
@@ -342,6 +382,8 @@ export default class SkillSystem {
         lastChannelTick: Date.now(),
         beamTargetId: target.id,
         beamRange: config.range ?? 250,
+        effectiveCastTime: (config.castTime ?? 1000) / frm,
+        effectiveTickRate: (config.tickRate ?? 500) / frm,
       }
       return
     }
@@ -352,12 +394,15 @@ export default class SkillSystem {
       return
     }
 
+    const frm = player.fireRateMult ?? 1
     player.activeCast = {
       config,
       vector: v,
       startedAt: Date.now(),
       isChanneled: config.subtype === 'CHANNELED',
       lastChannelTick: Date.now(),
+      effectiveCastTime: (config.castTime ?? 1000) / frm,
+      effectiveTickRate: (config.payload?.tickRate ?? config.tickRate ?? 500) / frm,
     }
   }
 
@@ -369,6 +414,7 @@ export default class SkillSystem {
       const target = this._findBeamTarget(gs, player, v, config.range ?? 250)
       if (!target) return false
 
+      const frm = player.fireRateMult ?? 1
       player.activeCast = {
         config,
         vector: v,
@@ -379,11 +425,14 @@ export default class SkillSystem {
         channelStartY:   player.y,
         beamTargetId:    target.id,
         beamRange:       config.range ?? 250,
+        effectiveCastTime: (config.castTime ?? 1000) / frm,
+        effectiveTickRate: (config.tickRate ?? 500) / frm,
       }
       return true
     }
 
     // UNTARGETED (e.g. Tranquility): activate immediately
+    const frm = player.fireRateMult ?? 1
     player.activeCast = {
       config,
       vector: v,
@@ -392,21 +441,31 @@ export default class SkillSystem {
       skillIndex,
       channelStartX:   player.x,
       channelStartY:   player.y,
+      effectiveCastTime: (config.castTime ?? 1000) / frm,
+      effectiveTickRate: (config.tickRate ?? 500) / frm,
     }
     return true
   }
 
-  _executeTargeted(gs, player, config, v) {
+  _executeTargeted(gs, player, config, v, isSelfCast = false) {
     if (config.subtype === 'HEAL_ALLY') {
-      const primaryTarget = this._findRayAlly(gs, player, v, config.range ?? 400)
-      if (!primaryTarget) return false
+      let primaryTarget
+      let healedIds
+
+      if (isSelfCast) {
+        primaryTarget = player
+        healedIds     = new Set()           // caster will be added by loop; allows re-chains from caster
+      } else {
+        primaryTarget = this._findRayAlly(gs, player, v, config.range ?? 400)
+        if (!primaryTarget) return false
+        healedIds     = new Set([player.id]) // exclude caster from chain hops
+      }
 
       const amount      = config.healAmount  ?? 0
       const maxChains   = config.maxChains   ?? 0
       const chainRadius = config.chainRadius ?? 200
       const color       = CLASSES[player.className]?.color ?? '#ffffff'
 
-      const healedIds = new Set([player.id])
       let prevX   = player.x
       let prevY   = player.y
       let current = primaryTarget
@@ -738,6 +797,24 @@ export default class SkillSystem {
         }
       }
 
+      // Collision check vs players — for canHitAllies projectiles (e.g. Penance heals allies)
+      if (proj.isAlive && proj.canHitAllies) {
+        gs.players.forEach(p => {
+          if (!proj.isAlive || p.isHost || p.isDead) return
+          if (proj.hit.has(p.id)) return
+          const projCircle   = { x: proj.x, y: proj.y, radius: proj.radius }
+          const playerCircle = { x: p.x,    y: p.y,    radius: GAME_CONFIG.PLAYER_RADIUS }
+          if (!this._collision.circlesOverlap(projCircle, playerCircle)) return
+          proj.hit.add(p.id)
+          const amount = proj.healAmount ?? 0
+          if (amount > 0) {
+            p.heal(amount)
+            if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount, type: 'heal', sourceSkill: null })
+          }
+          if (!proj.pierce) proj.isAlive = false
+        })
+      }
+
       // Collision check vs players — for enemy-fired projectiles (e.g. RangedDummy)
       if (proj.isAlive && proj.isEnemyProj) {
         gs.players.forEach(p => {
@@ -754,7 +831,15 @@ export default class SkillSystem {
           } else {
             const amount = proj.damage ?? 0
             if (amount > 0) {
-              p.hp = Math.max(1, p.hp - amount)   // never kill players in lobby
+              let remaining = amount
+              if (p.shieldAbsorb > 0) {
+                const absorbed = Math.min(p.shieldAbsorb, remaining)
+                p.shieldAbsorb -= absorbed
+                remaining -= absorbed
+              }
+              if (remaining > 0) {
+                p.hp = Math.max(1, p.hp - remaining)   // never kill players via enemy proj
+              }
               if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount, type: 'damage', sourceSkill: null })
             }
           }
@@ -766,6 +851,20 @@ export default class SkillSystem {
         gs.projectiles.delete(id)
       }
     })
+  }
+
+  _tickBursts(gs) {
+    const now = Date.now()
+    for (let i = this._pendingBursts.length - 1; i >= 0; i--) {
+      const entry = this._pendingBursts[i]
+      if (now < entry.spawnAt) continue
+      const player = gs.players.get(entry.playerId)
+      if (!player || player.isDead) { this._pendingBursts.splice(i, 1); continue }
+      this._spawnProjectile(gs, player, entry.config, {
+        vx: entry.vx, vy: entry.vy, color: entry.color,
+      })
+      this._pendingBursts.splice(i, 1)
+    }
   }
 
   _handleProjectileHit(gs, proj, target) {
@@ -973,7 +1072,7 @@ export default class SkillSystem {
           return
         }
 
-        const tickRate = cast.config.tickRate ?? 500
+      const tickRate = cast.effectiveTickRate ?? cast.config.tickRate ?? 500
         if (now - cast.lastChannelTick >= tickRate) {
           cast.lastChannelTick = now
           const dmg = cast.config.damagePerTick ?? 0
@@ -984,7 +1083,7 @@ export default class SkillSystem {
             if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount: heal, type: 'heal', sourceSkill: cast.config.name })
           }
         }
-        if (elapsed >= cast.config.castTime) {
+        if (elapsed >= (cast.effectiveCastTime ?? cast.config.castTime)) {
           p.activeCast = null
         }
         return
@@ -993,18 +1092,18 @@ export default class SkillSystem {
       if (cast.isChanneled) {
         // Fire payload on each channel tick
         const timeSinceLastTick = now - cast.lastChannelTick
-        const tickRate = cast.config.payload?.tickRate ?? 500
+        const tickRate = cast.effectiveTickRate ?? cast.config.payload?.tickRate ?? 500
         if (timeSinceLastTick >= tickRate) {
           cast.lastChannelTick = now
           this._executeCastPayload(gs, p, cast.config.payload, cast.vector)
         }
         // End channeling when castTime expires
-        if (elapsed >= cast.config.castTime) {
+        if (elapsed >= (cast.effectiveCastTime ?? cast.config.castTime)) {
           p.activeCast = null
         }
       } else {
         // Non-channeled: fire when castTime expires
-        if (elapsed >= cast.config.castTime) {
+        if (elapsed >= (cast.effectiveCastTime ?? cast.config.castTime)) {
           this._executeCastPayload(gs, p, cast.config.payload, cast.vector)
           p.activeCast = null
         }
@@ -1029,8 +1128,9 @@ export default class SkillSystem {
       const moved = Math.hypot(p.x - cast.channelStartX, p.y - cast.channelStartY)
       if (moved > INTERRUPT_THRESHOLD) {
         if (gs.cooldowns) {
-          gs.cooldowns.start(p.id, cast.skillIndex, cast.config.cooldown)
-          const expiresAt = now + cast.config.cooldown
+          const effectiveCooldown = Math.round(cast.config.cooldown / (p.fireRateMult ?? 1))
+          gs.cooldowns.start(p.id, cast.skillIndex, effectiveCooldown)
+          const expiresAt = now + effectiveCooldown
           if (gs.io) gs.io.emit('skill:cooldown', { playerId: p.id, skillIndex: cast.skillIndex, expiresAt })
         }
         if (gs.io) gs.io.emit('channel:interrupted', { playerId: p.id })
@@ -1039,12 +1139,12 @@ export default class SkillSystem {
       }
 
       // Natural expiry
-      if (elapsed >= cast.config.castTime) {
+      if (elapsed >= (cast.effectiveCastTime ?? cast.config.castTime)) {
         p.activeCast = null
         return
       }
 
-      const tickRate = cast.config.tickRate ?? 500
+      const tickRate = cast.effectiveTickRate ?? cast.config.tickRate ?? 500
       if (now - cast.lastChannelTick < tickRate) return
       cast.lastChannelTick = now
 
@@ -1196,6 +1296,20 @@ export default class SkillSystem {
     return best
   }
 
+  /** Find closest ally in the aim direction within range (for BUFF/TARGETED ally-targeting). */
+  _findAllyForBuff(gs, player, v, range = 400) {
+    let best = null, bestDist = Infinity
+    gs.players.forEach(p => {
+      if (p.isDead || p.isHost || p.id === player.id) return
+      const dx = p.x - player.x, dy = p.y - player.y
+      const dist = Math.hypot(dx, dy)
+      if (dist > range || dist < 5) return
+      if ((dx * v.x + dy * v.y) / dist < 0.5) return
+      if (dist < bestDist) { bestDist = dist; best = p }
+    })
+    return best
+  }
+
   /** Find first ally in the aim direction within range (for TARGETED/HEAL_ALLY). */
   _findRayAlly(gs, player, v, range) {
     let best = null
@@ -1246,11 +1360,12 @@ export default class SkillSystem {
       isLobbed:    false,
       targetX:     0,
       targetY:     0,
-      onImpact:    overrides.onImpact ?? null,
-      dot:         config.dot        ?? null,
-      chainLeft:   config.chain      ?? 0,
-      chainRange:  config.chainRange ?? 200,
-      onHitEffect: config.onHitEffect ?? null,
+      onImpact:    overrides.onImpact    ?? null,
+      dot:         config.dot            ?? null,
+      chainLeft:   config.chain          ?? 0,
+      chainRange:  config.chainRange     ?? 200,
+      onHitEffect: config.onHitEffect    ?? null,
+      canHitAllies: config.canHitAllies  ?? false,
     })
   }
 }

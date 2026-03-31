@@ -19,6 +19,16 @@ export default class LobbyRenderer extends BaseRenderer {
     if (enemy.isDummy) sprite.container.tint = 0xf1c40f   // gold tint for training dummies
   }
 
+  _onPlayerSync(p, sprite, pos, dt) {
+    if (this.vfx && p.effects) {
+      this.vfx.auras.sync(p.id, sprite.container, p.effects, GAME_CONFIG.PLAYER_RADIUS)
+    }
+  }
+
+  _onPlayerRemoved(id) {
+    this.vfx?.auras.removeEntity(id)
+  }
+
   _updateUI(dt, activePlayerIds) {
     if (!this._countText) return
     const n = activePlayerIds.size

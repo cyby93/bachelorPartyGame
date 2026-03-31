@@ -121,10 +121,13 @@ export default class HostGame {
         }
         return
       }
-      // Only update interpolation state when position actually changed
+      // When a new position arrives, anchor _prev at the current *visual* position
+      // (not the stale server integer p.x/p.y) so the lerp continues from wherever
+      // the sprite is actually drawn — eliminating snap-back jitter.
       if (d.x != null || d.y != null) {
-        p._prevX  = p.x
-        p._prevY  = p.y
+        const visual = this.getRenderPos(p)
+        p._prevX  = visual.x
+        p._prevY  = visual.y
         p._recvAt = now
       }
       Object.assign(p, d)
@@ -162,8 +165,8 @@ export default class HostGame {
 
   /**
    * Returns the smoothed render position for a player.
-   * Interpolates between the position before the last delta and the position after it,
-   * across one server tick duration (~50 ms).
+   * Interpolates between the visual position captured at the last delta (_prevX/_prevY)
+   * and the new server position (p.x/p.y), across one server tick duration (~50 ms).
    */
   getRenderPos(p) {
     const tickMs  = 1000 / GAME_CONFIG.TICK_RATE

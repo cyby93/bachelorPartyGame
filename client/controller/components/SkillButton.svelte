@@ -19,6 +19,14 @@
   let lastVector   = { x: 1, y: 0 }
   let lastDistance = 0
   let held         = $state(false)  // SUSTAINED visual state
+  let fired        = $state(false)  // INSTANT fired flash
+  let firedTimer   = null
+
+  function flashFired() {
+    fired = true
+    if (firedTimer) clearTimeout(firedTimer)
+    firedTimer = setTimeout(() => { fired = false; firedTimer = null }, 150)
+  }
 
   // ── Cast-on-hold state (CAST + DIRECTIONAL, e.g. Pyroblast) ──────────────
 
@@ -123,8 +131,12 @@
         onskill?.({ index, vector: lastVector, action: 'END' })
       } else if (isCastHold) {
         cancelCast()
-      } else if (!isFiller && lastDistance > 8) {
-        onskill?.({ index, vector: lastVector })
+      } else if (!isFiller) {
+        if (skill?.selfCastFallback && lastDistance < 15) {
+          onskill?.({ index, vector: { x: 0, y: 0 } })   // self-cast sentinel
+        } else if (lastDistance > 8) {
+          onskill?.({ index, vector: lastVector })
+        }
       }
       lastDistance = 0
     })
@@ -142,48 +154,65 @@
 
   // ── Touch handlers for INSTANT / SUSTAINED ────────────────────────────────
 
-  function onTouchStart(e) {
+  function onPointerDown(e) {
     const type = skill?.inputType
-    if (type === 'DIRECTIONAL' || type === 'TARGETED') return  // nipplejs owns it
+    if (type === 'DIRECTIONAL' || type === 'TARGETED' || type === 'AIMED') return  // nipplejs owns it
     e.preventDefault()
     navigator.vibrate?.(20)
 
     if (type === 'INSTANT') {
+      flashFired()
       onskill?.({ index, vector: { x: 1, y: 0 } })
+      if (skill?.autoRefire) {
+        autoFireInterval = setInterval(() => {
+          if (expiresAt <= Date.now()) {
+            flashFired()
+            onskill?.({ index, vector: { x: 1, y: 0 } })
+          }
+        }, 100)
+      }
     } else if (type === 'SUSTAINED') {
       held = true
       onskill?.({ index, vector: { x: 1, y: 0 }, action: 'START' })
     }
   }
 
-  function onTouchEnd(e) {
+  function onPointerUp(e) {
     const type = skill?.inputType
-    if (type === 'DIRECTIONAL' || type === 'TARGETED') return
+    if (type === 'DIRECTIONAL' || type === 'TARGETED' || type === 'AIMED') return
     e.preventDefault()
+    if (autoFireInterval) { clearInterval(autoFireInterval); autoFireInterval = null }
     if (type === 'SUSTAINED' && held) {
       held = false
       onskill?.({ index, vector: { x: 1, y: 0 }, action: 'END' })
     }
   }
 
-  function onTouchCancel(e) {
+  function onPointerCancel(e) {
     const type = skill?.inputType
-    if (type === 'DIRECTIONAL' || type === 'TARGETED') return
+    if (type === 'DIRECTIONAL' || type === 'TARGETED' || type === 'AIMED') return
+    e.preventDefault()
+    if (autoFireInterval) { clearInterval(autoFireInterval); autoFireInterval = null }
     if (type === 'SUSTAINED' && held) {
       held = false
       onskill?.({ index, vector: { x: 1, y: 0 }, action: 'END' })
     }
   }
+
+  onDestroy(() => {
+    if (firedTimer) { clearTimeout(firedTimer); firedTimer = null }
+  })
 </script>
 
 <div
   class="skill-btn"
   class:held
+  class:fired
   class:on-cd={expiresAt > Date.now()}
   bind:this={btnEl}
-  ontouchstart={onTouchStart}
-  ontouchend={onTouchEnd}
-  ontouchcancel={onTouchCancel}
+  onpointerdown={onPointerDown}
+  onpointerup={onPointerUp}
+  onpointercancel={onPointerCancel}
 >
   {#if skill}
     <span class="skill-icon">{skill.icon}</span>
@@ -215,6 +244,12 @@
   /* SUSTAINED — lit border while held */
   .skill-btn.held {
     border: 2px solid #00d2ff;
+  }
+
+  /* INSTANT — brief green flash on fire */
+  .skill-btn.fired {
+    background: #1a3a2a;
+    box-shadow: inset 0 0 12px rgba(0, 210, 100, 0.6);
   }
 
   .skill-icon { font-size: 32px; line-height: 1; }

@@ -40,6 +40,7 @@ export default class ServerPlayer {
     // Derived stats (rebuilt by rebuildStats after every effect change)
     this.speedMult       = 1
     this.damageMult      = 1
+    this.fireRateMult    = 1
     this.damageReduction = 0
     this.shieldAbsorb    = 0
     this.isRooted        = false
@@ -86,7 +87,14 @@ export default class ServerPlayer {
 
   takeDamage(amount) {
     if (this.isDead) return
-    this.hp = Math.max(0, this.hp - amount)
+    let remaining = amount
+    if (this.shieldAbsorb > 0) {
+      const absorbed = Math.min(this.shieldAbsorb, remaining)
+      this.shieldAbsorb -= absorbed
+      remaining -= absorbed
+      if (remaining <= 0) return
+    }
+    this.hp = Math.max(0, this.hp - remaining)
     if (this.hp === 0) this.isDead = true
   }
 

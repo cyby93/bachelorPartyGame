@@ -3,7 +3,7 @@
   import MoveJoystick  from '../components/MoveJoystick.svelte'
   import SkillButton   from '../components/SkillButton.svelte'
 
-  let { playerName = '', className = '', isDead = false, cooldowns = [0,0,0,0], onmove, onskill, onaim } = $props()
+  let { playerName = '', className = '', isDead = false, cooldowns = [0,0,0,0], comboPoints = 0, onmove, onskill, onaim } = $props()
 
   // Grid order: SK2 SK4 / SK1 SK3  (2×2, top row = skills 1,3; bottom = 0,2)
   // Per PLAN layout:
@@ -21,6 +21,13 @@
   <!-- ── HUD bar ── -->
   <div class="hud">
     <span class="hud-name" style="color: {classColor}">{playerName}</span>
+    {#if className === 'Rogue'}
+      <div class="combo-pips">
+        {#each [0,1,2,3,4] as i}
+          <div class="pip" class:active={i < comboPoints}></div>
+        {/each}
+      </div>
+    {/if}
   </div>
 
   <!-- ── Controls ── -->
@@ -83,6 +90,26 @@
     text-overflow: ellipsis;
     flex: 0 0 auto;
     max-width: 120px;
+  }
+
+  .combo-pips {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .pip {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #333;
+    border: 1px solid #666;
+    transition: background 0.1s, box-shadow 0.1s;
+  }
+
+  .pip.active {
+    background: #ffcc00;
+    box-shadow: 0 0 4px #ffcc00;
   }
 
   /* ── Controls ── */

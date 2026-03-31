@@ -26,4 +26,5 @@ export const EVENTS = {
   EFFECT_DAMAGE:       'effect:damage',        // { targetId, amount, type: 'damage'|'heal', sourceSkill }
   CHANNEL_INTERRUPTED: 'channel:interrupted',  // { playerId }
   TARGETED_HIT:        'targeted:hit',         // { casterX, casterY, targetX, targetY, effectType, color }
+  COMBO_POINTS:        'player:comboPoints',   // { playerId, points }
 }

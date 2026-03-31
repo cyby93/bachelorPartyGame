@@ -33,9 +33,18 @@ Every entry in `shared/SkillDatabase.js` is an object with these fields.
 | Value | Controller behavior |
 |-------|---------------------|
 | `INSTANT` | Single tap, no direction needed |
-| `DIRECTIONAL` | Drag joystick to aim, release to fire |
-| `TARGETED` | Drag to place a landing spot on the arena |
+| `DIRECTIONAL` | Drag joystick to aim, release to fire. If `castBar: true`, holding charges the skill instead; releasing early cancels with no cooldown. |
+| `AIMED` | Same as `DIRECTIONAL` but disables auto-fire loop — fires exactly once per drag (used for skills that should not repeat while held, e.g. Avenger's Shield, Penance). |
+| `TARGETED` | Drag to aim a ray-cast; fires on release. Identical to `DIRECTIONAL` on the controller — the distinction is server-side only. |
 | `SUSTAINED` | Hold to maintain (e.g. shield, toggle) |
+
+### Optional flags (any skill type)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `castBar` | `true` | Show a charge animation on the controller. The skill fires when the joystick is held for `castTime` ms. Releasing early cancels with no cooldown consumed. While the joystick is held after firing, the cast automatically repeats after `cooldown` ms. Only meaningful with `inputType: 'DIRECTIONAL'`. |
+| `selfCastFallback` | `true` | Two behaviours in one flag: **(1) Client** — if the joystick is tapped without dragging (pointer displacement < 15 px), sends a zero-vector sentinel so the server knows to target the caster. Has no effect when `castBar: true` (cast-bar skills never instant-fire from a tap). **(2) Server** — if no valid target is found in the aim direction, falls back to targeting the caster (e.g. Regrowth heals self when no ally is in range). |
+| `autoRefire` | `true` | For `INSTANT` skills only. While the button is held, the skill re-fires automatically every 100 ms as long as it is off cooldown (e.g. Holy Nova). |
 
 ### Conditional fields
 
@@ -97,8 +106,11 @@ Every entry in `shared/SkillDatabase.js` is an object with these fields.
 #### CAST type
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
+| `castBar` | `true` | yes (DIRECTIONAL) | Must be set on all DIRECTIONAL CAST skills. Activates the hold-to-charge UI. |
 | `castTime` | number (ms) | yes | Delay before payload fires |
 | `payload` | object | yes | Nested skill config to execute after cast. Supports `PROJECTILE`, `AOE`. |
+
+> **Cast bar lifecycle**: timer runs on the controller, not the server. The controller sends `action: 'CAST_START'` when the charge begins (server shows a visual cast bar) and fires the skill event when the timer completes. Cooldown starts only after the cast fires, not when charging begins.
 
 #### CHANNEL type
 Sustained effect that fires repeatedly. **Movement interrupts the channel and applies cooldown.**
@@ -115,15 +127,20 @@ Sustained effect that fires repeatedly. **Movement interrupts the channel and ap
 > **UNTARGETED** (`subtype: 'UNTARGETED'`): fires AOE payload around caster each tick. No target needed.
 
 #### TARGETED type
-Ray-cast single-target ability. **Cooldown is only consumed if a target is found.**
+Ray-cast single-target ability. **Cooldown is only consumed if a target is found** (unless `selfCastFallback: true`, which guarantees a hit by falling back to self).
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `range` | number | yes | Ray-cast search distance (pixels) |
 | `healAmount` | number | HEAL_ALLY only | HP restored to the first ally hit |
+| `dot` | object | DAMAGE_ENEMY optional | Apply damage over time on hit (same schema as PROJECTILE `dot`) |
+| `hot` | object | HEAL_ALLY optional | Apply healing over time after the initial heal. Fields: `healPerTick`, `tickRate` (ms), `duration` (ms), `sourceSkill` |
 | `damage` | number | DAMAGE_ENEMY only | Damage dealt to the first enemy hit |
+| `castBar` | `true` | optional | Add a hold-to-charge UI. Skill fires after `castTime` ms. Combine with `selfCastFallback: true` to self-cast when no ally is in range. |
+| `castTime` | number (ms) | if `castBar` | Duration of the charge bar |
 
 > Use `subtype: 'HEAL_ALLY'` to find the first allied player in aim direction.
-> Use `subtype: 'DAMAGE_ENEMY'` to find the first enemy in aim direction.
+> Use `subtype: 'DAMAGE_ENEMY'` to find the first enemy in aim direction. With `selfCastFallback: true`, tapping (no drag) targets the nearest enemy instead of ray-casting.
+> Use `subtype: 'TELEPORT_BEHIND'` to warp the caster behind the first enemy in aim direction and deal damage.
 
 #### SPAWN type
 Instantiates a server-side minion entity. **Spawning a second minion of the same subtype replaces the first.**

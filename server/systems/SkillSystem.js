@@ -171,12 +171,14 @@ export default class SkillSystem {
 
   _executeMelee(gs, player, config, v) {
     const halfAngle = (config.angle ?? Math.PI / 3) / 2
+    let hitCount = 0
 
     // Hit enemies
     gs.enemies.forEach(e => {
       if (e.isDead) return
       if (this._collision.inCone({ x: player.x, y: player.y }, v, halfAngle, config.range, { x: e.x, y: e.y })) {
         this._dealDamage(gs, player, e, config.damage ?? 0)
+        hitCount++
         // Apply debuff if effectParams present (e.g. Frost Strike slow)
         if (config.effectParams) {
           const ep = config.effectParams
@@ -197,6 +199,15 @@ export default class SkillSystem {
     if (gs.boss && !gs.boss.isDead) {
       if (this._collision.inCone({ x: player.x, y: player.y }, v, halfAngle, config.range, { x: gs.boss.x, y: gs.boss.y })) {
         this._dealDamage(gs, player, gs.boss, config.damage ?? 0)
+        hitCount++
+      }
+    }
+
+    // Combo point generation (Sinister Strike)
+    if (config.addsComboPoint && hitCount > 0) {
+      player.comboPoints = Math.min(5, (player.comboPoints ?? 0) + 1)
+      if (gs.io) {
+        gs.io.emit('player:comboPoints', { playerId: player.id, points: player.comboPoints })
       }
     }
   }
@@ -448,11 +459,18 @@ export default class SkillSystem {
 
       if (isSelfCast) {
         primaryTarget = player
-        healedIds     = new Set()           // caster will be added by loop; allows re-chains from caster
+        healedIds     = new Set()
       } else {
         primaryTarget = this._findRayAlly(gs, player, v, config.range ?? 400)
-        if (!primaryTarget) return false
-        healedIds     = new Set([player.id]) // exclude caster from chain hops
+        if (!primaryTarget) {
+          // No ally in aim direction — fall back to self if skill allows it
+          if (config.selfCastFallback) {
+            primaryTarget = player
+          } else {
+            return false
+          }
+        }
+        healedIds = new Set([player.id])
       }
 
       const amount      = config.healAmount  ?? 0
@@ -476,6 +494,22 @@ export default class SkillSystem {
             effectType: 'heal', color,
           })
         }
+
+        // Apply HoT if configured (e.g. Regrowth) — only on primary target (i === 0)
+        if (config.hot && i === 0) {
+          const h = config.hot
+          const hotSource = `hot:${config.name}`
+          const existingIdx = current.activeEffects.findIndex(e => e.source === hotSource)
+          if (existingIdx !== -1) current.activeEffects.splice(existingIdx, 1)   // refresh HoT
+          current.activeEffects.push({
+            source:        hotSource,
+            ownerId:       player.id,
+            params:        { healPerTick: h.healPerTick, tickRate: h.tickRate, sourceSkill: h.sourceSkill ?? config.name },
+            expiresAt:     Date.now() + (h.duration ?? 5000),
+            lastHealTick:  Date.now(),
+          })
+        }
+
         healedIds.add(current.id)
         prevX = current.x
         prevY = current.y
@@ -489,13 +523,72 @@ export default class SkillSystem {
     }
 
     if (config.subtype === 'DAMAGE_ENEMY') {
-      const target = this._findBeamTarget(gs, player, v, config.range ?? 400)
+      // Tap with no aim direction → find nearest enemy; otherwise ray-cast in aim direction
+      const target = isSelfCast
+        ? this._findNearestEnemy(gs, player, config.range ?? 450)
+        : this._findBeamTarget(gs, player, v, config.range ?? 400)
       if (!target) return false
       this._dealDamage(gs, player, target, config.damage ?? 0, config.name)
+
+      // Apply DoT if configured (e.g. Moonfire)
+      if (config.dot) {
+        const d = config.dot
+        target.activeEffects = target.activeEffects ?? []
+        const existingIdx = target.activeEffects.findIndex(e => e.params?.sourceSkill === d.sourceSkill)
+        if (existingIdx !== -1) target.activeEffects.splice(existingIdx, 1)   // refresh DoT
+        target.activeEffects.push({
+          source:         `dot:${config.name}`,
+          ownerId:        player.id,
+          params:         { damagePerTick: d.damagePerTick, tickRate: d.tickRate, sourceSkill: d.sourceSkill ?? config.name },
+          expiresAt:      Date.now() + (d.duration ?? 4000),
+          lastDamageTick: Date.now(),
+        })
+      }
+
       const color = CLASSES[player.className]?.color ?? '#ffffff'
       if (gs.io) {
         gs.io.emit('targeted:hit', {
           casterX: Math.round(player.x), casterY: Math.round(player.y),
+          targetX: Math.round(target.x), targetY: Math.round(target.y),
+          effectType: 'damage', color,
+        })
+      }
+      return true
+    }
+
+    if (config.subtype === 'TELEPORT_BEHIND') {
+      const target = this._findBeamTarget(gs, player, v, config.range ?? 350)
+      if (!target) return false
+
+      // Record position before teleport for VFX line
+      const fromX = player.x
+      const fromY = player.y
+
+      // Teleport behind enemy — same approach direction, past target center
+      const dx = target.x - player.x
+      const dy = target.y - player.y
+      const dist = Math.hypot(dx, dy)
+      const nx = dx / dist
+      const ny = dy / dist
+      const behindDist = (target.radius ?? 15) + (GAME_CONFIG.PLAYER_RADIUS ?? 12) + 5
+      player.x = Math.max(GAME_CONFIG.PLAYER_RADIUS ?? 12, Math.min(GAME_CONFIG.CANVAS_WIDTH  - (GAME_CONFIG.PLAYER_RADIUS ?? 12), target.x + nx * behindDist))
+      player.y = Math.max(GAME_CONFIG.PLAYER_RADIUS ?? 12, Math.min(GAME_CONFIG.CANVAS_HEIGHT - (GAME_CONFIG.PLAYER_RADIUS ?? 12), target.y + ny * behindDist))
+
+      // Damage scales with combo points then resets them
+      const comboBonus = (config.comboDamage ?? 0) * (player.comboPoints ?? 0)
+      this._dealDamage(gs, player, target, (config.damage ?? 0) + comboBonus, config.name)
+
+      const oldPoints = player.comboPoints ?? 0
+      player.comboPoints = 0
+      if (gs.io && oldPoints > 0) {
+        gs.io.emit('player:comboPoints', { playerId: player.id, points: 0 })
+      }
+
+      // VFX leap line from old position to target
+      const color = CLASSES[player.className]?.color ?? '#ffffff'
+      if (gs.io) {
+        gs.io.emit('targeted:hit', {
+          casterX: Math.round(fromX), casterY: Math.round(fromY),
           targetX: Math.round(target.x), targetY: Math.round(target.y),
           effectType: 'damage', color,
         })
@@ -670,9 +763,15 @@ export default class SkillSystem {
       remaining *= (1 - target.damageReduction)
     }
 
-    // Attacker damage multiplier
+    // Attacker damage multiplier (includes active buffs)
     const mult = attacker?.damageMult ?? 1
     remaining *= mult
+
+    // Shadow strike bonus — one-shot multiplier from attacking out of Vanish
+    if (attacker?.shadowStrikeMult) {
+      remaining *= attacker.shadowStrikeMult
+      attacker.shadowStrikeMult = 0
+    }
 
     const finalAmount = Math.round(remaining)
     if (finalAmount <= 0) return
@@ -988,6 +1087,23 @@ export default class SkillSystem {
     const now = Date.now()
     gs.players.forEach(p => {
       if (!p.activeEffects?.length) return
+
+      // Tick HoT healing on players (e.g. Regrowth)
+      for (const eff of p.activeEffects) {
+        if (eff.params?.healPerTick && eff.params?.tickRate) {
+          if (!eff.lastHealTick) eff.lastHealTick = now
+          if (now - eff.lastHealTick >= eff.params.tickRate) {
+            eff.lastHealTick = now
+            if (!p.isDead) {
+              p.heal(eff.params.healPerTick)
+              if (gs.io) {
+                gs.io.emit('effect:damage', { targetId: p.id, amount: eff.params.healPerTick, type: 'heal', sourceSkill: eff.params.sourceSkill ?? null })
+              }
+            }
+          }
+        }
+      }
+
       const before = p.activeEffects.length
       p.activeEffects = p.activeEffects.filter(e => e.expiresAt > now)
       if (p.activeEffects.length !== before) {
@@ -1266,6 +1382,21 @@ export default class SkillSystem {
     gs.enemies.forEach(e => checkTarget(e))
     if (gs.boss && !gs.boss.isDead) checkTarget(gs.boss)
 
+    return best
+  }
+
+  /** Find the nearest enemy (or boss) to the player within range, regardless of direction. */
+  _findNearestEnemy(gs, player, range) {
+    let best = null
+    let bestDist = Infinity
+    const check = (e) => {
+      if (e.isDead) return
+      const dist = Math.hypot(e.x - player.x, e.y - player.y)
+      if (dist > range) return
+      if (dist < bestDist) { bestDist = dist; best = e }
+    }
+    gs.enemies.forEach(e => check(e))
+    if (gs.boss && !gs.boss.isDead) check(gs.boss)
     return best
   }
 

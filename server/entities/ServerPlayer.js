@@ -46,6 +46,7 @@ export default class ServerPlayer {
     this.isRooted        = false
     this.isStunned       = false
     this.isInvisible     = false
+    this.comboPoints     = 0    // max 5, gained from Sinister Strike
 
     // Shadow values for delta detection
     this._prev = this._snapshot()
@@ -181,7 +182,8 @@ export default class ServerPlayer {
     if (cur.hp     !== prev.hp)     delta.hp     = cur.hp
 
     // Visibility state change
-    if (cur.isInvisible !== prev.isInvisible) delta.isInvisible = cur.isInvisible
+    if (cur.isInvisible  !== prev.isInvisible)  delta.isInvisible  = cur.isInvisible
+    if (cur.comboPoints  !== prev.comboPoints)  delta.comboPoints  = cur.comboPoints
 
     // Shield state
     if (cur.shieldActive !== prev.shieldActive) delta.shieldActive = cur.shieldActive
@@ -225,7 +227,8 @@ export default class ServerPlayer {
       angle:       +this.angle.toFixed(3),
       hp:          Math.ceil(this.hp),
       isDead:      this.isDead,
-      isInvisible: this.isInvisible,
+      isInvisible:  this.isInvisible,
+      comboPoints:  this.comboPoints,
       shieldActive: this.shieldActive,
       shieldAngle: +this.shieldAngle.toFixed(3),
       shieldArc:   +this.shieldArc.toFixed(3),

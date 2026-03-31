@@ -327,6 +327,20 @@ export default class GameServer {
     const config = player.getSkillConfig(index)
     if (!config) return
 
+    // Vanish/stealth breaks when any ability other than the stealth skill itself is used
+    if (player.isInvisible) {
+      const stealthIdx = player.activeEffects.findIndex(
+        e => e.params?.invisible && e.params?.breaksOnAttack
+      )
+      if (stealthIdx !== -1 && player.activeEffects[stealthIdx].source !== `skill:${index}`) {
+        // Preserve shadow strike bonus so the first damaging hit still gets the multiplier
+        const shadowMult = player.activeEffects[stealthIdx].params?.shadowStrikeMultiplier
+        if (shadowMult) player.shadowStrikeMult = shadowMult
+        player.activeEffects.splice(stealthIdx, 1)
+        player.rebuildStats()
+      }
+    }
+
     // SHIELD: START bypasses cooldown; END triggers cooldown
     if (config.type === 'SHIELD') {
       if (action === 'START') {
@@ -345,8 +359,8 @@ export default class GameServer {
       return
     }
 
-    // Cast-on-hold: controller-driven cast bar for CAST + DIRECTIONAL skills
-    if (config.type === 'CAST' && config.inputType === 'DIRECTIONAL') {
+    // Cast-on-hold: controller-driven cast bar for CAST/TARGETED + DIRECTIONAL skills with castTime
+    if ((config.type === 'CAST' || (config.type === 'TARGETED' && config.castTime != null)) && config.inputType === 'DIRECTIONAL') {
       if (action === 'CAST_START') {
         // Visual-only cast bar — no cooldown, no execution yet
         if (player.activeCast != null) return

@@ -31,10 +31,11 @@
 
   // ── Cast-on-hold state (CAST + DIRECTIONAL, e.g. Pyroblast) ──────────────
 
-  let castTimer   = null
-  let isCasting   = false
+  let castTimer     = null
+  let isCasting     = false
+  let joystickHeld  = false
 
-  const isCastHold   = $derived(skill?.type === 'CAST' && skill?.inputType === 'DIRECTIONAL')
+  const isCastHold   = $derived(skill?.castBar === true)
   const isShieldHold = $derived(skill?.type === 'SHIELD' && skill?.inputType === 'DIRECTIONAL')
   const castTime     = $derived(skill?.castTime ?? 1500)
 
@@ -52,10 +53,10 @@
         castTimer = null
         onskill?.({ index, vector: lastVector })
         // Wait for cooldown, then restart cast if joystick still held
-        if (lastDistance > 8) {
+        if (joystickHeld) {
           castTimer = setTimeout(() => {
             castTimer = null
-            if (lastDistance > 8) startCast()
+            if (joystickHeld) startCast()
           }, skill?.cooldown ?? 0)
         }
       }
@@ -94,8 +95,11 @@
       navigator.vibrate?.(20)
       lastVector   = { x: 1, y: 0 }
       lastDistance = 0
+      joystickHeld = true
 
-      if (isFiller) {
+      if (isCastHold && expiresAt <= Date.now()) {
+        startCast()
+      } else if (isFiller) {
         autoFireInterval = setInterval(() => {
           if (lastDistance > 8 && expiresAt <= Date.now()) {
             onskill?.({ index, vector: lastVector })
@@ -117,18 +121,13 @@
           held = true
           onskill?.({ index, vector: lastVector, action: 'START' })
         }
-      } else if (isCastHold) {
-        if (lastDistance > 8 && !isCasting && castTimer === null && expiresAt <= Date.now()) {
-          startCast()
-        } else if (lastDistance <= 8 && isCasting) {
-          cancelCast()
-        }
       } else if (isFiller && lastDistance > 8 && expiresAt <= Date.now()) {
         onskill?.({ index, vector: lastVector })
       }
     })
 
     j.on('end', () => {
+      joystickHeld = false
       if (autoFireInterval) {
         clearInterval(autoFireInterval)
         autoFireInterval = null
@@ -150,6 +149,7 @@
     })
 
     return () => {
+      joystickHeld = false
       if (autoFireInterval) clearInterval(autoFireInterval)
       if (held) {
         held = false
@@ -194,7 +194,8 @@
       if (skill?.selfCastFallback && selfCastTapStart !== null) {
         const dx = e.clientX - selfCastTapStart.x
         const dy = e.clientY - selfCastTapStart.y
-        if (Math.hypot(dx, dy) < 15) onskill?.({ index, vector: { x: 0, y: 0 } })
+        // Cast-bar skills handle their own tap via the nipplejs end handler; don't double-fire
+        if (Math.hypot(dx, dy) < 15 && !isCastHold) onskill?.({ index, vector: { x: 0, y: 0 } })
         selfCastTapStart = null
       }
       return

@@ -17,6 +17,7 @@
   let className   = $state('')
   let isDead      = $state(false)
   let cooldowns   = $state([0, 0, 0, 0])  // expiresAt timestamps per skill slot
+  let comboPoints = $state(0)
 
   // ── End state
   let endMessage  = $state('')
@@ -72,6 +73,11 @@
       if (data.playerId !== myId) return
       cooldowns = cooldowns.map((v, i) => i === data.skillIndex ? data.expiresAt : v)
     })
+
+    socket.on(EVENTS.COMBO_POINTS, data => {
+      if (data.playerId !== myId) return
+      comboPoints = data.points
+    })
   })
 
   onDestroy(() => { socket?.disconnect() })
@@ -117,6 +123,7 @@
       {className}
       {isDead}
       {cooldowns}
+      {comboPoints}
       onmove={handleMove}
       onskill={handleSkill}
       onaim={handleAim}

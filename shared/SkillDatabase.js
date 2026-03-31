@@ -119,6 +119,7 @@ const SkillDatabase = {
     {
       name:      'Lightning Bolt',
       type:      'CAST',
+      castBar:   true,
       inputType: 'DIRECTIONAL',
       cooldown:  800,
       castTime:  600,
@@ -302,6 +303,7 @@ const SkillDatabase = {
     {
       name:      'Fireball',
       type:      'CAST',
+      castBar:   true,
       inputType: 'DIRECTIONAL',
       cooldown:  900,
       castTime:  800,
@@ -338,6 +340,7 @@ const SkillDatabase = {
     {
       name:      'Pyroblast',
       type:      'CAST',
+      castBar:   true,
       inputType: 'DIRECTIONAL',
       cooldown:  500,
       castTime:  1500,
@@ -364,6 +367,7 @@ const SkillDatabase = {
     {
       name:      'Wrath',
       type:      'CAST',
+      castBar:   true,
       inputType: 'DIRECTIONAL',
       cooldown:  1000,
       castTime:  700,
@@ -378,28 +382,40 @@ const SkillDatabase = {
       icon:      '🌿'
     },
     {
-      name:      'Bear Form',
-      type:      'BUFF',
-      subtype:   'TOGGLE',
-      inputType: 'INSTANT',
-      cooldown:  1000,
-      duration:  -1,
-      effectParams: {
-        armorBonus:        50,
-        maxHpMultiplier:   1.5,
-        transformSprite:   'bear',
-        modifyS1: { type: 'MELEE', damage: 60, range: 60, angle: Math.PI / 4 }
+      name:             'Moonfire',
+      type:             'TARGETED',
+      subtype:          'DAMAGE_ENEMY',
+      inputType:        'DIRECTIONAL',
+      cooldown:         500,
+      range:            450,
+      damage:           25,
+      dot: {
+        damagePerTick: 12,
+        tickRate:      1000,
+        duration:      6000,
+        sourceSkill:   'Moonfire',
       },
-      icon:      '🐻'
+      selfCastFallback: true,   // tap with no aim = closest enemy
+      icon:             '🌙'
     },
     {
-      name:      'Cat Dash',
-      type:      'DASH',
-      inputType: 'DIRECTIONAL',
-      cooldown:  6000,
-      speed:     1200,
-      distance:  200,
-      icon:      '🍃'
+      name:             'Regrowth',
+      type:             'TARGETED',
+      castBar:          true,
+      subtype:          'HEAL_ALLY',
+      inputType:        'DIRECTIONAL',
+      cooldown:         500,
+      castTime:         1200,
+      range:            600,
+      healAmount:       40,
+      hot: {
+        healPerTick: 15,
+        tickRate:    1000,
+        duration:    5000,
+        sourceSkill: 'Regrowth',
+      },
+      selfCastFallback: true,
+      icon:             '🌿'
     },
     {
       name:      'Tranquility',
@@ -423,30 +439,30 @@ const SkillDatabase = {
   // ── ROGUE ─────────────────────────────────────────────────────────────────
   Rogue: [
     {
-      name:      'Sinister Strike',
-      type:      'MELEE',
-      inputType: 'DIRECTIONAL',
-      cooldown:  800,
-      damage:    70,
-      range:     50,
-      angle:     Math.PI / 6,   // 30° cone — very precise
-      icon:      '🗡️'
+      name:           'Sinister Strike',
+      type:           'MELEE',
+      inputType:      'DIRECTIONAL',
+      cooldown:       800,
+      damage:         70,
+      range:          50,
+      angle:          Math.PI / 6,   // 30° cone — very precise
+      addsComboPoint: true,
+      icon:           '🗡️'
     },
     {
-      name:      'Fan of Knives',
-      type:      'AOE',
-      subtype:   'AOE_SELF',
+      name:      'Vanish',
+      type:      'BUFF',
+      subtype:   'STEALTH',
       inputType: 'INSTANT',
-      cooldown:  8000,
-      damage:    30,
-      projectileCount: 8,
-      speed:     400,
-      radius:    8,
-      range:     200,
-      pierce:    false,
-      pattern:   'CIRCULAR',
-      effectType: 'DAMAGE',
-      icon:      '👤'
+      cooldown:  20000,
+      duration:  8000,
+      effectParams: {
+        invisible:              true,
+        opacity:                0.15,
+        breaksOnAttack:         true,
+        shadowStrikeMultiplier: 1.5,
+      },
+      icon: '👤'
     },
     {
       name:      'Sprint',
@@ -458,19 +474,15 @@ const SkillDatabase = {
       icon:      '☠️'
     },
     {
-      name:      'Ambush',
-      type:      'BUFF',
-      subtype:   'STEALTH',
-      inputType: 'INSTANT',
-      cooldown:  30000,
-      duration:  10000,
-      effectParams: {
-        invisible:        true,
-        damageMultiplier: 3.0,
-        opacity:          0.3,
-        breaksOnAttack:   true
-      },
-      icon:      '💀'
+      name:        'Ambush',
+      type:        'TARGETED',
+      subtype:     'TELEPORT_BEHIND',
+      inputType:   'TARGETED',
+      cooldown:    8000,
+      range:       350,
+      damage:      80,
+      comboDamage: 40,
+      icon:        '💀'
     }
   ],
 
@@ -479,6 +491,7 @@ const SkillDatabase = {
     {
       name:      'Shadow Bolt',
       type:      'CAST',
+      castBar:   true,
       inputType: 'DIRECTIONAL',
       cooldown:  500,
       castTime:  700,
@@ -495,6 +508,7 @@ const SkillDatabase = {
     {
       name:      'Corruption',
       type:      'CAST',
+      castBar:   true,
       inputType: 'DIRECTIONAL',
       cooldown:  1500,
       castTime:  1000,

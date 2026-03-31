@@ -13,7 +13,8 @@
       "Bash(grep -r \"bounce\\\\|ricochet\\\\|chain\\\\|multi.*heal\\\\|heal.*chain\" /d/Games/bachelorPartyGame --include=*.js --include=*.md)",
       "Bash(grep -o \"type: ''''[^'''']*''''\" shared/SkillDatabase.js)",
       "Bash(grep -o \"subtype: ''''[^'''']*''''\" shared/SkillDatabase.js)",
-      "Bash(sed \"s/''''$//\")"
+      "Bash(sed \"s/''''$//\")",
+      "Bash(xargs grep:*)"
     ]
   }
 }

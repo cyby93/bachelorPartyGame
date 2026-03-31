@@ -51,6 +51,13 @@
         isCasting = false
         castTimer = null
         onskill?.({ index, vector: lastVector })
+        // Wait for cooldown, then restart cast if joystick still held
+        if (lastDistance > 8) {
+          castTimer = setTimeout(() => {
+            castTimer = null
+            if (lastDistance > 8) startCast()
+          }, skill?.cooldown ?? 0)
+        }
       }
     }, castTime)
   }
@@ -111,7 +118,7 @@
           onskill?.({ index, vector: lastVector, action: 'START' })
         }
       } else if (isCastHold) {
-        if (lastDistance > 8 && !isCasting && expiresAt <= Date.now()) {
+        if (lastDistance > 8 && !isCasting && castTimer === null && expiresAt <= Date.now()) {
           startCast()
         } else if (lastDistance <= 8 && isCasting) {
           cancelCast()

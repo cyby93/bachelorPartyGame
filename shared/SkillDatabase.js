@@ -118,14 +118,18 @@ const SkillDatabase = {
   Shaman: [
     {
       name:      'Lightning Bolt',
-      type:      'PROJECTILE',
+      type:      'CAST',
       inputType: 'DIRECTIONAL',
       cooldown:  800,
-      damage:    35,
-      speed:     600,
-      radius:    10,
-      range:     500,
-      pierce:    false,
+      castTime:  600,
+      payload: {
+        type:    'PROJECTILE',
+        damage:  35,
+        speed:   600,
+        radius:  10,
+        range:   500,
+        pierce:  false,
+      },
       icon:      '⚡'
     },
     {
@@ -297,14 +301,18 @@ const SkillDatabase = {
   Mage: [
     {
       name:      'Fireball',
-      type:      'PROJECTILE',
+      type:      'CAST',
       inputType: 'DIRECTIONAL',
       cooldown:  900,
-      damage:    40,
-      speed:     500,
-      radius:    12,
-      range:     550,
-      pierce:    false,
+      castTime:  800,
+      payload: {
+        type:    'PROJECTILE',
+        damage:  40,
+        speed:   500,
+        radius:  12,
+        range:   550,
+        pierce:  false,
+      },
       icon:      '🔥'
     },
     {
@@ -355,14 +363,18 @@ const SkillDatabase = {
   Druid: [
     {
       name:      'Wrath',
-      type:      'PROJECTILE',
+      type:      'CAST',
       inputType: 'DIRECTIONAL',
       cooldown:  1000,
-      damage:    35,
-      speed:     550,
-      radius:    11,
-      range:     500,
-      pierce:    false,
+      castTime:  700,
+      payload: {
+        type:    'PROJECTILE',
+        damage:  35,
+        speed:   550,
+        radius:  11,
+        range:   500,
+        pierce:  false,
+      },
       icon:      '🌿'
     },
     {
@@ -466,31 +478,39 @@ const SkillDatabase = {
   Warlock: [
     {
       name:      'Shadow Bolt',
-      type:      'PROJECTILE',
+      type:      'CAST',
       inputType: 'DIRECTIONAL',
-      cooldown:  900,
-      damage:    35,
-      speed:     550,
-      radius:    10,
-      range:     500,
-      pierce:    false,
+      cooldown:  500,
+      castTime:  700,
+      payload: {
+        type:    'PROJECTILE',
+        damage:  35,
+        speed:   550,
+        radius:  10,
+        range:   500,
+        pierce:  false,
+      },
       icon:      '🔮'
     },
     {
       name:      'Corruption',
-      type:      'PROJECTILE',
+      type:      'CAST',
       inputType: 'DIRECTIONAL',
       cooldown:  1500,
-      damage:    10,
-      speed:     500,
-      radius:    10,
-      range:     450,
-      pierce:    false,
-      dot: {
-        damagePerTick: 10,
-        tickRate:      500,
-        duration:      4000,
-        sourceSkill:   'Corruption',
+      castTime:  1000,
+      payload: {
+        type:    'PROJECTILE',
+        damage:  10,
+        speed:   500,
+        radius:  10,
+        range:   450,
+        pierce:  false,
+        dot: {
+          damagePerTick: 10,
+          tickRate:      500,
+          duration:      4000,
+          sourceSkill:   'Corruption',
+        },
       },
       icon:      '☠️'
     },

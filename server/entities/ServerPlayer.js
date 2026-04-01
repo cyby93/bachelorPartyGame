@@ -37,6 +37,9 @@ export default class ServerPlayer {
     this.shieldArc    = 0          // radians — total arc width
     this.shieldSkillIndex = -1     // which skill slot holds the active shield
 
+    this.isAiming    = false
+    this.lastAimTime = 0
+
     // Derived stats (rebuilt by rebuildStats after every effect change)
     this.speedMult       = 1
     this.damageMult      = 1
@@ -81,6 +84,10 @@ export default class ServerPlayer {
     // Facing direction
     if (this.moveX !== 0 || this.moveY !== 0) {
       this.angle = Math.atan2(this.moveY, this.moveX)
+    }
+
+    if (this.isAiming && (Date.now() - this.lastAimTime) > 200) {
+      this.isAiming = false
     }
   }
 
@@ -185,6 +192,8 @@ export default class ServerPlayer {
     if (cur.isInvisible  !== prev.isInvisible)  delta.isInvisible  = cur.isInvisible
     if (cur.comboPoints  !== prev.comboPoints)  delta.comboPoints  = cur.comboPoints
 
+    if (cur.isAiming !== prev.isAiming) delta.isAiming = cur.isAiming
+
     // Shield state
     if (cur.shieldActive !== prev.shieldActive) delta.shieldActive = cur.shieldActive
     if (cur.shieldActive) {
@@ -229,6 +238,7 @@ export default class ServerPlayer {
       isDead:      this.isDead,
       isInvisible:  this.isInvisible,
       comboPoints:  this.comboPoints,
+      isAiming:     this.isAiming,
       shieldActive: this.shieldActive,
       shieldAngle: +this.shieldAngle.toFixed(3),
       shieldArc:   +this.shieldArc.toFixed(3),

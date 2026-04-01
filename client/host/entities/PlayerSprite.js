@@ -98,6 +98,13 @@ export default class PlayerSprite {
     this.container.addChild(this._shieldGfx)
     this._shieldVisible = false
 
+    // ── Aim arrow ─────────────────────────────────────────────────────────
+    this._aimArrow = new Graphics()
+    this._aimArrow.alpha = 0
+    this._drawAimArrow()
+    this._body.addChild(this._aimArrow)
+    this._aimPulse = 0
+
     // ── Overhead display (cast bar + status icons) ──────────────────────────
     this.overhead = new OverheadDisplay(this.container, {
       yOffset: -R - 18,
@@ -177,6 +184,32 @@ export default class PlayerSprite {
     g.stroke({ color: 0x00d2ff, width: 3, alpha: 0.8 })
   }
 
+  // ── Aim arrow drawing ─────────────────────────────────────────────────────
+
+  _drawAimArrow() {
+    const g = this._aimArrow
+    g.clear()
+
+    const GAP        = 6
+    const STEM_START = R + GAP
+    const STEM_END   = R + 22
+    const STEM_H     = 3
+    const HEAD_W     = 10
+    const HEAD_H     = 9
+
+    // Stem
+    g.rect(STEM_START, -STEM_H / 2, STEM_END - STEM_START, STEM_H)
+    g.fill({ color: 0xffffff, alpha: 0.9 })
+
+    // Arrowhead triangle — tip points right (= player forward in local space)
+    g.poly([
+      STEM_END + HEAD_W, 0,
+      STEM_END,          -HEAD_H,
+      STEM_END,           HEAD_H,
+    ])
+    g.fill({ color: 0xffffff, alpha: 0.9 })
+  }
+
   // ── Per-frame update ───────────────────────────────────────────────────────
 
   /**
@@ -215,6 +248,15 @@ export default class PlayerSprite {
       this._shieldGfx.alpha = 0
     }
     this._shieldVisible = shieldOn
+
+    // Aim arrow
+    if (state.isAiming) {
+      this._aimPulse += dt
+      this._aimArrow.alpha = 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(this._aimPulse * Math.PI * 2 / 0.6))
+    } else {
+      this._aimPulse = 0
+      this._aimArrow.alpha = 0
+    }
 
     // Update overhead display
     this.overhead.updateCastBar(state.castProgress ?? 0, state.isChanneling ?? false)

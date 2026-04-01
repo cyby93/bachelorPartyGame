@@ -442,9 +442,9 @@ const SkillDatabase = {
       name:           'Sinister Strike',
       type:           'MELEE',
       inputType:      'DIRECTIONAL',
-      cooldown:       800,
+      cooldown:       500,
       damage:         70,
-      range:          50,
+      range:          70,
       angle:          Math.PI / 6,   // 30° cone — very precise
       addsComboPoint: true,
       icon:           '🗡️'
@@ -454,7 +454,7 @@ const SkillDatabase = {
       type:      'BUFF',
       subtype:   'STEALTH',
       inputType: 'INSTANT',
-      cooldown:  20000,
+      cooldown:  5000,
       duration:  8000,
       effectParams: {
         invisible:              true,
@@ -468,7 +468,7 @@ const SkillDatabase = {
       name:      'Sprint',
       type:      'BUFF',
       inputType: 'INSTANT',
-      cooldown:  15000,
+      cooldown:  7000,
       duration:  3000,
       effectParams: { speedMultiplier: 2.0 },
       icon:      '☠️'

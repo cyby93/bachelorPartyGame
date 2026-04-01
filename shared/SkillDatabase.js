@@ -506,27 +506,23 @@ const SkillDatabase = {
       icon:      '🔮'
     },
     {
-      name:      'Corruption',
-      type:      'CAST',
-      castBar:   true,
-      inputType: 'DIRECTIONAL',
-      cooldown:  1500,
-      castTime:  1000,
-      payload: {
-        type:    'PROJECTILE',
-        damage:  10,
-        speed:   500,
-        radius:  10,
-        range:   450,
-        pierce:  false,
-        dot: {
-          damagePerTick: 10,
-          tickRate:      500,
-          duration:      4000,
-          sourceSkill:   'Corruption',
-        },
+      name:             'Corruption',
+      type:             'TARGETED',
+      castBar:          true,
+      subtype:          'DAMAGE_ENEMY',
+      inputType:        'DIRECTIONAL',
+      cooldown:         500,
+      castTime:         1200,
+      range:            600,
+      damage:       10,
+      dot: {
+        damagePerTick: 15,
+        tickRate:      1000,
+        duration:      7000,
+        sourceSkill:   'Corruption',
       },
-      icon:      '☠️'
+      selfCastFallback: false,
+      icon:             '☠️'
     },
     {
       name:      'Drain Life',

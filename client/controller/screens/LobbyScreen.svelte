@@ -1,7 +1,7 @@
 <script>
   import { CLASSES } from '../../../shared/ClassConfig.js'
 
-  let { playerName = '', className = '' } = $props()
+  let { playerName = '', className = '', onready } = $props()
 
   const CLASS_ICONS = {
     Warrior: '⚔️', Paladin: '🔨', Shaman:      '⚡',  Hunter:  '🏹',
@@ -39,6 +39,9 @@
     <div class="waiting">
       <div class="spinner"></div>
       <p>Waiting for host…</p>
+      <button type="button" class="ready-btn" onclick={() => onready?.()}>
+        I got it
+      </button>
     </div>
   </div>
 
@@ -148,6 +151,21 @@
     border-top-color: #00d2ff;
     border-radius: 50%;
     animation: spin 1s linear infinite;
+  }
+
+  .ready-btn {
+    padding: 10px 18px;
+    border-radius: 999px;
+    border: 1px solid #1e3a4a;
+    background: #16202a;
+    color: #00d2ff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .ready-btn:active {
+    background: #1e3a4a;
   }
 
   @keyframes spin { to { transform: rotate(360deg); } }

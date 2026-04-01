@@ -99,6 +99,7 @@ Host:
 Controller:
 
 - pre-run state and lobby UX
+- may show a local class-briefing step before unlocking controls, but this remains a controller-only presentation choice inside the server-driven `lobby` scene
 
 ### `battle`
 

@@ -248,7 +248,8 @@ Consumers:
 Contract notes:
 
 - scene names must match the Scene Names table above
-- controller maps `lobby` to a waiting/lobby screen and `battle` or `bossFight` to active gameplay
+- controller maps `lobby` to a local two-step flow: briefing screen first, then active controls after player acknowledgment
+- `battle` and `bossFight` map to active gameplay immediately
 
 ### `level:complete`
 

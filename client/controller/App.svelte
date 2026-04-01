@@ -19,6 +19,7 @@
   let isDead      = $state(false)
   let cooldowns   = $state([0, 0, 0, 0])  // expiresAt timestamps per skill slot
   let comboPoints = $state(0)
+  let lobbyReady  = $state(false)
 
   // ── End state
   let endMessage  = $state('')
@@ -68,6 +69,7 @@
         screen = 'game'
       } else if (scene === 'lobby') {
         screen = 'lobby'
+        lobbyReady = false
       } else if (scene === 'levelComplete') {
         screen = 'levelComplete'
         endMessage = `Level ${(levelIndex ?? 0) + 1} complete!`
@@ -121,6 +123,10 @@
   function handleAim({ vector }) {
     socket.emit(EVENTS.INPUT_AIM, { vector })
   }
+
+  function handleLobbyReady() {
+    lobbyReady = true
+  }
 </script>
 
 {#if isPortrait}
@@ -146,10 +152,24 @@
     <JoinScreen onjoin={handleJoin} />
 
   {:else if screen === 'lobby'}
-    <LobbyScreen
-      {playerName}
-      {className}
-    />
+    {#if !lobbyReady}
+      <LobbyScreen
+        {playerName}
+        {className}
+        onready={handleLobbyReady}
+      />
+    {:else}
+      <GameScreen
+        {playerName}
+        {className}
+        {isDead}
+        {cooldowns}
+        {comboPoints}
+        onmove={handleMove}
+        onskill={handleSkill}
+        onaim={handleAim}
+      />
+    {/if}
 
   {:else if screen === 'game'}
     <GameScreen

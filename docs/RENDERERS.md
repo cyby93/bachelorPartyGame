@@ -1,6 +1,7 @@
 # RENDERERS.md — Host Canvas Renderer System Reference
 
 All host-side canvas rendering lives in `client/host/scenes/`. The system uses PixiJS v8.
+Shared repo-level assistant guidance lives in `AGENTS.md`.
 
 ---
 

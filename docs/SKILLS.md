@@ -2,6 +2,7 @@
 
 > **Keep this file updated whenever you add or change a skill.**
 > It is the single source of truth for skill conventions, valid field combinations, and VFX behavior.
+> Shared repo-level assistant guidance lives in `AGENTS.md`.
 
 ---
 

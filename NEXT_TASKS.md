@@ -1,1 +1,0 @@
-1. The movement controllers seems to be working but when the player is standing still, the player 'model' (the geometric shape) is jiggling -> teleporting back and forth.

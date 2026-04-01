@@ -12,9 +12,10 @@
 
 import { Application, Container, Graphics } from 'pixi.js'
 import { GAME_CONFIG }  from '../../shared/GameConfig.js'
-import LobbyRenderer    from './scenes/LobbyRenderer.js'
-import BattleRenderer   from './scenes/BattleRenderer.js'
-import ResultRenderer   from './scenes/ResultRenderer.js'
+import LobbyRenderer          from './scenes/LobbyRenderer.js'
+import BattleRenderer         from './scenes/BattleRenderer.js'
+import ResultRenderer         from './scenes/ResultRenderer.js'
+import LevelCompleteRenderer  from './scenes/LevelCompleteRenderer.js'
 
 function lerp(a, b, t) { return a + (b - a) * t }
 
@@ -25,6 +26,12 @@ export default class HostGame {
     this.knownState     = { players: {} }
     this.activeRenderer = null
     this.renderers      = {}
+    this.socket         = null        // set via setSocket() from main.js
+  }
+
+  /** Called from main.js to give renderers access to the socket. */
+  setSocket(socket) {
+    this.socket = socket
   }
 
   // ── Initialisation ────────────────────────────────────────────────────────
@@ -75,11 +82,12 @@ export default class HostGame {
 
     // ── Scene renderers ───────────────────────────────────────────────────
     this.renderers = {
-      lobby:     new LobbyRenderer(this),
-      trashMob:  new BattleRenderer(this, 'trashMob'),
-      bossFight: new BattleRenderer(this, 'bossFight'),
-      result:    new ResultRenderer(this, true),
-      gameover:  new ResultRenderer(this, false),
+      lobby:         new LobbyRenderer(this),
+      battle:        new BattleRenderer(this, 'battle'),
+      bossFight:     new BattleRenderer(this, 'bossFight'),
+      levelComplete: new LevelCompleteRenderer(this, this.socket),
+      result:        new ResultRenderer(this, true),
+      gameover:      new ResultRenderer(this, false),
     }
 
     this.switchScene('lobby')
@@ -90,9 +98,19 @@ export default class HostGame {
 
   // ── Scene management ──────────────────────────────────────────────────────
 
-  switchScene(name) {
+  /**
+   * @param {string} name  – scene key
+   * @param {object} [meta] – level metadata from SCENE_CHANGE payload
+   */
+  switchScene(name, meta) {
     this.activeRenderer?.exit()
     this.activeRenderer = this.renderers[name] ?? this.renderers.lobby
+
+    // Pass level metadata to renderers that support it
+    if (this.activeRenderer.setLevelMeta) {
+      this.activeRenderer.setLevelMeta(meta ?? {})
+    }
+
     this.activeRenderer.enter()
   }
 
@@ -159,6 +177,11 @@ export default class HostGame {
   removePlayer(id) {
     delete this.knownState.players[id]
     this.activeRenderer?.onPlayerRemoved?.(id)
+  }
+
+  /** Forward objective progress to the active renderer. */
+  updateObjectives(objectives) {
+    this.activeRenderer?.updateObjectives?.(objectives)
   }
 
   // ── Interpolation ─────────────────────────────────────────────────────────

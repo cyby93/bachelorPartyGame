@@ -21,6 +21,7 @@ await game.init(document.getElementById('canvas-wrap'))
 
 // ── Socket ─────────────────────────────────────────────────────────────────
 const socket = io({ transports: ['websocket'] })
+game.setSocket(socket)
 console.log(socket);
 
 // ── DOM refs ───────────────────────────────────────────────────────────────
@@ -76,6 +77,11 @@ function setSceneControls(scene) {
     startBtn.disabled    = Object.values(game.knownState.players).filter(p => !p.isHost).length === 0
     startBtn.style.display = ''
     startBtn.onclick     = () => socket.emit(EVENTS.START_GAME)
+  } else if (scene === 'levelComplete') {
+    startBtn.textContent   = 'CONTINUE'
+    startBtn.disabled      = false
+    startBtn.style.display = ''
+    startBtn.onclick       = () => socket.emit(EVENTS.HOST_ADVANCE)
   } else if (scene === 'result' || scene === 'gameover') {
     startBtn.textContent   = 'RESTART GAME'
     startBtn.disabled      = false
@@ -130,8 +136,10 @@ socket.on(EVENTS.INIT, state => {
     console.log('JSON.stringify(player)')
 
   game.receiveFullState(state)
-  game.switchScene(state.scene ?? 'lobby')
-  setSceneControls(state.scene ?? 'lobby')
+  const scene = state.scene ?? 'lobby'
+  const meta = { levelIndex: state.levelIndex, totalLevels: state.totalLevels, levelName: state.levelName, objectives: state.objectives }
+  game.switchScene(scene, meta)
+  setSceneControls(scene)
   renderDOMPlayerList()
 })
 
@@ -153,13 +161,18 @@ socket.on(EVENTS.STATE_DELTA, delta => {
   if (after !== before) renderDOMPlayerList()
 })
 
-socket.on(EVENTS.SCENE_CHANGE, ({ scene }) => {
-  game.switchScene(scene)
+socket.on(EVENTS.SCENE_CHANGE, (data) => {
+  const { scene, ...meta } = data
+  game.switchScene(scene, meta)
   setSceneControls(scene)
 
-  if (scene === 'trashMob' || scene === 'bossFight') audio.playTransition()
+  if (scene === 'battle' || scene === 'bossFight') audio.playTransition()
   else if (scene === 'result')  audio.playVictory()
   else if (scene === 'gameover') audio.playDefeat()
+})
+
+socket.on(EVENTS.OBJECTIVE_UPDATE, ({ objectives }) => {
+  game.updateObjectives(objectives)
 })
 
 // ── VFX events ───────────────────────────────────────────────────────────

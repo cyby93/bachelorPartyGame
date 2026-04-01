@@ -22,5 +22,4 @@ export const GAME_CONFIG = {
 
   // Game rules
   MAX_PLAYERS:    13,
-  ENEMY_KILL_GOAL: 50,    // kills needed to end the trash-mob phase
 }

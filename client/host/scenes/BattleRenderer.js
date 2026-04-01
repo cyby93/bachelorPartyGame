@@ -1,10 +1,12 @@
 /**
  * client/host/scenes/BattleRenderer.js
  *
- * Canvas display for combat phases (trashMob and bossFight).
+ * Canvas display for all combat levels.
  *
- * - trashMob:  shows kill counter progress bar
- * - bossFight: shows boss HP bar
+ * Supports multiple objective types driven by level config:
+ *   - killCount  → progress bar
+ *   - survive    → countdown timer
+ *   - killBoss   → boss HP bar
  *
  * Extends BaseRenderer — only contains battle-specific logic:
  *   boss, minion, tombstone rendering; hit sparks; aura sync; mode UI.
@@ -17,12 +19,11 @@ import BossSprite       from '../entities/BossSprite.js'
 import BaseRenderer     from './BaseRenderer.js'
 
 const { CANVAS_WIDTH: W, CANVAS_HEIGHT: H } = GAME_CONFIG
-const KILL_GOAL = GAME_CONFIG.ENEMY_KILL_GOAL
 
 export default class BattleRenderer extends BaseRenderer {
   constructor(game, mode) {
     super(game)
-    this.mode = mode   // 'trashMob' | 'bossFight'
+    this.mode = mode   // 'battle' | 'bossFight'
 
     // Sub-containers in Z order: minions behind enemies behind boss; players on top
     this.minionContainer = new Container()
@@ -35,14 +36,28 @@ export default class BattleRenderer extends BaseRenderer {
 
     // Previous-frame HP tracking for hit sparks and death bursts
     this._prevPlayerHp = {}
+
+    // Level metadata (set from outside via setLevelMeta before enter, or via event)
+    this._levelMeta = null
+
+    // Objective progress received from server
+    this._objectives = []
+  }
+
+  /** Called by HostGame before enter() to pass level-specific data. */
+  setLevelMeta(meta) {
+    this._levelMeta = meta
+    this._objectives = meta?.objectives ?? []
+  }
+
+  /** Called each time the server sends OBJECTIVE_UPDATE. */
+  updateObjectives(objectives) {
+    this._objectives = objectives ?? []
   }
 
   // ── Container routing ──────────────────────────────────────────────────────
 
-  /** Route enemy sprites into the dedicated sub-container (behind boss/players). */
   get _enemyContainer() { return this.enemyContainer }
-
-  /** Route minion graphics into the dedicated sub-container (behind enemies). */
   get _minionContainer() { return this.minionContainer }
 
   // ── Lifecycle hooks ────────────────────────────────────────────────────────
@@ -56,18 +71,29 @@ export default class BattleRenderer extends BaseRenderer {
     this.tombstoneGfx.clear()
 
     this._prevPlayerHp = {}
+    this._levelMeta = null
+    this._objectives = []
   }
 
   _resetUIRefs() {
-    this._killText      = null
-    this._killFill      = null
-    this._killBarX      = 0
-    this._killBarW      = 0
+    // Generic objective UI
+    this._objPanel     = null
+    this._objTitle     = null
+    this._objText      = null
+    this._objFill      = null
+    this._objBarX      = 0
+    this._objBarW      = 0
+
+    // Boss HP bar (used when killBoss objective is present)
     this._bossHpFill    = null
     this._bossBarX      = 0
     this._bossBarW      = 0
-    this._lastKills     = -1
     this._lastBossHpPct = -1
+
+    // Level indicator
+    this._levelLabel    = null
+
+    this._lastObjVal    = -1
   }
 
   // ── Per-player hooks ───────────────────────────────────────────────────────
@@ -127,23 +153,22 @@ export default class BattleRenderer extends BaseRenderer {
   // ── Extra per-frame sync: boss, minions, tombstones ────────────────────────
 
   _syncExtras(dt) {
-    super._syncExtras(dt)   // syncs minions via base _syncMinions()
+    super._syncExtras(dt)
 
     const state = this.game.knownState
 
     // Boss
-    if (this.mode === 'bossFight' && state.boss) {
+    if (state.boss && !state.boss.isDead) {
       if (!this.bossSprite) {
         this.bossSprite = new BossSprite()
         this.bossContainer.addChild(this.bossSprite.container)
       }
       this.bossSprite.update(state.boss)
-
-      if (state.boss.isDead && this.bossSprite) {
-        this.bossContainer.removeChild(this.bossSprite.container)
-        this.bossSprite.destroy()
-        this.bossSprite = null
-      }
+    }
+    if (state.boss?.isDead && this.bossSprite) {
+      this.bossContainer.removeChild(this.bossSprite.container)
+      this.bossSprite.destroy()
+      this.bossSprite = null
     }
 
     // Tombstones
@@ -180,16 +205,33 @@ export default class BattleRenderer extends BaseRenderer {
   _updateUI(dt, activePlayerIds) {
     const state = this.game.knownState
 
-    if (this.mode === 'trashMob' && this._killText) {
-      const kills = state.killCount ?? 0
-      if (kills !== this._lastKills) {
-        this._lastKills = kills
-        this._killText.text = `${kills} / ${KILL_GOAL}`
-        this._drawKillBar(kills / KILL_GOAL)
+    // Update generic objective display
+    if (this._objectives.length > 0) {
+      const obj = this._objectives[0]  // primary objective
+
+      if (obj.type === 'killCount') {
+        const current = obj.current ?? 0
+        const target  = obj.target  ?? 1
+        if (current !== this._lastObjVal) {
+          this._lastObjVal = current
+          if (this._objText) this._objText.text = `${current} / ${target}`
+          this._drawObjBar(current / target)
+        }
+      } else if (obj.type === 'survive') {
+        const elapsed = obj.current ?? 0
+        const total   = obj.durationMs ?? obj.target ?? 1
+        const remaining = Math.max(0, total - elapsed)
+        const secs = Math.ceil(remaining / 1000)
+        if (secs !== this._lastObjVal) {
+          this._lastObjVal = secs
+          if (this._objText) this._objText.text = `${secs}s`
+          this._drawObjBar(elapsed / total)
+        }
       }
     }
 
-    if (this.mode === 'bossFight' && this._bossHpFill && state.boss) {
+    // Boss HP bar (for killBoss objective)
+    if (this._bossHpFill && state.boss) {
       const pct = state.boss.hp / (state.boss.maxHp || 1)
       if (pct !== this._lastBossHpPct) {
         this._lastBossHpPct = pct
@@ -211,11 +253,33 @@ export default class BattleRenderer extends BaseRenderer {
   // ── UI construction ────────────────────────────────────────────────────────
 
   _buildUI() {
-    if (this.mode === 'trashMob') this._buildTrashMobUI()
-    else                          this._buildBossFightUI()
+    const meta = this._levelMeta
+
+    // Level indicator (top-right corner)
+    if (meta) {
+      this._levelLabel = new Text({
+        text:  `Level ${(meta.levelIndex ?? 0) + 1} / ${meta.totalLevels ?? '?'}`,
+        style: { fontFamily: 'Arial', fontSize: 13, fill: '#556677', align: 'right' },
+      })
+      this._levelLabel.anchor.set(1, 0)
+      this._levelLabel.position.set(W - 12, 12)
+      this._uiRoot.addChild(this._levelLabel)
+    }
+
+    // Build objective-specific UI
+    const objectives = this._objectives
+    if (!objectives.length) return
+
+    const primary = objectives[0]
+
+    if (primary.type === 'killBoss') {
+      this._buildBossFightUI()
+    } else {
+      this._buildObjectiveUI(primary)
+    }
   }
 
-  _buildTrashMobUI() {
+  _buildObjectiveUI(obj) {
     const PANEL_W = 260
     const PANEL_H = 68
 
@@ -225,22 +289,42 @@ export default class BattleRenderer extends BaseRenderer {
     bg.stroke({ color: '#1e3a4a', width: 1 })
     this._uiRoot.addChild(bg)
 
+    // Objective label
+    let labelText = 'OBJECTIVE'
+    if (obj.type === 'killCount') {
+      labelText = obj.enemyTypes?.length
+        ? `KILL ${obj.target} ${obj.enemyTypes.join(', ').toUpperCase()}`
+        : 'WAVE PROGRESS'
+    } else if (obj.type === 'survive') {
+      labelText = 'SURVIVE'
+    }
+
     const label = new Text({
-      text:  'WAVE PROGRESS',
+      text:  labelText,
       style: { fontFamily: 'Arial', fontSize: 12, fontWeight: 'bold', fill: '#00d2ff', align: 'center' },
     })
     label.anchor.set(0.5, 0)
     label.position.set(W / 2, 16)
     this._uiRoot.addChild(label)
 
-    this._killText = new Text({
-      text:  `0 / ${KILL_GOAL}`,
+    // Counter / timer text
+    let initialText = '0'
+    if (obj.type === 'killCount') {
+      initialText = `0 / ${obj.target ?? '?'}`
+    } else if (obj.type === 'survive') {
+      const secs = Math.ceil((obj.durationMs ?? obj.target ?? 0) / 1000)
+      initialText = `${secs}s`
+    }
+
+    this._objText = new Text({
+      text:  initialText,
       style: { fontFamily: 'Arial', fontSize: 28, fontWeight: 'bold', fill: '#ffffff', align: 'center' },
     })
-    this._killText.anchor.set(0.5, 0)
-    this._killText.position.set(W / 2, 34)
-    this._uiRoot.addChild(this._killText)
+    this._objText.anchor.set(0.5, 0)
+    this._objText.position.set(W / 2, 34)
+    this._uiRoot.addChild(this._objText)
 
+    // Progress bar
     const PBAR_W = 220
     const trackBg = new Graphics()
     trackBg.rect(W / 2 - PBAR_W / 2, 66, PBAR_W, 6)
@@ -248,15 +332,18 @@ export default class BattleRenderer extends BaseRenderer {
     trackBg.stroke({ color: '#333333', width: 1 })
     this._uiRoot.addChild(trackBg)
 
-    this._killFill  = new Graphics()
-    this._killBarX  = W / 2 - PBAR_W / 2
-    this._killBarW  = PBAR_W
-    this._lastKills = -1
-    this._uiRoot.addChild(this._killFill)
-    this._drawKillBar(0)
+    this._objFill  = new Graphics()
+    this._objBarX  = W / 2 - PBAR_W / 2
+    this._objBarW  = PBAR_W
+    this._lastObjVal = -1
+    this._uiRoot.addChild(this._objFill)
+    this._drawObjBar(0)
   }
 
   _buildBossFightUI() {
+    const state = this.game.knownState
+    const bossName = state.boss?.name ?? this._levelMeta?.levelName ?? 'BOSS'
+
     const HBAR_W  = 420
     const PANEL_H = 44
 
@@ -267,7 +354,7 @@ export default class BattleRenderer extends BaseRenderer {
     this._uiRoot.addChild(bg)
 
     const nameText = new Text({
-      text:  'Illidan Stormrage',
+      text:  bossName,
       style: { fontFamily: 'Arial', fontSize: 13, fontWeight: 'bold', fill: '#ff4444', align: 'center' },
     })
     nameText.anchor.set(0.5, 0)
@@ -290,12 +377,12 @@ export default class BattleRenderer extends BaseRenderer {
 
   // ── Dynamic draw helpers ───────────────────────────────────────────────────
 
-  _drawKillBar(pct) {
-    if (!this._killFill) return
-    this._killFill.clear()
+  _drawObjBar(pct) {
+    if (!this._objFill) return
+    this._objFill.clear()
     if (pct > 0) {
-      this._killFill.rect(this._killBarX, 66, this._killBarW * pct, 6)
-      this._killFill.fill(pct >= 1 ? '#f1c40f' : '#00d2ff')
+      this._objFill.rect(this._objBarX, 66, this._objBarW * Math.min(pct, 1), 6)
+      this._objFill.fill(pct >= 1 ? '#f1c40f' : '#00d2ff')
     }
   }
 

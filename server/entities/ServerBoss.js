@@ -7,12 +7,19 @@ import { BOSS_CONFIG } from '../../shared/BossConfig.js'
 import { GAME_CONFIG } from '../../shared/GameConfig.js'
 
 export default class ServerBoss {
-  constructor() {
-    const cfg = BOSS_CONFIG.ILLIDAN
+  /**
+   * @param {string} [configKey='ILLIDAN'] — key into BOSS_CONFIG
+   * @param {object} [overrides]           — { hpMult, damageMult } for difficulty scaling
+   */
+  constructor(configKey = 'ILLIDAN', overrides = {}) {
+    const cfg = BOSS_CONFIG[configKey] ?? BOSS_CONFIG.ILLIDAN
+    const hpMult = overrides.hpMult ?? 1
+    const damageMult = overrides.damageMult ?? 1
 
     this.name      = cfg.name
-    this.maxHp     = cfg.maxHp
+    this.maxHp     = Math.round(cfg.maxHp * hpMult)
     this.hp        = this.maxHp
+    this._damageMult = damageMult
     this.radius    = GAME_CONFIG.BOSS_RADIUS
     this.x         = GAME_CONFIG.CANVAS_WIDTH  / 2
     this.y         = GAME_CONFIG.CANVAS_HEIGHT / 2
@@ -108,7 +115,11 @@ export default class ServerBoss {
       if (bestDist > activationRange) continue
 
       this._abilityCooldowns[ability.name] = now
-      attacks.push({ ...ability, bossX: this.x, bossY: this.y, target: nearest })
+      attacks.push({
+        ...ability,
+        damage: Math.round((ability.damage ?? 0) * this._damageMult),
+        bossX: this.x, bossY: this.y, target: nearest,
+      })
     }
 
     return attacks

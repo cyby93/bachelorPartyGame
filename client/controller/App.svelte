@@ -5,7 +5,7 @@
   import JoinScreen   from './screens/JoinScreen.svelte'
   import GameScreen   from './screens/GameScreen.svelte'
 
-  // ── Screens: 'join' | 'lobby' | 'game' | 'end'
+  // ── Screens: 'join' | 'lobby' | 'game' | 'levelComplete' | 'end'
   let screen = $state('join')
 
   // ── Orientation
@@ -62,11 +62,14 @@
       }
     })
 
-    socket.on(EVENTS.SCENE_CHANGE, ({ scene }) => {
-      if (scene === 'trashMob' || scene === 'bossFight') {
+    socket.on(EVENTS.SCENE_CHANGE, ({ scene, levelName, levelIndex, totalLevels }) => {
+      if (scene === 'battle' || scene === 'bossFight') {
         screen = 'game'
       } else if (scene === 'lobby') {
         screen = 'lobby'
+      } else if (scene === 'levelComplete') {
+        screen = 'levelComplete'
+        endMessage = `Level ${(levelIndex ?? 0) + 1} complete!`
       } else if (scene === 'result') {
         screen = 'end'
         endMessage = '🏆 Victory! Waiting for restart…'
@@ -153,6 +156,12 @@
       onaim={handleAim}
     />
 
+  {:else if screen === 'levelComplete'}
+    <div class="end-screen">
+      <p>{endMessage}</p>
+      <p class="sublabel">Waiting for host to continue…</p>
+    </div>
+
   {:else if screen === 'end'}
     <div class="end-screen">
       <p>{endMessage}</p>
@@ -169,12 +178,19 @@
   .end-screen {
     height: 100%;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
     padding: 24px;
     color: #7fa8c0;
     font-size: 18px;
+    gap: 8px;
+  }
+
+  .sublabel {
+    font-size: 14px;
+    color: #556677;
   }
 
   .rotate-overlay {

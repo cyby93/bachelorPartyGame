@@ -1,5 +1,7 @@
 import { EVENTS }        from '../shared/protocol.js'
 import { GAME_CONFIG }   from '../shared/GameConfig.js'
+import { CAMPAIGN }      from '../shared/LevelConfig.js'
+import { BOSS_CONFIG }   from '../shared/BossConfig.js'
 import { CLASSES, resolveClassName } from '../shared/ClassConfig.js'
 import ServerPlayer      from './entities/ServerPlayer.js'
 import ServerEnemy       from './entities/ServerEnemy.js'
@@ -7,6 +9,7 @@ import ServerBoss        from './entities/ServerBoss.js'
 import TrainingDummy, { RangedDummy, MeleeDummy, MovingDummy } from './entities/TrainingDummy.js'
 import CooldownSystem    from './systems/CooldownSystem.js'
 import SkillSystem       from './systems/SkillSystem.js'
+import SpawnSystem       from './systems/SpawnSystem.js'
 
 /**
  * GameServer — authoritative game simulation.
@@ -14,8 +17,8 @@ import SkillSystem       from './systems/SkillSystem.js'
  * Runs a fixed-rate tick loop (TICK_RATE Hz).
  * All game state lives here; clients are pure renderers / input sources.
  *
- * Scene flow:  lobby → trashMob → bossFight → result
- *                   ↑__________________________|  (restart)
+ * Scene flow:  lobby → battle (level 1) → levelComplete → battle (level 2) → … → result
+ *                   ↑______________________________________________________________|  (restart)
  */
 export default class GameServer {
   constructor(io) {
@@ -34,10 +37,13 @@ export default class GameServer {
     this.enemies       = new Map()  // id → ServerEnemy
     this.boss          = null
 
-    this._enemyIdSeq  = 0
+    this._enemyIdSeq  = { value: 0 }
     this._minionIdSeq = 0
     this._lastSpawn   = 0
     this.killCount    = 0
+
+    // Per-type kill tracking for objective evaluation
+    this._killsByType = {}
 
     // Spawned minions (totems, traps, pets)
     this.minions = new Map()
@@ -47,6 +53,15 @@ export default class GameServer {
 
     // Revive tracking: deadPlayerId → { reviverId, startedAt }
     this.reviveTimers = new Map()
+
+    // ── Level system ──────────────────────────────────────────────────────
+    this.currentLevelIndex = -1
+    this.currentLevel      = null
+    this.spawnSystem       = null
+    this._levelStartTime   = 0
+
+    // Objective progress — synced to clients via OBJECTIVE_UPDATE
+    this.objectiveProgress = []
 
     this.tick      = 0
     this.lastTick  = Date.now()
@@ -65,10 +80,10 @@ export default class GameServer {
   handleConnection(socket) {
     console.log(`[+] connected   ${socket.id}`)
 
-    socket.on(EVENTS.JOIN,         data => this._onJoin(socket, data))
-    socket.on(EVENTS.INPUT_MOVE,   data => this._onInputMove(socket, data))
-    socket.on(EVENTS.INPUT_SKILL,  data => this._onInputSkill(socket, data))
-    socket.on(EVENTS.INPUT_AIM,    ({ vector }) => {
+    socket.on(EVENTS.JOIN,          data => this._onJoin(socket, data))
+    socket.on(EVENTS.INPUT_MOVE,    data => this._onInputMove(socket, data))
+    socket.on(EVENTS.INPUT_SKILL,   data => this._onInputSkill(socket, data))
+    socket.on(EVENTS.INPUT_AIM,     ({ vector }) => {
       const player = this.players.get(socket.id)
       if (player && vector) {
         player.angle       = Math.atan2(vector.y, vector.x)
@@ -79,9 +94,10 @@ export default class GameServer {
         }
       }
     })
-    socket.on(EVENTS.START_GAME,   ()   => this._onStartGame(socket))
-    socket.on(EVENTS.RESTART_GAME, ()   => this._onRestartGame(socket))
-    socket.on('disconnect',        ()   => this._onDisconnect(socket))
+    socket.on(EVENTS.START_GAME,    ()   => this._onStartGame(socket))
+    socket.on(EVENTS.RESTART_GAME,  ()   => this._onRestartGame(socket))
+    socket.on(EVENTS.HOST_ADVANCE,  ()   => this._onHostAdvance(socket))
+    socket.on('disconnect',         ()   => this._onDisconnect(socket))
   }
 
   // ── Socket event handlers ──────────────────────────────────────────────────
@@ -131,22 +147,11 @@ export default class GameServer {
     })
   }
 
+  // ── Campaign flow ──────────────────────────────────────────────────────────
+
   _onStartGame(socket) {
     if (!this.players.get(socket.id)?.isHost) return
-
-    // Reset stats and clear leftover state
-    this.killCount   = 0
-    this.stats       = { damage: {}, deaths: {}, kills: 0, startTime: Date.now() }
-    this.projectiles.clear()
-    this.enemies.clear()
-    this.boss        = null
-    this.reviveTimers.clear()
-    this.minions.clear()
-    this._lastSpawn  = 0
-    this.skillSystem.activeZones    = []
-    this.skillSystem._pendingBursts = []
-
-    this._changeScene('trashMob')
+    this._startCampaign()
   }
 
   _onRestartGame(socket) {
@@ -167,19 +172,112 @@ export default class GameServer {
       }
     })
 
-    // Clear all game entities
+    this._clearCombatState()
+    this._changeScene('lobby')
+  }
+
+  _onHostAdvance(socket) {
+    if (!this.players.get(socket.id)?.isHost) return
+    if (this.scene !== 'levelComplete') return
+
+    const nextIndex = this.currentLevelIndex + 1
+    if (nextIndex >= CAMPAIGN.length) {
+      // Campaign complete — final victory!
+      this._changeScene('result')
+    } else {
+      this._startLevel(nextIndex)
+    }
+  }
+
+  _startCampaign() {
+    this.stats = { damage: {}, deaths: {}, kills: 0, startTime: Date.now() }
+    this._clearCombatState()
+    this._startLevel(0)
+  }
+
+  _startLevel(index) {
+    const level = CAMPAIGN[index]
+    if (!level) return
+
+    this.currentLevelIndex = index
+    this.currentLevel      = level
+
+    // Reset combat state between levels
+    this._clearCombatState()
+
+    // Reset all non-host players to full HP and scatter them
+    this.players.forEach(p => {
+      if (p.isHost) return
+      p.hp           = p.maxHp
+      p.isDead       = false
+      p.activeCast   = null
+      p.shieldActive = false
+      p.activeEffects = []
+      p.rebuildStats()
+      p.x = GAME_CONFIG.CANVAS_WIDTH  / 2 + (Math.random() - 0.5) * 400
+      p.y = GAME_CONFIG.CANVAS_HEIGHT / 2 + (Math.random() - 0.5) * 250
+    })
+
+    // Compute player count for difficulty scaling
+    let playerCount = 0
+    this.players.forEach(p => { if (!p.isHost) playerCount++ })
+
+    // Set up spawn system if level has spawning
+    if (level.spawning) {
+      this.spawnSystem = new SpawnSystem(level, playerCount)
+    }
+
+    // Set up boss if level has one
+    if (level.boss) {
+      const diff = level.difficulty ?? {}
+      const hpMult     = (diff.hpMult?.base ?? 1)     + (diff.hpMult?.perPlayer ?? 0)     * (playerCount - 1)
+      const damageMult = (diff.damageMult?.base ?? 1) + (diff.damageMult?.perPlayer ?? 0) * (playerCount - 1)
+      this.boss = new ServerBoss(level.boss, { hpMult, damageMult })
+    }
+
+    // Init objective progress
+    this._levelStartTime = Date.now()
+    this._initObjectiveProgress()
+
+    console.log(`[~] Level ${index + 1}/${CAMPAIGN.length}: ${level.name}`)
+
+    // Determine scene type for the renderer
+    const scene = level.boss ? 'bossFight' : 'battle'
+    this._changeScene(scene, {
+      levelIndex:  index,
+      totalLevels: CAMPAIGN.length,
+      levelName:   level.name,
+      objectives:  this.objectiveProgress,
+    })
+  }
+
+  _initObjectiveProgress() {
+    this.objectiveProgress = (this.currentLevel?.objectives ?? []).map(obj => {
+      switch (obj.type) {
+        case 'killCount':
+          return { ...obj, current: 0 }
+        case 'survive':
+          return { ...obj, current: 0 }
+        case 'killBoss':
+          return { ...obj, current: 0, target: 1 }
+        default:
+          return { ...obj, current: 0 }
+      }
+    })
+  }
+
+  _clearCombatState() {
     this.projectiles.clear()
     this.enemies.clear()
     this.boss          = null
     this.killCount     = 0
-    this.stats         = { damage: {}, deaths: {}, kills: 0, startTime: 0 }
+    this._killsByType  = {}
     this.reviveTimers.clear()
     this.minions.clear()
     this._lastSpawn    = 0
+    this.spawnSystem   = null
     this.skillSystem.activeZones    = []
     this.skillSystem._pendingBursts = []
-
-    this._changeScene('lobby')
   }
 
   _onDisconnect(socket) {
@@ -196,10 +294,10 @@ export default class GameServer {
 
   // ── Scene management ───────────────────────────────────────────────────────
 
-  _changeScene(name) {
+  _changeScene(name, extra = {}) {
     this.scene = name
     console.log(`[~] scene → ${name}`)
-    this.io.emit(EVENTS.SCENE_CHANGE, { scene: name })
+    this.io.emit(EVENTS.SCENE_CHANGE, { scene: name, ...extra })
 
     // Clean up on return to lobby
     if (name === 'lobby') {
@@ -208,6 +306,9 @@ export default class GameServer {
       this.boss = null
       this.reviveTimers.clear()
       this.minions.clear()
+      this.currentLevelIndex = -1
+      this.currentLevel      = null
+      this.spawnSystem       = null
       this._spawnTrainingDummy()
     }
   }
@@ -216,29 +317,11 @@ export default class GameServer {
     const W = GAME_CONFIG.CANVAS_WIDTH
     const H = GAME_CONFIG.CANVAS_HEIGHT
 
-    // Idle dummy — stationary center-top, takes damage but never dies
     this.enemies.set('training-dummy', new TrainingDummy({ id: 'training-dummy' }))
-
-    // Ranged dummy — stationary left, fires slow projectiles at nearest player
-    this.enemies.set('ranged-dummy', new RangedDummy({
-      id: 'ranged-dummy',
-      x:  W * 0.2,
-      y:  H * 0.5,
-    }))
-
-    // Melee dummy — stationary right, attacks if player walks into melee range
-    this.enemies.set('melee-dummy', new MeleeDummy({
-      id: 'melee-dummy',
-      x:  W * 0.8,
-      y:  H * 0.5,
-    }))
-
-    // Moving dummy — patrols center so players can practice on a moving target
+    this.enemies.set('ranged-dummy', new RangedDummy({ id: 'ranged-dummy', x: W * 0.2, y: H * 0.5 }))
+    this.enemies.set('melee-dummy', new MeleeDummy({ id: 'melee-dummy', x: W * 0.8, y: H * 0.5 }))
     this.enemies.set('moving-dummy', new MovingDummy({
-      id:     'moving-dummy',
-      pointA: { x: W * 0.5, y: H * 0.55 },
-      pointB: { x: W * 0.5, y: H * 0.80 },
-      speed:  1.5,
+      id: 'moving-dummy', pointA: { x: W * 0.5, y: H * 0.55 }, pointB: { x: W * 0.5, y: H * 0.80 }, speed: 1.5,
     }))
   }
 
@@ -289,30 +372,36 @@ export default class GameServer {
     // 2. Update players
     this.players.forEach(p => p.update(dt))
 
-    // 3. Update enemies + boss + skill ticks
-    // Lobby: run skill ticks so projectiles can hit training dummies
+    // 3. Scene-specific logic
     if (this.scene === 'lobby') {
       const gs = this._gs()
       this.skillSystem.tick(gs, dt)
       this.enemies.forEach(dummy => dummy.update(dt, gs))
     }
 
-    if (this.scene === 'trashMob' || this.scene === 'bossFight') {
+    if (this.scene === 'battle' || this.scene === 'bossFight') {
       const gs = this._gs()
       this.skillSystem.tick(gs, dt)
 
-      if (this.scene === 'trashMob') {
-        this._updateEnemies(dt, now)
-        this._spawnEnemies(now)
-        this._checkRevive(now)
-        this._checkTrashMobWin()
-        this._checkAllDead()
-      } else if (this.scene === 'bossFight') {
-        this._updateBoss(dt, now)
-        this._checkRevive(now)
-        this._checkBossWin()
-        this._checkAllDead()
+      // Spawn enemies from SpawnSystem
+      if (this.spawnSystem) {
+        const spawned = this.spawnSystem.tick(now, this.enemies, this._enemyIdSeq)
+        for (const e of spawned) {
+          this.enemies.set(e.id, e)
+        }
       }
+
+      // Update enemies (AI + contact damage)
+      this._updateEnemies(dt, now)
+
+      // Update boss
+      if (this.boss) {
+        this._updateBoss(dt, now)
+      }
+
+      this._checkRevive(now)
+      this._updateObjectives(now)
+      this._checkAllDead()
     }
 
     // 4. Broadcast delta state
@@ -337,7 +426,6 @@ export default class GameServer {
         e => e.params?.invisible && e.params?.breaksOnAttack
       )
       if (stealthIdx !== -1 && player.activeEffects[stealthIdx].source !== `skill:${index}`) {
-        // Preserve shadow strike bonus so the first damaging hit still gets the multiplier
         const shadowMult = player.activeEffects[stealthIdx].params?.shadowStrikeMultiplier
         if (shadowMult) player.shadowStrikeMult = shadowMult
         player.activeEffects.splice(stealthIdx, 1)
@@ -354,7 +442,6 @@ export default class GameServer {
       } else if (action === 'END') {
         const gs = this._gs()
         this.skillSystem.execute(gs, player, config, index, vector ?? { x: 1, y: 0 }, action)
-        // Start cooldown on release
         const effectiveCooldown = Math.round(config.cooldown / (player.fireRateMult ?? 1))
         this.cooldowns.start(player.id, index, effectiveCooldown)
         this.io.emit(EVENTS.COOLDOWN, { playerId: player.id, skillIndex: index, durationMs: effectiveCooldown })
@@ -365,7 +452,6 @@ export default class GameServer {
     // Cast-on-hold: controller-driven cast bar for CAST/TARGETED + DIRECTIONAL skills with castTime
     if ((config.type === 'CAST' || (config.type === 'TARGETED' && config.castTime != null)) && config.inputType === 'DIRECTIONAL') {
       if (action === 'CAST_START') {
-        // Visual-only cast bar — no cooldown, no execution yet
         if (player.activeCast != null) return
         player.activeCast = {
           config,
@@ -379,7 +465,6 @@ export default class GameServer {
         player.activeCast = null
         return
       }
-      // No action = cast completed on controller — clear visual cast, proceed to fire
       player.activeCast = null
     }
 
@@ -445,49 +530,38 @@ export default class GameServer {
 
   // ── Enemy management ────────────────────────────────────────────────────────
 
-  _spawnEnemies(now) {
-    const SPAWN_INTERVAL = 2000
-    if (now - this._lastSpawn < SPAWN_INTERVAL) return
-
-    // Don't overspawn
-    const total = this.enemies.size + this.killCount
-    if (total >= GAME_CONFIG.ENEMY_KILL_GOAL + 10) return
-
-    this._lastSpawn = now
-
-    const count = Math.floor(Math.random() * 3) + 1   // 1-3
-
-    for (let i = 0; i < count; i++) {
-      const { x, y } = this._randomEdgePos(30)
-      const id = ++this._enemyIdSeq
-      this.enemies.set(id, new ServerEnemy({ id, x, y }))
-    }
-  }
-
-  _randomEdgePos(margin) {
-    const W = GAME_CONFIG.CANVAS_WIDTH
-    const H = GAME_CONFIG.CANVAS_HEIGHT
-    const edge = Math.floor(Math.random() * 4)
-
-    switch (edge) {
-      case 0: return { x: margin + Math.random() * (W - 2 * margin), y: margin }                  // top
-      case 1: return { x: margin + Math.random() * (W - 2 * margin), y: H - margin }              // bottom
-      case 2: return { x: margin,     y: margin + Math.random() * (H - 2 * margin) }              // left
-      default: return { x: W - margin, y: margin + Math.random() * (H - 2 * margin) }             // right
-    }
-  }
-
   _updateEnemies(dt, now) {
+    const ctx = { enemies: this.enemies, now, projectiles: this.projectiles, enemyIdSeq: this._enemyIdSeq }
+
     this.enemies.forEach((e, id) => {
       if (e.isDead) {
         this.enemies.delete(id)
         this.killCount++
-        // Sync kills to stats
+        this._killsByType[e.type] = (this._killsByType[e.type] ?? 0) + 1
         this.stats.kills = this.killCount
         return
       }
 
-      e.update(dt, this.players)
+      const action = e.update(dt, this.players, ctx)
+
+      // Handle enemy actions (ranged shots, healer pulses)
+      if (action?.action === 'shoot') {
+        const projId = `ep_${++this._enemyIdSeq.value}`
+        this.projectiles.set(projId, {
+          id: projId,
+          x: action.x, y: action.y,
+          vx: action.vx, vy: action.vy,
+          radius: 5,
+          range: 500,
+          distTraveled: 0,
+          damage: action.damage,
+          color: action.color,
+          isAlive: true,
+          isEnemyProj: true,
+          ownerId: id,
+          hit: new Set([id]),
+        })
+      }
 
       // Contact damage to players (rate-limited: once per 500ms per enemy)
       if (now - e._lastContactDamage > 500) {
@@ -496,9 +570,9 @@ export default class GameServer {
           const dist = Math.hypot(p.x - e.x, p.y - e.y)
           const combined = (GAME_CONFIG.PLAYER_RADIUS + e.radius)
           if (dist <= combined) {
-            if (p.isShieldBlocking(e.x, e.y)) return  // shield blocks
+            if (p.isShieldBlocking(e.x, e.y)) return
             e._lastContactDamage = now
-            p.takeDamage(15)
+            p.takeDamage(e.contactDamage)
             if (!this.stats.deaths) this.stats.deaths = {}
             if (p.isDead) {
               this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
@@ -576,7 +650,6 @@ export default class GameServer {
     })
 
     deadPlayers.forEach(dead => {
-      // Find closest alive player within REVIVE_DISTANCE
       let reviver = null
       for (const alive of alivePlayers) {
         const d = Math.hypot(alive.x - dead.x, alive.y - dead.y)
@@ -603,43 +676,76 @@ export default class GameServer {
     })
   }
 
-  // ── Win / lose conditions ───────────────────────────────────────────────────
+  // ── Objective evaluation ───────────────────────────────────────────────────
 
-  _checkTrashMobWin() {
-    if (this.killCount >= GAME_CONFIG.ENEMY_KILL_GOAL) {
-      console.log('[~] TrashMob complete — spawning boss')
+  _updateObjectives(now) {
+    if (!this.currentLevel) return
 
-      // Reset all non-host players to full HP and scatter them
-      this.players.forEach(p => {
-        if (p.isHost) return
-        p.hp          = p.maxHp
-        p.isDead      = false
-        p.activeCast  = null
-        p.shieldActive = false
-        p.activeEffects = []
-        p.rebuildStats()
-        p.x = GAME_CONFIG.CANVAS_WIDTH  / 2 + (Math.random() - 0.5) * 400
-        p.y = GAME_CONFIG.CANVAS_HEIGHT / 2 + (Math.random() - 0.5) * 250
-      })
+    let allComplete = true
 
-      this.enemies.clear()
-      this.projectiles.clear()
-      this.reviveTimers.clear()
-      this.minions.clear()
-      this.skillSystem.activeZones    = []
-      this.skillSystem._pendingBursts = []
-      this.boss = new ServerBoss()
+    for (let i = 0; i < this.objectiveProgress.length; i++) {
+      const obj = this.objectiveProgress[i]
 
-      this._changeScene('bossFight')
+      switch (obj.type) {
+        case 'killCount': {
+          if (obj.enemyTypes?.length) {
+            let count = 0
+            for (const t of obj.enemyTypes) count += (this._killsByType[t] ?? 0)
+            obj.current = count
+          } else {
+            obj.current = this.killCount
+          }
+          if (obj.current < obj.target) allComplete = false
+          break
+        }
+        case 'survive': {
+          obj.current = now - this._levelStartTime
+          obj.target  = obj.durationMs
+          if (obj.current < obj.durationMs) allComplete = false
+          break
+        }
+        case 'killBoss': {
+          obj.current = this.boss?.isDead ? 1 : 0
+          obj.target  = 1
+          if (!this.boss?.isDead) allComplete = false
+          break
+        }
+        default:
+          allComplete = false
+      }
+    }
+
+    // Broadcast objective progress periodically (every 5 ticks ≈ 250ms)
+    if (this.tick % 5 === 0) {
+      this.io.emit(EVENTS.OBJECTIVE_UPDATE, { objectives: this.objectiveProgress })
+    }
+
+    if (allComplete) {
+      this._onLevelComplete()
     }
   }
 
-  _checkBossWin() {
-    if (this.boss?.isDead) {
-      console.log('[~] Boss defeated — victory!')
+  _onLevelComplete() {
+    const levelIndex = this.currentLevelIndex
+    const isLastLevel = levelIndex >= CAMPAIGN.length - 1
+
+    console.log(`[~] Level ${levelIndex + 1} complete! ${isLastLevel ? '(final)' : ''}`)
+
+    if (isLastLevel) {
+      // Campaign complete — final victory!
       this._changeScene('result')
+    } else {
+      // Show level-complete screen and wait for host to advance
+      this._changeScene('levelComplete', {
+        levelIndex,
+        levelName: this.currentLevel?.name ?? '',
+        totalLevels: CAMPAIGN.length,
+        stats: { ...this.stats },
+      })
     }
   }
+
+  // ── Win / lose conditions ───────────────────────────────────────────────────
 
   _checkAllDead() {
     let livingCount = 0
@@ -648,6 +754,8 @@ export default class GameServer {
     })
     if (livingCount === 0 && this.players.size > 0) {
       console.log('[~] All players dead — game over')
+      this.currentLevelIndex = -1
+      this.currentLevel      = null
       this._changeScene('gameover')
     }
   }
@@ -660,10 +768,14 @@ export default class GameServer {
     this.players.forEach((p, id) => { players[id] = p.toDTO() })
     return {
       players,
-      scene:     this.scene,
-      tick:      this.tick,
-      killCount: this.killCount,
-      boss:      this.boss ? this.boss.toDTO() : null,
+      scene:      this.scene,
+      tick:       this.tick,
+      killCount:  this.killCount,
+      boss:       this.boss ? this.boss.toDTO() : null,
+      levelIndex:  this.currentLevelIndex,
+      totalLevels: CAMPAIGN.length,
+      levelName:   this.currentLevel?.name ?? null,
+      objectives:  this.objectiveProgress,
     }
   }
 

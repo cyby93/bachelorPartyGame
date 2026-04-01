@@ -3,6 +3,7 @@
   import { io } from 'socket.io-client'
   import { EVENTS } from '../../shared/protocol.js'
   import JoinScreen   from './screens/JoinScreen.svelte'
+  import LobbyScreen  from './screens/LobbyScreen.svelte'
   import GameScreen   from './screens/GameScreen.svelte'
 
   // ── Screens: 'join' | 'lobby' | 'game' | 'levelComplete' | 'end'
@@ -144,7 +145,13 @@
   {#if screen === 'join'}
     <JoinScreen onjoin={handleJoin} />
 
-  {:else if screen === 'lobby' || screen === 'game'}
+  {:else if screen === 'lobby'}
+    <LobbyScreen
+      {playerName}
+      {className}
+    />
+
+  {:else if screen === 'game'}
     <GameScreen
       {playerName}
       {className}

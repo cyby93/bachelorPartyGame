@@ -207,6 +207,7 @@ Use this to pick the right combination for a new skill idea.
 |------|---------|-----------------|-------|
 | `PROJECTILE` | *(none)* | Single projectile, travels until range or hit | Standard ranged attack |
 | `PROJECTILE` | `MULTI` | Fan of `projectileCount` projectiles | Needs `projectileCount` + `spreadAngle` |
+| `PROJECTILE` | `BURST` | Fires several projectiles in sequence from one activation | Optional `burstCount` + `burstInterval`, defaults used if omitted |
 | `PROJECTILE` | `TARGETED` | Projectile that heals allies instead of damaging enemies | Needs `healAmount` + `effectType: 'HEAL'` |
 | `PROJECTILE` | `GRIP` | Pulls first enemy hit toward caster | Needs `effectType: 'GRIP'` |
 | `MELEE` | *(none)* | Instant cone hit | No movement |
@@ -225,6 +226,7 @@ Use this to pick the right combination for a new skill idea.
 | `CHANNEL` | `UNTARGETED` | Repeatedly fire AOE payload around caster; movement interrupts | Tranquility pattern |
 | `TARGETED` | `HEAL_ALLY` | Ray-cast finds first ally in aim direction, heals instantly | Chain Heal pattern — no cooldown if no target |
 | `TARGETED` | `DAMAGE_ENEMY` | Ray-cast finds first enemy in aim direction, damages instantly | No cooldown if no target |
+| `TARGETED` | `TELEPORT_BEHIND` | Warps behind the first enemy in aim direction, then deals damage | Good for gap-closing assassinations |
 | `SPAWN` | `TOTEM` | Stationary minion that fires at nearby enemies | Searing Totem pattern |
 | `SPAWN` | `TRAP` | Stationary trigger object; fires when enemy enters radius | Explosive Trap pattern |
 | `SPAWN` | `PET` | Mobile minion that chases and attacks enemies | Call of the Wild pattern |
@@ -376,6 +378,11 @@ Follow this checklist in order:
 - For CHANNEL, the cooldown is short (500ms) because the cast time IS the limitation. If the player moves, cooldown is applied immediately.
 - For TARGETED and CHANNEL/BEAM, the cooldown is **only applied if a target is found**. Failed casts are free retries.
 - For SPAWN, the cooldown starts immediately regardless of what the minion does after spawning.
+
+### Drift watch notes
+- `AIMED` is a valid `inputType`. It behaves like `DIRECTIONAL` aiming, but fires exactly once on release and does not enter the controller auto-fire loop.
+- `PROJECTILE/BURST` is supported by runtime code even when `burstCount` and `burstInterval` are omitted. The server falls back to default burst values.
+- `TARGETED/TELEPORT_BEHIND` is supported by runtime code and should stay documented anywhere subtype support is listed.
 
 ### Controller feel
 - DIRECTIONAL feels best for aimed projectiles and dashes.

@@ -24,7 +24,7 @@ export const EVENTS = {
   SCENE_CHANGE:  'scene:change',    // { scene, levelIndex?, totalLevels?, levelName?, objectives? }
   LEVEL_COMPLETE:    'level:complete',    // { levelIndex, levelName, stats }
   OBJECTIVE_UPDATE:  'objective:update',  // { objectives: [{ type, current, target }] }
-  COOLDOWN:            'skill:cooldown',       // { playerId, skillIndex, expiresAt }
+  COOLDOWN:            'skill:cooldown',       // { playerId, skillIndex, durationMs }
   SKILL_FIRED:         'skill:fired',          // { playerId, skillName, type, subtype, x, y, angle, radius, range, color }
   EFFECT_DAMAGE:       'effect:damage',        // { targetId, amount, type: 'damage'|'heal', sourceSkill }
   CHANNEL_INTERRUPTED: 'channel:interrupted',  // { playerId }

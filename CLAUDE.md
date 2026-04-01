@@ -7,6 +7,8 @@ Use `AGENTS.md` as the canonical shared repo guide. Update shared instructions t
 ## Primary References
 
 - Shared repo instructions: `AGENTS.md`
+- Protocol and state contracts: `docs/PROTOCOL.md`
+- Campaign and objective flow: `docs/CAMPAIGN.md`
 - Skill system reference: `docs/SKILLS.md`
 - Host renderer reference: `docs/RENDERERS.md`
 

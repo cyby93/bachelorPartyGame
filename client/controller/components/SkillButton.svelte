@@ -1,10 +1,11 @@
 <script>
   /**
-   * SkillButton — handles all 4 inputType interaction modes.
+   * SkillButton — handles all 5 inputType interaction modes.
    *
    * inputType:
    *   INSTANT     — tap to fire (no direction needed)
    *   DIRECTIONAL — nipplejs drag to aim, release fires with normalised direction vector
+   *   AIMED       — same aiming interaction, but fires exactly once on release
    *   TARGETED    — same interaction as DIRECTIONAL (drag → release)
    *   SUSTAINED   — touchstart emits action:'START', touchend emits action:'END'
    */
@@ -227,7 +228,8 @@
   })
 </script>
 
-<div
+<button
+  type="button"
   class="skill-btn"
   class:held
   class:fired
@@ -242,11 +244,13 @@
     <span class="skill-name">{skill.name}</span>
     <CooldownOverlay {expiresAt} />
   {/if}
-</div>
+</button>
 
 <style>
   .skill-btn {
     background: #16202a;
+    border: 0;
+    padding: 0;
     display: flex;
     flex-direction: column;
     align-items: center;

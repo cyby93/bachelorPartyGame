@@ -10,9 +10,9 @@
 import SkillDatabase from './SkillDatabase.js'
 
 const VALID_TYPES     = ['PROJECTILE', 'MELEE', 'AOE', 'DASH', 'BUFF', 'SHIELD', 'CAST', 'CHANNEL', 'TARGETED', 'SPAWN']
-const VALID_SUBTYPES  = ['MULTI', 'TARGETED', 'GRIP', 'AOE_SELF', 'AOE_LOBBED', 'BACKWARDS', 'TELEPORT', 'TOGGLE', 'STEALTH', 'BEAM', 'CHANNELED',
-                         'UNTARGETED', 'HEAL_ALLY', 'DAMAGE_ENEMY', 'TOTEM', 'TRAP', 'PET']
-const VALID_INPUT     = ['INSTANT', 'DIRECTIONAL', 'TARGETED', 'SUSTAINED']
+const VALID_SUBTYPES  = ['MULTI', 'BURST', 'TARGETED', 'GRIP', 'AOE_SELF', 'AOE_LOBBED', 'BACKWARDS', 'TELEPORT', 'TOGGLE', 'STEALTH', 'BEAM', 'CHANNELED',
+                         'UNTARGETED', 'HEAL_ALLY', 'DAMAGE_ENEMY', 'TELEPORT_BEHIND', 'TOTEM', 'TRAP', 'PET']
+const VALID_INPUT     = ['INSTANT', 'DIRECTIONAL', 'AIMED', 'TARGETED', 'SUSTAINED']
 const VALID_EFFECTS   = ['DAMAGE', 'HEAL', 'DUAL', 'BUFF', 'DEBUFF', 'FEAR', 'REVIVE', 'GRIP']
 
 // Fields that are always required
@@ -39,9 +39,20 @@ const SUBTYPE_REQUIRED = {
   BEAM:          ['range', 'tickRate', 'damagePerTick', 'healPerTick'],
   HEAL_ALLY:     ['healAmount'],
   DAMAGE_ENEMY:  ['damage'],
+  TELEPORT_BEHIND: ['damage'],
   TOTEM:         ['totemAbility'],
   TRAP:          ['triggerRadius', 'trapEffect'],
   PET:           ['petStats'],
+}
+
+const SUBTYPE_COMPATIBILITY = {
+  PROJECTILE: ['MULTI', 'BURST', 'TARGETED', 'GRIP'],
+  AOE: ['AOE_SELF', 'AOE_LOBBED'],
+  DASH: ['BACKWARDS', 'TELEPORT'],
+  BUFF: ['TOGGLE', 'STEALTH', 'TARGETED'],
+  CHANNEL: ['BEAM', 'UNTARGETED'],
+  TARGETED: ['HEAL_ALLY', 'DAMAGE_ENEMY', 'TELEPORT_BEHIND'],
+  SPAWN: ['TOTEM', 'TRAP', 'PET'],
 }
 
 let warnings = 0
@@ -76,9 +87,18 @@ function validateSkill(cls, skill, index) {
     error(cls, label, `unknown subtype '${skill.subtype}' — valid: ${VALID_SUBTYPES.join(', ')}`)
   }
 
+  const allowedSubtypes = SUBTYPE_COMPATIBILITY[skill.type]
+  if (skill.subtype !== undefined && allowedSubtypes && !allowedSubtypes.includes(skill.subtype)) {
+    warn(cls, label, `subtype '${skill.subtype}' is unusual for type ${skill.type} — check docs and runtime alignment`)
+  }
+
   // Valid inputType
   if (!VALID_INPUT.includes(skill.inputType)) {
     error(cls, label, `unknown inputType '${skill.inputType}' — valid: ${VALID_INPUT.join(', ')}`)
+  }
+
+  if (skill.inputType === 'AIMED' && skill.type !== 'PROJECTILE' && skill.type !== 'MELEE') {
+    warn(cls, label, `AIMED is currently intended for single-fire aim interactions; confirm controller semantics are documented for ${skill.type}`)
   }
 
   // Per-type required fields (with exceptions for known valid variations)
@@ -134,6 +154,18 @@ function validateSkill(cls, skill, index) {
     if (!VALID_TYPES.includes(skill.payload.type)) {
       error(cls, label, `payload.type '${skill.payload.type}' is not a valid skill type`)
     }
+  }
+
+  if (skill.type === 'CAST' && skill.inputType === 'DIRECTIONAL' && skill.castBar !== true) {
+    warn(cls, label, `DIRECTIONAL CAST skills should set castBar: true so controller and host cast UI stay aligned`)
+  }
+
+  if (skill.type === 'TARGETED' && skill.castBar === true && skill.castTime == null) {
+    warn(cls, label, `TARGETED skills with castBar should define castTime`)
+  }
+
+  if (skill.type === 'CHANNEL' && skill.subtype === 'UNTARGETED' && !skill.payload) {
+    warn(cls, label, `CHANNEL/UNTARGETED usually requires a payload to define each tick's effect`)
   }
 
   // Cooldown sanity

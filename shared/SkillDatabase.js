@@ -7,9 +7,10 @@
  *   type        – server-side effect handler: PROJECTILE | MELEE | AOE | DASH | BUFF | SHIELD | CAST | CHANNEL | TARGETED | SPAWN
  *   subtype     – optional modifier for the handler (AOE_SELF, AOE_LOBBED, MULTI, BACKWARDS, TELEPORT, TOGGLE, TARGETED, CHANNELED,
  *                   BEAM, UNTARGETED, HEAL_ALLY, DAMAGE_ENEMY, TOTEM, TRAP, PET)
- *   inputType   – controller interaction: INSTANT | DIRECTIONAL | TARGETED | SUSTAINED
+ *   inputType   – controller interaction: INSTANT | DIRECTIONAL | AIMED | TARGETED | SUSTAINED
  *                   INSTANT    = single tap, no direction needed
  *                   DIRECTIONAL= drag to aim direction, release to fire
+ *                   AIMED      = drag to aim, then fire exactly once on release
  *                   TARGETED   = drag to aim a landing spot on the arena
  *                   SUSTAINED  = hold to maintain (e.g. shield direction)
  *   cooldown    – ms
@@ -255,6 +256,7 @@ const SkillDatabase = {
       speed:        500,
       radius:       10,
       range:        450,
+      pierce:       false,
       canHitAllies: true,
       icon:         '✝️'
     },

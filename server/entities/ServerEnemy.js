@@ -85,11 +85,16 @@ export default class ServerEnemy {
 
     const dx   = nearest.x - this.x
     const dy   = nearest.y - this.y
-    const dist = Math.hypot(dx, dy)
-    if (dist < 2) return
+    const dist    = Math.hypot(dx, dy)
+    const stopDist = GAME_CONFIG.PLAYER_RADIUS + this.radius
 
-    this.x += (dx / dist) * pps * dt
-    this.y += (dy / dist) * pps * dt
+    // Stop at the contact boundary so isShieldBlocking gets a valid angle vector
+    if (dist <= stopDist) return
+
+    // Move toward player but don't overshoot the contact boundary
+    const step = Math.min(pps * dt, dist - stopDist)
+    this.x += (dx / dist) * step
+    this.y += (dy / dist) * step
     this._clampToArena()
   }
 

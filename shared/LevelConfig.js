@@ -4,7 +4,7 @@
  *
  * The server walks through CAMPAIGN[0..N] sequentially.
  * Each level defines its objectives, enemy spawning rules, optional boss,
- * and difficulty scaling that adjusts with player count.
+ * arena size, and difficulty scaling that adjusts with player count.
  *
  * ── Objective schema ──────────────────────────────────────────────────────
  *  { type: 'killCount',  target: 50 }                    — kill any 50 enemies
@@ -22,6 +22,7 @@ export const CAMPAIGN = [
   {
     id: 'level_1',
     name: 'The Courtyard',
+    arena: { width: 1024, height: 768 },
     objectives: [
       { type: 'killCount', target: 30 },
     ],
@@ -45,6 +46,7 @@ export const CAMPAIGN = [
   {
     id: 'level_2',
     name: 'The Barracks',
+    arena: { width: 1180, height: 820 },
     objectives: [
       { type: 'killCount', target: 40 },
     ],
@@ -70,6 +72,7 @@ export const CAMPAIGN = [
   {
     id: 'level_3',
     name: "Illidan's Sanctum",
+    arena: { width: 1440, height: 900 },
     objectives: [
       { type: 'killBoss' },
     ],

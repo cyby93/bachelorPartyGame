@@ -7,9 +7,6 @@
  */
 
 import { Container, Graphics, Text } from 'pixi.js'
-import { GAME_CONFIG } from '../../../shared/GameConfig.js'
-
-const { CANVAS_WIDTH: W, CANVAS_HEIGHT: H } = GAME_CONFIG
 
 export default class LevelCompleteRenderer {
   /**
@@ -44,9 +41,14 @@ export default class LevelCompleteRenderer {
 
   update() {}
 
+  resize() {
+    this._buildScreen()
+  }
+
   // ── Screen builder ────────────────────────────────────────────────────────
 
   _buildScreen() {
+    const { width: W, height: H } = this.game.getScreenSize()
     this._uiRoot.removeChildren()
 
     // Darkened overlay

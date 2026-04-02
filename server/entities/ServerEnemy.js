@@ -25,6 +25,8 @@ export default class ServerEnemy {
     this.contactDamage = contactDamage ?? base.contactDamage
     this.isDead        = false
     this.isPlayer      = false
+    this.arenaWidth    = GAME_CONFIG.CANVAS_WIDTH
+    this.arenaHeight   = GAME_CONFIG.CANVAS_HEIGHT
 
     // Status effects (same as before)
     this.activeEffects = []
@@ -339,8 +341,13 @@ export default class ServerEnemy {
   }
 
   _clampToArena() {
-    this.x = Math.max(this.radius, Math.min(GAME_CONFIG.CANVAS_WIDTH  - this.radius, this.x))
-    this.y = Math.max(this.radius, Math.min(GAME_CONFIG.CANVAS_HEIGHT - this.radius, this.y))
+    this.x = Math.max(this.radius, Math.min(this.arenaWidth  - this.radius, this.x))
+    this.y = Math.max(this.radius, Math.min(this.arenaHeight - this.radius, this.y))
+  }
+
+  setArenaSize(width, height) {
+    this.arenaWidth = width
+    this.arenaHeight = height
   }
 
   toDTO() {

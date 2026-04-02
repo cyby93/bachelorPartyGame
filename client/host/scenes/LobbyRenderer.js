@@ -6,8 +6,7 @@
  * The DOM sidebar handles player list + QR code + start button.
  */
 
-import { Text }        from 'pixi.js'
-import { GAME_CONFIG } from '../../../shared/GameConfig.js'
+import { Text } from 'pixi.js'
 import BaseRenderer    from './BaseRenderer.js'
 
 export default class LobbyRenderer extends BaseRenderer {
@@ -21,7 +20,7 @@ export default class LobbyRenderer extends BaseRenderer {
 
   _onPlayerSync(p, sprite, pos, dt) {
     if (this.vfx && p.effects) {
-      this.vfx.auras.sync(p.id, sprite.container, p.effects, GAME_CONFIG.PLAYER_RADIUS)
+      this.vfx.auras.sync(p.id, sprite.container, p.effects, this.game.getPlayerRadius())
     }
   }
 
@@ -44,7 +43,7 @@ export default class LobbyRenderer extends BaseRenderer {
   // ── UI builder ─────────────────────────────────────────────────────────────
 
   _buildUI() {
-    const { CANVAS_WIDTH: W, CANVAS_HEIGHT: H } = GAME_CONFIG
+    const { width: W, height: H } = this.game.getScreenSize()
 
     const title = new Text({
       text:  'LOBBY  —  Practice your skills!',

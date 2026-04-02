@@ -58,10 +58,12 @@ function normalize(v) {
   return { x: v.x / len, y: v.y / len }
 }
 
-function clampPos(x, y, r) {
+function clampPos(gs, x, y, r) {
+  const arenaWidth = gs?.arenaWidth ?? GAME_CONFIG.CANVAS_WIDTH
+  const arenaHeight = gs?.arenaHeight ?? GAME_CONFIG.CANVAS_HEIGHT
   return {
-    x: Math.max(r, Math.min(GAME_CONFIG.CANVAS_WIDTH  - r, x)),
-    y: Math.max(r, Math.min(GAME_CONFIG.CANVAS_HEIGHT - r, y)),
+    x: Math.max(r, Math.min(arenaWidth  - r, x)),
+    y: Math.max(r, Math.min(arenaHeight - r, y)),
   }
 }
 
@@ -227,7 +229,7 @@ export default class SkillSystem {
       // Spawn a lobbed projectile that detonates at target
       const targetX = player.x + v.x * (config.range ?? 300)
       const targetY = player.y + v.y * (config.range ?? 300)
-      const clamp = clampPos(targetX, targetY, 0)
+      const clamp = clampPos(gs, targetX, targetY, 0)
 
       const id = ++this._projSeq
       const color = CLASSES[player.className]?.color ?? '#ffff00'
@@ -265,6 +267,7 @@ export default class SkillSystem {
 
     if (config.subtype === 'TELEPORT') {
       const newPos = clampPos(
+        gs,
         player.x + v.x * dist,
         player.y + v.y * dist,
         r
@@ -273,6 +276,7 @@ export default class SkillSystem {
       player.y = newPos.y
     } else if (config.subtype === 'BACKWARDS') {
       const newPos = clampPos(
+        gs,
         player.x - v.x * dist,
         player.y - v.y * dist,
         r
@@ -282,6 +286,7 @@ export default class SkillSystem {
     } else {
       // Default: forward charge — stun enemies in path
       const newPos = clampPos(
+        gs,
         player.x + v.x * dist,
         player.y + v.y * dist,
         r
@@ -571,8 +576,9 @@ export default class SkillSystem {
       const nx = dx / dist
       const ny = dy / dist
       const behindDist = (target.radius ?? 15) + (GAME_CONFIG.PLAYER_RADIUS ?? 12) + 5
-      player.x = Math.max(GAME_CONFIG.PLAYER_RADIUS ?? 12, Math.min(GAME_CONFIG.CANVAS_WIDTH  - (GAME_CONFIG.PLAYER_RADIUS ?? 12), target.x + nx * behindDist))
-      player.y = Math.max(GAME_CONFIG.PLAYER_RADIUS ?? 12, Math.min(GAME_CONFIG.CANVAS_HEIGHT - (GAME_CONFIG.PLAYER_RADIUS ?? 12), target.y + ny * behindDist))
+      const behindPos = clampPos(gs, target.x + nx * behindDist, target.y + ny * behindDist, GAME_CONFIG.PLAYER_RADIUS ?? 12)
+      player.x = behindPos.x
+      player.y = behindPos.y
 
       // Damage scales with combo points then resets them
       const comboBonus = (config.comboDamage ?? 0) * (player.comboPoints ?? 0)
@@ -832,8 +838,8 @@ export default class SkillSystem {
 
       // Out of bounds
       if (
-        proj.x < 0 || proj.x > GAME_CONFIG.CANVAS_WIDTH ||
-        proj.y < 0 || proj.y > GAME_CONFIG.CANVAS_HEIGHT
+        proj.x < 0 || proj.x > (gs.arenaWidth ?? GAME_CONFIG.CANVAS_WIDTH) ||
+        proj.y < 0 || proj.y > (gs.arenaHeight ?? GAME_CONFIG.CANVAS_HEIGHT)
       ) {
         proj.isAlive = false
         gs.projectiles.delete(id)

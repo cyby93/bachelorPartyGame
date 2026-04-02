@@ -19,6 +19,8 @@ export default class SpawnSystem {
     this.config      = levelConfig.spawning
     this.difficulty  = levelConfig.difficulty ?? {}
     this.playerCount = Math.max(playerCount, 1)
+    this.arenaWidth  = levelConfig.arena?.width ?? GAME_CONFIG.CANVAS_WIDTH
+    this.arenaHeight = levelConfig.arena?.height ?? GAME_CONFIG.CANVAS_HEIGHT
     this._lastSpawn  = 0
 
     // Pre-compute multipliers once per level
@@ -89,6 +91,7 @@ export default class SpawnSystem {
         radius:        base.radius,
         contactDamage: Math.round(base.contactDamage * this._damageMult),
       })
+      enemy.setArenaSize(this.arenaWidth, this.arenaHeight)
 
       spawned.push(enemy)
     }
@@ -97,8 +100,8 @@ export default class SpawnSystem {
   }
 
   _randomEdgePos(margin) {
-    const W = GAME_CONFIG.CANVAS_WIDTH
-    const H = GAME_CONFIG.CANVAS_HEIGHT
+    const W = this.arenaWidth
+    const H = this.arenaHeight
     const edge = Math.floor(Math.random() * 4)
 
     switch (edge) {

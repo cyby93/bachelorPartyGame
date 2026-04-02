@@ -7,10 +7,7 @@
  */
 
 import { Container, Graphics, Text } from 'pixi.js'
-import { GAME_CONFIG } from '../../../shared/GameConfig.js'
 import { CLASSES }     from '../../../shared/ClassConfig.js'
-
-const { CANVAS_WIDTH: W, CANVAS_HEIGHT: H } = GAME_CONFIG
 
 export default class ResultRenderer {
   constructor(game, isVictory) {
@@ -34,9 +31,14 @@ export default class ResultRenderer {
   // No per-frame updates needed — screen is static
   update() {}
 
+  resize() {
+    this._buildScreen()
+  }
+
   // ── Screen builder ────────────────────────────────────────────────────────
 
   _buildScreen() {
+    const { width: W, height: H } = this.game.getScreenSize()
     this._uiRoot.removeChildren()
 
     // Darkened overlay
@@ -71,6 +73,7 @@ export default class ResultRenderer {
   }
 
   _buildStatsPanel() {
+    const { width: W, height: H } = this.game.getScreenSize()
     const PANEL_W = 520
     const PANEL_H = 220
     const panelX  = W / 2 - PANEL_W / 2

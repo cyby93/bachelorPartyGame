@@ -26,9 +26,11 @@ function _nearestPlayer(players, x, y) {
 
 export default class TrainingDummy {
   constructor({ id, x, y, dummyName } = {}) {
+    this.arenaWidth  = GAME_CONFIG.CANVAS_WIDTH
+    this.arenaHeight = GAME_CONFIG.CANVAS_HEIGHT
     this.id        = id ?? 'training-dummy'
-    this.x         = x ?? GAME_CONFIG.CANVAS_WIDTH  / 2
-    this.y         = y ?? GAME_CONFIG.CANVAS_HEIGHT / 4
+    this.x         = x ?? this.arenaWidth / 2
+    this.y         = y ?? this.arenaHeight / 4
     this.hp        = 500
     this.maxHp     = 500
     this.radius    = GAME_CONFIG.ENEMY_RADIUS
@@ -84,6 +86,11 @@ export default class TrainingDummy {
       isDummy:   true,
       dummyName: this.dummyName,
     }
+  }
+
+  setArenaSize(width, height) {
+    this.arenaWidth = width
+    this.arenaHeight = height
   }
 }
 
@@ -244,7 +251,7 @@ export class MovingDummy extends TrainingDummy {
   }
 
   _clamp() {
-    this.x = Math.max(this.radius, Math.min(GAME_CONFIG.CANVAS_WIDTH  - this.radius, this.x))
-    this.y = Math.max(this.radius, Math.min(GAME_CONFIG.CANVAS_HEIGHT - this.radius, this.y))
+    this.x = Math.max(this.radius, Math.min(this.arenaWidth  - this.radius, this.x))
+    this.y = Math.max(this.radius, Math.min(this.arenaHeight - this.radius, this.y))
   }
 }

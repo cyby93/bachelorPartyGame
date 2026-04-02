@@ -22,11 +22,15 @@ function lerp(a, b, t) { return a + (b - a) * t }
 export default class HostGame {
   constructor() {
     this.app            = null
-    this.layers         = {}          // bg | groundFx | entities | fx | ui
+    this.layers         = {}          // bg | groundFx | entities | fx | worldUi | ui
+    this.worldRoot      = null
     this.knownState     = { players: {} }
     this.activeRenderer = null
     this.renderers      = {}
     this.socket         = null        // set via setSocket() from main.js
+    this.containerEl    = null
+    this.currentArena   = { width: GAME_CONFIG.CANVAS_WIDTH, height: GAME_CONFIG.CANVAS_HEIGHT }
+    this._onResize      = null
   }
 
   /** Called from main.js to give renderers access to the socket. */
@@ -37,10 +41,11 @@ export default class HostGame {
   // ── Initialisation ────────────────────────────────────────────────────────
 
   async init(containerEl) {
+    this.containerEl = containerEl
     this.app = new Application()
     await this.app.init({
-      width:       GAME_CONFIG.CANVAS_WIDTH,
-      height:      GAME_CONFIG.CANVAS_HEIGHT,
+      width:       containerEl.clientWidth || GAME_CONFIG.CANVAS_WIDTH,
+      height:      containerEl.clientHeight || GAME_CONFIG.CANVAS_HEIGHT,
       background:  0x0a1018,
       antialias:   true,
       resolution:  Math.min(window.devicePixelRatio ?? 1, 2),
@@ -50,35 +55,18 @@ export default class HostGame {
     containerEl.appendChild(this.app.canvas)
 
     // ── Permanent layer stack (back → front) ──────────────────────────────
-    for (const name of ['bg', 'groundFx', 'entities', 'fx', 'ui']) {
+    this.worldRoot = new Container()
+    this.app.stage.addChild(this.worldRoot)
+
+    for (const name of ['bg', 'groundFx', 'entities', 'fx', 'worldUi']) {
       this.layers[name] = new Container()
-      this.app.stage.addChild(this.layers[name])
+      this.worldRoot.addChild(this.layers[name])
     }
+    this.layers.ui = new Container()
+    this.app.stage.addChild(this.layers.ui)
 
     // ── Dungeon tile background (drawn once) ─────────────────────────────
-    const { CANVAS_WIDTH: W, CANVAS_HEIGHT: H } = GAME_CONFIG
-    const bgGfx = new Graphics()
-    const TILE  = 64
-
-    // Pseudo-random tile shading (seeded for consistency)
-    let seed = 13
-    const rand = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 0xffffffff }
-
-    const cols = Math.ceil(W / TILE)
-    const rows = Math.ceil(H / TILE)
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const v = Math.floor(12 + rand() * 10)
-        bgGfx.rect(c * TILE, r * TILE, TILE - 1, TILE - 1)
-        bgGfx.fill((v << 16) | (v << 8) | v)
-      }
-    }
-    // Tile border lines
-    for (let x = 0; x <= W; x += TILE) bgGfx.moveTo(x, 0).lineTo(x, H)
-    for (let y = 0; y <= H; y += TILE) bgGfx.moveTo(0, y).lineTo(W, y)
-    bgGfx.stroke({ color: 0x000000, alpha: 0.4, width: 1 })
-
-    this.layers.bg.addChild(bgGfx)
+    this._rebuildBackground()
 
     // ── Scene renderers ───────────────────────────────────────────────────
     this.renderers = {
@@ -92,6 +80,11 @@ export default class HostGame {
 
     this.switchScene('lobby')
 
+    this._onResize = () => this.resizeToContainer()
+    window.addEventListener('resize', this._onResize)
+    document.addEventListener('fullscreenchange', this._onResize)
+    this.resizeToContainer()
+
     // ── Tick — pass delta-time (seconds) to renderers ────────────────────
     this.app.ticker.add(ticker => this.activeRenderer?.update(ticker.deltaMS / 1000))
   }
@@ -103,6 +96,7 @@ export default class HostGame {
    * @param {object} [meta] – level metadata from SCENE_CHANGE payload
    */
   switchScene(name, meta) {
+    this.setArenaSize(meta?.arenaWidth, meta?.arenaHeight)
     this.activeRenderer?.exit()
     this.activeRenderer = this.renderers[name] ?? this.renderers.lobby
 
@@ -112,12 +106,14 @@ export default class HostGame {
     }
 
     this.activeRenderer.enter()
+    this.resizeToContainer()
   }
 
   // ── State management ──────────────────────────────────────────────────────
 
   /** Full snapshot received on initial join. */
   receiveFullState(state) {
+    this.setArenaSize(state.arenaWidth, state.arenaHeight)
     const now = performance.now()
     this.knownState.players = {}
     Object.values(state.players ?? {}).forEach(p => {
@@ -199,5 +195,89 @@ export default class HostGame {
       x: lerp(p._prevX ?? p.x, p.x, alpha),
       y: lerp(p._prevY ?? p.y, p.y, alpha),
     }
+  }
+
+  setArenaSize(width, height) {
+    this.currentArena = {
+      width: width ?? GAME_CONFIG.CANVAS_WIDTH,
+      height: height ?? GAME_CONFIG.CANVAS_HEIGHT,
+    }
+    this._rebuildBackground()
+    this.resizeToContainer()
+  }
+
+  resizeToContainer() {
+    if (!this.app || !this.containerEl) return
+
+    const width = Math.max(1, this.containerEl.clientWidth)
+    const height = Math.max(1, this.containerEl.clientHeight)
+    this.app.renderer.resize(width, height)
+
+    const { width: arenaWidth, height: arenaHeight } = this.currentArena
+    const fitScale = Math.min(width / arenaWidth, height / arenaHeight)
+    const worldWidth = arenaWidth * fitScale
+    const worldHeight = arenaHeight * fitScale
+    const offsetX = (width - worldWidth) / 2
+    const offsetY = (height - worldHeight) / 2
+
+    this.worldRoot.scale.set(fitScale)
+    this.worldRoot.position.set(offsetX, offsetY)
+    this.activeRenderer?.resize?.()
+  }
+
+  getScreenSize() {
+    return {
+      width: this.app?.renderer?.width ?? GAME_CONFIG.CANVAS_WIDTH,
+      height: this.app?.renderer?.height ?? GAME_CONFIG.CANVAS_HEIGHT,
+    }
+  }
+
+  getPlayerRadius() {
+    return GAME_CONFIG.PLAYER_RADIUS
+  }
+
+  _rebuildBackground() {
+    if (!this.layers.bg) return
+
+    this.layers.bg.removeChildren().forEach(child => child.destroy())
+
+    const { width: W, height: H } = this.currentArena
+    const bgGfx = new Graphics()
+    const TILE = 64
+
+    // Add a brighter arena plate and stone-like frame so the map edges read clearly.
+    bgGfx.rect(0, 0, W, H)
+    bgGfx.fill(0x16222d)
+
+    bgGfx.rect(10, 10, W - 20, H - 20)
+    bgGfx.stroke({ color: 0x7f93a3, alpha: 0.9, width: 18 })
+
+    bgGfx.rect(10, 10, W - 20, H - 20)
+    bgGfx.stroke({ color: 0x2f4352, alpha: 0.95, width: 6 })
+
+    let seed = 13
+    const rand = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 0xffffffff }
+
+    const cols = Math.ceil(W / TILE)
+    const rows = Math.ceil(H / TILE)
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const v = Math.floor(12 + rand() * 10)
+        bgGfx.rect(c * TILE, r * TILE, TILE - 1, TILE - 1)
+        bgGfx.fill((v << 16) | (v << 8) | v)
+      }
+    }
+
+    for (let x = 0; x <= W; x += TILE) bgGfx.moveTo(x, 0).lineTo(x, H)
+    for (let y = 0; y <= H; y += TILE) bgGfx.moveTo(0, y).lineTo(W, y)
+    bgGfx.stroke({ color: 0x000000, alpha: 0.4, width: 1 })
+
+    bgGfx.rect(16, 16, W - 32, H - 32)
+    bgGfx.stroke({ color: 0xb7c4cf, alpha: 0.9, width: 3 })
+
+    bgGfx.rect(0, 0, W, H)
+    bgGfx.stroke({ color: 0x09121a, alpha: 0.95, width: 10 })
+
+    this.layers.bg.addChild(bgGfx)
   }
 }

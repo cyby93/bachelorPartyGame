@@ -58,6 +58,12 @@ export default class BaseRenderer {
     this._buildUI()
   }
 
+  resize() {
+    this._uiRoot.removeChildren()
+    this._resetUIRefs()
+    this._buildUI()
+  }
+
   exit() {
     this._onBeforeExit()
 

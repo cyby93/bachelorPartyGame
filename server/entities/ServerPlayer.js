@@ -19,8 +19,11 @@ export default class ServerPlayer {
     this.baseSpeed   = classData.speed   // px-units per frame at 60 FPS
     this.speed       = this.baseSpeed    // current (may be modified by effects)
 
-    this.x     = data.x ?? GAME_CONFIG.CANVAS_WIDTH  / 2
-    this.y     = data.y ?? GAME_CONFIG.CANVAS_HEIGHT / 2
+    this.arenaWidth  = data.arenaWidth  ?? GAME_CONFIG.CANVAS_WIDTH
+    this.arenaHeight = data.arenaHeight ?? GAME_CONFIG.CANVAS_HEIGHT
+
+    this.x     = data.x ?? this.arenaWidth / 2
+    this.y     = data.y ?? this.arenaHeight / 2
     this.moveX = 0
     this.moveY = 0
     this.angle = 0
@@ -83,8 +86,8 @@ export default class ServerPlayer {
 
     // Boundary clamp
     const r = GAME_CONFIG.PLAYER_RADIUS
-    this.x = Math.max(r, Math.min(GAME_CONFIG.CANVAS_WIDTH  - r, this.x))
-    this.y = Math.max(r, Math.min(GAME_CONFIG.CANVAS_HEIGHT - r, this.y))
+    this.x = Math.max(r, Math.min(this.arenaWidth  - r, this.x))
+    this.y = Math.max(r, Math.min(this.arenaHeight - r, this.y))
 
     if (this.isAiming && (Date.now() - this.lastAimTime) > 200) {
       this.isAiming = false
@@ -253,5 +256,10 @@ export default class ServerPlayer {
       shieldAngle: +this.shieldAngle.toFixed(3),
       shieldArc:   +this.shieldArc.toFixed(3),
     }
+  }
+
+  setArenaSize(width, height) {
+    this.arenaWidth = width
+    this.arenaHeight = height
   }
 }

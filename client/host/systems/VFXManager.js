@@ -12,14 +12,14 @@ import FloatingTextPool     from './FloatingTextPool.js'
 
 export default class VFXManager {
   /**
-   * @param {object} layers - { bg, groundFx, entities, fx, ui }
+   * @param {object} layers - { bg, groundFx, entities, fx, ui, worldUi }
    */
   constructor(layers) {
     this.particles = new ParticleSystem(layers.fx)
     this.oneShot   = new OneShotEffectSystem(layers.fx)
     this.ground    = new GroundEffectSystem(layers.groundFx)
     this.auras     = new AuraSystem()
-    this.floatingText = new FloatingTextPool(layers.ui)
+    this.floatingText = new FloatingTextPool(layers.worldUi)
   }
 
   update(dt) {

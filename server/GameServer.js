@@ -59,6 +59,8 @@ export default class GameServer {
     this.currentLevel      = null
     this.spawnSystem       = null
     this._levelStartTime   = 0
+    this.arenaWidth        = GAME_CONFIG.CANVAS_WIDTH
+    this.arenaHeight       = GAME_CONFIG.CANVAS_HEIGHT
 
     // Objective progress — synced to clients via OBJECTIVE_UPDATE
     this.objectiveProgress = []
@@ -107,14 +109,17 @@ export default class GameServer {
     const { name, className, isHost } = data ?? {}
 
     const resolvedClass = resolveClassName(className) ?? 'Warrior'
+    const { x, y } = this._randomPointNearCenter(300, 200)
 
     const player = new ServerPlayer({
       id:        socket.id,
       name:      (name || 'Player').slice(0, 20),
       className: resolvedClass,
       isHost:    !!isHost,
-      x: GAME_CONFIG.CANVAS_WIDTH  / 2 + (Math.random() - 0.5) * 300,
-      y: GAME_CONFIG.CANVAS_HEIGHT / 2 + (Math.random() - 0.5) * 200,
+      arenaWidth: this.arenaWidth,
+      arenaHeight: this.arenaHeight,
+      x,
+      y,
     })
 
     this.players.set(socket.id, player)
@@ -156,6 +161,8 @@ export default class GameServer {
   _onRestartGame(socket) {
     if (!this.players.get(socket.id)?.isHost) return
 
+    this._setArenaSize(GAME_CONFIG.CANVAS_WIDTH, GAME_CONFIG.CANVAS_HEIGHT)
+
     // Reset all players to full HP / alive
     this.players.forEach(p => {
       if (!p.isHost) {
@@ -165,8 +172,10 @@ export default class GameServer {
         p.shieldActive = false
         p.activeEffects = []
         p.rebuildStats()
-        p.x = GAME_CONFIG.CANVAS_WIDTH  / 2 + (Math.random() - 0.5) * 300
-        p.y = GAME_CONFIG.CANVAS_HEIGHT / 2 + (Math.random() - 0.5) * 200
+        p.setArenaSize(this.arenaWidth, this.arenaHeight)
+        const { x, y } = this._randomPointNearCenter(300, 200)
+        p.x = x
+        p.y = y
         this.cooldowns.clearPlayer(p.id)
       }
     })
@@ -200,6 +209,7 @@ export default class GameServer {
 
     this.currentLevelIndex = index
     this.currentLevel      = level
+    this._setArenaSize(level.arena?.width ?? GAME_CONFIG.CANVAS_WIDTH, level.arena?.height ?? GAME_CONFIG.CANVAS_HEIGHT)
 
     // Reset combat state between levels
     this._clearCombatState()
@@ -213,8 +223,10 @@ export default class GameServer {
       p.shieldActive = false
       p.activeEffects = []
       p.rebuildStats()
-      p.x = GAME_CONFIG.CANVAS_WIDTH  / 2 + (Math.random() - 0.5) * 400
-      p.y = GAME_CONFIG.CANVAS_HEIGHT / 2 + (Math.random() - 0.5) * 250
+      p.setArenaSize(this.arenaWidth, this.arenaHeight)
+      const { x, y } = this._randomPointNearCenter(400, 250)
+      p.x = x
+      p.y = y
     })
 
     // Compute player count for difficulty scaling
@@ -231,7 +243,7 @@ export default class GameServer {
       const diff = level.difficulty ?? {}
       const hpMult     = (diff.hpMult?.base ?? 1)     + (diff.hpMult?.perPlayer ?? 0)     * (playerCount - 1)
       const damageMult = (diff.damageMult?.base ?? 1) + (diff.damageMult?.perPlayer ?? 0) * (playerCount - 1)
-      this.boss = new ServerBoss(level.boss, { hpMult, damageMult })
+      this.boss = new ServerBoss(level.boss, { hpMult, damageMult, arenaWidth: this.arenaWidth, arenaHeight: this.arenaHeight })
     }
 
     // Init objective progress
@@ -246,6 +258,8 @@ export default class GameServer {
       levelIndex:  index,
       totalLevels: CAMPAIGN.length,
       levelName:   level.name,
+      arenaWidth:  this.arenaWidth,
+      arenaHeight: this.arenaHeight,
       objectives:  this.objectiveProgress,
     })
   }
@@ -294,9 +308,18 @@ export default class GameServer {
   // ── Scene management ───────────────────────────────────────────────────────
 
   _changeScene(name, extra = {}) {
+    if (name === 'lobby') {
+      this._setArenaSize(GAME_CONFIG.CANVAS_WIDTH, GAME_CONFIG.CANVAS_HEIGHT)
+    }
+
     this.scene = name
     console.log(`[~] scene → ${name}`)
-    this.io.emit(EVENTS.SCENE_CHANGE, { scene: name, ...extra })
+    this.io.emit(EVENTS.SCENE_CHANGE, {
+      scene: name,
+      arenaWidth: this.arenaWidth,
+      arenaHeight: this.arenaHeight,
+      ...extra,
+    })
 
     // Clean up on return to lobby
     if (name === 'lobby') {
@@ -313,21 +336,43 @@ export default class GameServer {
   }
 
   _spawnTrainingDummy() {
-    const W = GAME_CONFIG.CANVAS_WIDTH
-    const H = GAME_CONFIG.CANVAS_HEIGHT
+    const W = this.arenaWidth
+    const H = this.arenaHeight
 
-    this.enemies.set('training-dummy', new TrainingDummy({ id: 'training-dummy' }))
-    this.enemies.set('ranged-dummy', new RangedDummy({ id: 'ranged-dummy', x: W * 0.2, y: H * 0.5 }))
-    this.enemies.set('melee-dummy', new MeleeDummy({ id: 'melee-dummy', x: W * 0.8, y: H * 0.5 }))
-    this.enemies.set('moving-dummy', new MovingDummy({
+    const idle = new TrainingDummy({ id: 'training-dummy' })
+    const ranged = new RangedDummy({ id: 'ranged-dummy', x: W * 0.2, y: H * 0.5 })
+    const melee = new MeleeDummy({ id: 'melee-dummy', x: W * 0.8, y: H * 0.5 })
+    const moving = new MovingDummy({
       id: 'moving-dummy', pointA: { x: W * 0.5, y: H * 0.55 }, pointB: { x: W * 0.5, y: H * 0.80 }, speed: 1.5,
-    }))
+    })
+
+    ;[idle, ranged, melee, moving].forEach(dummy => dummy.setArenaSize(this.arenaWidth, this.arenaHeight))
+
+    this.enemies.set('training-dummy', idle)
+    this.enemies.set('ranged-dummy', ranged)
+    this.enemies.set('melee-dummy', melee)
+    this.enemies.set('moving-dummy', moving)
+  }
+
+  _setArenaSize(width, height) {
+    this.arenaWidth = width
+    this.arenaHeight = height
+    this.players.forEach(p => p.setArenaSize(width, height))
+  }
+
+  _randomPointNearCenter(spreadX, spreadY) {
+    return {
+      x: this.arenaWidth / 2 + (Math.random() - 0.5) * spreadX,
+      y: this.arenaHeight / 2 + (Math.random() - 0.5) * spreadY,
+    }
   }
 
   // ── Game state accessor ────────────────────────────────────────────────────
 
   _gs() {
     return {
+      arenaWidth:   this.arenaWidth,
+      arenaHeight:  this.arenaHeight,
       players:      this.players,
       projectiles:  this.projectiles,
       enemies:      this.enemies,
@@ -771,6 +816,8 @@ export default class GameServer {
       tick:       this.tick,
       killCount:  this.killCount,
       boss:       this.boss ? this.boss.toDTO() : null,
+      arenaWidth: this.arenaWidth,
+      arenaHeight: this.arenaHeight,
       levelIndex:  this.currentLevelIndex,
       totalLevels: CAMPAIGN.length,
       levelName:   this.currentLevel?.name ?? null,

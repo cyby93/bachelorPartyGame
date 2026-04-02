@@ -21,7 +21,7 @@ export const EVENTS = {
   STATE_DELTA:   'state:delta',     // incremental tick update (20 Hz)
   PLAYER_JOINED: 'player:joined',   // { player DTO }
   PLAYER_LEFT:   'player:left',     // socketId string
-  SCENE_CHANGE:  'scene:change',    // { scene, levelIndex?, totalLevels?, levelName?, objectives? }
+  SCENE_CHANGE:  'scene:change',    // { scene, arenaWidth?, arenaHeight?, levelIndex?, totalLevels?, levelName?, objectives? }
   LEVEL_COMPLETE:    'level:complete',    // { levelIndex, levelName, stats }
   OBJECTIVE_UPDATE:  'objective:update',  // { objectives: [{ type, current, target }] }
   COOLDOWN:            'skill:cooldown',       // { playerId, skillIndex, durationMs }

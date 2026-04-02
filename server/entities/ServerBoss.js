@@ -21,8 +21,10 @@ export default class ServerBoss {
     this.hp        = this.maxHp
     this._damageMult = damageMult
     this.radius    = GAME_CONFIG.BOSS_RADIUS
-    this.x         = GAME_CONFIG.CANVAS_WIDTH  / 2
-    this.y         = GAME_CONFIG.CANVAS_HEIGHT / 2
+    this.arenaWidth = overrides.arenaWidth ?? GAME_CONFIG.CANVAS_WIDTH
+    this.arenaHeight = overrides.arenaHeight ?? GAME_CONFIG.CANVAS_HEIGHT
+    this.x         = this.arenaWidth / 2
+    this.y         = this.arenaHeight / 2
     this.angle     = 0
     this.isDead    = false
     this.phase     = 1
@@ -85,8 +87,8 @@ export default class ServerBoss {
     this.angle = Math.atan2(dy, dx)
 
     // Clamp
-    this.x = Math.max(this.radius, Math.min(GAME_CONFIG.CANVAS_WIDTH  - this.radius, this.x))
-    this.y = Math.max(this.radius, Math.min(GAME_CONFIG.CANVAS_HEIGHT - this.radius, this.y))
+    this.x = Math.max(this.radius, Math.min(this.arenaWidth  - this.radius, this.x))
+    this.y = Math.max(this.radius, Math.min(this.arenaHeight - this.radius, this.y))
   }
 
   /**

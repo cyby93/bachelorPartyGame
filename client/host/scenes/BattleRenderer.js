@@ -18,8 +18,6 @@ import { CLASSES }      from '../../../shared/ClassConfig.js'
 import BossSprite       from '../entities/BossSprite.js'
 import BaseRenderer     from './BaseRenderer.js'
 
-const { CANVAS_WIDTH: W, CANVAS_HEIGHT: H } = GAME_CONFIG
-
 export default class BattleRenderer extends BaseRenderer {
   constructor(game, mode) {
     super(game)
@@ -112,7 +110,7 @@ export default class BattleRenderer extends BaseRenderer {
     this._prevPlayerHp[p.id] = p.hp
 
     if (this.vfx && p.effects) {
-      this.vfx.auras.sync(p.id, sprite.container, p.effects, GAME_CONFIG.PLAYER_RADIUS)
+      this.vfx.auras.sync(p.id, sprite.container, p.effects, this.game.getPlayerRadius())
     }
   }
 
@@ -178,7 +176,7 @@ export default class BattleRenderer extends BaseRenderer {
       if (!this.tombstoneGfx.has(tomb.id)) {
         const gfx = new Graphics()
         this.tombstoneGfx.set(tomb.id, gfx)
-        this._uiRoot.addChild(gfx)
+        this._entityRoot.addChild(gfx)
       }
       const gfx = this.tombstoneGfx.get(tomb.id)
       gfx.clear()
@@ -193,7 +191,7 @@ export default class BattleRenderer extends BaseRenderer {
 
     this.tombstoneGfx.forEach((gfx, id) => {
       if (!activeTombIds.has(id)) {
-        this._uiRoot.removeChild(gfx)
+        this._entityRoot.removeChild(gfx)
         gfx.destroy()
         this.tombstoneGfx.delete(id)
       }
@@ -253,6 +251,7 @@ export default class BattleRenderer extends BaseRenderer {
   // ── UI construction ────────────────────────────────────────────────────────
 
   _buildUI() {
+    const { width: W } = this.game.getScreenSize()
     const meta = this._levelMeta
 
     // Level indicator (top-right corner)
@@ -280,6 +279,7 @@ export default class BattleRenderer extends BaseRenderer {
   }
 
   _buildObjectiveUI(obj) {
+    const { width: W } = this.game.getScreenSize()
     const PANEL_W = 260
     const PANEL_H = 68
 
@@ -341,6 +341,7 @@ export default class BattleRenderer extends BaseRenderer {
   }
 
   _buildBossFightUI() {
+    const { width: W } = this.game.getScreenSize()
     const state = this.game.knownState
     const bossName = state.boss?.name ?? this._levelMeta?.levelName ?? 'BOSS'
 

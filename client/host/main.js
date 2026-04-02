@@ -137,7 +137,14 @@ socket.on(EVENTS.INIT, state => {
 
   game.receiveFullState(state)
   const scene = state.scene ?? 'lobby'
-  const meta = { levelIndex: state.levelIndex, totalLevels: state.totalLevels, levelName: state.levelName, objectives: state.objectives }
+  const meta = {
+    levelIndex: state.levelIndex,
+    totalLevels: state.totalLevels,
+    levelName: state.levelName,
+    objectives: state.objectives,
+    arenaWidth: state.arenaWidth,
+    arenaHeight: state.arenaHeight,
+  }
   game.switchScene(scene, meta)
   setSceneControls(scene)
   renderDOMPlayerList()

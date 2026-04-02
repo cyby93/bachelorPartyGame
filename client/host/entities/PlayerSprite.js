@@ -8,6 +8,7 @@
  *   ├── body       (child Container — rotated to player.angle)
  *   │   ├── shapeGfx    (class-specific filled polygon/circle/square)
  *   │   └── frontDot    (small white dot pointing "forward")
+ *   ├── aimArrow   (child Graphics — rotated to player.aimAngle)
  *   ├── nameText   (above shape, always upright)
  *   ├── hpBarBg    (background bar, drawn once)
  *   └── hpBarFill  (filled portion, redrawn on HP change)
@@ -102,7 +103,7 @@ export default class PlayerSprite {
     this._aimArrow = new Graphics()
     this._aimArrow.alpha = 0
     this._drawAimArrow()
-    this._body.addChild(this._aimArrow)
+    this.container.addChild(this._aimArrow)
     this._aimPulse = 0
 
     // ── Overhead display (cast bar + status icons) ──────────────────────────
@@ -251,6 +252,7 @@ export default class PlayerSprite {
 
     // Aim arrow
     if (state.isAiming) {
+      this._aimArrow.rotation = state.aimAngle ?? state.angle ?? 0
       this._aimPulse += dt
       this._aimArrow.alpha = 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(this._aimPulse * Math.PI * 2 / 0.6))
     } else {

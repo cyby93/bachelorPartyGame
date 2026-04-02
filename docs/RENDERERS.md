@@ -126,7 +126,7 @@ Inside any renderer method, server state is accessed via:
 ```js
 const state = this.game.knownState
 // Fields:
-state.players       // { [id]: { id, hp, maxHp, x, y, angle, isDead, isHost, className, effects, beamTargetId, ... } }
+state.players       // { [id]: { id, hp, maxHp, x, y, angle, aimAngle, isDead, isHost, className, effects, beamTargetId, ... } }
 state.enemies       // [{ id, x, y, hp, maxHp, isDummy, ... }]  (null in bossFight)
 state.boss          // { id, x, y, hp, maxHp, isDead, phase, ... }  (null in trashMob)
 state.minions       // [{ id, x, y, hp, maxHp, minionType, color, ownerId, ... }]
@@ -135,6 +135,9 @@ state.tombstones    // [{ id, x, y, progress }]
 state.aoeZones      // [{ id, x, y, radius, color, expiresAt }]
 state.killCount     // number (trashMob)
 ```
+
+- `angle` drives model/body rotation
+- `aimAngle` is available for aim-only helper visuals like the held-direction arrow
 
 Interpolated render position (blends prev/current server tick):
 ```js

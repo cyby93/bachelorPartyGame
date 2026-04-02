@@ -86,11 +86,12 @@ export default class GameServer {
     socket.on(EVENTS.INPUT_AIM,     ({ vector }) => {
       const player = this.players.get(socket.id)
       if (player && vector) {
-        player.angle       = Math.atan2(vector.y, vector.x)
+        player.aimAngle    = Math.atan2(vector.y, vector.x)
+        player.angle       = player.aimAngle
         player.isAiming    = true
         player.lastAimTime = Date.now()
         if (player.shieldActive) {
-          player.shieldAngle = player.angle
+          player.shieldAngle = player.aimAngle
         }
       }
     })
@@ -137,8 +138,6 @@ export default class GameServer {
   _onInputSkill(socket, data) {
     const queue = this.inputQueues.get(socket.id)
     if (!queue) return
-    const player = this.players.get(socket.id)
-    if (player) player.isAiming = false
     queue.push({
       type:   'skill',
       index:  Number(data?.index) || 0,

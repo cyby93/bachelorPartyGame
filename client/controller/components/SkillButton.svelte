@@ -77,6 +77,7 @@
   // ── nipplejs for DIRECTIONAL / TARGETED ───────────────────────────────────
 
   let autoFireInterval = null
+  let aimHeartbeat = null
 
   $effect(() => {
     const type = skill?.inputType
@@ -97,6 +98,12 @@
       lastVector   = { x: 1, y: 0 }
       lastDistance = 0
       joystickHeld = true
+
+       aimHeartbeat = setInterval(() => {
+         if (joystickHeld && lastDistance > 8) {
+           onaim?.({ vector: lastVector })
+         }
+       }, 100)
 
       if (isCastHold && expiresAt <= Date.now()) {
         startCast()
@@ -129,6 +136,10 @@
 
     j.on('end', () => {
       joystickHeld = false
+      if (aimHeartbeat) {
+        clearInterval(aimHeartbeat)
+        aimHeartbeat = null
+      }
       if (autoFireInterval) {
         clearInterval(autoFireInterval)
         autoFireInterval = null
@@ -151,6 +162,10 @@
 
     return () => {
       joystickHeld = false
+      if (aimHeartbeat) {
+        clearInterval(aimHeartbeat)
+        aimHeartbeat = null
+      }
       if (autoFireInterval) clearInterval(autoFireInterval)
       if (held) {
         held = false

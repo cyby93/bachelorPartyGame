@@ -126,7 +126,7 @@ Consumer:
 
 Notes:
 
-- updates facing and aim state only
+- updates aim state only and sets preferred facing while aim is active
 - does not itself execute gameplay
 
 ### Host Commands
@@ -354,9 +354,12 @@ Current host assumptions include fields such as:
 
 ```js
 {
-  id, hp, maxHp, x, y, angle, isDead, isHost, className, effects, beamTargetId
+  id, hp, maxHp, x, y, angle, aimAngle, isDead, isHost, className, effects, beamTargetId
 }
 ```
+
+- `angle` is the resolved model-facing direction
+- `aimAngle` is the current ability-aim direction used by helper visuals
 
 Rules:
 

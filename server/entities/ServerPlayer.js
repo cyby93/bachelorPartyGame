@@ -24,6 +24,8 @@ export default class ServerPlayer {
     this.moveX = 0
     this.moveY = 0
     this.angle = 0
+    this.moveAngle = 0
+    this.aimAngle  = 0
 
     this.isDead = false
 
@@ -63,6 +65,9 @@ export default class ServerPlayer {
     if (len > 1) { x /= len; y /= len }
     this.moveX = x
     this.moveY = y
+    if (x !== 0 || y !== 0) {
+      this.moveAngle = Math.atan2(y, x)
+    }
   }
 
   // ── Per-tick update ───────────────────────────────────────────────────
@@ -81,13 +86,15 @@ export default class ServerPlayer {
     this.x = Math.max(r, Math.min(GAME_CONFIG.CANVAS_WIDTH  - r, this.x))
     this.y = Math.max(r, Math.min(GAME_CONFIG.CANVAS_HEIGHT - r, this.y))
 
-    // Facing direction
-    if (this.moveX !== 0 || this.moveY !== 0) {
-      this.angle = Math.atan2(this.moveY, this.moveX)
-    }
-
     if (this.isAiming && (Date.now() - this.lastAimTime) > 200) {
       this.isAiming = false
+    }
+
+    // Prefer active aim direction for facing, otherwise fall back to movement.
+    if (this.isAiming) {
+      this.angle = this.aimAngle
+    } else if (this.moveX !== 0 || this.moveY !== 0) {
+      this.angle = this.moveAngle
     }
   }
 
@@ -167,6 +174,7 @@ export default class ServerPlayer {
       x:         Math.round(this.x),
       y:         Math.round(this.y),
       angle:     +this.angle.toFixed(3),
+      aimAngle:  +this.aimAngle.toFixed(3),
       hp:        Math.ceil(this.hp),
       maxHp:     this.maxHp,
       isDead:    this.isDead,
@@ -186,6 +194,7 @@ export default class ServerPlayer {
     if (cur.x      !== prev.x)      delta.x      = cur.x
     if (cur.y      !== prev.y)      delta.y      = cur.y
     if (cur.angle  !== prev.angle)  delta.angle  = cur.angle
+    if (cur.aimAngle !== prev.aimAngle) delta.aimAngle = cur.aimAngle
     if (cur.hp     !== prev.hp)     delta.hp     = cur.hp
 
     // Visibility state change
@@ -234,6 +243,7 @@ export default class ServerPlayer {
       x:           Math.round(this.x),
       y:           Math.round(this.y),
       angle:       +this.angle.toFixed(3),
+      aimAngle:    +this.aimAngle.toFixed(3),
       hp:          Math.ceil(this.hp),
       isDead:      this.isDead,
       isInvisible:  this.isInvisible,

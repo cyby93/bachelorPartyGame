@@ -9,7 +9,7 @@ export const EVENTS = {
   JOIN:         'game:join',       // { name, className, isHost }
   INPUT_MOVE:   'input:move',      // { x, y }  (normalised -1..1)
   INPUT_SKILL:  'input:skill',     // { index, vector: { x, y } }
-  INPUT_AIM:    'input:aim',       // { vector: { x, y } }  — updates facing angle, no movement
+  INPUT_AIM:    'input:aim',       // { vector: { x, y } }  — updates aim direction and preferred facing, no movement
 
   // ── Host → Server (host-only commands) ───────────────────────────────────
   START_GAME:    'host:start',

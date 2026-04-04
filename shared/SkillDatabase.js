@@ -568,18 +568,16 @@ const SkillDatabase = {
       icon:      '❄️'
     },
     {
-      name:      'Death Grip',
-      type:      'PROJECTILE',
-      subtype:   'GRIP',
-      inputType: 'DIRECTIONAL',
-      cooldown:  1000,
-      damage:    0,
-      speed:     800,
-      radius:    12,
-      range:     350,
-      pierce:    false,
-      effectType: 'GRIP',
-      icon:      '🪝'
+      name:             'Death Grip',
+      type:             'TARGETED',
+      subtype:          'GRIP',
+      inputType:        'TARGETED',
+      selfCastFallback: true,
+      cooldown:         1000,
+      damage:           0,
+      range:            350,
+      effectType:       'GRIP',
+      icon:             '🪝'
     },
     {
       name:      'Death and Decay',

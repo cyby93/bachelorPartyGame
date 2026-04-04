@@ -602,6 +602,30 @@ export default class SkillSystem {
       return true
     }
 
+    if (config.subtype === 'GRIP') {
+      const target = isSelfCast
+        ? this._findNearestEnemy(gs, player, config.range ?? 350)
+        : this._findBeamTarget(gs, player, v, config.range ?? 350)
+      if (!target || target.id === 'boss') return false   // boss is immune
+      target.pullTarget = { x: player.x, y: player.y, speed: 600 }
+      target.activeEffects = target.activeEffects ?? []
+      target.activeEffects.push({
+        source:    'grip',
+        ownerId:   player.id,
+        params:    { isPull: true },
+        expiresAt: Date.now() + 1000,
+      })
+      const color = CLASSES[player.className]?.color ?? '#ffffff'
+      if (gs.io) {
+        gs.io.emit('targeted:hit', {
+          casterX: Math.round(player.x), casterY: Math.round(player.y),
+          targetX: Math.round(target.x), targetY: Math.round(target.y),
+          effectType: 'damage', color,
+        })
+      }
+      return true
+    }
+
     return false
   }
 

@@ -59,22 +59,22 @@ export const CAMPAIGN = [
     id: 'level_2',
     name: 'The Black Temple Gates',
     arena: {
-      width: 2200,
-      height: 800,
+      width: 1100,
+      height: 400,
       rooms: [
-        { id: 'left',  x: 0,    y: 0, width: 1060, height: 800 },
-        { id: 'right', x: 1140, y: 0, width: 1060, height: 800 },
+        { id: 'left',  x: 0,   y: 0, width: 530, height: 400 },
+        { id: 'right', x: 570, y: 0, width: 530, height: 400 },
       ],
       passages: [
-        { id: 'passage1', fromRoom: 'left', toRoom: 'right', x: 1060, y: 300, width: 80, height: 200, blockedByGate: 'gate1' },
+        { id: 'passage1', fromRoom: 'left', toRoom: 'right', x: 530, y: 150, width: 40, height: 100, blockedByGate: 'gate1' },
       ],
     },
     objectives: [
       { type: 'destroyGates' },
     ],
     gates: [
-      { id: 'gate1', passageId: 'passage1', hp: 500, position: { x: 1060, y: 400 }, radius: 30 },
-      { id: 'gate2', passageId: null,        hp: 500, position: { x: 2170, y: 400 }, radius: 30 },
+      { id: 'gate1', passageId: 'passage1', hp: 500, position: { x: 530, y: 200 }, radius: 24 },
+      { id: 'gate2', passageId: null,        hp: 500, position: { x: 1070, y: 200 }, radius: 24 },
     ],
     spawning: {
       mode: 'continuous',
@@ -82,7 +82,7 @@ export const CAMPAIGN = [
       countPerWave: [1, 3],
       maxAliveAtOnce: 12,
       spawnNearActiveGate: true,
-      spawnRadius: 150,
+      spawnRadius: 80,
       enemyTypes: [
         { type: 'grunt',        weight: 3 },
         { type: 'brute',        weight: 1 },

@@ -31,6 +31,7 @@ export default class BattleRenderer extends BaseRenderer {
 
     this.bossSprite   = null
     this.tombstoneGfx = new Map()   // playerId → Graphics
+    this.gateGfx      = new Map()   // gateId → Graphics
 
     // Previous-frame HP tracking for hit sparks and death bursts
     this._prevPlayerHp = {}
@@ -67,6 +68,8 @@ export default class BattleRenderer extends BaseRenderer {
     }
     this.tombstoneGfx.forEach(gfx => gfx.destroy())
     this.tombstoneGfx.clear()
+    this.gateGfx.forEach(gfx => gfx.destroy())
+    this.gateGfx.clear()
 
     this._prevPlayerHp = {}
     this._levelMeta = null
@@ -133,6 +136,9 @@ export default class BattleRenderer extends BaseRenderer {
     if (targetId === 'boss' && this.bossSprite) {
       return { x: this.bossSprite.container.x, y: this.bossSprite.container.y }
     }
+    // Gate targets
+    const gate = (this.game.knownState.gates ?? []).find(g => g.id === targetId)
+    if (gate && !gate.isDead) return { x: gate.x, y: gate.y }
     return null
   }
 
@@ -145,6 +151,9 @@ export default class BattleRenderer extends BaseRenderer {
         return { x: this.bossSprite.container.x, y: this.bossSprite.container.y }
       }
     }
+    // Gate targets
+    const gate = (this.game.knownState.gates ?? []).find(g => g.id === targetId)
+    if (gate && !gate.isDead) return { x: gate.x, y: gate.y }
     return null
   }
 
@@ -194,6 +203,65 @@ export default class BattleRenderer extends BaseRenderer {
         this._entityRoot.removeChild(gfx)
         gfx.destroy()
         this.tombstoneGfx.delete(id)
+      }
+    })
+
+    // Gates
+    const gates = state.gates ?? []
+    const activeGateIds = new Set(gates.map(g => g.id))
+
+    for (const gate of gates) {
+      if (gate.isDead) {
+        // Remove destroyed gates
+        if (this.gateGfx.has(gate.id)) {
+          this._entityRoot.removeChild(this.gateGfx.get(gate.id))
+          this.gateGfx.get(gate.id).destroy()
+          this.gateGfx.delete(gate.id)
+        }
+        continue
+      }
+
+      if (!this.gateGfx.has(gate.id)) {
+        const gfx = new Graphics()
+        this.gateGfx.set(gate.id, gfx)
+        this._entityRoot.addChild(gfx)
+      }
+
+      const gfx = this.gateGfx.get(gate.id)
+      const r = gate.radius ?? 24
+      const hpPct = gate.hp / (gate.maxHp || 1)
+
+      gfx.clear()
+
+      // Gate body — glowing circle
+      const bodyColor = gate.isActive ? 0xff4444 : 0x666666
+      gfx.circle(gate.x, gate.y, r)
+      gfx.fill({ color: bodyColor, alpha: 0.7 })
+      gfx.circle(gate.x, gate.y, r)
+      gfx.stroke({ color: gate.isActive ? 0xff8888 : 0x999999, width: 3 })
+
+      // HP bar above gate
+      const barW = r * 2.5
+      const barH = 5
+      const barX = gate.x - barW / 2
+      const barY = gate.y - r - 12
+      gfx.rect(barX, barY, barW, barH)
+      gfx.fill({ color: 0x111111, alpha: 0.8 })
+      if (hpPct > 0) {
+        const hpColor = hpPct > 0.5 ? 0xe74c3c : hpPct > 0.25 ? 0xe67e22 : 0xc0392b
+        gfx.rect(barX, barY, barW * hpPct, barH)
+        gfx.fill(hpColor)
+      }
+      gfx.rect(barX, barY, barW, barH)
+      gfx.stroke({ color: 0x333333, width: 1 })
+    }
+
+    // Remove stale gate graphics
+    this.gateGfx.forEach((gfx, id) => {
+      if (!activeGateIds.has(id)) {
+        this._entityRoot.removeChild(gfx)
+        gfx.destroy()
+        this.gateGfx.delete(id)
       }
     })
   }

@@ -11,7 +11,7 @@ import { GAME_CONFIG }   from '../../shared/GameConfig.js'
 import { ENEMY_TYPES }   from '../../shared/EnemyTypeConfig.js'
 
 export default class ServerEnemy {
-  constructor({ id, x, y, type = 'grunt', hp, maxHp, speed, radius, contactDamage }) {
+  constructor({ id, x, y, type = 'grunt', hp, maxHp, speed, radius, contactDamage, generation }) {
     const base = ENEMY_TYPES[type] ?? ENEMY_TYPES.grunt
 
     this.id            = id
@@ -66,6 +66,25 @@ export default class ServerEnemy {
     this._healCooldown   = base.healCooldown   ?? 3000
     this._preferredRange = base.preferredRange ?? 100
     this._lastHeal       = 0
+
+    // Split-on-death / generation tracking
+    this.generation      = generation ?? 0
+    this.splitOnDeath    = base.splitOnDeath ?? null
+
+    // Leviathan AI — multi-target
+    this._maxRangedTargets = base.maxRangedTargets ?? 2
+    this._meleeTarget      = null
+    this._rangedTargets    = []
+
+    // Gate Repairer AI
+    this._repairAmount   = base.repairAmount  ?? 8
+    this._repairRange    = base.repairRange   ?? 60
+    this._isRepairing    = false
+
+    // Channeler AI
+    this._channelTarget  = base.channelTarget ?? null
+    this._hpBuffPerSec   = base.hpBuffPerSecond     ?? 50
+    this._dmgBuffPerSec  = base.damageBuffPerSecond  ?? 2
   }
 
   takeDamage(amount) {
@@ -119,10 +138,13 @@ export default class ServerEnemy {
 
     // Dispatch to AI type
     switch (this.ai) {
-      case 'ranged':  return this._aiRanged(dt, pps, players, ctx)
-      case 'charger': return this._aiCharger(dt, pps, players, ctx)
-      case 'healer':  return this._aiHealer(dt, pps, players, ctx)
-      default:        return this._aiChase(dt, pps, players)
+      case 'ranged':      return this._aiRanged(dt, pps, players, ctx)
+      case 'charger':     return this._aiCharger(dt, pps, players, ctx)
+      case 'healer':      return this._aiHealer(dt, pps, players, ctx)
+      case 'leviathan':   return this._aiLeviathan(dt, pps, players, ctx)
+      case 'gateRepairer': return this._aiGateRepairer(dt, pps, players, ctx)
+      case 'channeler':   return this._aiChanneler(dt, pps, players, ctx)
+      default:            return this._aiChase(dt, pps, players)
     }
   }
 
@@ -327,6 +349,122 @@ export default class ServerEnemy {
     return null
   }
 
+  // ── AI: Leviathan (multi-target) ─────────────────────────────────────
+
+  _aiLeviathan(dt, pps, players, ctx) {
+    const now = ctx?.now ?? Date.now()
+
+    // Determine how many ranged targets this generation supports
+    // Gen 0 = maxRangedTargets, Gen 1 = max-1, Gen 2+ = 0 (melee only)
+    const rangedSlots = Math.max(0, this._maxRangedTargets - this.generation)
+
+    // If no ranged slots, behave as chase AI
+    if (rangedSlots === 0) {
+      return this._aiChase(dt, pps, players)
+    }
+
+    // Find all living, non-host, non-invisible players sorted by distance
+    const candidates = []
+    players.forEach(p => {
+      if (p.isHost || p.isDead || p.isInvisible) return
+      const d = Math.hypot(p.x - this.x, p.y - this.y)
+      candidates.push({ player: p, dist: d })
+    })
+    candidates.sort((a, b) => a.dist - b.dist)
+
+    if (candidates.length === 0) return null
+
+    // Melee target: nearest player
+    this._meleeTarget = candidates[0].player
+
+    // Ranged targets: next N players (excluding melee target)
+    this._rangedTargets = candidates.slice(1, 1 + rangedSlots).map(c => c.player)
+
+    // Chase melee target
+    const mx = this._meleeTarget.x - this.x
+    const my = this._meleeTarget.y - this.y
+    const mDist = Math.hypot(mx, my)
+    const stopDist = GAME_CONFIG.PLAYER_RADIUS + this.radius
+
+    if (mDist > stopDist) {
+      const step = Math.min(pps * dt, mDist - stopDist)
+      this.x += (mx / mDist) * step
+      this.y += (my / mDist) * step
+      this._clampToArena()
+    }
+
+    // Fire ranged projectiles at ranged targets on cooldown
+    const actions = []
+    if (this._rangedTargets.length > 0 && now - this._lastAttack >= this._attackCooldown) {
+      this._lastAttack = now
+      for (const target of this._rangedTargets) {
+        const dx = target.x - this.x
+        const dy = target.y - this.y
+        const norm = Math.hypot(dx, dy) || 1
+        actions.push({
+          action: 'shoot',
+          x: this.x,
+          y: this.y,
+          vx: (dx / norm) * this._projSpeed,
+          vy: (dy / norm) * this._projSpeed,
+          damage: this._projDamage,
+          speed: this._projSpeed,
+          color: ENEMY_TYPES[this.type]?.color ?? '#2E8B57',
+          // Exclude melee target from projectile hits
+          excludeTargetId: this._meleeTarget.id,
+        })
+      }
+    }
+
+    return actions.length > 0 ? actions : null
+  }
+
+  // ── AI: Gate Repairer ──────────────────────────────────────────────────
+
+  _aiGateRepairer(dt, pps, players, ctx) {
+    const gate = ctx?.activeGate
+    this._isRepairing = false
+
+    // If no active gate (destroyed), fall back to chase AI
+    if (!gate || gate.isDead) {
+      return this._aiChase(dt, pps, players)
+    }
+
+    const dx   = gate.x - this.x
+    const dy   = gate.y - this.y
+    const dist = Math.hypot(dx, dy)
+
+    if (dist <= this._repairRange) {
+      // In range: repair the gate
+      this._isRepairing = true
+      return {
+        action: 'repair',
+        gateId: gate.id,
+        amount: this._repairAmount * dt,
+      }
+    }
+
+    // Walk toward gate
+    const step = Math.min(pps * dt, dist)
+    this.x += (dx / dist) * step
+    this.y += (dy / dist) * step
+    this._clampToArena()
+    return null
+  }
+
+  // ── AI: Channeler (stationary beam buff) ───────────────────────────────
+
+  _aiChanneler(dt, pps, players, ctx) {
+    // Channelers are stationary — they don't move
+    // The buff application is handled by GameServer, not here
+    // Return a channel action so GameServer knows this enemy is channeling
+    return {
+      action: 'channel',
+      hpPerSecond: this._hpBuffPerSec,
+      dmgPerSecond: this._dmgBuffPerSec,
+    }
+  }
+
   // ── Helpers ──────────────────────────────────────────────────────────────
 
   _findNearest(players) {
@@ -351,7 +489,7 @@ export default class ServerEnemy {
   }
 
   toDTO() {
-    return {
+    const dto = {
       id:    this.id,
       x:     Math.round(this.x),
       y:     Math.round(this.y),
@@ -359,5 +497,8 @@ export default class ServerEnemy {
       maxHp: this.maxHp,
       type:  this.type,
     }
+    if (this.generation > 0) dto.generation = this.generation
+    if (this._isRepairing)   dto.isRepairing = true
+    return dto
   }
 }

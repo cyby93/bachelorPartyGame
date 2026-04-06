@@ -74,7 +74,7 @@ When changing skill behavior, keep `shared/SkillDatabase.js`, `shared/SkillValid
 ## Scene Flow
 
 ```text
-Lobby -> TrashMob (50 kills) -> BossFight (Illidan) -> Result / GameOver -> Lobby
+Lobby -> Level 1 (Waves) -> Level 2 (Gates) -> Level 3 (Leviathan) -> Level 4 (Shade of Akama) -> Level 5 (Illidan) -> Result / GameOver -> Lobby
 ```
 
 Scene transitions are server-driven through the shared protocol.
@@ -105,7 +105,7 @@ Use these ownership areas to decide which files and docs must be reviewed before
 | Shared Contracts and Config | `shared/protocol.js`, `shared/*Config.js`, `shared/SkillDatabase.js` | Shared files define contracts used by multiple runtime parts. Do not change them without checking all producers and consumers. |
 | Host Rendering and VFX | `client/host/*`, `docs/RENDERERS.md` | Host renders server state and should not invent gameplay rules. |
 | Controller UI and Input | `client/controller/*` | Controller sends intent and presents UI only. It must stay aligned with protocol and skill input semantics. |
-| Campaign and Level Flow | `shared/LevelConfig.js`, `server/GameServer.js`, progression-related renderers/screens | Level schema, scene transitions, and objective handling must stay aligned across server and UI surfaces. |
+| Campaign and Level Flow | `shared/LevelConfig.js`, `server/GameServer.js`, `server/entities/ServerNPC.js`, `server/entities/ServerGate.js`, progression-related renderers/screens | Level schema, scene transitions, and objective handling must stay aligned across server and UI surfaces. |
 | Docs and Validation | `AGENTS.md`, `docs/*`, `shared/SkillValidator.js` | Docs and validators are part of the implementation for boundary-heavy changes, not optional cleanup. |
 
 ## Change Routing Rules

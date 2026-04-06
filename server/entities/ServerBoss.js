@@ -20,13 +20,14 @@ export default class ServerBoss {
     this.maxHp     = Math.round(cfg.maxHp * hpMult)
     this.hp        = this.maxHp
     this._damageMult = damageMult
-    this.radius    = GAME_CONFIG.BOSS_RADIUS
+    this.radius    = cfg.radius ?? GAME_CONFIG.BOSS_RADIUS
     this.arenaWidth = overrides.arenaWidth ?? GAME_CONFIG.CANVAS_WIDTH
     this.arenaHeight = overrides.arenaHeight ?? GAME_CONFIG.CANVAS_HEIGHT
     this.x         = this.arenaWidth / 2
     this.y         = this.arenaHeight / 2
     this.angle     = 0
     this.isDead    = false
+    this.isImmune  = false
     this.phase     = 1
     this.isPlayer  = false
     this.id        = 'boss'
@@ -42,7 +43,7 @@ export default class ServerBoss {
   }
 
   takeDamage(amount) {
-    if (this.isDead) return
+    if (this.isDead || this.isImmune) return
     this.hp = Math.max(0, this.hp - amount)
     if (this.hp === 0) { this.isDead = true; return }
     this._updatePhase()
@@ -129,14 +130,15 @@ export default class ServerBoss {
 
   toDTO() {
     return {
-      id:     'boss',
-      x:      Math.round(this.x),
-      y:      Math.round(this.y),
-      angle:  +this.angle.toFixed(3),
-      hp:     this.hp,
-      maxHp:  this.maxHp,
-      phase:  this.phase,
-      isDead: this.isDead,
+      id:       'boss',
+      x:        Math.round(this.x),
+      y:        Math.round(this.y),
+      angle:    +this.angle.toFixed(3),
+      hp:       Math.round(this.hp),
+      maxHp:    Math.round(this.maxHp),
+      phase:    this.phase,
+      isDead:   this.isDead,
+      isImmune: this.isImmune || undefined,
     }
   }
 }

@@ -198,11 +198,22 @@ export default class SkillSystem {
     })
 
     // Hit boss
-    if (gs.boss && !gs.boss.isDead) {
+    if (gs.boss && !gs.boss.isDead && !gs.boss.isImmune) {
       if (this._collision.inCone({ x: player.x, y: player.y }, v, halfAngle, config.range, { x: gs.boss.x, y: gs.boss.y })) {
         this._dealDamage(gs, player, gs.boss, config.damage ?? 0)
         hitCount++
       }
+    }
+
+    // Hit gates
+    if (gs.gates) {
+      gs.gates.forEach(gate => {
+        if (gate.isDead || !gate.isActive) return
+        if (this._collision.inCone({ x: player.x, y: player.y }, v, halfAngle, config.range, { x: gate.x, y: gate.y })) {
+          gate.takeDamage(Math.round((config.damage ?? 0) * (player.damageMult ?? 1)))
+          hitCount++
+        }
+      })
     }
 
     // Combo point generation (Sinister Strike)
@@ -765,10 +776,20 @@ export default class SkillSystem {
     })
 
     // Damage boss
-    if (gs.boss && !gs.boss.isDead) {
+    if (gs.boss && !gs.boss.isDead && !gs.boss.isImmune) {
       if (this._collision.distance({ x: cx, y: cy }, { x: gs.boss.x, y: gs.boss.y }) <= radius + gs.boss.radius) {
         this._dealDamage(gs, player, gs.boss, config.damage ?? 0)
       }
+    }
+
+    // Damage gates
+    if (gs.gates) {
+      gs.gates.forEach(gate => {
+        if (gate.isDead || !gate.isActive) return
+        if (this._collision.distance({ x: cx, y: cy }, { x: gate.x, y: gate.y }) <= radius + gate.radius) {
+          gate.takeDamage(Math.round((config.damage ?? 0) * (player?.damageMult ?? 1)))
+        }
+      })
     }
   }
 
@@ -910,7 +931,7 @@ export default class SkillSystem {
       })
 
       // Collision check vs boss
-      if (proj.isAlive && gs.boss && !gs.boss.isDead) {
+      if (proj.isAlive && gs.boss && !gs.boss.isDead && !gs.boss.isImmune) {
         if (!proj.hit.has('boss')) {
           const projCircle = { x: proj.x, y: proj.y, radius: proj.radius }
           const bossCircle = { x: gs.boss.x, y: gs.boss.y, radius: gs.boss.radius }
@@ -918,6 +939,21 @@ export default class SkillSystem {
             this._handleProjectileHit(gs, proj, gs.boss)
           }
         }
+      }
+
+      // Collision check vs gates
+      if (proj.isAlive && gs.gates && !proj.isEnemyProj) {
+        gs.gates.forEach(gate => {
+          if (!proj.isAlive || gate.isDead || !gate.isActive) return
+          if (proj.hit.has(gate.id)) return
+          const projCircle = { x: proj.x, y: proj.y, radius: proj.radius }
+          const gateCircle = { x: gate.x, y: gate.y, radius: gate.radius }
+          if (this._collision.circlesOverlap(projCircle, gateCircle)) {
+            proj.hit.add(gate.id)
+            gate.takeDamage(proj.damage ?? 0)
+            if (!proj.pierce) proj.isAlive = false
+          }
+        })
       }
 
       // Collision check vs players — for canHitAllies projectiles (e.g. Penance heals allies)
@@ -1410,7 +1446,7 @@ export default class SkillSystem {
     }
 
     gs.enemies.forEach(e => checkTarget(e))
-    if (gs.boss && !gs.boss.isDead) checkTarget(gs.boss)
+    if (gs.boss && !gs.boss.isDead && !gs.boss.isImmune) checkTarget(gs.boss)
 
     return best
   }
@@ -1426,7 +1462,7 @@ export default class SkillSystem {
       if (dist < bestDist) { bestDist = dist; best = e }
     }
     gs.enemies.forEach(e => check(e))
-    if (gs.boss && !gs.boss.isDead) check(gs.boss)
+    if (gs.boss && !gs.boss.isDead && !gs.boss.isImmune) check(gs.boss)
     return best
   }
 

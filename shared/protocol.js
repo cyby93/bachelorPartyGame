@@ -15,6 +15,7 @@ export const EVENTS = {
   START_GAME:    'host:start',
   RESTART_GAME:  'host:restart',
   HOST_ADVANCE:  'host:advance',    // host clicks "Continue" on level-complete screen
+  SET_LEVEL:     'host:setLevel',   // { levelIndex } — debug: pick starting level from lobby
 
   // ── Server → All Clients ─────────────────────────────────────────────────
   INIT:          'game:init',       // full state snapshot sent on join

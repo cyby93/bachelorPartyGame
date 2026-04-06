@@ -225,6 +225,38 @@ export default class BattleRenderer extends BaseRenderer {
           if (this._objText) this._objText.text = `${secs}s`
           this._drawObjBar(elapsed / total)
         }
+      } else if (obj.type === 'surviveWaves') {
+        const current = obj.current ?? 0
+        const target  = obj.target  ?? 1
+        if (current !== this._lastObjVal) {
+          this._lastObjVal = current
+          if (this._objText) this._objText.text = `${current} / ${target}`
+          this._drawObjBar(current / target)
+        }
+      } else if (obj.type === 'destroyGates') {
+        const current = obj.current ?? 0
+        const target  = obj.target  ?? 1
+        if (current !== this._lastObjVal) {
+          this._lastObjVal = current
+          if (this._objText) this._objText.text = `${current} / ${target}`
+          this._drawObjBar(current / target)
+        }
+      } else if (obj.type === 'killAll') {
+        const done = obj.current === 1
+        const val  = done ? 1 : 0
+        if (val !== this._lastObjVal) {
+          this._lastObjVal = val
+          if (this._objText) this._objText.text = done ? 'COMPLETE' : 'IN PROGRESS'
+          this._drawObjBar(val)
+        }
+      } else if (obj.type === 'killBossProtectNPC') {
+        const done = obj.current === 1
+        const val  = done ? 1 : 0
+        if (val !== this._lastObjVal) {
+          this._lastObjVal = val
+          if (this._objText) this._objText.text = done ? 'COMPLETE' : 'IN PROGRESS'
+          this._drawObjBar(val)
+        }
       }
     }
 
@@ -297,6 +329,14 @@ export default class BattleRenderer extends BaseRenderer {
         : 'WAVE PROGRESS'
     } else if (obj.type === 'survive') {
       labelText = 'SURVIVE'
+    } else if (obj.type === 'surviveWaves') {
+      labelText = 'SURVIVE THE WAVES'
+    } else if (obj.type === 'destroyGates') {
+      labelText = 'DESTROY THE GATES'
+    } else if (obj.type === 'killAll') {
+      labelText = 'DEFEAT ALL ENEMIES'
+    } else if (obj.type === 'killBossProtectNPC') {
+      labelText = 'PROTECT AKAMA'
     }
 
     const label = new Text({
@@ -314,6 +354,14 @@ export default class BattleRenderer extends BaseRenderer {
     } else if (obj.type === 'survive') {
       const secs = Math.ceil((obj.durationMs ?? obj.target ?? 0) / 1000)
       initialText = `${secs}s`
+    } else if (obj.type === 'surviveWaves') {
+      initialText = `0 / ${obj.target ?? '?'}`
+    } else if (obj.type === 'destroyGates') {
+      initialText = `0 / ${obj.target ?? '?'}`
+    } else if (obj.type === 'killAll') {
+      initialText = 'IN PROGRESS'
+    } else if (obj.type === 'killBossProtectNPC') {
+      initialText = 'IN PROGRESS'
     }
 
     this._objText = new Text({

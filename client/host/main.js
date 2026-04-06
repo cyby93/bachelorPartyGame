@@ -11,6 +11,7 @@
 import { io }         from 'socket.io-client'
 import { EVENTS }     from '../../shared/protocol.js'
 import { CLASSES }    from '../../shared/ClassConfig.js'
+import { CAMPAIGN }   from '../../shared/LevelConfig.js'
 import HostGame       from './HostGame.js'
 import AudioSystem    from './systems/AudioSystem.js'
 
@@ -31,6 +32,10 @@ const playerListEl   = document.getElementById('player-list')
 const startBtn       = document.getElementById('start-btn')
 const qrWrap         = document.getElementById('qr-code')
 const fullscreenBtn  = document.getElementById('fullscreen-btn')
+const levelSelector  = document.getElementById('level-selector')
+const levelNameEl    = document.getElementById('level-name')
+const prevLevelBtn   = document.getElementById('prev-level-btn')
+const nextLevelBtn   = document.getElementById('next-level-btn')
 
 // ── Fullscreen ─────────────────────────────────────────────────────────────
 fullscreenBtn?.addEventListener('click', () => {
@@ -44,6 +49,24 @@ document.addEventListener('fullscreenchange', () => {
   if (fullscreenBtn) {
     fullscreenBtn.textContent = document.fullscreenElement ? '✕ Exit Fullscreen' : '⛶ Fullscreen'
   }
+})
+
+// ── Level selector (debug) ────────────────────────────────────────────────
+let selectedLevel = 0
+
+function updateLevelDisplay() {
+  if (levelNameEl) levelNameEl.textContent = `Level ${selectedLevel + 1}: ${CAMPAIGN[selectedLevel]?.name ?? '?'}`
+}
+
+prevLevelBtn?.addEventListener('click', () => {
+  selectedLevel = Math.max(0, selectedLevel - 1)
+  updateLevelDisplay()
+  socket.emit(EVENTS.SET_LEVEL, { levelIndex: selectedLevel })
+})
+nextLevelBtn?.addEventListener('click', () => {
+  selectedLevel = Math.min(CAMPAIGN.length - 1, selectedLevel + 1)
+  updateLevelDisplay()
+  socket.emit(EVENTS.SET_LEVEL, { levelIndex: selectedLevel })
 })
 
 // ── DOM helpers ────────────────────────────────────────────────────────────
@@ -77,6 +100,8 @@ function setSceneControls(scene) {
     startBtn.disabled    = Object.values(game.knownState.players).filter(p => !p.isHost).length === 0
     startBtn.style.display = ''
     startBtn.onclick     = () => socket.emit(EVENTS.START_GAME)
+    if (levelSelector) levelSelector.style.display = ''
+    updateLevelDisplay()
   } else if (scene === 'levelComplete') {
     startBtn.textContent   = 'CONTINUE'
     startBtn.disabled      = false
@@ -91,6 +116,9 @@ function setSceneControls(scene) {
     // In-game: hide the button
     startBtn.style.display = 'none'
   }
+
+  // Level selector only visible in lobby
+  if (scene !== 'lobby' && levelSelector) levelSelector.style.display = 'none'
 }
 
 // ── Socket events ──────────────────────────────────────────────────────────
@@ -180,6 +208,11 @@ socket.on(EVENTS.SCENE_CHANGE, (data) => {
 
 socket.on(EVENTS.OBJECTIVE_UPDATE, ({ objectives }) => {
   game.updateObjectives(objectives)
+})
+
+socket.on(EVENTS.SET_LEVEL, ({ levelIndex, levelName }) => {
+  selectedLevel = levelIndex
+  updateLevelDisplay()
 })
 
 // ── VFX events ───────────────────────────────────────────────────────────

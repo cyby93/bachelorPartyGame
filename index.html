@@ -44,6 +44,14 @@
     }
     #start-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
+    #level-selector { display: flex; align-items: center; gap: 8px; justify-content: center; }
+    #level-selector button {
+      padding: 6px 12px; border-radius: 6px; border: 1px solid #1e3a4a;
+      background: #0f1923; color: #7fa8c0; cursor: pointer; font-size: 13px; font-weight: bold;
+    }
+    #level-selector button:hover { background: #1e3a4a; color: #fff; }
+    #level-name { color: #00d2ff; font-size: 13px; min-width: 180px; text-align: center; }
+
     #fullscreen-btn {
       padding: 8px; border-radius: 6px; border: 1px solid #1e3a4a;
       background: #0f1923; color: #7fa8c0; cursor: pointer; font-size: 13px;
@@ -83,6 +91,11 @@
       </div>
     </div>
 
+    <div id="level-selector" style="display:none">
+      <button id="prev-level-btn">&#9664; Prev</button>
+      <span id="level-name">Level 1: The Courtyard</span>
+      <button id="next-level-btn">Next &#9654;</button>
+    </div>
     <button id="start-btn" disabled>START GAME</button>
     <button id="fullscreen-btn" title="Toggle fullscreen">⛶ Fullscreen</button>
   </div>

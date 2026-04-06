@@ -19,5 +19,24 @@ export const BOSS_CONFIG = {
       { threshold: 0.6, speed: 2.0 },   // Phase 2: 60% → 30%
       { threshold: 0.3, speed: 2.5 }    // Phase 3: 30% → dead (enraged)
     ]
-  }
+  },
+
+  SHADE_OF_AKAMA: {
+    name:  'Shade of Akama',
+    maxHp: 4000,
+    speed: 0.6,
+    radius: 55,
+    meleeDamage: 40,
+    attackCooldown: 2000,
+    attackRange: 60,
+    // No abilities array — Shade uses simple melee only
+    abilities: [],
+    // Two phases: idle (immune) → active (attacks Akama)
+    phases: [
+      { threshold: 1.0, speed: 0,   idle: true },    // Phase 1: immune, stationary
+      { threshold: 1.0, speed: 0.6, idle: false },   // Phase 2: active, chases Akama
+    ],
+    // Target override: attacks NPC instead of players
+    targetNPC: 'akama',
+  },
 }

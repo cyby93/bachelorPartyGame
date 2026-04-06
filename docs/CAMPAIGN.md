@@ -23,7 +23,7 @@ Host and controller render or react to server progression. They do not decide it
 ## Current Flow
 
 ```text
-Lobby -> Battle levels -> Boss fight -> Result / GameOver -> Lobby
+Lobby -> Level 1 (Waves) -> Level 2 (Gates) -> Level 3 (Leviathan) -> Level 4 (Shade of Akama) -> Level 5 (Illidan) -> Result / GameOver -> Lobby
 ```
 
 Current implementation details:
@@ -43,10 +43,16 @@ Current campaign entries look like:
 {
   id,
   name,
+  arena,          // { width, height, rooms?, passages? }
   objectives,
-  spawning,
+  spawning,       // { mode, interval, ... } or null
   difficulty,
-  boss
+  boss,           // boss config key or null
+  gates?,         // array of gate definitions (Level 2)
+  npcs?,          // array of NPC definitions (Level 4)
+  warlocks?,      // warlock spawn config (Level 4)
+  initialEnemies?, // pre-placed enemies (Level 3)
+  bossSpawnPosition?, // override boss spawn { x, y }
 }
 ```
 
@@ -56,10 +62,16 @@ Current campaign entries look like:
 |------|---------|
 | `id` | stable level identifier |
 | `name` | display name |
+| `arena` | arena dimensions, optional rooms and passages |
 | `objectives` | ordered or grouped objective definitions |
-| `spawning` | enemy spawn config for non-boss levels |
+| `spawning` | enemy spawn config (`mode: 'continuous'` or `'wave'`), or `null` |
 | `difficulty` | player-count scaling configuration |
-| `boss` | boss identifier or `null` |
+| `boss` | boss config key or `null` |
+| `gates` | destructible gate definitions (Level 2) |
+| `npcs` | friendly NPC definitions (Level 4) |
+| `warlocks` | warlock channeler spawn config (Level 4) |
+| `initialEnemies` | pre-placed enemies at level start (Level 3) |
+| `bossSpawnPosition` | custom boss spawn position override |
 
 ---
 
@@ -73,6 +85,10 @@ Current objective types documented in `shared/LevelConfig.js`:
 | `killCount` with filter | `{ type: 'killCount', target, enemyTypes }` | kill `target` enemies of listed types |
 | `survive` | `{ type: 'survive', durationMs }` | survive for duration |
 | `killBoss` | `{ type: 'killBoss' }` | defeat the level boss |
+| `surviveWaves` | `{ type: 'surviveWaves' }` | clear all discrete waves |
+| `destroyGates` | `{ type: 'destroyGates' }` | destroy all gates in sequence |
+| `killAll` | `{ type: 'killAll' }` | kill all enemies including splits |
+| `killBossProtectNPC` | `{ type: 'killBossProtectNPC', npcId, bossId }` | kill boss before NPC dies |
 
 Rules:
 

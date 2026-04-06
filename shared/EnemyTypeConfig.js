@@ -72,4 +72,52 @@ export const ENEMY_TYPES = {
     healCooldown: 3000,
     preferredRange: 100,    // tries to stay this far from the pack centre
   },
+
+  // ── Gate Repairer (Level 2) ─────────────────────────────────────────────
+  gateRepairer: {
+    hp: 35,
+    speed: 1.1,
+    radius: 13,
+    contactDamage: 5,
+    color: '#8B4513',
+    shape: 'square',
+    ai: 'gateRepairer',
+    repairAmount: 8,        // HP restored per second while in range
+    repairRange: 60,        // distance to gate to start repairing
+  },
+
+  // ── Leviathan (Level 3) ─────────────────────────────────────────────────
+  leviathan: {
+    hp: 300,
+    speed: 0.8,
+    radius: 50,
+    contactDamage: 25,
+    color: '#2E8B57',
+    shape: 'circle',
+    ai: 'leviathan',
+    projectileSpeed: 180,
+    projectileDamage: 15,
+    attackRange: 400,
+    attackCooldown: 2000,
+    maxRangedTargets: 2,
+    splitOnDeath: {
+      count: 2,
+      statMultiplier: 0.75,
+      maxGenerations: 3,
+    },
+  },
+
+  // ── Warlock / Channeler (Level 4) ───────────────────────────────────────
+  warlock: {
+    hp: 60,
+    speed: 0,
+    radius: 14,
+    contactDamage: 0,
+    color: '#6A0DAD',
+    shape: 'diamond',
+    ai: 'channeler',
+    channelTarget: null,          // set at spawn time to target entity ID
+    hpBuffPerSecond: 50,          // HP added to target per second per warlock
+    damageBuffPerSecond: 2,       // damage added to target per second per warlock
+  },
 }

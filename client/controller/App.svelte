@@ -2,12 +2,17 @@
   import { onMount, onDestroy } from 'svelte'
   import { io } from 'socket.io-client'
   import { EVENTS } from '../../shared/protocol.js'
-  import JoinScreen   from './screens/JoinScreen.svelte'
-  import LobbyScreen  from './screens/LobbyScreen.svelte'
-  import GameScreen   from './screens/GameScreen.svelte'
+  import NameScreen        from './screens/NameScreen.svelte'
+  import ClassSelectScreen from './screens/ClassSelectScreen.svelte'
+  import LobbyScreen       from './screens/LobbyScreen.svelte'
+  import GameScreen        from './screens/GameScreen.svelte'
 
-  // ── Screens: 'join' | 'lobby' | 'game' | 'levelComplete' | 'end'
-  let screen = $state('join')
+  // ── Screens: 'name' | 'classSelect' | 'lobby' | 'game' | 'levelComplete' | 'end'
+  let screen = $state('name')
+
+  // ── Overlay (swappable mid-game screen, e.g. quiz between levels)
+  let overlayScreen = $state(null)   // null | 'quiz' | …
+  let overlayData   = $state(null)
 
   // ── Orientation
   let isPortrait = $state(false)
@@ -59,7 +64,7 @@
     socket.on('connect', () => {
       myId = socket.id
       // Reconnect: if already past the join screen, re-register with the server
-      if (screen !== 'join' && playerName && className) {
+      if (screen !== 'name' && screen !== 'classSelect' && playerName && className) {
         socket.emit(EVENTS.JOIN, { name: playerName, className, isHost: false })
       }
     })
@@ -104,12 +109,21 @@
 
   // ── Actions passed down to children
 
-  function handleJoin({ name, cls }) {
+  function handleNameSubmit(name) {
     playerName = name
-    className  = cls
+    screen = 'classSelect'
+    if (!document.fullscreenElement && !isIOS) toggleFullscreen()
+  }
 
-    socket.emit(EVENTS.JOIN, { name, className: cls, isHost: false })
+  function handleClassReady(cls) {
+    className = cls
+    socket.emit(EVENTS.JOIN, { name: playerName, className: cls, isHost: false })
     screen = 'lobby'
+  }
+
+  function handleOverlayDone(result) {
+    overlayScreen = null
+    overlayData = null
   }
 
   function handleMove(vec) {
@@ -129,7 +143,7 @@
   }
 </script>
 
-{#if isPortrait}
+{#if isPortrait && screen !== 'name'}
   <div class="rotate-overlay">
     <span class="rotate-icon">⟳</span>
     <p>Rotate your phone to landscape</p>
@@ -148,8 +162,11 @@
 {/if}
 
 <div class="app">
-  {#if screen === 'join'}
-    <JoinScreen onjoin={handleJoin} />
+  {#if screen === 'name'}
+    <NameScreen onnext={handleNameSubmit} />
+
+  {:else if screen === 'classSelect'}
+    <ClassSelectScreen onready={handleClassReady} />
 
   {:else if screen === 'lobby'}
     {#if !lobbyReady}
@@ -172,22 +189,32 @@
     {/if}
 
   {:else if screen === 'game'}
-    <GameScreen
-      {playerName}
-      {className}
-      {isDead}
-      {cooldowns}
-      {comboPoints}
-      onmove={handleMove}
-      onskill={handleSkill}
-      onaim={handleAim}
-    />
+    {#if overlayScreen}
+      <!-- Future: swappable overlay (quiz, etc.) -->
+      <div class="end-screen"><p>Overlay: {overlayScreen}</p></div>
+    {:else}
+      <GameScreen
+        {playerName}
+        {className}
+        {isDead}
+        {cooldowns}
+        {comboPoints}
+        onmove={handleMove}
+        onskill={handleSkill}
+        onaim={handleAim}
+      />
+    {/if}
 
   {:else if screen === 'levelComplete'}
-    <div class="end-screen">
-      <p>{endMessage}</p>
-      <p class="sublabel">Waiting for host to continue…</p>
-    </div>
+    {#if overlayScreen}
+      <!-- Future: swappable overlay (quiz, etc.) -->
+      <div class="end-screen"><p>Overlay: {overlayScreen}</p></div>
+    {:else}
+      <div class="end-screen">
+        <p>{endMessage}</p>
+        <p class="sublabel">Waiting for host to continue…</p>
+      </div>
+    {/if}
 
   {:else if screen === 'end'}
     <div class="end-screen">

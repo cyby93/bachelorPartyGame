@@ -33,9 +33,14 @@ const startBtn       = document.getElementById('start-btn')
 const qrWrap         = document.getElementById('qr-code')
 const fullscreenBtn  = document.getElementById('fullscreen-btn')
 const levelSelector  = document.getElementById('level-selector')
-const levelNameEl    = document.getElementById('level-name')
+const selectedLevelNameEl = document.getElementById('selected-level-name')
 const prevLevelBtn   = document.getElementById('prev-level-btn')
 const nextLevelBtn   = document.getElementById('next-level-btn')
+const levelPanelEl   = document.getElementById('level-panel')
+const levelIndexEl   = document.getElementById('level-index')
+const currentLevelNameEl = document.getElementById('current-level-name')
+const objectiveLabelEl = document.getElementById('objective-label')
+const objectiveValueEl = document.getElementById('objective-value')
 
 // ── Fullscreen ─────────────────────────────────────────────────────────────
 fullscreenBtn?.addEventListener('click', () => {
@@ -53,9 +58,10 @@ document.addEventListener('fullscreenchange', () => {
 
 // ── Level selector (debug) ────────────────────────────────────────────────
 let selectedLevel = 0
+let currentLevelMeta = null
 
 function updateLevelDisplay() {
-  if (levelNameEl) levelNameEl.textContent = `Level ${selectedLevel + 1}: ${CAMPAIGN[selectedLevel]?.name ?? '?'}`
+  if (selectedLevelNameEl) selectedLevelNameEl.textContent = `Level ${selectedLevel + 1}: ${CAMPAIGN[selectedLevel]?.name ?? '?'}`
 }
 
 prevLevelBtn?.addEventListener('click', () => {
@@ -90,6 +96,69 @@ function renderDOMPlayerList() {
   }).join('')
 
   if (startBtn.dataset.scene === 'lobby') startBtn.disabled = false
+}
+
+function clearLevelPanel() {
+  if (levelPanelEl) levelPanelEl.hidden = true
+  if (levelIndexEl) levelIndexEl.textContent = ''
+  if (currentLevelNameEl) currentLevelNameEl.textContent = ''
+  if (objectiveLabelEl) objectiveLabelEl.textContent = ''
+  if (objectiveValueEl) objectiveValueEl.textContent = ''
+}
+
+function formatObjective(objective, knownState) {
+  if (!objective) return { label: '', value: '' }
+
+  switch (objective.type) {
+    case 'killCount': {
+      const label = objective.enemyTypes?.length
+        ? `Kill ${objective.target ?? '?'} ${objective.enemyTypes.join(', ')}`
+        : 'Wave progress'
+      return { label, value: `${objective.current ?? 0} / ${objective.target ?? '?'}` }
+    }
+    case 'survive': {
+      const total = objective.durationMs ?? objective.target ?? 0
+      const remaining = Math.max(0, total - (objective.current ?? 0))
+      return { label: 'Survive', value: `${Math.ceil(remaining / 1000)}s remaining` }
+    }
+    case 'surviveWaves':
+      return { label: 'Survive the waves', value: `${objective.current ?? 0} / ${objective.target ?? '?'}` }
+    case 'destroyGates':
+      return { label: 'Destroy the gates', value: `${objective.current ?? 0} / ${objective.target ?? '?'}` }
+    case 'killAll':
+      return { label: 'Defeat all enemies', value: objective.current === 1 ? 'Complete' : 'In progress' }
+    case 'killBoss': {
+      const boss = knownState?.boss
+      if (boss) {
+        const hp = Math.max(0, Math.ceil(boss.hp ?? 0))
+        const maxHp = Math.max(1, Math.ceil(boss.maxHp ?? 1))
+        return { label: boss.name ?? 'Boss', value: `${hp} / ${maxHp} HP` }
+      }
+      return { label: 'Defeat the boss', value: objective.current === 1 ? 'Complete' : 'In progress' }
+    }
+    case 'killBossProtectNPC': {
+      const npc = (knownState?.npcs ?? []).find(entry => entry.id === objective.npcId)
+      const npcState = npc ? `${Math.max(0, Math.ceil(npc.hp ?? 0))} HP` : 'Alive'
+      return { label: 'Protect Akama', value: objective.current === 1 ? 'Complete' : npcState }
+    }
+    default:
+      return { label: 'Objective', value: String(objective.current ?? '') }
+  }
+}
+
+function renderLevelPanel(scene, meta, objectives = meta?.objectives) {
+  const isCombatScene = scene === 'battle' || scene === 'bossFight'
+  if (!isCombatScene) {
+    clearLevelPanel()
+    return
+  }
+
+  const summary = formatObjective(objectives?.[0] ?? null, game.knownState)
+  if (levelPanelEl) levelPanelEl.hidden = false
+  if (levelIndexEl) levelIndexEl.textContent = `Level ${(meta?.levelIndex ?? 0) + 1} / ${meta?.totalLevels ?? '?'}`
+  if (currentLevelNameEl) currentLevelNameEl.textContent = meta?.levelName ?? 'Current level'
+  if (objectiveLabelEl) objectiveLabelEl.textContent = summary.label || 'Objective'
+  if (objectiveValueEl) objectiveValueEl.textContent = summary.value || 'In progress'
 }
 
 function setSceneControls(scene) {
@@ -174,7 +243,9 @@ socket.on(EVENTS.INIT, state => {
     arenaHeight: state.arenaHeight,
   }
   game.switchScene(scene, meta)
+  currentLevelMeta = meta
   setSceneControls(scene)
+  renderLevelPanel(scene, meta)
   renderDOMPlayerList()
 })
 
@@ -199,7 +270,9 @@ socket.on(EVENTS.STATE_DELTA, delta => {
 socket.on(EVENTS.SCENE_CHANGE, (data) => {
   const { scene, ...meta } = data
   game.switchScene(scene, meta)
+  currentLevelMeta = meta
   setSceneControls(scene)
+  renderLevelPanel(scene, meta)
 
   if (scene === 'battle' || scene === 'bossFight') audio.playTransition()
   else if (scene === 'result')  audio.playVictory()
@@ -208,6 +281,7 @@ socket.on(EVENTS.SCENE_CHANGE, (data) => {
 
 socket.on(EVENTS.OBJECTIVE_UPDATE, ({ objectives }) => {
   game.updateObjectives(objectives)
+  renderLevelPanel(startBtn.dataset.scene, currentLevelMeta ?? {}, objectives)
 })
 
 socket.on(EVENTS.SET_LEVEL, ({ levelIndex, levelName }) => {

@@ -26,7 +26,10 @@
     })
   })
 
-  onDestroy(() => { joystick?.destroy() })
+  onDestroy(() => {
+    onmove?.({ x: 0, y: 0 })
+    joystick?.destroy()
+  })
 </script>
 
 <div class="move-zone" bind:this={zoneEl}></div>

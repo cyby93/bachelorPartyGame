@@ -50,7 +50,7 @@
       background: #0f1923; color: #7fa8c0; cursor: pointer; font-size: 13px; font-weight: bold;
     }
     #level-selector button:hover { background: #1e3a4a; color: #fff; }
-    #level-name { color: #00d2ff; font-size: 13px; min-width: 180px; text-align: center; }
+    #selected-level-name { color: #00d2ff; font-size: 13px; min-width: 180px; text-align: center; }
 
     #fullscreen-btn {
       padding: 8px; border-radius: 6px; border: 1px solid #1e3a4a;
@@ -58,8 +58,104 @@
     }
     #fullscreen-btn:hover { background: #1e3a4a; color: #fff; }
 
-    #canvas-wrap { flex: 1; display: flex; align-items: center; justify-content: center; background: #0a1018; min-height: 0; overflow: hidden; }
-    canvas        { display: block; max-width: 100% !important; max-height: 100% !important; width: auto !important; height: auto !important; }
+    #main-layout {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      background: #0a1018;
+    }
+
+    #level-panel {
+      min-height: 76px;
+      padding: 14px 18px;
+      border-bottom: 1px solid #1e2d3a;
+      background: linear-gradient(180deg, #101a25 0%, #0c141d 100%);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+    }
+    #level-panel[hidden] { display: none; }
+
+    #level-meta {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    #level-index {
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #7fa8c0;
+    }
+    #current-level-name {
+      font-size: 24px;
+      font-weight: 700;
+      color: #ffffff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #objective-card {
+      flex: 0 0 320px;
+      max-width: 40%;
+      padding: 12px 14px;
+      border: 1px solid #1e3a4a;
+      border-radius: 10px;
+      background: rgba(5, 11, 18, 0.7);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    #objective-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #00d2ff;
+    }
+    #objective-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    #canvas-wrap {
+      flex: 1;
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 12px;
+    }
+    canvas {
+      display: block;
+      max-width: 100% !important;
+      max-height: 100% !important;
+      width: auto !important;
+      height: auto !important;
+    }
+
+    @media (max-width: 960px) {
+      #level-panel {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      #objective-card {
+        max-width: none;
+        flex-basis: auto;
+      }
+
+      #current-level-name {
+        white-space: normal;
+      }
+    }
 
     /* Connection badge */
     #conn-badge {
@@ -93,15 +189,27 @@
 
     <div id="level-selector" style="display:none">
       <button id="prev-level-btn">&#9664; Prev</button>
-      <span id="level-name">Level 1: The Courtyard</span>
+      <span id="selected-level-name">Level 1: The Courtyard</span>
       <button id="next-level-btn">Next &#9654;</button>
     </div>
     <button id="start-btn" disabled>START GAME</button>
     <button id="fullscreen-btn" title="Toggle fullscreen">⛶ Fullscreen</button>
   </div>
 
-  <div id="canvas-wrap">
-    <canvas id="game-canvas"></canvas>
+  <div id="main-layout">
+    <div id="level-panel" hidden>
+      <div id="level-meta">
+        <div id="level-index"></div>
+        <div id="current-level-name"></div>
+      </div>
+
+      <div id="objective-card">
+        <div id="objective-label"></div>
+        <div id="objective-value"></div>
+      </div>
+    </div>
+
+    <div id="canvas-wrap"></div>
   </div>
 
   <div id="conn-badge">Connecting…</div>

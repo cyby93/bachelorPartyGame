@@ -236,6 +236,7 @@ export default class GameServer {
 
     // Reset combat state between levels
     this._clearCombatState()
+    this._resetPlayerInputs()
 
     // Reset all non-host players to full HP and scatter them
     this.players.forEach(p => {
@@ -414,6 +415,19 @@ export default class GameServer {
     this.skillSystem._pendingBursts = []
   }
 
+  _resetPlayerInputs() {
+    this.players.forEach(p => {
+      if (p.isHost) return
+      p.setMoveInput(0, 0)
+      p.activeCast = null
+      p.shieldActive = false
+    })
+
+    this.inputQueues.forEach(queue => {
+      queue.length = 0
+    })
+  }
+
   _onDisconnect(socket) {
     const player = this.players.get(socket.id)
     console.log(`[-] disconnect  ${player?.name ?? socket.id}`)
@@ -429,6 +443,8 @@ export default class GameServer {
   // ── Scene management ───────────────────────────────────────────────────────
 
   _changeScene(name, extra = {}) {
+    this._resetPlayerInputs()
+
     if (name === 'lobby') {
       this._setArenaSize(GAME_CONFIG.CANVAS_WIDTH, GAME_CONFIG.CANVAS_HEIGHT)
     }
@@ -603,6 +619,7 @@ export default class GameServer {
 
   _processSkillInput(player, input) {
     if (player.isDead) return
+    if (this.scene !== 'lobby' && this.scene !== 'battle' && this.scene !== 'bossFight') return
 
     const { index, vector, action } = input
     const config = player.getSkillConfig(index)

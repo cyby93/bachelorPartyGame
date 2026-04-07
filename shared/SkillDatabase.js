@@ -267,9 +267,9 @@ const SkillDatabase = {
       inputType:  'INSTANT',
       autoRefire: true,
       cooldown:   1000,
-      radius:     120,
-      damage:     20,
-      healAmount: 25,
+      radius:     320,
+      damage:     100,
+      healAmount: 105,
       effectType: 'DUAL',
       icon:       '💚'
     },

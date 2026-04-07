@@ -52,7 +52,7 @@ export default class HostGame {
       autoDensity: true,
     })
 
-    containerEl.appendChild(this.app.canvas)
+    containerEl.replaceChildren(this.app.canvas)
 
     // ── Permanent layer stack (back → front) ──────────────────────────────
     this.worldRoot = new Container()

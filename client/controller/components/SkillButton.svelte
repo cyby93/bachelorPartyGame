@@ -239,6 +239,16 @@
   }
 
   onDestroy(() => {
+    if (autoFireInterval) { clearInterval(autoFireInterval); autoFireInterval = null }
+    if (aimHeartbeat) { clearInterval(aimHeartbeat); aimHeartbeat = null }
+    joystickHeld = false
+    if (held) {
+      held = false
+      if (skill?.inputType === 'SUSTAINED') {
+        onskill?.({ index, vector: { x: 1, y: 0 }, action: 'END' })
+      }
+    }
+    cancelCast()
     if (firedTimer) { clearTimeout(firedTimer); firedTimer = null }
   })
 </script>

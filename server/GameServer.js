@@ -13,6 +13,7 @@ import CooldownSystem    from './systems/CooldownSystem.js'
 import SkillSystem       from './systems/SkillSystem.js'
 import SpawnSystem       from './systems/SpawnSystem.js'
 import { ENEMY_TYPES }   from '../shared/EnemyTypeConfig.js'
+import { buildWallSegments, resolveWallCollision, hitsWall } from '../shared/WallCollision.js'
 
 /**
  * GameServer — authoritative game simulation.
@@ -75,6 +76,7 @@ export default class GameServer {
     this._levelStartTime   = 0
     this.arenaWidth        = GAME_CONFIG.CANVAS_WIDTH
     this.arenaHeight       = GAME_CONFIG.CANVAS_HEIGHT
+    this._wallSegments     = []
 
     // Objective progress — synced to clients via OBJECTIVE_UPDATE
     this.objectiveProgress = []
@@ -233,12 +235,15 @@ export default class GameServer {
     this.currentLevelIndex = index
     this.currentLevel      = level
     this._setArenaSize(level.arena?.width ?? GAME_CONFIG.CANVAS_WIDTH, level.arena?.height ?? GAME_CONFIG.CANVAS_HEIGHT)
+    this._wallSegments = buildWallSegments(level.arena)
 
     // Reset combat state between levels
     this._clearCombatState()
     this._resetPlayerInputs()
 
     // Reset all non-host players to full HP and scatter them
+    // If rooms are defined, spawn in the first (left) room; otherwise near centre.
+    const firstRoom = level.arena?.rooms?.[0]
     this.players.forEach(p => {
       if (p.isHost) return
       p.hp           = p.maxHp
@@ -248,9 +253,15 @@ export default class GameServer {
       p.activeEffects = []
       p.rebuildStats()
       p.setArenaSize(this.arenaWidth, this.arenaHeight)
-      const { x, y } = this._randomPointNearCenter(400, 250)
-      p.x = x
-      p.y = y
+      if (firstRoom) {
+        const pad = GAME_CONFIG.PLAYER_RADIUS + 10
+        p.x = firstRoom.x + pad + Math.random() * (firstRoom.width - pad * 2)
+        p.y = firstRoom.y + pad + Math.random() * (firstRoom.height - pad * 2)
+      } else {
+        const { x, y } = this._randomPointNearCenter(400, 250)
+        p.x = x
+        p.y = y
+      }
     })
 
     // Compute player count for difficulty scaling
@@ -370,6 +381,8 @@ export default class GameServer {
       objectives:  this.objectiveProgress,
       gates:       this._gatesDTO(),
       npcs:        this._npcsDTO(),
+      rooms:       level.arena?.rooms ?? [],
+      passages:    level.arena?.passages ?? [],
     })
   }
 
@@ -447,6 +460,7 @@ export default class GameServer {
 
     if (name === 'lobby') {
       this._setArenaSize(GAME_CONFIG.CANVAS_WIDTH, GAME_CONFIG.CANVAS_HEIGHT)
+      this._wallSegments = []
     }
 
     this.scene = name
@@ -502,6 +516,12 @@ export default class GameServer {
     this.players.forEach(p => p.setArenaSize(width, height))
   }
 
+  /** Returns true if the gate with the given id has been destroyed. */
+  _isGateDead(gateId) {
+    const gate = this.gates.get(gateId)
+    return gate ? gate.isDead : true   // unknown gate → treat as open
+  }
+
   _randomPointNearCenter(spreadX, spreadY) {
     return {
       x: this.arenaWidth / 2 + (Math.random() - 0.5) * spreadX,
@@ -526,6 +546,8 @@ export default class GameServer {
       cooldowns:    this.cooldowns,
       minions:      this.minions,
       nextMinionId: () => ++this._minionIdSeq,
+      wallSegments: this._wallSegments,
+      isGateDead:   (id) => this._isGateDead(id),
     }
   }
 
@@ -560,6 +582,17 @@ export default class GameServer {
     // 2. Update players
     this.players.forEach(p => p.update(dt))
 
+    // 2b. Wall collision for players
+    if (this._wallSegments.length > 0) {
+      const isGateDead = (id) => this._isGateDead(id)
+      this.players.forEach(p => {
+        if (p.isHost || p.isDead) return
+        const resolved = resolveWallCollision(p.x, p.y, GAME_CONFIG.PLAYER_RADIUS, this._wallSegments, isGateDead)
+        p.x = resolved.x
+        p.y = resolved.y
+      })
+    }
+
     // 3. Scene-specific logic
     if (this.scene === 'lobby') {
       const gs = this._gs()
@@ -573,11 +606,15 @@ export default class GameServer {
 
       // Spawn enemies from SpawnSystem
       if (this.spawnSystem) {
-        // For gate-based spawning, pass active gate position
+        // For gate-based spawning, offset spawn point to the left of the gate
+        // (players advance from the left, enemies defend the gate from the player side)
         let spawnPos = null
         if (this.currentLevel?.spawning?.spawnNearActiveGate) {
           const gate = this._getActiveGate()
-          if (gate) spawnPos = { x: gate.x, y: gate.y }
+          if (gate) {
+            const offsetX = gate.passageId ? -((gate.width ?? 40) / 2 + 60) : 0
+            spawnPos = { x: gate.x + offsetX, y: gate.y }
+          }
         }
         const spawned = this.spawnSystem.tick(now, this.enemies, this._enemyIdSeq, spawnPos)
         for (const e of spawned) {
@@ -838,6 +875,17 @@ export default class GameServer {
       })
       enemy.setArenaSize(this.arenaWidth, this.arenaHeight)
       this.enemies.set(id, enemy)
+    }
+
+    // Wall collision for enemies
+    if (this._wallSegments.length > 0) {
+      const isGateDead = (id) => this._isGateDead(id)
+      this.enemies.forEach(e => {
+        if (e.isDead) return
+        const resolved = resolveWallCollision(e.x, e.y, e.radius, this._wallSegments, isGateDead)
+        e.x = resolved.x
+        e.y = resolved.y
+      })
     }
 
     // Warlock / Phase 2 transition (Level 4)
@@ -1276,6 +1324,8 @@ export default class GameServer {
       objectives:  this.objectiveProgress,
       gates:       this._gatesDTO(),
       npcs:        this._npcsDTO(),
+      rooms:       this.currentLevel?.arena?.rooms ?? [],
+      passages:    this.currentLevel?.arena?.passages ?? [],
     }
   }
 

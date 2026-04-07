@@ -241,6 +241,8 @@ socket.on(EVENTS.INIT, state => {
     objectives: state.objectives,
     arenaWidth: state.arenaWidth,
     arenaHeight: state.arenaHeight,
+    rooms: state.rooms,
+    passages: state.passages,
   }
   game.switchScene(scene, meta)
   currentLevelMeta = meta

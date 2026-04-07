@@ -73,8 +73,8 @@ export const CAMPAIGN = [
       { type: 'destroyGates' },
     ],
     gates: [
-      { id: 'gate1', passageId: 'passage1', hp: 500, position: { x: 530, y: 200 }, radius: 24 },
-      { id: 'gate2', passageId: null,        hp: 500, position: { x: 1070, y: 200 }, radius: 24 },
+      { id: 'gate1', passageId: 'passage1', hp: 500, position: { x: 550, y: 200 }, width: 40, height: 100 },
+      { id: 'gate2', passageId: null,        hp: 500, position: { x: 1070, y: 200 }, width: 48, height: 80 },
     ],
     spawning: {
       mode: 'continuous',

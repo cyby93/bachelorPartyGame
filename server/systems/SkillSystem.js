@@ -8,6 +8,7 @@ import CollisionSystem from './CollisionSystem.js'
 import { GAME_CONFIG } from '../../shared/GameConfig.js'
 import { CLASSES }     from '../../shared/ClassConfig.js'
 import ServerMinion    from '../entities/ServerMinion.js'
+import { hitsWall }    from '../../shared/WallCollision.js'
 
 // ── Standalone helpers ────────────────────────────────────────────────────────
 
@@ -782,11 +783,13 @@ export default class SkillSystem {
       }
     }
 
-    // Damage gates
+    // Damage gates (circle AOE vs rect gate)
     if (gs.gates) {
       gs.gates.forEach(gate => {
         if (gate.isDead || !gate.isActive) return
-        if (this._collision.distance({ x: cx, y: cy }, { x: gate.x, y: gate.y }) <= radius + gate.radius) {
+        const aoeCircle = { x: cx, y: cy, radius }
+        const gateRect  = { x: gate.x, y: gate.y, width: gate.width ?? 40, height: gate.height ?? 100 }
+        if (this._collision.circleRectOverlap(aoeCircle, gateRect)) {
           gate.takeDamage(Math.round((config.damage ?? 0) * (player?.damageMult ?? 1)))
         }
       })
@@ -881,6 +884,15 @@ export default class SkillSystem {
       const moved = Math.hypot(proj.x - prevX, proj.y - prevY)
       proj.distTraveled += moved
 
+      // Wall collision — destroy projectile if it hits a solid wall
+      if (gs.wallSegments && gs.wallSegments.length > 0 && gs.isGateDead) {
+        if (hitsWall(proj.x, proj.y, proj.radius ?? 4, gs.wallSegments, gs.isGateDead)) {
+          proj.isAlive = false
+          gs.projectiles.delete(id)
+          return
+        }
+      }
+
       // Out of bounds
       if (
         proj.x < 0 || proj.x > (gs.arenaWidth ?? GAME_CONFIG.CANVAS_WIDTH) ||
@@ -941,14 +953,14 @@ export default class SkillSystem {
         }
       }
 
-      // Collision check vs gates
+      // Collision check vs gates (circle-vs-rect)
       if (proj.isAlive && gs.gates && !proj.isEnemyProj) {
         gs.gates.forEach(gate => {
           if (!proj.isAlive || gate.isDead || !gate.isActive) return
           if (proj.hit.has(gate.id)) return
           const projCircle = { x: proj.x, y: proj.y, radius: proj.radius }
-          const gateCircle = { x: gate.x, y: gate.y, radius: gate.radius }
-          if (this._collision.circlesOverlap(projCircle, gateCircle)) {
+          const gateRect   = { x: gate.x, y: gate.y, width: gate.width ?? 40, height: gate.height ?? 100 }
+          if (this._collision.circleRectOverlap(projCircle, gateRect)) {
             proj.hit.add(gate.id)
             gate.takeDamage(proj.damage ?? 0)
             if (!proj.pierce) proj.isAlive = false

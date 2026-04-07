@@ -211,23 +211,26 @@ export default class BattleRenderer extends BaseRenderer {
       }
 
       const gfx = this.gateGfx.get(gate.id)
-      const r = gate.radius ?? 24
+      const gateW = gate.width  ?? 40
+      const gateH = gate.height ?? 100
       const hpPct = gate.hp / (gate.maxHp || 1)
 
       gfx.clear()
 
-      // Gate body — glowing circle
+      // Gate body — rectangular
       const bodyColor = gate.isActive ? 0xff4444 : 0x666666
-      gfx.circle(gate.x, gate.y, r)
+      const gateX = gate.x - gateW / 2
+      const gateY = gate.y - gateH / 2
+      gfx.rect(gateX, gateY, gateW, gateH)
       gfx.fill({ color: bodyColor, alpha: 0.7 })
-      gfx.circle(gate.x, gate.y, r)
+      gfx.rect(gateX, gateY, gateW, gateH)
       gfx.stroke({ color: gate.isActive ? 0xff8888 : 0x999999, width: 3 })
 
       // HP bar above gate
-      const barW = r * 2.5
+      const barW = Math.max(gateW, 60)
       const barH = 5
       const barX = gate.x - barW / 2
-      const barY = gate.y - r - 12
+      const barY = gateY - 12
       gfx.rect(barX, barY, barW, barH)
       gfx.fill({ color: 0x111111, alpha: 0.8 })
       if (hpPct > 0) {

@@ -30,6 +30,7 @@ export default class HostGame {
     this.socket         = null        // set via setSocket() from main.js
     this.containerEl    = null
     this.currentArena   = { width: GAME_CONFIG.CANVAS_WIDTH, height: GAME_CONFIG.CANVAS_HEIGHT }
+    this._levelMeta     = {}
     this._onResize      = null
   }
 
@@ -96,6 +97,8 @@ export default class HostGame {
    * @param {object} [meta] – level metadata from SCENE_CHANGE payload
    */
   switchScene(name, meta) {
+    // Store meta before setArenaSize so _rebuildBackground can draw walls
+    this._levelMeta = meta ?? {}
     this.setArenaSize(meta?.arenaWidth, meta?.arenaHeight)
     this.activeRenderer?.exit()
     this.activeRenderer = this.renderers[name] ?? this.renderers.lobby
@@ -238,6 +241,28 @@ export default class HostGame {
     return GAME_CONFIG.PLAYER_RADIUS
   }
 
+  /** Draw a single wall segment with stone-like visual. */
+  _drawWallRect(gfx, x, y, w, h) {
+    // Dark stone fill
+    gfx.rect(x, y, w, h)
+    gfx.fill({ color: 0x3d3d3d, alpha: 1 })
+
+    // Inner bricks — horizontal lines every 20px
+    const brickH = 20
+    for (let by = y + brickH; by < y + h; by += brickH) {
+      gfx.moveTo(x, by).lineTo(x + w, by)
+    }
+    gfx.stroke({ color: 0x2a2a2a, alpha: 0.8, width: 1 })
+
+    // Bright border to stand out from background
+    gfx.rect(x, y, w, h)
+    gfx.stroke({ color: 0x7f93a3, width: 3 })
+
+    // Inner highlight edge
+    gfx.rect(x + 2, y + 2, w - 4, h - 4)
+    gfx.stroke({ color: 0x555555, width: 1 })
+  }
+
   _rebuildBackground() {
     if (!this.layers.bg) return
 
@@ -279,6 +304,39 @@ export default class HostGame {
 
     bgGfx.rect(0, 0, W, H)
     bgGfx.stroke({ color: 0x09121a, alpha: 0.95, width: 10 })
+
+    // Draw wall segments between rooms
+    const rooms = this._levelMeta?.rooms
+    const passages = this._levelMeta?.passages
+    if (rooms && rooms.length >= 2 && passages) {
+      const sorted = [...rooms].sort((a, b) => a.x - b.x)
+      for (let i = 0; i < sorted.length - 1; i++) {
+        const left = sorted[i]
+        const right = sorted[i + 1]
+        const wallX = left.x + left.width
+        const wallW = right.x - wallX
+        if (wallW <= 0) continue
+
+        const wallTop = Math.min(left.y, right.y)
+        const wallBottom = Math.max(left.y + left.height, right.y + right.height)
+
+        // Find passages that cut through this wall
+        const wallPassages = passages.filter(p => p.x >= wallX && p.x < wallX + wallW)
+        wallPassages.sort((a, b) => a.y - b.y)
+
+        // Draw solid wall segments (not passage openings)
+        let curY = wallTop
+        for (const p of wallPassages) {
+          if (p.y > curY) {
+            this._drawWallRect(bgGfx, wallX, curY, wallW, p.y - curY)
+          }
+          curY = p.y + p.height
+        }
+        if (curY < wallBottom) {
+          this._drawWallRect(bgGfx, wallX, curY, wallW, wallBottom - curY)
+        }
+      }
+    }
 
     this.layers.bg.addChild(bgGfx)
   }

@@ -49,6 +49,21 @@ export default class CollisionSystem {
   }
 
   /**
+   * True if a circle overlaps an axis-aligned rectangle.
+   * @param {{ x, y, radius }} circle – circle centre + radius
+   * @param {{ x, y, width, height }} rect – rect defined by centre + size
+   */
+  circleRectOverlap(circle, rect) {
+    const halfW = rect.width / 2
+    const halfH = rect.height / 2
+    const cx = Math.max(rect.x - halfW, Math.min(circle.x, rect.x + halfW))
+    const cy = Math.max(rect.y - halfH, Math.min(circle.y, rect.y + halfH))
+    const dx = circle.x - cx
+    const dy = circle.y - cy
+    return (dx * dx + dy * dy) < (circle.radius * circle.radius)
+  }
+
+  /**
    * Returns all targets within a circular radius.
    * @param {object}   center  – { x, y }
    * @param {number}   radius

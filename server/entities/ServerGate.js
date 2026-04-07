@@ -21,7 +21,9 @@ export default class ServerGate {
     this.maxHp     = this.hp
     this.x         = config.position?.x ?? 0
     this.y         = config.position?.y ?? 0
-    this.radius    = config.radius ?? 30
+    this.width     = config.width  ?? 40
+    this.height    = config.height ?? 100
+    this.radius    = Math.max(this.width, this.height) / 2   // kept for legacy cone/AOE range checks
     this.isDead    = false
     this.isActive  = false    // only active gate can be damaged
     this.isPlayer  = false
@@ -54,6 +56,8 @@ export default class ServerGate {
       y:        this.y,
       hp:       this.hp,
       maxHp:    this.maxHp,
+      width:    this.width,
+      height:   this.height,
       radius:   this.radius,
       isDead:   this.isDead,
       isActive: this.isActive,

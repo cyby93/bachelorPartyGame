@@ -28,7 +28,7 @@ export const BOSS_CONFIG = {
     radius: 55,
     meleeDamage: 40,
     attackCooldown: 2000,
-    attackRange: 60,
+    attackRange: 90,
     // No abilities array — Shade uses simple melee only
     abilities: [],
     // Two phases: idle (immune) → active (attacks Akama)

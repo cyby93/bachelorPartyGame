@@ -12,7 +12,7 @@
  *   boss, minion, tombstone rendering; hit sparks; aura sync; mode UI.
  */
 
-import { Container, Graphics } from 'pixi.js'
+import { Container, Graphics, Text } from 'pixi.js'
 import { GAME_CONFIG }  from '../../../shared/GameConfig.js'
 import { CLASSES }      from '../../../shared/ClassConfig.js'
 import BossSprite       from '../entities/BossSprite.js'
@@ -30,6 +30,7 @@ export default class BattleRenderer extends BaseRenderer {
     this._entityRoot.addChild(this.minionContainer, this.enemyContainer, this.bossContainer)
 
     this.bossSprite   = null
+    this.npcGfx       = new Map()   // npcId → { container, body, hpFill, nameLabel }
     this.tombstoneGfx = new Map()   // playerId → Graphics
     this.gateGfx      = new Map()   // gateId → Graphics
     this.buildingGfx  = new Map()   // buildingId → Graphics
@@ -67,6 +68,8 @@ export default class BattleRenderer extends BaseRenderer {
       this.bossSprite.destroy()
       this.bossSprite = null
     }
+    this.npcGfx.forEach(entry => entry.container.destroy({ children: true }))
+    this.npcGfx.clear()
     this.tombstoneGfx.forEach(gfx => gfx.destroy())
     this.tombstoneGfx.clear()
     this.gateGfx.forEach(gfx => gfx.destroy())
@@ -159,7 +162,7 @@ export default class BattleRenderer extends BaseRenderer {
     // Boss
     if (state.boss && !state.boss.isDead) {
       if (!this.bossSprite) {
-        this.bossSprite = new BossSprite()
+        this.bossSprite = new BossSprite(state.boss.name)
         this.bossContainer.addChild(this.bossSprite.container)
       }
       this.bossSprite.update(state.boss)
@@ -169,6 +172,71 @@ export default class BattleRenderer extends BaseRenderer {
       this.bossSprite.destroy()
       this.bossSprite = null
     }
+
+    // NPCs (friendly entities like Akama)
+    const npcs = state.npcs ?? []
+    const activeNpcIds = new Set()
+    for (const npc of npcs) {
+      if (npc.isDead) continue
+      activeNpcIds.add(npc.id)
+      const r = npc.radius ?? 25
+
+      if (!this.npcGfx.has(npc.id)) {
+        const container = new Container()
+
+        const body = new Graphics()
+        container.addChild(body)
+
+        const nameLabel = new Text({
+          text:  npc.name ?? 'NPC',
+          style: { fontFamily: 'Arial', fontSize: 12, fontWeight: 'bold', fill: '#27ae60', align: 'center' },
+        })
+        nameLabel.anchor.set(0.5, 1)
+        nameLabel.position.set(0, -r - 18)
+        container.addChild(nameLabel)
+
+        const hpBg = new Graphics()
+        hpBg.rect(-30, -r - 14, 60, 6)
+        hpBg.fill({ color: 0x111111, alpha: 0.8 })
+        hpBg.rect(-30, -r - 14, 60, 6)
+        hpBg.stroke({ color: 0x333333, width: 0.5 })
+        container.addChild(hpBg)
+
+        const hpFill = new Graphics()
+        container.addChild(hpFill)
+
+        this.npcGfx.set(npc.id, { container, body, hpFill, radius: r })
+        this._entityRoot.addChild(container)
+      }
+
+      const entry = this.npcGfx.get(npc.id)
+      entry.container.position.set(npc.x, npc.y)
+
+      // Redraw body
+      entry.body.clear()
+      entry.body.circle(0, 0, r)
+      entry.body.fill({ color: 0x27ae60, alpha: 0.9 })
+      entry.body.circle(0, 0, r)
+      entry.body.stroke({ color: 0x2ecc71, width: 2 })
+
+      // HP bar fill
+      const hpPct = npc.maxHp > 0 ? Math.max(0, npc.hp / npc.maxHp) : 0
+      entry.hpFill.clear()
+      if (hpPct > 0) {
+        const hpColor = hpPct > 0.5 ? 0x27ae60 : hpPct > 0.25 ? 0xe67e22 : 0xe74c3c
+        entry.hpFill.rect(-30, -r - 14, 60 * hpPct, 6)
+        entry.hpFill.fill(hpColor)
+      }
+    }
+
+    // Remove dead/stale NPC graphics
+    this.npcGfx.forEach((entry, id) => {
+      if (!activeNpcIds.has(id)) {
+        this._entityRoot.removeChild(entry.container)
+        entry.container.destroy({ children: true })
+        this.npcGfx.delete(id)
+      }
+    })
 
     // Tombstones
     const activeTombIds = new Set((state.tombstones ?? []).map(t => t.id))

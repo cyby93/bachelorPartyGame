@@ -126,6 +126,7 @@ export default class HostGame {
     })
     if (state.gates) this.knownState.gates = state.gates
     if (state.buildings) this.knownState.buildings = state.buildings
+    if (state.npcs) this.knownState.npcs = state.npcs
   }
 
   /** Incremental delta received every server tick. */
@@ -165,6 +166,7 @@ export default class HostGame {
     if (delta.minions     != null) this.knownState.minions     = delta.minions
     if (delta.gates       != null) this.knownState.gates       = delta.gates
     if (delta.buildings   != null) this.knownState.buildings   = delta.buildings
+    if (delta.npcs        != null) this.knownState.npcs        = delta.npcs
   }
 
   addPlayer(dto) {

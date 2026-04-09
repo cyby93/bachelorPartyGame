@@ -131,11 +131,13 @@ export default class ServerBoss {
   toDTO() {
     return {
       id:       'boss',
+      name:     this.name,
       x:        Math.round(this.x),
       y:        Math.round(this.y),
       angle:    +this.angle.toFixed(3),
       hp:       Math.round(this.hp),
       maxHp:    Math.round(this.maxHp),
+      radius:   this.radius,
       phase:    this.phase,
       isDead:   this.isDead,
       isImmune: this.isImmune || undefined,

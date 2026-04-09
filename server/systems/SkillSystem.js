@@ -95,7 +95,7 @@ export default class SkillSystem {
     const v = normalize(vector ?? { x: 1, y: 0 })
 
     switch (config.type) {
-      case 'PROJECTILE': return this._executeProjectile(gs, player, config, v)
+      case 'PROJECTILE': return this._executeProjectile(gs, player, config, v, isSelfCast)
       case 'MELEE':      return this._executeMelee(gs, player, config, v)
       case 'AOE':        return this._executeAOE(gs, player, config, v)
       case 'DASH':       return this._executeDash(gs, player, config, v)
@@ -127,7 +127,7 @@ export default class SkillSystem {
 
   // ── Skill handlers ─────────────────────────────────────────────────────────
 
-  _executeProjectile(gs, player, config, v) {
+  _executeProjectile(gs, player, config, v, isSelfCast = false) {
     const color = CLASSES[player.className]?.color ?? '#ffffff'
 
     if (config.subtype === 'BURST') {
@@ -138,10 +138,11 @@ export default class SkillSystem {
         this._pendingBursts.push({
           spawnAt:  now + i * interval,
           playerId: player.id,
-          vx:       v.x * config.speed,
-          vy:       v.y * config.speed,
+          vx:       isSelfCast ? 0 : v.x * config.speed,
+          vy:       isSelfCast ? 0 : v.y * config.speed,
           config,
           color,
+          selfCast: isSelfCast,
         })
       }
       return
@@ -1011,6 +1012,8 @@ export default class SkillSystem {
         gs.players.forEach(p => {
           if (!proj.isAlive || p.isHost || p.isDead) return
           if (proj.hit.has(p.id)) return
+          // Skip the caster unless this is a self-cast projectile
+          if (p.id === proj.ownerId && !proj.selfCast) return
           const projCircle   = { x: proj.x, y: proj.y, radius: proj.radius }
           const playerCircle = { x: p.x,    y: p.y,    radius: GAME_CONFIG.PLAYER_RADIUS }
           if (!this._collision.circlesOverlap(projCircle, playerCircle)) return
@@ -1063,6 +1066,7 @@ export default class SkillSystem {
       if (!player || player.isDead) { this._pendingBursts.splice(i, 1); continue }
       this._spawnProjectile(gs, player, entry.config, {
         vx: entry.vx, vy: entry.vy, color: entry.color,
+        selfCast: entry.selfCast,
       })
       this._pendingBursts.splice(i, 1)
     }
@@ -1599,6 +1603,7 @@ export default class SkillSystem {
       chainRange:  config.chainRange     ?? 200,
       onHitEffect: config.onHitEffect    ?? null,
       canHitAllies: config.canHitAllies  ?? false,
+      selfCast:    overrides.selfCast   ?? false,
     })
   }
 }

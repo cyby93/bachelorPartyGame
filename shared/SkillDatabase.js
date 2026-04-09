@@ -258,6 +258,7 @@ const SkillDatabase = {
       range:        450,
       pierce:       false,
       canHitAllies: true,
+      selfCastFallback: true,
       icon:         '✝️'
     },
     {

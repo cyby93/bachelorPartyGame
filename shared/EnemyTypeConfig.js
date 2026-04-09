@@ -89,7 +89,7 @@ export const ENEMY_TYPES = {
   // ── Leviathan (Level 3) ─────────────────────────────────────────────────
   leviathan: {
     hp: 300,
-    speed: 0.8,
+    speed: 1.0,
     radius: 50,
     contactDamage: 25,
     color: '#2E8B57',

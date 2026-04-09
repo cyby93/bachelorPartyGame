@@ -869,8 +869,10 @@ export default class GameServer {
           if (base) {
             const childGen = e.generation + 1
             for (let i = 0; i < split.count; i++) {
-              const offsetX = (Math.random() - 0.5) * 40
-              const offsetY = (Math.random() - 0.5) * 40
+              const angle = (i / split.count) * Math.PI * 2 + (Math.random() - 0.5) * 0.5
+              const dist = e.radius * 1.5 + 20
+              const offsetX = Math.cos(angle) * dist
+              const offsetY = Math.sin(angle) * dist
               pendingSplits.push({
                 type:          e.type,
                 x:             e.x + offsetX,

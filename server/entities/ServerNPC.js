@@ -116,6 +116,7 @@ export default class ServerNPC {
       y:      Math.round(this.y),
       hp:     this.hp,
       maxHp:  this.maxHp,
+      radius: this.radius,
       isDead: this.isDead,
       isNPC:  true,
     }

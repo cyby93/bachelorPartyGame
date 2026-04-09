@@ -251,7 +251,7 @@ const SkillDatabase = {
       subtype:      'BURST',
       inputType:    'AIMED',
       cooldown:     4000,
-      damage:       30,
+      damage:       150,
       healAmount:   40,
       speed:        500,
       radius:       10,

@@ -41,4 +41,8 @@ export const EVENTS = {
   QUIZ_UPGRADE:         'quiz:upgrade',         // C→S:   { skillIndex }
   QUIZ_UPGRADE_CHOSEN:  'quiz:upgradeChosen',   // S→All: { playerId, skillIndex, skillName }
   QUIZ_DONE:            'quiz:done',            // S→All: quiz resolved, host can continue
+
+  // ── Illidan encounter (Level 5) ─────────────────────────────────────────
+  ILLIDAN_DIALOG_LINE:      'illidan:dialog_line',      // S→All: { speaker, text }
+  ILLIDAN_PHASE_TRANSITION: 'illidan:phase_transition', // S→All: { phase }
 }

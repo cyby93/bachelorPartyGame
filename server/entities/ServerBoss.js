@@ -3,16 +3,23 @@
  * Server-side boss entity: Illidan Stormrage with phase-based AI.
  */
 
-import { BOSS_CONFIG } from '../../shared/BossConfig.js'
-import { GAME_CONFIG } from '../../shared/GameConfig.js'
+import { BOSS_CONFIG }    from '../../shared/BossConfig.js'
+import { ILLIDAN_CONFIG } from '../../shared/IllidanConfig.js'
+import { GAME_CONFIG }    from '../../shared/GameConfig.js'
+
+/** Config lookup: Illidan uses its own file; others use BOSS_CONFIG. */
+function resolveConfig(configKey) {
+  if (configKey === 'ILLIDAN') return ILLIDAN_CONFIG
+  return BOSS_CONFIG[configKey] ?? BOSS_CONFIG.SHADE_OF_AKAMA
+}
 
 export default class ServerBoss {
   /**
-   * @param {string} [configKey='ILLIDAN'] — key into BOSS_CONFIG
-   * @param {object} [overrides]           — { hpMult, damageMult } for difficulty scaling
+   * @param {string} [configKey='ILLIDAN'] — 'ILLIDAN' | 'SHADE_OF_AKAMA'
+   * @param {object} [overrides]           — { hpMult, damageMult, arenaWidth, arenaHeight }
    */
   constructor(configKey = 'ILLIDAN', overrides = {}) {
-    const cfg = BOSS_CONFIG[configKey] ?? BOSS_CONFIG.ILLIDAN
+    const cfg = resolveConfig(configKey)
     const hpMult = overrides.hpMult ?? 1
     const damageMult = overrides.damageMult ?? 1
 
@@ -33,10 +40,19 @@ export default class ServerBoss {
     this.id        = 'boss'
 
     this._abilityCooldowns = {}
-    this._phases   = cfg.phases
-    this._abilities = cfg.abilities
-    this.baseSpeed = cfg.speed
-    this.speed     = this.baseSpeed
+    this._phases        = cfg.phases ?? []
+    this._abilities     = cfg.abilities ?? []
+    this._phaseAbilities = cfg.phaseAbilities ?? null  // Illidan: per-phase ability sets
+    this._config        = cfg
+    this.baseSpeed      = cfg.speed
+    this.speed          = this.baseSpeed
+
+    /**
+     * Optional callback wired by GameServer for encounter-specific logic.
+     * Called with (newPhase) whenever the phase changes.
+     * @type {((phase: number) => void) | null}
+     */
+    this.onPhaseChange = null
 
     // Contact damage rate-limiter per player: Map<playerId, timestamp>
     // Stored externally on ServerPlayer as _lastBossContact
@@ -58,10 +74,19 @@ export default class ServerBoss {
           this.phase = newPhase
           this.speed = this._phases[i].speed
           console.log(`[Boss] Phase ${newPhase} — speed ${this.speed}`)
+          this.onPhaseChange?.(newPhase)
         }
         break
       }
     }
+  }
+
+  /** Returns the abilities active for the current phase. */
+  _getActiveAbilities() {
+    if (this._phaseAbilities) {
+      return this._phaseAbilities[this.phase] ?? []
+    }
+    return this._abilities
   }
 
   update(dt, players) {
@@ -100,7 +125,7 @@ export default class ServerBoss {
     if (this.isDead) return []
     const attacks = []
 
-    for (const ability of this._abilities) {
+    for (const ability of this._getActiveAbilities()) {
       const lastUsed = this._abilityCooldowns[ability.name] ?? 0
       if (now - lastUsed < ability.cooldown) continue
 
@@ -114,8 +139,14 @@ export default class ServerBoss {
       })
       if (!nearest) continue
 
-      const activationRange = ability.type === 'beam' ? 350 : 200
-      if (bestDist > activationRange) continue
+      // Phase 2 abilities fire from outside the map — skip range check for them.
+      // Other abilities keep a practical range gate so the boss doesn't use
+      // abilities it can't meaningfully deliver (e.g. across a very large map).
+      const skipRangeCheck = ['fireball', 'darkBarrage', 'eyeBeams'].includes(ability.type)
+      if (!skipRangeCheck) {
+        const activationRange = ability.type === 'beam' ? 350 : 600
+        if (bestDist > activationRange) continue
+      }
 
       this._abilityCooldowns[ability.name] = now
       attacks.push({

@@ -36,6 +36,7 @@ const levelSelector  = document.getElementById('level-selector')
 const selectedLevelNameEl = document.getElementById('selected-level-name')
 const prevLevelBtn   = document.getElementById('prev-level-btn')
 const nextLevelBtn   = document.getElementById('next-level-btn')
+const skipDialogChk  = document.getElementById('skip-dialog-chk')
 const levelPanelEl   = document.getElementById('level-panel')
 const levelIndexEl   = document.getElementById('level-index')
 const currentLevelNameEl = document.getElementById('current-level-name')
@@ -64,15 +65,22 @@ function updateLevelDisplay() {
   if (selectedLevelNameEl) selectedLevelNameEl.textContent = `Level ${selectedLevel + 1}: ${CAMPAIGN[selectedLevel]?.name ?? '?'}`
 }
 
+function emitSetLevel() {
+  socket.emit(EVENTS.SET_LEVEL, { levelIndex: selectedLevel, skipDialog: skipDialogChk?.checked ?? false })
+}
+
 prevLevelBtn?.addEventListener('click', () => {
   selectedLevel = Math.max(0, selectedLevel - 1)
   updateLevelDisplay()
-  socket.emit(EVENTS.SET_LEVEL, { levelIndex: selectedLevel })
+  emitSetLevel()
 })
 nextLevelBtn?.addEventListener('click', () => {
   selectedLevel = Math.min(CAMPAIGN.length - 1, selectedLevel + 1)
   updateLevelDisplay()
-  socket.emit(EVENTS.SET_LEVEL, { levelIndex: selectedLevel })
+  emitSetLevel()
+})
+skipDialogChk?.addEventListener('change', () => {
+  emitSetLevel()
 })
 
 // ── DOM helpers ────────────────────────────────────────────────────────────
@@ -289,9 +297,10 @@ socket.on(EVENTS.OBJECTIVE_UPDATE, ({ objectives }) => {
   renderLevelPanel(startBtn.dataset.scene, currentLevelMeta ?? {}, objectives)
 })
 
-socket.on(EVENTS.SET_LEVEL, ({ levelIndex, levelName }) => {
+socket.on(EVENTS.SET_LEVEL, ({ levelIndex, levelName, skipDialog }) => {
   selectedLevel = levelIndex
   updateLevelDisplay()
+  if (skipDialogChk && skipDialog !== undefined) skipDialogChk.checked = skipDialog
 })
 
 // ── VFX events ───────────────────────────────────────────────────────────
@@ -310,6 +319,16 @@ socket.on(EVENTS.TARGETED_HIT, data => {
 
 socket.on(EVENTS.CHANNEL_INTERRUPTED, data => {
   game.activeRenderer?.onChannelInterrupted?.(data)
+})
+
+// ── Illidan encounter events ──────────────────────────────────────────────
+
+socket.on(EVENTS.ILLIDAN_DIALOG_LINE, data => {
+  game.activeRenderer?.onIllidanDialogLine?.(data)
+})
+
+socket.on(EVENTS.ILLIDAN_PHASE_TRANSITION, data => {
+  game.activeRenderer?.onIllidanPhaseTransition?.(data)
 })
 
 // ── Quiz events ───────────────────────────────────────────────────────────

@@ -212,7 +212,7 @@ export const CAMPAIGN = [
     },
   },
 
-  // ── Level 5: Illidan Stormrage (Placeholder) ─────────────────────────
+  // ── Level 5: Illidan Stormrage ────────────────────────────────────────
   {
     id: 'level_5',
     name: "Illidan's Sanctum",
@@ -220,12 +220,22 @@ export const CAMPAIGN = [
     objectives: [
       { type: 'killBoss' },
     ],
+    // Adds (Flame of Azzinoth) are spawned programmatically by GameServer in Phase 2.
     spawning: null,
     difficulty: {
       hpMult:     { base: 1.0, perPlayer: 0.06 },
       damageMult: { base: 1.0, perPlayer: 0.06 },
-      spawnMult:  { base: 1.0, perPlayer: 0.0 },
+      spawnMult:  { base: 1.0, perPlayer: 0.0  },
     },
     boss: 'ILLIDAN',
+
+    // Entrance cinematic. Boss is immune until all lines have played.
+    // delayAfter: ms to wait after this line before showing the next.
+    dialog: [
+      { speaker: 'akama',   text: 'Illidan! The time has come to end this.',       delayAfter: 3000 },
+      { speaker: 'illidan', text: 'Akama... your treachery has finally caught up.', delayAfter: 3500 },
+      { speaker: 'akama',   text: 'My people will be free. I will see to that.',    delayAfter: 3000 },
+      { speaker: 'illidan', text: 'You are not prepared!',                          delayAfter: 2500 },
+    ],
   },
 ]

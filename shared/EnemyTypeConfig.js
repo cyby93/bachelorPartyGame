@@ -120,4 +120,45 @@ export const ENEMY_TYPES = {
     hpBuffPerSecond: 50,          // HP added to target per second per warlock
     damageBuffPerSecond: 2,       // damage added to target per second per warlock
   },
+
+  // ── Illidan encounter adds (Level 5) ────────────────────────────────────
+
+  // Phase 2 adds — must be kited to avoid Blaze zones; burning aura damages nearby players
+  flameOfAzzinoth: {
+    hp: 600,
+    speed: 1.0,
+    radius: 40,
+    contactDamage: 0,     // dealt via aura tick, not contact
+    color: '#ff5500',
+    shape: 'circle',
+    ai: 'flameOfAzzinoth',
+    blazeInterval: 8000,  // ms between leaving a Blaze ground zone
+    blazeRadius:   80,
+    auraRadius:    40,    // burning aura — damages players every 2 s
+    auraDamage:    10,
+    auraTickRate:  2000,
+  },
+
+  // Phase 3 — chases one random player, instantly kills on contact, retargets on death
+  shadowDemon: {
+    hp: 80,
+    speed: 3.5,
+    radius: 18,
+    contactDamage: 0,     // dealt as instant kill logic in GameServer
+    color: '#7700cc',
+    shape: 'diamond',
+    ai: 'shadowDemon',
+  },
+
+  // Spawned when Parasitic Shadowfiend debuff expires on a player;
+  // infects the next player it touches
+  shadowfiend: {
+    hp: 60,
+    speed: 2.0,
+    radius: 16,
+    contactDamage: 0,     // infection applied by GameServer, not contact damage
+    color: '#440088',
+    shape: 'triangle',
+    ai: 'shadowfiend',
+  },
 }

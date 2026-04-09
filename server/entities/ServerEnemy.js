@@ -85,6 +85,21 @@ export default class ServerEnemy {
     this._channelTarget  = base.channelTarget ?? null
     this._hpBuffPerSec   = base.hpBuffPerSecond     ?? 50
     this._dmgBuffPerSec  = base.damageBuffPerSecond  ?? 2
+
+    // Flame of Azzinoth AI (Level 5, Phase 2)
+    this._blazeLastTick  = 0
+    this._blazeInterval  = base.blazeInterval ?? 8000
+    this._blazeRadius    = base.blazeRadius   ?? 80
+    this._auraLastTick   = 0
+    this._auraRadius     = base.auraRadius    ?? 40
+    this._auraDamage     = base.auraDamage    ?? 10
+    this._auraTickRate   = base.auraTickRate  ?? 2000
+
+    // Shadow Demon AI (Level 5, Phase 3) — set by GameServer after spawn
+    this.targetPlayerId  = null
+
+    // Shadowfiend AI (Level 5) — player who was infected (don't re-infect same player)
+    this.sourcePlayerId  = null
   }
 
   takeDamage(amount) {
@@ -138,13 +153,16 @@ export default class ServerEnemy {
 
     // Dispatch to AI type
     switch (this.ai) {
-      case 'ranged':      return this._aiRanged(dt, pps, players, ctx)
-      case 'charger':     return this._aiCharger(dt, pps, players, ctx)
-      case 'healer':      return this._aiHealer(dt, pps, players, ctx)
-      case 'leviathan':   return this._aiLeviathan(dt, pps, players, ctx)
-      case 'gateRepairer': return this._aiGateRepairer(dt, pps, players, ctx)
-      case 'channeler':   return this._aiChanneler(dt, pps, players, ctx)
-      default:            return this._aiChase(dt, pps, players)
+      case 'ranged':          return this._aiRanged(dt, pps, players, ctx)
+      case 'charger':         return this._aiCharger(dt, pps, players, ctx)
+      case 'healer':          return this._aiHealer(dt, pps, players, ctx)
+      case 'leviathan':       return this._aiLeviathan(dt, pps, players, ctx)
+      case 'gateRepairer':    return this._aiGateRepairer(dt, pps, players, ctx)
+      case 'channeler':       return this._aiChanneler(dt, pps, players, ctx)
+      case 'flameOfAzzinoth': return this._aiFlameOfAzzinoth(dt, pps, players, ctx)
+      case 'shadowDemon':     return this._aiShadowDemon(dt, pps, players)
+      case 'shadowfiend':     return this._aiShadowfiend(dt, pps, players)
+      default:                return this._aiChase(dt, pps, players)
     }
   }
 
@@ -417,6 +435,113 @@ export default class ServerEnemy {
     }
 
     return actions.length > 0 ? actions : null
+  }
+
+  // ── AI: Flame of Azzinoth (Level 5 Phase 2) ─────────────────────────────
+
+  /**
+   * Chases the nearest player. Periodically leaves a Blaze ground zone at its
+   * current position. Has a burning aura that deals damage to nearby players
+   * (ticked by GameServer via the returned action).
+   */
+  _aiFlameOfAzzinoth(dt, pps, players, ctx) {
+    // Chase nearest player
+    this._aiChase(dt, pps, players)
+
+    const now = ctx?.now ?? Date.now()
+    const actions = []
+
+    // Drop a Blaze zone periodically
+    if (now - this._blazeLastTick >= this._blazeInterval) {
+      this._blazeLastTick = now
+      actions.push({
+        action: 'leaveBlaze',
+        x: this.x,
+        y: this.y,
+        radius: this._blazeRadius,
+      })
+    }
+
+    // Burning aura tick
+    if (now - this._auraLastTick >= this._auraTickRate) {
+      this._auraLastTick = now
+      actions.push({
+        action: 'burningAuraTick',
+        x: this.x,
+        y: this.y,
+        radius: this._auraRadius,
+        damage: this._auraDamage,
+      })
+    }
+
+    return actions.length > 0 ? actions : null
+  }
+
+  // ── AI: Shadow Demon (Level 5 Phase 3) ──────────────────────────────────
+
+  /**
+   * Chases its assigned targetPlayerId. Instant kill on contact is handled by
+   * GameServer. Returns a retarget action when the target is dead/missing.
+   */
+  _aiShadowDemon(dt, pps, players) {
+    // Find target by ID
+    let target = null
+    if (this.targetPlayerId) {
+      players.forEach(p => { if (p.id === this.targetPlayerId) target = p })
+    }
+
+    // Retarget if no valid target
+    if (!target || target.isDead || target.isHost) {
+      let fallback = null
+      players.forEach(p => {
+        if (p.isHost || p.isDead) return
+        if (!fallback) fallback = p
+      })
+      if (!fallback) return null
+      this.targetPlayerId = fallback.id
+      target = fallback
+    }
+
+    // Move toward target
+    const dx   = target.x - this.x
+    const dy   = target.y - this.y
+    const dist = Math.hypot(dx, dy)
+    if (dist > 2) {
+      const step = Math.min(pps * dt, dist)
+      this.x += (dx / dist) * step
+      this.y += (dy / dist) * step
+    }
+    this._clampToArena()
+    return null
+  }
+
+  // ── AI: Shadowfiend (from Parasitic Shadowfiend debuff) ──────────────────
+
+  /**
+   * Chases the nearest player who does NOT have the sourcePlayerId.
+   * Infection logic (applying the Parasitic Shadowfiend debuff) is handled
+   * by GameServer on contact.
+   */
+  _aiShadowfiend(dt, pps, players) {
+    let nearest = null
+    let bestDist = Infinity
+    players.forEach(p => {
+      if (p.isHost || p.isDead || p.id === this.sourcePlayerId) return
+      const d = Math.hypot(p.x - this.x, p.y - this.y)
+      if (d < bestDist) { bestDist = d; nearest = p }
+    })
+    if (!nearest) return null
+
+    const dx   = nearest.x - this.x
+    const dy   = nearest.y - this.y
+    const dist = Math.hypot(dx, dy)
+    if (dist > 2) {
+      const step = Math.min(pps * dt, dist)
+      this.x += (dx / dist) * step
+      this.y += (dy / dist) * step
+    }
+    this._clampToArena()
+    return null
   }
 
   // ── AI: Gate Repairer ──────────────────────────────────────────────────

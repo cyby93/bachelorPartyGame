@@ -1,7 +1,9 @@
-import { EVENTS }        from '../shared/protocol.js'
-import { GAME_CONFIG }   from '../shared/GameConfig.js'
-import { CAMPAIGN }      from '../shared/LevelConfig.js'
-import { BOSS_CONFIG }   from '../shared/BossConfig.js'
+import { EVENTS }          from '../shared/protocol.js'
+import { GAME_CONFIG }     from '../shared/GameConfig.js'
+import { CAMPAIGN }        from '../shared/LevelConfig.js'
+import { BOSS_CONFIG }     from '../shared/BossConfig.js'
+import { ILLIDAN_CONFIG }  from '../shared/IllidanConfig.js'
+import DialogSystem        from './systems/DialogSystem.js'
 import { CLASSES, resolveClassName } from '../shared/ClassConfig.js'
 import ServerPlayer      from './entities/ServerPlayer.js'
 import ServerEnemy       from './entities/ServerEnemy.js'
@@ -70,6 +72,15 @@ export default class GameServer {
     // Level 4: warlock/boss phase tracking
     this._bossPhase = 1
     this._warlockCount = 0
+
+    // Level 5: Illidan encounter state
+    this._illidanState   = null
+    this._activeEyeBeams = []
+    this._eyeBeamSeq     = 0
+    this._dialogSystem   = null
+
+    // Debug: skip entrance cinematic when testing boss mechanics
+    this.skipDialog = false
 
     // Stats tracking
     this.stats = { damage: {}, deaths: {}, kills: 0, startTime: 0 }
@@ -188,12 +199,13 @@ export default class GameServer {
 
   // ── Campaign flow ──────────────────────────────────────────────────────────
 
-  _onSetLevel(socket, { levelIndex }) {
+  _onSetLevel(socket, { levelIndex, skipDialog }) {
     if (!this.players.get(socket.id)?.isHost) return
     if (this.scene !== 'lobby') return
     const idx = Math.max(0, Math.min(levelIndex ?? 0, CAMPAIGN.length - 1))
     this.startingLevelIndex = idx
-    this.io.emit(EVENTS.SET_LEVEL, { levelIndex: idx, levelName: CAMPAIGN[idx].name })
+    if (skipDialog !== undefined) this.skipDialog = !!skipDialog
+    this.io.emit(EVENTS.SET_LEVEL, { levelIndex: idx, levelName: CAMPAIGN[idx].name, skipDialog: this.skipDialog })
   }
 
   _onStartGame(socket) {
@@ -405,6 +417,37 @@ export default class GameServer {
       }
     }
 
+    // Illidan encounter setup (Level 5)
+    if (level.boss === 'ILLIDAN' && this.boss) {
+      this._illidanState = {
+        phase2AddsSpawned:    false,
+        flameOfAzzinothIds:   new Set(),
+        phase3Entered:        false,
+        auraDreadLastTick:    0,
+        phase2TransitionDone: false,
+      }
+      this._activeEyeBeams = []
+
+      // Wire phase-change callback
+      this.boss.onPhaseChange = (phase) => {
+        this.io.emit(EVENTS.ILLIDAN_PHASE_TRANSITION, { phase })
+        if (phase === 2) this._onIllidanPhase2()
+      }
+
+      // Start entrance cinematic — boss is immune until dialog completes
+      if (level.dialog?.length && !this.skipDialog) {
+        this.boss.isImmune = true
+        this._dialogSystem = new DialogSystem({
+          lines: level.dialog,
+          onComplete: () => {
+            if (this.boss) this.boss.isImmune = false
+            this._dialogSystem = null
+          },
+        })
+        this._dialogSystem.start((event, data) => this.io.emit(event, data))
+      }
+    }
+
     // Init objective progress
     this._levelStartTime = Date.now()
     this._initObjectiveProgress()
@@ -472,6 +515,11 @@ export default class GameServer {
     this.spawnSystem   = null
     this.skillSystem.activeZones    = []
     this.skillSystem._pendingBursts = []
+
+    // Illidan state
+    if (this._dialogSystem) { this._dialogSystem.destroy(); this._dialogSystem = null }
+    this._illidanState   = null
+    this._activeEyeBeams = []
   }
 
   _resetPlayerInputs() {
@@ -887,9 +935,17 @@ export default class GameServer {
           }
         }
 
-        // Track warlock deaths for Phase 2 transition
+        // Track warlock deaths for Phase 2 transition (Level 4)
         if (e.type === 'warlock') {
           // warlockAliveCount will be recounted below
+        }
+
+        // Flame of Azzinoth deaths → trigger Phase 3 (Level 5)
+        if (this._illidanState?.flameOfAzzinothIds.has(id)) {
+          this._illidanState.flameOfAzzinothIds.delete(id)
+          if (this._illidanState.flameOfAzzinothIds.size === 0) {
+            this._onIllidanPhase3()
+          }
         }
 
         return
@@ -907,6 +963,46 @@ export default class GameServer {
         for (const a of action) this._handleEnemyAction(a, id, e, now)
       } else {
         this._handleEnemyAction(action, id, e, now)
+      }
+
+      // Shadow Demon: instant kill on contact (Level 5)
+      if (e.type === 'shadowDemon' && now - e._lastContactDamage > 1000) {
+        this.players.forEach(p => {
+          if (p.isHost || p.isDead) return
+          const dist = Math.hypot(p.x - e.x, p.y - e.y)
+          if (dist <= GAME_CONFIG.PLAYER_RADIUS + e.radius) {
+            if (p.isShieldBlocking(e.x, e.y)) return
+            e._lastContactDamage = now
+            p.takeDamage(p.maxHp * 10)   // effectively instant kill
+            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: 9999, type: 'damage', sourceSkill: 'Shadow Demon' })
+            if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
+          }
+        })
+      }
+
+      // Shadowfiend: infects next player on contact (Level 5)
+      if (e.type === 'shadowfiend' && !e._infectedTarget && now - e._lastContactDamage > 500) {
+        this.players.forEach(p => {
+          if (p.isHost || p.isDead || p.id === e.sourcePlayerId) return
+          const dist = Math.hypot(p.x - e.x, p.y - e.y)
+          if (dist <= GAME_CONFIG.PLAYER_RADIUS + e.radius) {
+            e._infectedTarget = true
+            e._lastContactDamage = now
+            e.isDead = true   // self-destruct after infecting
+            // Apply Parasitic Shadowfiend debuff to the new player
+            p.activeEffects = p.activeEffects ?? []
+            p.activeEffects = p.activeEffects.filter(ef => ef.source !== 'illidan:parasiticShadowfiend')
+            const abilityConfig = (ILLIDAN_CONFIG.phaseAbilities[1] ?? []).find(a => a.type === 'parasiticShadowfiend')
+            p.activeEffects.push({
+              source:    'illidan:parasiticShadowfiend',
+              params:    { dotDamage: abilityConfig?.dotDamage ?? 30, spawnCount: abilityConfig?.spawnCount ?? 2, targetId: p.id },
+              expiresAt: now + (abilityConfig?.dotDuration ?? 10000),
+              lastTick:  now,
+              tickRate:  abilityConfig?.dotInterval ?? 2000,
+            })
+            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: 0, type: 'damage', sourceSkill: 'Parasitic Shadowfiend' })
+          }
+        })
       }
 
       // Contact damage to players (rate-limited: once per 500ms per enemy)
@@ -1008,8 +1104,27 @@ export default class GameServer {
       // Gate repairer heals the active gate
       const gate = this.gates.get(action.gateId)
       if (gate) gate.repair(action.amount)
+    } else if (action.action === 'leaveBlaze') {
+      // Flame of Azzinoth drops a persistent fire circle
+      this.skillSystem.addZone('enemy_' + enemyId, {
+        radius:   action.radius,
+        duration: 30000,
+        damage:   25,
+        tickRate: 1000,
+      }, action.x, action.y, '#ff4400')
+    } else if (action.action === 'burningAuraTick') {
+      // Flame of Azzinoth burning aura — damage nearby players
+      this.players.forEach(p => {
+        if (p.isHost || p.isDead) return
+        const d = Math.hypot(p.x - action.x, p.y - action.y)
+        if (d <= action.radius + GAME_CONFIG.PLAYER_RADIUS) {
+          p.takeDamage(action.damage)
+          this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: action.damage, type: 'damage', sourceSkill: 'Burning Aura' })
+          if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
+        }
+      })
     }
-    // 'heal' and 'channel' actions don't need special handling here
+    // 'heal', 'channel', 'leaveBlaze', 'burningAuraTick' handled above
   }
 
   /** Activate the next gate in sequence. */
@@ -1064,9 +1179,16 @@ export default class GameServer {
 
   _updateBoss(dt, now) {
     if (!this.boss) return
-    if (this.boss.isImmune) return   // Shade Phase 1: idle, immune
 
-    // Shade of Akama: target NPC instead of players
+    // ── Illidan encounter ──────────────────────────────────────────────────
+    if (this.currentLevel?.boss === 'ILLIDAN') {
+      this._updateIllidan(dt, now)
+      return
+    }
+
+    // ── Generic boss (Shade of Akama) ──────────────────────────────────────
+    if (this.boss.isImmune) return  // Shade Phase 1: idle, immune
+
     const bossConfig = BOSS_CONFIG[this.currentLevel?.boss]
     if (bossConfig?.targetNPC && this._bossPhase >= 2) {
       const npc = this.npcs.get(bossConfig.targetNPC)
@@ -1120,6 +1242,480 @@ export default class GameServer {
           if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
         }
       }
+    })
+  }
+
+  // ── Illidan Stormrage update ─────────────────────────────────────────────
+
+  _updateIllidan(dt, now) {
+    if (!this.boss || !this._illidanState) return
+
+    // Phase 2: boss is outside the map — skip movement/contact but fire abilities
+    if (this.boss.isImmune && this._illidanState.phase2AddsSpawned) {
+      const attacks = this.boss.updateAbilities(dt, this.players, now)
+      for (const attack of attacks) this._handleIllidanAbility(attack, now)
+      this._tickIllidanEyeBeams(now)
+      this._tickIllidanEffects(now)
+      return
+    }
+
+    // Skip if immune for other reasons (dialog, phase transition)
+    if (this.boss.isImmune) return
+
+    // Normal movement toward nearest player
+    this.boss.update(dt, this.players)
+
+    // Fire phase-aware abilities
+    const attacks = this.boss.updateAbilities(dt, this.players, now)
+    for (const attack of attacks) this._handleIllidanAbility(attack, now)
+
+    // Tick eye beams (Phase 2 only, but safe to call always)
+    this._tickIllidanEyeBeams(now)
+
+    // Tick Illidan-specific player debuffs
+    this._tickIllidanEffects(now)
+
+    // Aura of Dread — Phase 3 passive
+    if (this.boss.phase === 3) {
+      const aura = ILLIDAN_CONFIG.phase3Aura
+      if (now - this._illidanState.auraDreadLastTick >= aura.tickRate) {
+        this._illidanState.auraDreadLastTick = now
+        this.players.forEach(p => {
+          if (p.isHost || p.isDead) return
+          const d = Math.hypot(p.x - this.boss.x, p.y - this.boss.y)
+          if (d <= aura.radius + GAME_CONFIG.PLAYER_RADIUS) {
+            p.takeDamage(aura.damage)
+            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: aura.damage, type: 'damage', sourceSkill: 'Aura of Dread' })
+            if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
+          }
+        })
+      }
+    }
+
+    // Melee contact damage
+    this.players.forEach(p => {
+      if (p.isHost || p.isDead) return
+      const d = Math.hypot(p.x - this.boss.x, p.y - this.boss.y)
+      if (d <= this.boss.radius + GAME_CONFIG.PLAYER_RADIUS + 5) {
+        if (p.isShieldBlocking(this.boss.x, this.boss.y)) return
+        if (!p._lastBossContact) p._lastBossContact = 0
+        if (now - p._lastBossContact > 500) {
+          p._lastBossContact = now
+          const dmg = Math.round(ILLIDAN_CONFIG.meleeDamage * this.boss._damageMult)
+          p.takeDamage(dmg)
+          if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
+        }
+      }
+    })
+  }
+
+  /** Handle a single Illidan ability attack object. */
+  _handleIllidanAbility(attack, now) {
+    if (!attack || !this.boss) return
+
+    const applyDeath = (p) => {
+      if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
+    }
+
+    switch (attack.type) {
+
+      case 'flameCrash': {
+        const crashX = attack.bossX
+        const crashY = attack.bossY
+        this.boss.isImmune = true
+        setTimeout(() => {
+          if (!this.boss || this.boss.isDead) return
+          this.boss.isImmune = false
+          this.players.forEach(p => {
+            if (p.isHost || p.isDead) return
+            const d = Math.hypot(p.x - crashX, p.y - crashY)
+            if (d <= attack.radius + GAME_CONFIG.PLAYER_RADIUS) {
+              if (p.isShieldBlocking(crashX, crashY)) return
+              p.takeDamage(attack.damage)
+              this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: attack.damage, type: 'damage', sourceSkill: 'Flame Crash' })
+              applyDeath(p)
+            }
+          })
+          const gf = attack.groundFire
+          this.skillSystem.addZone('boss', {
+            radius: gf.radius, duration: gf.duration,
+            damage: gf.tickDamage, tickRate: gf.tickRate,
+          }, crashX, crashY, '#0044ff')
+        }, 1500)
+        break
+      }
+
+      case 'drawSoul': {
+        const coneHalfRad = (attack.coneAngle / 2) * (Math.PI / 180)
+        const facing = this.boss.angle
+        let hits = 0
+        this.players.forEach(p => {
+          if (p.isHost || p.isDead) return
+          const dx = p.x - attack.bossX
+          const dy = p.y - attack.bossY
+          const dist = Math.hypot(dx, dy)
+          if (dist > attack.coneRange + GAME_CONFIG.PLAYER_RADIUS) return
+          const angle = Math.atan2(dy, dx)
+          let diff = Math.abs(angle - facing)
+          if (diff > Math.PI) diff = 2 * Math.PI - diff
+          if (diff <= coneHalfRad) {
+            if (p.isShieldBlocking(attack.bossX, attack.bossY)) return
+            p.takeDamage(attack.damage)
+            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: attack.damage, type: 'damage', sourceSkill: 'Draw Soul' })
+            applyDeath(p)
+            hits++
+          }
+        })
+        if (hits > 0 && !this.boss.isDead) {
+          const healAmt = attack.healPerTarget * hits
+          this.boss.hp = Math.min(this.boss.maxHp, this.boss.hp + healAmt)
+          this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: 'boss', amount: healAmt, type: 'heal', sourceSkill: 'Draw Soul' })
+        }
+        break
+      }
+
+      case 'shear': {
+        let nearest = null, bestDist = Infinity
+        this.players.forEach(p => {
+          if (p.isHost || p.isDead) return
+          const d = Math.hypot(p.x - attack.bossX, p.y - attack.bossY)
+          if (d < bestDist) { bestDist = d; nearest = p }
+        })
+        if (!nearest) break
+        nearest.activeEffects = nearest.activeEffects ?? []
+        nearest.activeEffects = nearest.activeEffects.filter(e => e.source !== 'illidan:shear')
+        nearest.activeEffects.push({
+          source:    'illidan:shear',
+          params:    { maxHpReduction: attack.maxHpReduction },
+          expiresAt: now + attack.duration,
+        })
+        nearest.rebuildStats()
+        this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: nearest.id, amount: 0, type: 'damage', sourceSkill: 'Shear' })
+        break
+      }
+
+      case 'parasiticShadowfiend': {
+        const living = []
+        this.players.forEach(p => { if (!p.isHost && !p.isDead) living.push(p) })
+        if (!living.length) break
+        const target = living[Math.floor(Math.random() * living.length)]
+        target.activeEffects = target.activeEffects ?? []
+        target.activeEffects = target.activeEffects.filter(e => e.source !== 'illidan:parasiticShadowfiend')
+        target.activeEffects.push({
+          source:   'illidan:parasiticShadowfiend',
+          params:   { dotDamage: attack.dotDamage, spawnCount: attack.spawnCount, targetId: target.id },
+          expiresAt: now + attack.dotDuration,
+          lastTick:  now,
+          tickRate:  attack.dotInterval,
+        })
+        this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: target.id, amount: 0, type: 'damage', sourceSkill: 'Parasitic Shadowfiend' })
+        break
+      }
+
+      case 'fireball': {
+        const living = []
+        this.players.forEach(p => { if (!p.isHost && !p.isDead) living.push(p) })
+        if (!living.length) break
+        const target = living[Math.floor(Math.random() * living.length)]
+        this.players.forEach(p => {
+          if (p.isHost || p.isDead) return
+          const d = Math.hypot(p.x - target.x, p.y - target.y)
+          if (d <= attack.splashRadius + GAME_CONFIG.PLAYER_RADIUS) {
+            if (p.isShieldBlocking(attack.bossX, attack.bossY)) return
+            p.takeDamage(attack.damage)
+            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: attack.damage, type: 'damage', sourceSkill: 'Fireball' })
+            applyDeath(p)
+          }
+        })
+        break
+      }
+
+      case 'darkBarrage': {
+        const living = []
+        this.players.forEach(p => { if (!p.isHost && !p.isDead) living.push(p) })
+        if (!living.length) break
+        const target = living[Math.floor(Math.random() * living.length)]
+        target.activeEffects = target.activeEffects ?? []
+        target.activeEffects = target.activeEffects.filter(e => e.source !== 'illidan:darkBarrage')
+        target.activeEffects.push({
+          source:    'illidan:darkBarrage',
+          params:    { dotDamage: attack.dotDamage },
+          expiresAt: now + attack.dotDuration,
+          lastTick:  now,
+          tickRate:  attack.dotInterval,
+        })
+        this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: target.id, amount: 0, type: 'damage', sourceSkill: 'Dark Barrage' })
+        break
+      }
+
+      case 'eyeBeams': {
+        for (let i = 0; i < 2; i++) {
+          const x1 = 80 + Math.random() * (this.arenaWidth  - 160)
+          const y1 = 80 + Math.random() * (this.arenaHeight - 160)
+          const angle = Math.random() * Math.PI * 2
+          const x2 = x1 + Math.cos(angle) * attack.lineLength
+          const y2 = y1 + Math.sin(angle) * attack.lineLength
+          this._activeEyeBeams.push({
+            id:              ++this._eyeBeamSeq,
+            x1, y1, x2, y2,
+            startedAt:       now,
+            drawDuration:    attack.drawDuration,
+            groundFire:      attack.groundFire,
+            damage:          attack.damage,
+            lastDamageTick:  now,
+            lastFireZonePct: 0,
+          })
+        }
+        break
+      }
+
+      case 'agonizingFlames': {
+        const living = []
+        this.players.forEach(p => { if (!p.isHost && !p.isDead) living.push(p) })
+        if (!living.length) break
+        const primary = living[Math.floor(Math.random() * living.length)]
+        this.players.forEach(p => {
+          if (p.isHost || p.isDead) return
+          const d = Math.hypot(p.x - primary.x, p.y - primary.y)
+          if (d <= attack.splashRadius + GAME_CONFIG.PLAYER_RADIUS) {
+            if (p.isShieldBlocking(attack.bossX, attack.bossY)) return
+            p.takeDamage(attack.damage)
+            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: attack.damage, type: 'damage', sourceSkill: 'Agonizing Flames' })
+            applyDeath(p)
+          }
+        })
+        primary.activeEffects = primary.activeEffects ?? []
+        primary.activeEffects = primary.activeEffects.filter(e => e.source !== 'illidan:agonizingFlames')
+        primary.activeEffects.push({
+          source:    'illidan:agonizingFlames',
+          params:    { dotDamage: attack.dotDamage, dotRadius: attack.dotRadius, targetId: primary.id },
+          expiresAt: now + attack.dotDuration,
+          lastTick:  now,
+          tickRate:  attack.dotInterval,
+        })
+        this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: primary.id, amount: 0, type: 'damage', sourceSkill: 'Agonizing Flames' })
+        break
+      }
+
+      case 'shadowBlast': {
+        const living = []
+        this.players.forEach(p => { if (!p.isHost && !p.isDead) living.push(p) })
+        if (!living.length) break
+        const target = living[Math.floor(Math.random() * living.length)]
+        this.players.forEach(p => {
+          if (p.isHost || p.isDead) return
+          const d = Math.hypot(p.x - target.x, p.y - target.y)
+          if (d <= attack.splashRadius + GAME_CONFIG.PLAYER_RADIUS) {
+            if (p.isShieldBlocking(attack.bossX, attack.bossY)) return
+            p.takeDamage(attack.damage)
+            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: attack.damage, type: 'damage', sourceSkill: 'Shadow Blast' })
+            applyDeath(p)
+          }
+        })
+        break
+      }
+
+      case 'summonShadowDemons': {
+        const spread = 40
+        for (let i = 0; i < attack.count; i++) {
+          const angle  = (i / attack.count) * Math.PI * 2
+          const sx     = attack.bossX + Math.cos(angle) * spread
+          const sy     = attack.bossY + Math.sin(angle) * spread
+          const base   = ENEMY_TYPES.shadowDemon
+          const id     = ++this._enemyIdSeq.value
+          const demon  = new ServerEnemy({
+            id,
+            x: sx, y: sy,
+            type: 'shadowDemon',
+            hp: base.hp, maxHp: base.hp,
+            speed: base.speed,
+            radius: base.radius,
+            contactDamage: 0,
+          })
+          demon.setArenaSize(this.arenaWidth, this.arenaHeight)
+          const living = []
+          this.players.forEach(p => { if (!p.isHost && !p.isDead) living.push(p) })
+          if (living.length) {
+            demon.targetPlayerId = living[Math.floor(Math.random() * living.length)].id
+          }
+          this.enemies.set(id, demon)
+        }
+        break
+      }
+    }
+  }
+
+  /** Transition Illidan to Phase 2: teleport outside map, spawn Flame of Azzinoth adds. */
+  _onIllidanPhase2() {
+    if (!this.boss || !this._illidanState) return
+    if (this._illidanState.phase2AddsSpawned) return
+    this._illidanState.phase2AddsSpawned = true
+
+    console.log('[Illidan] Phase 2 — flying outside map')
+
+    this.boss.isImmune = true
+    this.boss.x = ILLIDAN_CONFIG.phase2Position.x
+    this.boss.y = ILLIDAN_CONFIG.phase2Position.y
+
+    const diff = this.currentLevel?.difficulty ?? {}
+    let playerCount = 0
+    this.players.forEach(p => { if (!p.isHost) playerCount++ })
+    const hpMult = (diff.hpMult?.base ?? 1) + (diff.hpMult?.perPlayer ?? 0) * (playerCount - 1)
+
+    for (const addCfg of ILLIDAN_CONFIG.phase2Adds) {
+      const base = ENEMY_TYPES[addCfg.type]
+      if (!base) continue
+      const id = ++this._enemyIdSeq.value
+      const add = new ServerEnemy({
+        id,
+        x: addCfg.x, y: addCfg.y,
+        type: addCfg.type,
+        hp: Math.round(base.hp * hpMult), maxHp: Math.round(base.hp * hpMult),
+        speed: base.speed,
+        radius: base.radius,
+        contactDamage: 0,
+      })
+      add.setArenaSize(this.arenaWidth, this.arenaHeight)
+      this.enemies.set(id, add)
+      this._illidanState.flameOfAzzinothIds.add(id)
+    }
+  }
+
+  /** Transition Illidan to Phase 3: return to map, become vulnerable. */
+  _onIllidanPhase3() {
+    if (!this.boss || !this._illidanState) return
+    if (this._illidanState.phase3Entered) return
+    this._illidanState.phase3Entered = true
+
+    console.log('[Illidan] Phase 3 — demon form')
+
+    this.boss.phase = 3
+    this.boss.isImmune = false
+    this.boss.speed = 2.0
+    this.boss.x = this.arenaWidth  / 2
+    this.boss.y = this.arenaHeight / 2
+
+    this.io.emit(EVENTS.ILLIDAN_PHASE_TRANSITION, { phase: 3 })
+  }
+
+  /** Advance eye beam progress; leave ground fire zones along the path. */
+  _tickIllidanEyeBeams(now) {
+    for (let i = this._activeEyeBeams.length - 1; i >= 0; i--) {
+      const beam = this._activeEyeBeams[i]
+      const progress = Math.min(1, (now - beam.startedAt) / beam.drawDuration)
+
+      const tipX = beam.x1 + (beam.x2 - beam.x1) * progress
+      const tipY = beam.y1 + (beam.y2 - beam.y1) * progress
+
+      // Damage players near the tip every 500ms while still drawing
+      if (progress < 1 && now - beam.lastDamageTick >= 500) {
+        beam.lastDamageTick = now
+        this.players.forEach(p => {
+          if (p.isHost || p.isDead) return
+          const d = Math.hypot(p.x - tipX, p.y - tipY)
+          if (d <= 35 + GAME_CONFIG.PLAYER_RADIUS) {
+            p.takeDamage(beam.damage)
+            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: beam.damage, type: 'damage', sourceSkill: 'Eye Beams' })
+            if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
+          }
+        })
+      }
+
+      // Leave ground fire zones periodically (every ~10% of the path)
+      const pctSinceLastZone = progress - (beam.lastFireZonePct ?? 0)
+      if (pctSinceLastZone >= 0.1) {
+        beam.lastFireZonePct = progress
+        const gf = beam.groundFire
+        this.skillSystem.addZone('boss', {
+          radius: gf.radius, duration: gf.duration,
+          damage: gf.tickDamage, tickRate: gf.tickRate,
+        }, tipX, tipY, '#6600cc')
+      }
+
+      if (progress >= 1) this._activeEyeBeams.splice(i, 1)
+    }
+  }
+
+  /** Tick Illidan-specific player debuffs (DoTs, spawn-on-expiry). */
+  _tickIllidanEffects(now) {
+    this.players.forEach(p => {
+      if (p.isDead || !p.activeEffects?.length) return
+
+      const toSpawn = []
+
+      for (const eff of p.activeEffects) {
+        if (eff.source === 'illidan:parasiticShadowfiend') {
+          if (!eff.lastTick) eff.lastTick = now
+          if (now - eff.lastTick >= eff.tickRate) {
+            eff.lastTick = now
+            p.takeDamage(eff.params.dotDamage)
+            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: eff.params.dotDamage, type: 'damage', sourceSkill: 'Parasitic Shadowfiend' })
+            if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
+          }
+          if (now >= eff.expiresAt && !eff._spawnQueued) {
+            eff._spawnQueued = true
+            toSpawn.push({ type: 'shadowfiend', count: eff.params.spawnCount, x: p.x, y: p.y, sourcePlayerId: p.id })
+          }
+        }
+
+        if (eff.source === 'illidan:darkBarrage') {
+          if (!eff.lastTick) eff.lastTick = now
+          if (now - eff.lastTick >= eff.tickRate) {
+            eff.lastTick = now
+            p.takeDamage(eff.params.dotDamage)
+            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: eff.params.dotDamage, type: 'damage', sourceSkill: 'Dark Barrage' })
+            if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
+          }
+        }
+
+        if (eff.source === 'illidan:agonizingFlames') {
+          if (!eff.lastTick) eff.lastTick = now
+          if (now - eff.lastTick >= eff.tickRate) {
+            eff.lastTick = now
+            p.takeDamage(eff.params.dotDamage)
+            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: eff.params.dotDamage, type: 'damage', sourceSkill: 'Agonizing Flames' })
+            if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
+            this.players.forEach(other => {
+              if (other.id === p.id || other.isHost || other.isDead) return
+              const d = Math.hypot(other.x - p.x, other.y - p.y)
+              if (d <= eff.params.dotRadius + GAME_CONFIG.PLAYER_RADIUS) {
+                other.takeDamage(eff.params.dotDamage)
+                this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: other.id, amount: eff.params.dotDamage, type: 'damage', sourceSkill: 'Agonizing Flames' })
+                if (other.isDead) this.stats.deaths[other.id] = (this.stats.deaths[other.id] ?? 0) + 1
+              }
+            })
+          }
+        }
+      }
+
+      // Spawn shadowfiends on Parasitic Shadowfiend expiry
+      for (const spawn of toSpawn) {
+        const base = ENEMY_TYPES[spawn.type]
+        if (!base) continue
+        for (let i = 0; i < spawn.count; i++) {
+          const angle = (i / spawn.count) * Math.PI * 2
+          const sx = spawn.x + Math.cos(angle) * 30
+          const sy = spawn.y + Math.sin(angle) * 30
+          const id = ++this._enemyIdSeq.value
+          const fiend = new ServerEnemy({
+            id,
+            x: sx, y: sy,
+            type: spawn.type,
+            hp: base.hp, maxHp: base.hp,
+            speed: base.speed,
+            radius: base.radius,
+            contactDamage: 0,
+          })
+          fiend.setArenaSize(this.arenaWidth, this.arenaHeight)
+          fiend.sourcePlayerId = spawn.sourcePlayerId
+          this.enemies.set(id, fiend)
+        }
+      }
+
+      // Expire illidan effects (normal effects are expired by SkillSystem._tickEffects)
+      p.activeEffects = p.activeEffects.filter(e =>
+        !e.source?.startsWith('illidan:') || now < e.expiresAt
+      )
     })
   }
 
@@ -1643,7 +2239,19 @@ export default class GameServer {
       buildings:   this._buildingsDTO(),
       npcs:        this._npcsDTO(),
       waveInfo:    this._waveInfoDTO(),
+      eyeBeams:    this._eyeBeamsDTO(),
     }
+  }
+
+  _eyeBeamsDTO() {
+    if (!this._activeEyeBeams.length) return null
+    const now = Date.now()
+    return this._activeEyeBeams.map(b => ({
+      id:       b.id,
+      x1: b.x1, y1: b.y1,
+      x2: b.x2, y2: b.y2,
+      progress: Math.min(1, (now - b.startedAt) / b.drawDuration),
+    }))
   }
 
   _gatesDTO() {

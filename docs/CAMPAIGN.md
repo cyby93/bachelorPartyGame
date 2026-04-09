@@ -23,7 +23,7 @@ Host and controller render or react to server progression. They do not decide it
 ## Current Flow
 
 ```text
-Lobby -> Level 1 (Waves) -> Level 2 (Siege) -> Level 3 (Gates) -> Level 4 (Leviathan) -> Level 5 (Shade of Akama) -> Level 6 (Illidan) -> Result / GameOver -> Lobby
+Lobby -> Level 1 (Waves) -> Level 2 (Siege) -> Level 3 (Leviathan) -> Level 4 (Shade of Akama) -> Level 5 (Illidan Stormrage) -> Result / GameOver -> Lobby
 ```
 
 Current implementation details:
@@ -71,9 +71,10 @@ Current campaign entries look like:
 | `buildings` | destructible spawner buildings (Level 2) |
 | `buildingSpawning` | building spawn config: interval, buff, enemy types (Level 2) |
 | `npcs` | friendly NPC definitions (Level 5) |
-| `warlocks` | warlock channeler spawn config (Level 5) |
-| `initialEnemies` | pre-placed enemies at level start (Level 4) |
+| `warlocks` | warlock channeler spawn config (Level 4) |
+| `initialEnemies` | pre-placed enemies at level start (Level 3) |
 | `bossSpawnPosition` | custom boss spawn position override |
+| `dialog` | Illidan entrance cinematic lines `[{ speaker, text, delayAfter }]` (Level 5 only) |
 
 ---
 
@@ -213,6 +214,67 @@ Inspect when relevant:
 - `server/systems/SpawnSystem.js`
 - host renderers that display objectives or progression state
 - controller scene and screen handling
+
+---
+
+---
+
+## Level 5 — Illidan Stormrage
+
+Config lives in `shared/IllidanConfig.js` (not `BossConfig.js`). All Illidan-specific phase logic is in `GameServer._updateIllidan()` and related methods.
+
+### Entrance Cinematic
+
+When Level 5 starts, boss is set to immune and `DialogSystem` plays the `dialog` lines from `LevelConfig`. Boss immunity is released after the last line.
+
+Socket events: `illidan:dialog_line { speaker, text }` → `BattleRenderer.onIllidanDialogLine()`
+
+### Phase 1 (100% → 60% HP)
+
+Illidan chases nearest player. Abilities (all Illidan-specific types handled by `_handleIllidanAbility`):
+
+| Ability | Cooldown | Effect |
+|---|---|---|
+| Flame Crash | 12 s | Jump → AOE + persistent blue ground fire |
+| Draw Soul | 10 s | 90° frontal cone; heals Illidan 500 per target hit |
+| Shear | 8 s | Reduces closest player's effective max HP 60% for 5 s |
+| Parasitic Shadowfiend | 18 s | Shadow DoT 30/2 s for 10 s; on expiry spawns 2 Shadowfiend mobs that spread infection |
+
+### Phase 2 (triggered at 60% HP)
+
+Illidan teleports to `phase2Position` (above top edge of arena, y ≈ -80), becomes immune. Two **Flame of Azzinoth** adds spawn at fixed positions. Phase 2 ends when **both adds die** → Phase 3 triggers (`_onIllidanPhase3`).
+
+Flame of Azzinoth mechanics (handled via `_aiFlameOfAzzinoth` + enemy action handlers):
+- **Blaze**: drops a persistent fire circle (radius 80, 30 s, 25 dmg/s) every 8 s
+- **Burning Aura**: 10 dmg every 2 s to all players within 40 px
+
+Illidan Phase 2 abilities (fired from outside map, no range gate):
+
+| Ability | Cooldown | Effect |
+|---|---|---|
+| Fireball | 8 s | Random player + 80 px splash, 100 dmg |
+| Dark Barrage | 12 s | DoT 20/s for 10 s on random player |
+| Eye Beams | 22 s | 2 progressive fire lines drawn over 3.5 s; leave persistent ground fire |
+
+Eye Beam state is broadcast via `delta.eyeBeams []` and rendered in `BattleRenderer._renderEyeBeams()`.
+
+### Phase 3 (after both Flame of Azzinoth die)
+
+Illidan teleports back to arena centre, becomes vulnerable, speed 2.0. Demon form.
+
+| Ability | Cooldown | Effect |
+|---|---|---|
+| Agonizing Flames | 15 s | AOE on random player + 20 s DoT (30/5 s) that also hits nearby players |
+| Shadow Blast | 5 s | 120 dmg splash on random player (80 px) |
+| Summon Shadow Demons | 30 s | 4 Shadow Demons; each instantly kills the player they reach; retarget on death |
+| Aura of Dread (passive) | — | 10 dmg every 3 s to all players within 120 px of Illidan |
+
+### Key Contracts
+
+- `ILLIDAN_CONFIG` in `shared/IllidanConfig.js` is the single source of truth for all numeric values
+- `ILLIDAN_DIALOG_LINE` / `ILLIDAN_PHASE_TRANSITION` are the socket events — see `shared/protocol.js`
+- Phase 2 → 3 is NOT HP-based; it fires when `_illidanState.flameOfAzzinothIds` empties
+- `_tickIllidanEffects()` handles all Illidan DoTs independently from `SkillSystem._tickEffects()`
 
 ---
 

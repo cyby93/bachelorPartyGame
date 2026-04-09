@@ -43,6 +43,22 @@ export default class BattleRenderer extends BaseRenderer {
 
     // Objective progress received from server
     this._objectives = []
+
+    // Eye beam line graphics (Illidan Phase 2)
+    this._eyeBeamGfx   = new Graphics()
+    this._entityRoot.addChild(this._eyeBeamGfx)
+
+    // Illidan dialog overlay (cinematic intro + phase transitions)
+    this._dialogContainer  = new Container()
+    this._dialogBg         = null
+    this._dialogSpeaker    = null
+    this._dialogText       = null
+    this._dialogTimer      = null
+
+    // Phase transition flash
+    this._phaseFlashGfx    = new Graphics()
+    this._phaseFlashAlpha  = 0
+    this._phaseFlashText   = null
   }
 
   /** Called by HostGame before enter() to pass level-specific data. */
@@ -80,6 +96,14 @@ export default class BattleRenderer extends BaseRenderer {
     this._prevPlayerHp = {}
     this._levelMeta = null
     this._objectives = []
+
+    // Dialog
+    if (this._dialogTimer) clearTimeout(this._dialogTimer)
+    this._dialogTimer = null
+    this._dialogContainer.removeChildren()
+
+    // Eye beams
+    this._eyeBeamGfx.clear()
   }
 
   _resetUIRefs() {
@@ -158,6 +182,9 @@ export default class BattleRenderer extends BaseRenderer {
     super._syncExtras(dt)
 
     const state = this.game.knownState
+
+    // Eye Beams (Illidan Phase 2)
+    this._renderEyeBeams(state.eyeBeams)
 
     // Boss
     if (state.boss && !state.boss.isDead) {
@@ -415,5 +442,136 @@ export default class BattleRenderer extends BaseRenderer {
 
   _buildUI() {
     this._uiRoot.removeChildren()
+
+    // Dialog box (shown during cinematic and phase transitions)
+    const w = this.game.app.renderer.width
+    const h = this.game.app.renderer.height
+
+    this._dialogBg = new Graphics()
+    this._dialogBg.rect(0, 0, w, 80)
+    this._dialogBg.fill({ color: 0x000000, alpha: 0.75 })
+    this._dialogBg.rect(0, 0, w, 80)
+    this._dialogBg.stroke({ color: 0x444444, width: 1 })
+    this._dialogContainer.addChild(this._dialogBg)
+
+    this._dialogSpeaker = new Text({
+      text: '',
+      style: { fontFamily: 'Arial', fontSize: 13, fontWeight: 'bold', fill: '#ffffff' },
+    })
+    this._dialogSpeaker.position.set(20, 12)
+    this._dialogContainer.addChild(this._dialogSpeaker)
+
+    this._dialogText = new Text({
+      text: '',
+      style: { fontFamily: 'Arial', fontSize: 16, fill: '#eeeeee', wordWrap: true, wordWrapWidth: w - 40 },
+    })
+    this._dialogText.position.set(20, 34)
+    this._dialogContainer.addChild(this._dialogText)
+
+    this._dialogContainer.position.set(0, h - 90)
+    this._dialogContainer.visible = false
+    this._uiRoot.addChild(this._dialogContainer)
+
+    // Phase transition flash overlay
+    this._phaseFlashGfx.rect(0, 0, w, h)
+    this._phaseFlashGfx.fill({ color: 0xffffff, alpha: 0 })
+    this._phaseFlashAlpha = 0
+    this._uiRoot.addChild(this._phaseFlashGfx)
+
+    // Phase transition label
+    this._phaseFlashText = new Text({
+      text: '',
+      style: { fontFamily: 'Arial', fontSize: 28, fontWeight: 'bold', fill: '#ff3300', align: 'center' },
+    })
+    this._phaseFlashText.anchor.set(0.5, 0.5)
+    this._phaseFlashText.position.set(w / 2, h / 2)
+    this._phaseFlashText.visible = false
+    this._uiRoot.addChild(this._phaseFlashText)
+  }
+
+  // ── Illidan encounter events ───────────────────────────────────────────────
+
+  /** Show an Illidan dialog line in the cinematic box at the bottom. */
+  onIllidanDialogLine({ speaker, text }) {
+    if (!this._dialogContainer) return
+
+    const speakerLabel = speaker === 'illidan' ? 'ILLIDAN STORMRAGE' : 'AKAMA'
+    const speakerColor = speaker === 'illidan' ? '#9933ff' : '#00ccaa'
+
+    this._dialogSpeaker.text  = speakerLabel
+    this._dialogSpeaker.style = { ...this._dialogSpeaker.style, fill: speakerColor }
+    this._dialogText.text     = text
+    this._dialogContainer.visible = true
+
+    // Auto-hide after a generous timeout (server controls the actual timing)
+    if (this._dialogTimer) clearTimeout(this._dialogTimer)
+    this._dialogTimer = setTimeout(() => {
+      if (this._dialogContainer) this._dialogContainer.visible = false
+    }, 8000)
+  }
+
+  /** Flash overlay and show phase label on Illidan phase transitions. */
+  onIllidanPhaseTransition({ phase }) {
+    if (!this._phaseFlashGfx || !this._phaseFlashText) return
+
+    const labels = {
+      2: 'ILLIDAN TRANSFORMS',
+      3: 'DEMON FORM',
+    }
+    const label = labels[phase]
+    if (!label) return
+
+    this._phaseFlashText.text    = label
+    this._phaseFlashText.visible = true
+    this._phaseFlashAlpha        = 0.45
+    this._phaseFlashGfx.clear()
+    const w = this.game.app.renderer.width
+    const h = this.game.app.renderer.height
+    this._phaseFlashGfx.rect(0, 0, w, h)
+    this._phaseFlashGfx.fill({ color: phase === 2 ? 0xff6600 : 0x440088, alpha: this._phaseFlashAlpha })
+
+    // Fade out over 1.5 s
+    const startTime = Date.now()
+    const fade = () => {
+      const elapsed = Date.now() - startTime
+      const progress = Math.min(1, elapsed / 1500)
+      this._phaseFlashAlpha = 0.45 * (1 - progress)
+      if (this._phaseFlashGfx) {
+        this._phaseFlashGfx.clear()
+        if (this._phaseFlashAlpha > 0) {
+          this._phaseFlashGfx.rect(0, 0, w, h)
+          this._phaseFlashGfx.fill({ color: phase === 2 ? 0xff6600 : 0x440088, alpha: this._phaseFlashAlpha })
+        }
+      }
+      if (progress < 1) requestAnimationFrame(fade)
+      else if (this._phaseFlashText) this._phaseFlashText.visible = false
+    }
+    requestAnimationFrame(fade)
+
+    // Hide dialog box on phase transition
+    if (this._dialogContainer) this._dialogContainer.visible = false
+  }
+
+  // ── Eye Beam rendering (Illidan Phase 2) ──────────────────────────────────
+
+  _renderEyeBeams(eyeBeams) {
+    this._eyeBeamGfx.clear()
+    if (!eyeBeams?.length) return
+    for (const beam of eyeBeams) {
+      const cx = beam.x1 + (beam.x2 - beam.x1) * beam.progress
+      const cy = beam.y1 + (beam.y2 - beam.y1) * beam.progress
+      // Outer glow
+      this._eyeBeamGfx.moveTo(beam.x1, beam.y1)
+      this._eyeBeamGfx.lineTo(cx, cy)
+      this._eyeBeamGfx.stroke({ width: 18, color: 0x440088, alpha: 0.2 })
+      // Mid glow
+      this._eyeBeamGfx.moveTo(beam.x1, beam.y1)
+      this._eyeBeamGfx.lineTo(cx, cy)
+      this._eyeBeamGfx.stroke({ width: 9, color: 0x9933ff, alpha: 0.5 })
+      // Core
+      this._eyeBeamGfx.moveTo(beam.x1, beam.y1)
+      this._eyeBeamGfx.lineTo(cx, cy)
+      this._eyeBeamGfx.stroke({ width: 3, color: 0xcc66ff, alpha: 0.95 })
+    }
   }
 }

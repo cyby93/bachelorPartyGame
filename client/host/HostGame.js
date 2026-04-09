@@ -125,6 +125,7 @@ export default class HostGame {
       this.knownState.players[p.id] = { ...p, _prevX: p.x, _prevY: p.y, _recvAt: now }
     })
     if (state.gates) this.knownState.gates = state.gates
+    if (state.buildings) this.knownState.buildings = state.buildings
   }
 
   /** Incremental delta received every server tick. */
@@ -163,6 +164,7 @@ export default class HostGame {
     if (delta.aoeZones    != null) this.knownState.aoeZones    = delta.aoeZones
     if (delta.minions     != null) this.knownState.minions     = delta.minions
     if (delta.gates       != null) this.knownState.gates       = delta.gates
+    if (delta.buildings   != null) this.knownState.buildings   = delta.buildings
   }
 
   addPlayer(dto) {

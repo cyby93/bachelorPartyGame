@@ -1,6 +1,6 @@
 # Level Design Overview — RAID NIGHT: THE RESCUE
 
-Canonical implementation reference for all 5 campaign levels. Future tasks that implement individual levels or the systems they depend on should use this document as the source of truth for design intent, expected behaviors, and tuning values.
+Canonical implementation reference for all 6 campaign levels. Future tasks that implement individual levels or the systems they depend on should use this document as the source of truth for design intent, expected behaviors, and tuning values.
 
 ## Related Files
 
@@ -12,6 +12,8 @@ Canonical implementation reference for all 5 campaign levels. Future tasks that 
 | `shared/GameConfig.js` | Canvas size, tick rate, player constants |
 | `server/GameServer.js` | Objective evaluation, level setup, scene flow |
 | `server/systems/SpawnSystem.js` | Enemy spawn logic |
+| `server/systems/BuildingSpawnSystem.js` | Building-driven enemy spawning |
+| `server/entities/ServerBuilding.js` | Destructible spawner building entity |
 | `server/entities/ServerEnemy.js` | Enemy AI dispatch |
 | `docs/CAMPAIGN.md` | Campaign flow contracts |
 
@@ -327,9 +329,10 @@ warlock: {
 | Objective Type | Evaluated As | Complete When | Required By |
 |---|---|---|---|
 | `surviveWaves` | `currentWave` vs `waveCount` | All waves cleared (last wave enemies dead) | Level 1 |
-| `destroyGates` | Count of destroyed gates vs total | All gates destroyed | Level 2 |
-| `killAll` | All enemies dead AND no pending splits | Enemy count = 0 and no more will spawn | Level 3 |
-| `killBossProtectNPC` | Boss dead = win; NPC dead = lose | Boss HP reaches 0 | Level 4 |
+| `destroyBuildings` | Count of destroyed buildings vs total | All buildings destroyed | Level 2 |
+| `destroyGates` | Count of destroyed gates vs total | All gates destroyed | Level 3 |
+| `killAll` | All enemies dead AND no pending splits | Enemy count = 0 and no more will spawn | Level 4 |
+| `killBossProtectNPC` | Boss dead = win; NPC dead = lose | Boss HP reaches 0 | Level 5 |
 
 **Server scope:** New branches in `GameServer._updateObjectives()` and `_initObjectiveProgress()`. The `killBossProtectNPC` type needs a dual win/lose check — NPC death triggers `gameover` instead of `levelComplete`.
 
@@ -470,7 +473,104 @@ difficulty: {
 
 ---
 
-# Level 2: Destroy the Gates
+# Level 2: The Siege
+
+## Overview
+
+A large square arena with 4 enemy-summoning buildings in the corners. Buildings continuously spawn enemies until destroyed. As buildings fall, the surviving buildings ramp up their spawn rate, creating increasing pressure. Destroy all 4 buildings to win.
+
+## Map Layout
+
+```
++----------------------------------------------+
+|  [B1]                                  [B2]  |
+|                                              |
+|                                              |
+|                                              |
+|                   P P                        |
+|                   P P                        |
+|                                              |
+|                                              |
+|  [B3]                                  [B4]  |
++----------------------------------------------+
+                 1000 x 1000
+
+P = player spawn area (center)
+[BN] = enemy-spawning building (corners)
+```
+
+- **Arena:** 1000 x 1000 (1:1 ratio, large)
+- **Rooms:** 1 (no walls, no obstacles)
+- **Buildings:** 4, positioned at each corner (120px inset from edges)
+
+## Objective
+
+- **Type:** `destroyBuildings`
+- **Win condition:** All 4 buildings destroyed
+- **Lose condition:** All players dead simultaneously
+
+```js
+objectives: [{ type: 'destroyBuildings' }]
+```
+
+## Building Stats
+
+| Building | HP | Position | Size |
+|---|---|---|---|
+| B1 | 600 | (120, 120) | 60x60 |
+| B2 | 600 | (880, 120) | 60x60 |
+| B3 | 600 | (120, 880) | 60x60 |
+| B4 | 600 | (880, 880) | 60x60 |
+
+Building HP scales with difficulty: `buildingHp * hpMult`.
+
+All buildings are active (damageable) simultaneously — unlike gates, there is no sequential activation.
+
+## Enemy Roster
+
+| Type | HP | Speed | Radius | Contact Dmg | AI | Spawn Weight |
+|---|---|---|---|---|---|---|
+| grunt | 30 | 1.2 | 15 | 15 | chase | 3 |
+| brute | 80 | 0.9 | 22 | 30 | chase | 1 |
+| archer | 20 | 1.0 | 12 | 5 | ranged | 2 |
+| charger | 50 | 1.4 | 18 | 40 | charger | 1 |
+
+## Spawning Rules
+
+- **Mode:** Building-driven (independent timers per building via `BuildingSpawnSystem`)
+- **Base interval:** 3000ms per building
+- **Count per spawn:** 1–2 enemies
+- **Max alive per building:** 6
+- **Spawn location:** Within 80px radius of owning building
+- **Buff on destruction:** Each destroyed building speeds up survivors by 25% (stacking)
+  - Formula: `effectiveInterval = baseInterval / (1 + buffFactor * destroyedCount) / spawnMult`
+  - 0 destroyed: 3000ms, 1 destroyed: 2400ms, 2 destroyed: 2000ms, 3 destroyed: 1714ms
+
+## New Systems Used
+
+- `ServerBuilding` entity — destructible spawner, all active simultaneously
+- `BuildingSpawnSystem` — per-building spawn timers with ramping buff
+- `destroyBuildings` objective type
+
+## Difficulty Tuning
+
+```js
+difficulty: {
+  hpMult:     { base: 1.0, perPlayer: 0.06 },
+  damageMult: { base: 1.0, perPlayer: 0.05 },
+  spawnMult:  { base: 1.0, perPlayer: 0.10 },
+}
+```
+
+## Renderer Notes
+
+- Building sprites: brown/stone rectangles with HP bars
+- Building destruction removes the graphic (no rubble)
+- Enemies spawn visibly near buildings
+
+---
+
+# Level 3: Destroy the Gates
 
 ## Overview
 

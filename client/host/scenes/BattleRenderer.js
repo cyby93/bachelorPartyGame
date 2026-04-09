@@ -32,6 +32,7 @@ export default class BattleRenderer extends BaseRenderer {
     this.bossSprite   = null
     this.tombstoneGfx = new Map()   // playerId → Graphics
     this.gateGfx      = new Map()   // gateId → Graphics
+    this.buildingGfx  = new Map()   // buildingId → Graphics
 
     // Previous-frame HP tracking for hit sparks and death bursts
     this._prevPlayerHp = {}
@@ -70,6 +71,8 @@ export default class BattleRenderer extends BaseRenderer {
     this.tombstoneGfx.clear()
     this.gateGfx.forEach(gfx => gfx.destroy())
     this.gateGfx.clear()
+    this.buildingGfx.forEach(gfx => gfx.destroy())
+    this.buildingGfx.clear()
 
     this._prevPlayerHp = {}
     this._levelMeta = null
@@ -122,6 +125,9 @@ export default class BattleRenderer extends BaseRenderer {
     // Gate targets
     const gate = (this.game.knownState.gates ?? []).find(g => g.id === targetId)
     if (gate && !gate.isDead) return { x: gate.x, y: gate.y }
+    // Building targets
+    const building = (this.game.knownState.buildings ?? []).find(b => b.id === targetId)
+    if (building && !building.isDead) return { x: building.x, y: building.y }
     return null
   }
 
@@ -137,6 +143,9 @@ export default class BattleRenderer extends BaseRenderer {
     // Gate targets
     const gate = (this.game.knownState.gates ?? []).find(g => g.id === targetId)
     if (gate && !gate.isDead) return { x: gate.x, y: gate.y }
+    // Building targets
+    const building = (this.game.knownState.buildings ?? []).find(b => b.id === targetId)
+    if (building && !building.isDead) return { x: building.x, y: building.y }
     return null
   }
 
@@ -248,6 +257,72 @@ export default class BattleRenderer extends BaseRenderer {
         this._entityRoot.removeChild(gfx)
         gfx.destroy()
         this.gateGfx.delete(id)
+      }
+    })
+
+    // Buildings
+    const buildings = state.buildings ?? []
+    const activeBuildingIds = new Set(buildings.map(b => b.id))
+
+    for (const building of buildings) {
+      if (building.isDead) {
+        if (this.buildingGfx.has(building.id)) {
+          const gfx = this.buildingGfx.get(building.id)
+          this._entityRoot.removeChild(gfx)
+          gfx.destroy()
+          this.buildingGfx.delete(building.id)
+        }
+        continue
+      }
+
+      if (!this.buildingGfx.has(building.id)) {
+        const gfx = new Graphics()
+        this.buildingGfx.set(building.id, gfx)
+        this._entityRoot.addChild(gfx)
+      }
+
+      const gfx = this.buildingGfx.get(building.id)
+      const bW = building.width  ?? 60
+      const bH = building.height ?? 60
+      const hpPct = building.hp / (building.maxHp || 1)
+
+      gfx.clear()
+
+      // Building body — stone/brown rectangle
+      const bX = building.x - bW / 2
+      const bY = building.y - bH / 2
+      gfx.rect(bX, bY, bW, bH)
+      gfx.fill({ color: 0x8B6914, alpha: 0.85 })
+      gfx.rect(bX, bY, bW, bH)
+      gfx.stroke({ color: 0xA0822A, width: 3 })
+
+      // Inner detail — smaller rect
+      const inset = 8
+      gfx.rect(bX + inset, bY + inset, bW - inset * 2, bH - inset * 2)
+      gfx.stroke({ color: 0x6B4F10, width: 1 })
+
+      // HP bar above building
+      const barW = Math.max(bW, 60)
+      const barH = 5
+      const barX = building.x - barW / 2
+      const barY = bY - 12
+      gfx.rect(barX, barY, barW, barH)
+      gfx.fill({ color: 0x111111, alpha: 0.8 })
+      if (hpPct > 0) {
+        const hpColor = hpPct > 0.5 ? 0xe74c3c : hpPct > 0.25 ? 0xe67e22 : 0xc0392b
+        gfx.rect(barX, barY, barW * hpPct, barH)
+        gfx.fill(hpColor)
+      }
+      gfx.rect(barX, barY, barW, barH)
+      gfx.stroke({ color: 0x333333, width: 1 })
+    }
+
+    // Remove stale building graphics
+    this.buildingGfx.forEach((gfx, id) => {
+      if (!activeBuildingIds.has(id)) {
+        this._entityRoot.removeChild(gfx)
+        gfx.destroy()
+        this.buildingGfx.delete(id)
       }
     })
   }

@@ -217,6 +217,17 @@ export default class SkillSystem {
       })
     }
 
+    // Hit buildings
+    if (gs.buildings) {
+      gs.buildings.forEach(building => {
+        if (building.isDead) return
+        if (this._collision.inCone({ x: player.x, y: player.y }, v, halfAngle, config.range, { x: building.x, y: building.y })) {
+          building.takeDamage(Math.round((config.damage ?? 0) * (player.damageMult ?? 1)))
+          hitCount++
+        }
+      })
+    }
+
     // Combo point generation (Sinister Strike)
     if (config.addsComboPoint && hitCount > 0) {
       player.comboPoints = Math.min(5, (player.comboPoints ?? 0) + 1)
@@ -794,6 +805,18 @@ export default class SkillSystem {
         }
       })
     }
+
+    // Damage buildings (circle AOE vs rect building)
+    if (gs.buildings) {
+      gs.buildings.forEach(building => {
+        if (building.isDead) return
+        const aoeCircle    = { x: cx, y: cy, radius }
+        const buildingRect = { x: building.x, y: building.y, width: building.width ?? 60, height: building.height ?? 60 }
+        if (this._collision.circleRectOverlap(aoeCircle, buildingRect)) {
+          building.takeDamage(Math.round((config.damage ?? 0) * (player?.damageMult ?? 1)))
+        }
+      })
+    }
   }
 
   // ── Damage helper ──────────────────────────────────────────────────────────
@@ -963,6 +986,21 @@ export default class SkillSystem {
           if (this._collision.circleRectOverlap(projCircle, gateRect)) {
             proj.hit.add(gate.id)
             gate.takeDamage(proj.damage ?? 0)
+            if (!proj.pierce) proj.isAlive = false
+          }
+        })
+      }
+
+      // Collision check vs buildings (circle-vs-rect)
+      if (proj.isAlive && gs.buildings && !proj.isEnemyProj) {
+        gs.buildings.forEach(building => {
+          if (!proj.isAlive || building.isDead) return
+          if (proj.hit.has(building.id)) return
+          const projCircle    = { x: proj.x, y: proj.y, radius: proj.radius }
+          const buildingRect  = { x: building.x, y: building.y, width: building.width ?? 60, height: building.height ?? 60 }
+          if (this._collision.circleRectOverlap(projCircle, buildingRect)) {
+            proj.hit.add(building.id)
+            building.takeDamage(proj.damage ?? 0)
             if (!proj.pierce) proj.isAlive = false
           }
         })

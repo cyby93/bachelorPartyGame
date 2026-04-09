@@ -23,7 +23,7 @@ Host and controller render or react to server progression. They do not decide it
 ## Current Flow
 
 ```text
-Lobby -> Level 1 (Waves) -> Level 2 (Gates) -> Level 3 (Leviathan) -> Level 4 (Shade of Akama) -> Level 5 (Illidan) -> Result / GameOver -> Lobby
+Lobby -> Level 1 (Waves) -> Level 2 (Siege) -> Level 3 (Gates) -> Level 4 (Leviathan) -> Level 5 (Shade of Akama) -> Level 6 (Illidan) -> Result / GameOver -> Lobby
 ```
 
 Current implementation details:
@@ -67,10 +67,12 @@ Current campaign entries look like:
 | `spawning` | enemy spawn config (`mode: 'continuous'` or `'wave'`), or `null` |
 | `difficulty` | player-count scaling configuration |
 | `boss` | boss config key or `null` |
-| `gates` | destructible gate definitions (Level 2) |
-| `npcs` | friendly NPC definitions (Level 4) |
-| `warlocks` | warlock channeler spawn config (Level 4) |
-| `initialEnemies` | pre-placed enemies at level start (Level 3) |
+| `gates` | destructible gate definitions (Level 3) |
+| `buildings` | destructible spawner buildings (Level 2) |
+| `buildingSpawning` | building spawn config: interval, buff, enemy types (Level 2) |
+| `npcs` | friendly NPC definitions (Level 5) |
+| `warlocks` | warlock channeler spawn config (Level 5) |
+| `initialEnemies` | pre-placed enemies at level start (Level 4) |
 | `bossSpawnPosition` | custom boss spawn position override |
 
 ---
@@ -87,6 +89,7 @@ Current objective types documented in `shared/LevelConfig.js`:
 | `killBoss` | `{ type: 'killBoss' }` | defeat the level boss |
 | `surviveWaves` | `{ type: 'surviveWaves' }` | clear all discrete waves |
 | `destroyGates` | `{ type: 'destroyGates' }` | destroy all gates in sequence |
+| `destroyBuildings` | `{ type: 'destroyBuildings' }` | destroy all spawner buildings |
 | `killAll` | `{ type: 'killAll' }` | kill all enemies including splits |
 | `killBossProtectNPC` | `{ type: 'killBossProtectNPC', npcId, bossId }` | kill boss before NPC dies |
 

@@ -8,6 +8,8 @@ import ServerEnemy       from './entities/ServerEnemy.js'
 import ServerBoss        from './entities/ServerBoss.js'
 import ServerNPC         from './entities/ServerNPC.js'
 import ServerGate        from './entities/ServerGate.js'
+import ServerBuilding    from './entities/ServerBuilding.js'
+import BuildingSpawnSystem from './systems/BuildingSpawnSystem.js'
 import TrainingDummy, { RangedDummy, MeleeDummy, MovingDummy } from './entities/TrainingDummy.js'
 import CooldownSystem    from './systems/CooldownSystem.js'
 import SkillSystem       from './systems/SkillSystem.js'
@@ -60,6 +62,10 @@ export default class GameServer {
     // Gates (destructible objectives)
     this.gates = new Map()        // id → ServerGate
     this._activeGateIndex = 0     // which gate in the sequence is active
+
+    // Buildings (destructible spawners)
+    this.buildings = new Map()    // id → ServerBuilding
+    this.buildingSpawnSystem = null
 
     // Level 4: warlock/boss phase tracking
     this._bossPhase = 1
@@ -318,6 +324,19 @@ export default class GameServer {
       this._activateNextGate()
     }
 
+    // Set up buildings (The Siege)
+    if (level.buildings?.length) {
+      for (const bCfg of level.buildings) {
+        this.buildings.set(bCfg.id, new ServerBuilding(bCfg, hpMult))
+      }
+      if (level.buildingSpawning) {
+        this.buildingSpawnSystem = new BuildingSpawnSystem(
+          level.buildingSpawning, diff, playerCount,
+          this.arenaWidth, this.arenaHeight
+        )
+      }
+    }
+
     // Set up NPCs (Level 4 — Akama)
     if (level.npcs?.length) {
       for (const npcCfg of level.npcs) {
@@ -402,6 +421,7 @@ export default class GameServer {
       arenaHeight: this.arenaHeight,
       objectives:  this.objectiveProgress,
       gates:       this._gatesDTO(),
+      buildings:   this._buildingsDTO(),
       npcs:        this._npcsDTO(),
       rooms:       level.arena?.rooms ?? [],
       passages:    level.arena?.passages ?? [],
@@ -421,6 +441,8 @@ export default class GameServer {
           return { ...obj, current: 0, target: this.spawnSystem?.waveCount ?? 0 }
         case 'destroyGates':
           return { ...obj, current: 0, target: this.gates.size }
+        case 'destroyBuildings':
+          return { ...obj, current: 0, target: this.buildings.size }
         case 'killAll':
           return { ...obj, current: 0, target: 1 }
         case 'killBossProtectNPC':
@@ -442,6 +464,8 @@ export default class GameServer {
     this.npcs.clear()
     this.gates.clear()
     this._activeGateIndex = 0
+    this.buildings.clear()
+    this.buildingSpawnSystem = null
     this._bossPhase    = 1
     this._warlockCount = 0
     this._lastSpawn    = 0
@@ -504,6 +528,8 @@ export default class GameServer {
       this.npcs.clear()
       this.gates.clear()
       this._activeGateIndex = 0
+      this.buildings.clear()
+      this.buildingSpawnSystem = null
       this._bossPhase    = 1
       this._warlockCount = 0
       this.currentLevelIndex = -1
@@ -562,6 +588,7 @@ export default class GameServer {
       enemies:      this.enemies,
       boss:         this.boss,
       gates:        this.gates,
+      buildings:    this.buildings,
       npcs:         this.npcs,
       stats:        this.stats,
       io:           this.io,
@@ -644,6 +671,12 @@ export default class GameServer {
         }
       }
 
+      // Spawn enemies from BuildingSpawnSystem
+      if (this.buildingSpawnSystem) {
+        const bSpawned = this.buildingSpawnSystem.tick(now, this.buildings, this.enemies, this._enemyIdSeq)
+        for (const e of bSpawned) this.enemies.set(e.id, e)
+      }
+
       // Update enemies (AI + contact damage + split-on-death)
       this._updateEnemies(dt, now)
 
@@ -660,6 +693,16 @@ export default class GameServer {
       // Update gates (check destruction, advance sequence)
       if (this.gates.size > 0) {
         this._updateGates()
+      }
+
+      // Log building destruction
+      if (this.buildings.size > 0) {
+        this.buildings.forEach(b => {
+          if (b.isDead && b.isActive) {
+            b.isActive = false
+            console.log(`[~] Building ${b.id} destroyed`)
+          }
+        })
       }
 
       this._checkRevive(now)
@@ -810,9 +853,12 @@ export default class GameServer {
         this._killsByType[e.type] = (this._killsByType[e.type] ?? 0) + 1
         this.stats.kills = this.killCount
 
-        // Notify wave spawn system
+        // Notify spawn systems
         if (this.spawnSystem) {
           this.spawnSystem.onEnemyDied()
+        }
+        if (this.buildingSpawnSystem) {
+          this.buildingSpawnSystem.onEnemyDied(id)
         }
 
         // Split-on-death: queue child spawns
@@ -1248,6 +1294,13 @@ export default class GameServer {
           if (destroyed < obj.target) allComplete = false
           break
         }
+        case 'destroyBuildings': {
+          let destroyed = 0
+          this.buildings.forEach(b => { if (b.isDead) destroyed++ })
+          obj.current = destroyed
+          if (destroyed < obj.target) allComplete = false
+          break
+        }
         case 'killAll': {
           // Complete when no enemies remain (including no pending splits)
           const enemyCount = this.enemies.size
@@ -1525,6 +1578,7 @@ export default class GameServer {
       levelName:   this.currentLevel?.name ?? null,
       objectives:  this.objectiveProgress,
       gates:       this._gatesDTO(),
+      buildings:   this._buildingsDTO(),
       npcs:        this._npcsDTO(),
       rooms:       this.currentLevel?.arena?.rooms ?? [],
       passages:    this.currentLevel?.arena?.passages ?? [],
@@ -1584,6 +1638,7 @@ export default class GameServer {
       aoeZones:    this.skillSystem.getZonesDTO(),
       minions,
       gates:       this._gatesDTO(),
+      buildings:   this._buildingsDTO(),
       npcs:        this._npcsDTO(),
       waveInfo:    this._waveInfoDTO(),
     }
@@ -1593,6 +1648,13 @@ export default class GameServer {
     if (this.gates.size === 0) return null
     const arr = []
     this.gates.forEach(g => arr.push(g.toDTO()))
+    return arr
+  }
+
+  _buildingsDTO() {
+    if (this.buildings.size === 0) return null
+    const arr = []
+    this.buildings.forEach(b => arr.push(b.toDTO()))
     return arr
   }
 

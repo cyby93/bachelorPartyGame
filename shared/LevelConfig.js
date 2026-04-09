@@ -13,6 +13,7 @@
  *  { type: 'killBoss' }                                  — defeat the level's boss
  *  { type: 'surviveWaves' }                              — clear all discrete waves
  *  { type: 'destroyGates' }                              — destroy all gates
+ *  { type: 'destroyBuildings' }                          — destroy all buildings
  *  { type: 'killAll' }                                   — kill all enemies (incl. splits)
  *  { type: 'killBossProtectNPC', npcId, bossId }         — kill boss before NPC dies
  *
@@ -54,7 +55,43 @@ export const CAMPAIGN = [
     boss: null,
   },
 
-  // ── Level 2: Destroy the Gates ────────────────────────────────────────
+  // ── Level 2: The Siege (Destroy the Buildings) ────────────────────────
+  {
+    id: 'level_siege',
+    name: 'The Siege',
+    arena: { width: 1000, height: 1000 },
+    objectives: [
+      { type: 'destroyBuildings' },
+    ],
+    buildings: [
+      { id: 'b1', position: { x: 120, y: 120 }, hp: 600, width: 60, height: 60 },
+      { id: 'b2', position: { x: 880, y: 120 }, hp: 600, width: 60, height: 60 },
+      { id: 'b3', position: { x: 120, y: 880 }, hp: 600, width: 60, height: 60 },
+      { id: 'b4', position: { x: 880, y: 880 }, hp: 600, width: 60, height: 60 },
+    ],
+    buildingSpawning: {
+      baseInterval: 3000,          // ms between spawns per building
+      countPerSpawn: [1, 2],       // min/max enemies per spawn event
+      maxAlivePerBuilding: 6,      // cap per building
+      buffFactor: 0.25,            // 25% faster spawns per destroyed building
+      spawnRadius: 80,             // spawn distance from building center
+      enemyTypes: [
+        { type: 'grunt',   weight: 3 },
+        { type: 'brute',   weight: 1 },
+        { type: 'archer',  weight: 2 },
+        { type: 'charger', weight: 1 },
+      ],
+    },
+    spawning: null,
+    difficulty: {
+      hpMult:     { base: 1.0, perPlayer: 0.06 },
+      damageMult: { base: 1.0, perPlayer: 0.05 },
+      spawnMult:  { base: 1.0, perPlayer: 0.10 },
+    },
+    boss: null,
+  },
+
+  // ── Level 3: Destroy the Gates ────────────────────────────────────────
   {
     id: 'level_2',
     name: 'The Black Temple Gates',

@@ -23,150 +23,120 @@
 </script>
 
 <div class="lobby">
-  <!-- Left column -->
-  <div class="left-col">
-    <div class="hero" style="--class-color: {classColor}">
-      <span class="icon">{CLASS_ICONS[className] ?? '?'}</span>
-      <h2>{playerName}</h2>
-      <p class="class-tag">{cls?.name ?? className} · {ROLES[className]}</p>
+  <!-- Top bar: hero info + stats -->
+  <div class="top-bar" style="--class-color: {classColor}">
+    <span class="icon">{CLASS_ICONS[className] ?? '?'}</span>
+    <div class="hero-info">
+      <span class="hero-name" style="color: {classColor}">{playerName}</span>
+      <span class="class-tag">{cls?.name ?? className} · {ROLES[className]}</span>
     </div>
-
-    <div class="stat-row">
+    <div class="stats">
       <span>❤️ {cls?.hp ?? '—'} HP</span>
-      <span>⚡ {cls?.speed ?? '—'}x Speed</span>
-    </div>
-
-    <div class="waiting">
-      <div class="spinner"></div>
-      <p>Waiting for host…</p>
-      <button type="button" class="ready-btn" onclick={() => onready?.()}>
-        I got it
-      </button>
+      <span>⚡ {cls?.speed ?? '—'}x Spd</span>
     </div>
   </div>
 
-  <!-- Right column -->
-  <div class="right-col">
-    <p class="section-label">YOUR SKILLS</p>
-    <div class="skills-section">
-      {#each skills as skill, i}
-        <div class="skill-row">
-          <span class="skill-icon">{skill.icon}</span>
-          <div class="skill-info">
-            <span class="skill-name">{skill.name}</span>
-            <span class="skill-type">{skill.inputType} · {(skill.cooldown / 1000).toFixed(1)}s CD</span>
-          </div>
+  <!-- Skills grid -->
+  <div class="skills-grid">
+    {#each skills as skill}
+      <div class="skill-card">
+        <span class="skill-icon">{skill.icon}</span>
+        <div class="skill-info">
+          <span class="skill-name">{skill.name}</span>
+          <span class="skill-meta">{skill.inputType} · {(skill.cooldown / 1000).toFixed(1)}s CD</span>
         </div>
-      {/each}
-    </div>
+      </div>
+    {/each}
   </div>
+
+  <!-- Ready button -->
+  <button type="button" class="ready-btn" onclick={() => onready?.()}>
+    I GOT IT — LET'S GO!
+  </button>
 </div>
 
 <style>
   .lobby {
     height: 100%;
-    display: grid;
-    grid-template-columns: 1fr 1.4fr;
-    gap: 12px;
-    padding: 12px;
-  }
-
-  .left-col {
     display: flex;
     flex-direction: column;
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  /* ── Top bar ── */
+  .top-bar {
+    display: flex;
+    align-items: center;
     gap: 10px;
-    min-height: 0;
-  }
-
-  .right-col {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-height: 0;
-  }
-
-  .hero {
-    text-align: center;
-    padding: 8px;
+    padding: 8px 12px;
     border-radius: 10px;
     border: 2px solid var(--class-color);
     background: color-mix(in srgb, var(--class-color) 10%, #0f1923);
+    flex-shrink: 0;
   }
 
-  .hero .icon  { font-size: 28px; }
-  .hero h2     { margin: 4px 0 2px; font-size: 16px; color: var(--class-color); }
-  .hero .class-tag { font-size: 11px; color: #7fa8c0; }
+  .icon { font-size: 26px; flex-shrink: 0; }
 
-  .stat-row {
-    display: flex;
-    gap: 16px;
-    font-size: 13px;
-    color: #bbb;
-  }
-
-  .section-label {
-    font-size: 10px;
-    letter-spacing: 2px;
-    color: #555;
-    margin: 0;
-  }
-
-  .skills-section {
+  .hero-info {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 2px;
+    min-width: 0;
     flex: 1;
+  }
+
+  .hero-name  { font-size: 15px; font-weight: bold; }
+  .class-tag  { font-size: 11px; color: #7fa8c0; }
+
+  .stats {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+    font-size: 12px;
+    color: #bbb;
+    flex-shrink: 0;
+  }
+
+  /* ── Skills ── */
+  .skills-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
     min-height: 0;
   }
 
-  .skill-row {
+  .skill-card {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     background: #16202a;
     border-radius: 8px;
     padding: 8px 10px;
+    min-width: 0;
   }
 
-  .skill-icon  { font-size: 18px; }
+  .skill-icon  { font-size: 18px; flex-shrink: 0; }
+  .skill-info  { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .skill-name  { font-size: 12px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .skill-meta  { font-size: 10px; color: #7fa8c0; }
 
-  .skill-info  { display: flex; flex-direction: column; gap: 2px; }
-  .skill-name  { font-size: 13px; font-weight: bold; }
-  .skill-type  { font-size: 11px; color: #7fa8c0; }
-
-  .waiting {
-    margin-top: auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    color: #7fa8c0;
-    font-size: 13px;
-  }
-
-  .spinner {
-    width: 24px;
-    height: 24px;
-    border: 3px solid #1e3a4a;
-    border-top-color: #00d2ff;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-
+  /* ── Ready button ── */
   .ready-btn {
-    padding: 10px 18px;
+    width: 100%;
+    padding: 12px;
     border-radius: 999px;
-    border: 1px solid #1e3a4a;
-    background: #16202a;
-    color: #00d2ff;
-    font-size: 14px;
-    font-weight: 600;
+    border: none;
+    font-size: 15px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    background: linear-gradient(135deg, #00d2ff, #0070a8);
+    color: #fff;
     cursor: pointer;
+    flex-shrink: 0;
   }
 
-  .ready-btn:active {
-    background: #1e3a4a;
-  }
-
-  @keyframes spin { to { transform: rotate(360deg); } }
+  .ready-btn:active { opacity: 0.85; }
 </style>

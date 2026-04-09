@@ -689,6 +689,17 @@ export default class SkillSystem {
           }
         }
       })
+      // Also heal healable NPCs in radius (e.g. Akama)
+      gs.npcs?.forEach(npc => {
+        if (npc.isDead || !npc.isHealable) return
+        if (this._collision.distance({ x: cx, y: cy }, { x: npc.x, y: npc.y }) <= radius) {
+          const amount = config.healAmount ?? 0
+          npc.heal(amount)
+          if (gs.io && amount > 0) {
+            gs.io.emit('effect:damage', { targetId: npc.id, amount, type: 'heal', sourceSkill: config.name ?? null })
+          }
+        }
+      })
       return
     }
 
@@ -720,6 +731,17 @@ export default class SkillSystem {
           p.heal(amount)
           if (gs.io && amount > 0) {
             gs.io.emit('effect:damage', { targetId: p.id, amount, type: 'heal', sourceSkill: config.name ?? null })
+          }
+        }
+      })
+      // Also heal healable NPCs in radius
+      gs.npcs?.forEach(npc => {
+        if (npc.isDead || !npc.isHealable) return
+        if (this._collision.distance({ x: cx, y: cy }, { x: npc.x, y: npc.y }) <= radius) {
+          const amount = config.healAmount ?? 0
+          npc.heal(amount)
+          if (gs.io && amount > 0) {
+            gs.io.emit('effect:damage', { targetId: npc.id, amount, type: 'heal', sourceSkill: config.name ?? null })
           }
         }
       })
@@ -1025,6 +1047,23 @@ export default class SkillSystem {
           }
           if (!proj.pierce) proj.isAlive = false
         })
+        // Also check healable NPCs (e.g. Akama)
+        if (proj.isAlive) {
+          gs.npcs?.forEach(npc => {
+            if (!proj.isAlive || npc.isDead || !npc.isHealable) return
+            if (proj.hit.has(npc.id)) return
+            const projCircle = { x: proj.x, y: proj.y, radius: proj.radius }
+            const npcCircle  = { x: npc.x,  y: npc.y,  radius: npc.radius }
+            if (!this._collision.circlesOverlap(projCircle, npcCircle)) return
+            proj.hit.add(npc.id)
+            const amount = proj.healAmount ?? 0
+            if (amount > 0) {
+              npc.heal(amount)
+              if (gs.io) gs.io.emit('effect:damage', { targetId: npc.id, amount, type: 'heal', sourceSkill: null })
+            }
+            if (!proj.pierce) proj.isAlive = false
+          })
+        }
       }
 
       // Collision check vs players — for enemy-fired projectiles (e.g. RangedDummy)
@@ -1530,6 +1569,12 @@ export default class SkillSystem {
       if (dist > radius) return
       if (dist < bestDist) { bestDist = dist; best = p }
     })
+    gs.npcs?.forEach(npc => {
+      if (npc.isDead || !npc.isHealable || healedIds.has(npc.id)) return
+      const dist = Math.hypot(npc.x - pivotX, npc.y - pivotY)
+      if (dist > radius) return
+      if (dist < bestDist) { bestDist = dist; best = npc }
+    })
     return best
   }
 
@@ -1561,6 +1606,17 @@ export default class SkillSystem {
       const dot = (dx * v.x + dy * v.y) / dist
       if (dot < 0.5) return
       if (dist < bestDist) { bestDist = dist; best = p }
+    })
+
+    gs.npcs?.forEach(npc => {
+      if (npc.isDead || !npc.isHealable) return
+      const dx = npc.x - player.x
+      const dy = npc.y - player.y
+      const dist = Math.hypot(dx, dy)
+      if (dist > range || dist < 5) return
+      const dot = (dx * v.x + dy * v.y) / dist
+      if (dot < 0.5) return
+      if (dist < bestDist) { bestDist = dist; best = npc }
     })
 
     return best

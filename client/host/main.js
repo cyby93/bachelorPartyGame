@@ -42,6 +42,9 @@ const levelIndexEl   = document.getElementById('level-index')
 const currentLevelNameEl = document.getElementById('current-level-name')
 const objectiveLabelEl = document.getElementById('objective-label')
 const objectiveValueEl = document.getElementById('objective-value')
+const shadeBuffCardEl  = document.getElementById('shade-buff-card')
+const shadeHpValueEl   = document.getElementById('shade-hp-value')
+const shadeBuffTextEl  = document.getElementById('shade-buff-text')
 
 // ── Fullscreen ─────────────────────────────────────────────────────────────
 fullscreenBtn?.addEventListener('click', () => {
@@ -112,6 +115,7 @@ function clearLevelPanel() {
   if (currentLevelNameEl) currentLevelNameEl.textContent = ''
   if (objectiveLabelEl) objectiveLabelEl.textContent = ''
   if (objectiveValueEl) objectiveValueEl.textContent = ''
+  if (shadeBuffCardEl) shadeBuffCardEl.hidden = true
 }
 
 function formatObjective(objective, knownState) {
@@ -167,6 +171,20 @@ function renderLevelPanel(scene, meta, objectives = meta?.objectives) {
   if (currentLevelNameEl) currentLevelNameEl.textContent = meta?.levelName ?? 'Current level'
   if (objectiveLabelEl) objectiveLabelEl.textContent = summary.label || 'Objective'
   if (objectiveValueEl) objectiveValueEl.textContent = summary.value || 'In progress'
+
+  // Shade of Akama buff card (Level 4 Phase 1 only)
+  const boss = game.knownState?.boss
+  if (shadeBuffCardEl) {
+    if (boss && boss.isImmune && !boss.isDead) {
+      shadeBuffCardEl.hidden = false
+      const hp = Math.ceil(boss.hp ?? 0)
+      const dmgPct = Math.round(((boss.damageMult ?? 1) - 1) * 100)
+      if (shadeHpValueEl) shadeHpValueEl.textContent = `${hp.toLocaleString()} HP`
+      if (shadeBuffTextEl) shadeBuffTextEl.textContent = dmgPct > 0 ? `+${dmgPct}% Damage` : 'No buff yet'
+    } else {
+      shadeBuffCardEl.hidden = true
+    }
+  }
 }
 
 function setSceneControls(scene) {
@@ -278,6 +296,19 @@ socket.on(EVENTS.STATE_DELTA, delta => {
   game.receiveState(delta)
   const after  = Object.keys(game.knownState.players).length
   if (after !== before) renderDOMPlayerList()
+
+  // Update shade buff card live during Level 4 Phase 1
+  if (shadeBuffCardEl && !shadeBuffCardEl.hidden) {
+    const boss = game.knownState?.boss
+    if (boss && boss.isImmune && !boss.isDead) {
+      const hp = Math.ceil(boss.hp ?? 0)
+      const dmgPct = Math.round(((boss.damageMult ?? 1) - 1) * 100)
+      if (shadeHpValueEl) shadeHpValueEl.textContent = `${hp.toLocaleString()} HP`
+      if (shadeBuffTextEl) shadeBuffTextEl.textContent = dmgPct > 0 ? `+${dmgPct}% Damage` : 'No buff yet'
+    } else {
+      shadeBuffCardEl.hidden = true
+    }
+  }
 })
 
 socket.on(EVENTS.SCENE_CHANGE, (data) => {

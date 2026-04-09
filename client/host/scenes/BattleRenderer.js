@@ -48,6 +48,11 @@ export default class BattleRenderer extends BaseRenderer {
     this._eyeBeamGfx   = new Graphics()
     this._entityRoot.addChild(this._eyeBeamGfx)
 
+    // Warlock channeling beams (Level 4 Phase 1: warlocks → Shade)
+    this._warlockBeamGfx = new Graphics()
+    this._entityRoot.addChild(this._warlockBeamGfx)
+    this._warlockBeamTime = 0
+
     // Illidan dialog overlay (cinematic intro + phase transitions)
     this._dialogContainer  = new Container()
     this._dialogBg         = null
@@ -104,6 +109,10 @@ export default class BattleRenderer extends BaseRenderer {
 
     // Eye beams
     this._eyeBeamGfx.clear()
+
+    // Warlock beams
+    this._warlockBeamGfx.clear()
+    this._warlockBeamTime = 0
   }
 
   _resetUIRefs() {
@@ -185,6 +194,10 @@ export default class BattleRenderer extends BaseRenderer {
 
     // Eye Beams (Illidan Phase 2)
     this._renderEyeBeams(state.eyeBeams)
+
+    // Warlock channeling beams (Level 4 Phase 1)
+    this._warlockBeamTime = (this._warlockBeamTime + dt) % 10
+    this._renderWarlockBeams(state)
 
     // Boss
     if (state.boss && !state.boss.isDead) {
@@ -572,6 +585,48 @@ export default class BattleRenderer extends BaseRenderer {
       this._eyeBeamGfx.moveTo(beam.x1, beam.y1)
       this._eyeBeamGfx.lineTo(cx, cy)
       this._eyeBeamGfx.stroke({ width: 3, color: 0xcc66ff, alpha: 0.95 })
+    }
+  }
+
+  // ── Warlock channeling beams (Level 4 Phase 1) ────────────────────────────
+
+  _renderWarlockBeams(state) {
+    this._warlockBeamGfx.clear()
+    if (!state.boss?.isImmune) return
+
+    const tx = state.boss.x
+    const ty = state.boss.y
+    const t  = this._warlockBeamTime
+    const pulse = 0.5 + 0.25 * Math.sin(t * 4)
+
+    const enemies = state.enemies ?? []
+    for (const e of enemies) {
+      if (e.type !== 'warlock' || e.isDead) continue
+
+      const sx = e.x
+      const sy = e.y
+
+      // Outer glow
+      this._warlockBeamGfx.moveTo(sx, sy)
+      this._warlockBeamGfx.lineTo(tx, ty)
+      this._warlockBeamGfx.stroke({ color: 0x9933ff, width: 6, alpha: 0.15 })
+
+      // Core beam
+      this._warlockBeamGfx.moveTo(sx, sy)
+      this._warlockBeamGfx.lineTo(tx, ty)
+      this._warlockBeamGfx.stroke({ color: 0xcc44ff, width: 2, alpha: pulse })
+
+      // Flowing dots traveling from warlock toward boss (power flowing in)
+      const dx = tx - sx
+      const dy = ty - sy
+      for (let i = 0; i < 4; i++) {
+        const frac = ((i / 4) + t * 0.3) % 1
+        const px   = sx + dx * frac
+        const py   = sy + dy * frac
+        const a    = Math.sin(frac * Math.PI) * 0.8
+        this._warlockBeamGfx.circle(px, py, 2.5)
+        this._warlockBeamGfx.fill({ color: 0x6600cc, alpha: a })
+      }
     }
   }
 }

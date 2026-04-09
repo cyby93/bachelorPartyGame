@@ -31,6 +31,8 @@ export default class ServerNPC {
     this.isDead        = false
     this.isNPC         = true
     this.isPlayer      = false
+    this.isHealable    = config.isHealable ?? true
+    this.activeEffects = []   // required for HoT compatibility (not ticked by SkillSystem)
 
     this.arenaWidth    = GAME_CONFIG.CANVAS_WIDTH
     this.arenaHeight   = GAME_CONFIG.CANVAS_HEIGHT
@@ -61,6 +63,11 @@ export default class ServerNPC {
     if (this.isDead) return
     this.hp = Math.max(0, this.hp - amount)
     if (this.hp === 0) this.isDead = true
+  }
+
+  heal(amount) {
+    if (this.isDead) return
+    this.hp = Math.min(this.maxHp, this.hp + amount)
   }
 
   /**

@@ -169,9 +169,10 @@ export default class ServerBoss {
       hp:       Math.round(this.hp),
       maxHp:    Math.round(this.maxHp),
       radius:   this.radius,
-      phase:    this.phase,
-      isDead:   this.isDead,
-      isImmune: this.isImmune || undefined,
+      phase:      this.phase,
+      isDead:     this.isDead,
+      isImmune:   this.isImmune || undefined,
+      damageMult: +this._damageMult.toFixed(2),
     }
   }
 }

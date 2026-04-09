@@ -123,6 +123,38 @@
       color: #ffffff;
     }
 
+    #shade-buff-card {
+      flex: 0 0 260px;
+      max-width: 35%;
+      padding: 12px 14px;
+      border: 1px solid #6600aa;
+      border-radius: 10px;
+      background: rgba(40, 0, 60, 0.7);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    #shade-buff-card[hidden] { display: none; }
+    #shade-buff-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #cc44ff;
+    }
+    #shade-hp-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+    #shade-buff-text {
+      font-size: 13px;
+      color: #dd88ff;
+    }
+    @media (max-width: 960px) {
+      #shade-buff-card { max-width: none; flex-basis: auto; }
+    }
+
     #canvas-wrap {
       flex: 1;
       min-width: 0;
@@ -209,6 +241,12 @@
       <div id="objective-card">
         <div id="objective-label"></div>
         <div id="objective-value"></div>
+      </div>
+
+      <div id="shade-buff-card" hidden>
+        <div id="shade-buff-label">SHADE OF AKAMA</div>
+        <div id="shade-hp-value"></div>
+        <div id="shade-buff-text"></div>
       </div>
     </div>
 

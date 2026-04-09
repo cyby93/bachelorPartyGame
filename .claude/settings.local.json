@@ -14,7 +14,13 @@
       "Bash(grep -o \"type: ''''[^'''']*''''\" shared/SkillDatabase.js)",
       "Bash(grep -o \"subtype: ''''[^'''']*''''\" shared/SkillDatabase.js)",
       "Bash(sed \"s/''''$//\")",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Read(//usr/**)",
+      "Read(//home/**)",
+      "Read(//usr/local/bin/**)",
+      "Read(//home/cyby/.local/bin/**)",
+      "Bash(/mnt/c/Program Files/nodejs/node:*)",
+      "Bash(echo \"exit: $?\")"
     ]
   }
 }

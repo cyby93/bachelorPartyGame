@@ -22,4 +22,7 @@ export const GAME_CONFIG = {
 
   // Game rules
   MAX_PLAYERS:    13,
+
+  // Quiz & upgrade system (between levels)
+  QUIZ_BETWEEN_LEVELS: true,
 }

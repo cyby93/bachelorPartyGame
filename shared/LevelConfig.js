@@ -36,7 +36,7 @@ export const CAMPAIGN = [
     ],
     spawning: {
       mode: 'wave',
-      waveCount: 8,
+      waveCount: 1,
       betweenWaveDelayMs: 3000,
       spawnEdge: 'right',
       progression: [

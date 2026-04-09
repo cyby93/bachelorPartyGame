@@ -16,6 +16,7 @@ import LobbyRenderer          from './scenes/LobbyRenderer.js'
 import BattleRenderer         from './scenes/BattleRenderer.js'
 import ResultRenderer         from './scenes/ResultRenderer.js'
 import LevelCompleteRenderer  from './scenes/LevelCompleteRenderer.js'
+import QuizRenderer           from './scenes/QuizRenderer.js'
 
 function lerp(a, b, t) { return a + (b - a) * t }
 
@@ -75,6 +76,7 @@ export default class HostGame {
       battle:        new BattleRenderer(this, 'battle'),
       bossFight:     new BattleRenderer(this, 'bossFight'),
       levelComplete: new LevelCompleteRenderer(this, this.socket),
+      quiz:          new QuizRenderer(this, this.socket),
       result:        new ResultRenderer(this, true),
       gameover:      new ResultRenderer(this, false),
     }

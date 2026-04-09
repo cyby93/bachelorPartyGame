@@ -6,6 +6,9 @@
   import ClassSelectScreen from './screens/ClassSelectScreen.svelte'
   import LobbyScreen       from './screens/LobbyScreen.svelte'
   import GameScreen        from './screens/GameScreen.svelte'
+  import QuizAnswerScreen  from './screens/QuizAnswerScreen.svelte'
+  import QuizResultScreen  from './screens/QuizResultScreen.svelte'
+  import UpgradeSelectScreen from './screens/UpgradeSelectScreen.svelte'
 
   // ── Screens: 'name' | 'classSelect' | 'lobby' | 'game' | 'levelComplete' | 'end'
   let screen = $state('name')
@@ -72,12 +75,22 @@
     socket.on(EVENTS.SCENE_CHANGE, ({ scene, levelName, levelIndex, totalLevels }) => {
       if (scene === 'battle' || scene === 'bossFight') {
         screen = 'game'
+        overlayScreen = null
+        overlayData = null
       } else if (scene === 'lobby') {
         screen = 'lobby'
         lobbyReady = false
+        overlayScreen = null
+        overlayData = null
+      } else if (scene === 'quiz') {
+        screen = 'quiz'
+        overlayScreen = 'quizWaiting'
+        overlayData = null
       } else if (scene === 'levelComplete') {
         screen = 'levelComplete'
         endMessage = `Level ${(levelIndex ?? 0) + 1} complete!`
+        overlayScreen = null
+        overlayData = null
       } else if (scene === 'result') {
         screen = 'end'
         endMessage = '🏆 Victory! Waiting for restart…'
@@ -102,6 +115,29 @@
     socket.on(EVENTS.COMBO_POINTS, data => {
       if (data.playerId !== myId) return
       comboPoints = data.points
+    })
+
+    // ── Quiz events ─────────────────────────────────────────────────────
+    socket.on(EVENTS.QUIZ_QUESTION, data => {
+      overlayScreen = 'quizAnswer'
+      overlayData = data   // { question, options }
+    })
+
+    socket.on(EVENTS.QUIZ_RESULTS, data => {
+      const myResult = data.playerResults?.[myId]
+      const correctAnswer = overlayData?.options?.[data.correctIndex] ?? ''
+      overlayScreen = 'quizResult'
+      overlayData = { correct: !!myResult, correctAnswer }
+    })
+
+    socket.on(EVENTS.QUIZ_UPGRADE_OPTIONS, data => {
+      overlayScreen = 'upgradeSelect'
+      overlayData = data   // { skills: [...] }
+    })
+
+    socket.on(EVENTS.QUIZ_DONE, () => {
+      overlayScreen = 'quizDone'
+      overlayData = null
     })
   })
 
@@ -140,6 +176,16 @@
 
   function handleLobbyReady() {
     lobbyReady = true
+  }
+
+  function handleQuizAnswer(chosenIndex) {
+    socket.emit(EVENTS.QUIZ_ANSWER, { chosenIndex })
+  }
+
+  function handleUpgrade(skillIndex) {
+    socket.emit(EVENTS.QUIZ_UPGRADE, { skillIndex })
+    overlayScreen = 'upgradeWaiting'
+    overlayData = null
   }
 </script>
 
@@ -189,32 +235,55 @@
     {/if}
 
   {:else if screen === 'game'}
-    {#if overlayScreen}
-      <!-- Future: swappable overlay (quiz, etc.) -->
-      <div class="end-screen"><p>Overlay: {overlayScreen}</p></div>
-    {:else}
-      <GameScreen
-        {playerName}
-        {className}
-        {isDead}
-        {cooldowns}
-        {comboPoints}
-        onmove={handleMove}
-        onskill={handleSkill}
-        onaim={handleAim}
+    <GameScreen
+      {playerName}
+      {className}
+      {isDead}
+      {cooldowns}
+      {comboPoints}
+      onmove={handleMove}
+      onskill={handleSkill}
+      onaim={handleAim}
+    />
+
+  {:else if screen === 'quiz'}
+    {#if overlayScreen === 'quizAnswer'}
+      <QuizAnswerScreen
+        options={overlayData?.options ?? []}
+        onanswer={handleQuizAnswer}
       />
+    {:else if overlayScreen === 'quizResult'}
+      <QuizResultScreen
+        correct={overlayData?.correct ?? false}
+        correctAnswer={overlayData?.correctAnswer ?? ''}
+      />
+    {:else if overlayScreen === 'upgradeSelect'}
+      <UpgradeSelectScreen
+        skills={overlayData?.skills ?? []}
+        onupgrade={handleUpgrade}
+      />
+    {:else if overlayScreen === 'upgradeWaiting'}
+      <div class="end-screen">
+        <p>Upgrade chosen!</p>
+        <p class="sublabel">Waiting for others…</p>
+      </div>
+    {:else if overlayScreen === 'quizDone'}
+      <div class="end-screen">
+        <p>Quiz complete!</p>
+        <p class="sublabel">Waiting for host to continue…</p>
+      </div>
+    {:else}
+      <div class="end-screen">
+        <p>Quiz time!</p>
+        <p class="sublabel">Waiting for question…</p>
+      </div>
     {/if}
 
   {:else if screen === 'levelComplete'}
-    {#if overlayScreen}
-      <!-- Future: swappable overlay (quiz, etc.) -->
-      <div class="end-screen"><p>Overlay: {overlayScreen}</p></div>
-    {:else}
-      <div class="end-screen">
-        <p>{endMessage}</p>
-        <p class="sublabel">Waiting for host to continue…</p>
-      </div>
-    {/if}
+    <div class="end-screen">
+      <p>{endMessage}</p>
+      <p class="sublabel">Waiting for host to continue…</p>
+    </div>
 
   {:else if screen === 'end'}
     <div class="end-screen">

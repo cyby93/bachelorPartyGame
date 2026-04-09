@@ -176,6 +176,9 @@ function setSceneControls(scene) {
     startBtn.disabled      = false
     startBtn.style.display = ''
     startBtn.onclick       = () => socket.emit(EVENTS.HOST_ADVANCE)
+  } else if (scene === 'quiz') {
+    // Hide button during quiz — host waits for players
+    startBtn.style.display = 'none'
   } else if (scene === 'result' || scene === 'gameover') {
     startBtn.textContent   = 'RESTART GAME'
     startBtn.disabled      = false
@@ -307,4 +310,31 @@ socket.on(EVENTS.TARGETED_HIT, data => {
 
 socket.on(EVENTS.CHANNEL_INTERRUPTED, data => {
   game.activeRenderer?.onChannelInterrupted?.(data)
+})
+
+// ── Quiz events ───────────────────────────────────────────────────────────
+
+socket.on(EVENTS.QUIZ_QUESTION, data => {
+  game.activeRenderer?.setQuestion?.(data)
+})
+
+socket.on(EVENTS.QUIZ_PROGRESS, data => {
+  game.activeRenderer?.setProgress?.(data)
+})
+
+socket.on(EVENTS.QUIZ_RESULTS, data => {
+  game.activeRenderer?.setResults?.(data)
+})
+
+socket.on(EVENTS.QUIZ_UPGRADE_CHOSEN, data => {
+  game.activeRenderer?.addUpgradeChosen?.(data)
+})
+
+socket.on(EVENTS.QUIZ_DONE, () => {
+  game.activeRenderer?.setDone?.()
+  // Show CONTINUE button for host to dismiss quiz
+  startBtn.textContent   = 'CONTINUE'
+  startBtn.disabled      = false
+  startBtn.style.display = ''
+  startBtn.onclick       = () => socket.emit(EVENTS.HOST_ADVANCE)
 })

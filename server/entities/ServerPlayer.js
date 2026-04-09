@@ -1,6 +1,7 @@
 import { GAME_CONFIG }            from '../../shared/GameConfig.js'
 import { CLASSES, resolveClassName } from '../../shared/ClassConfig.js'
 import { rebuildStats }            from '../systems/SkillSystem.js'
+import { applyUpgrades }          from '../../shared/UpgradeUtils.js'
 
 /**
  * ServerPlayer — authoritative player state.
@@ -55,6 +56,9 @@ export default class ServerPlayer {
     this.isStunned       = false
     this.isInvisible     = false
     this.comboPoints     = 0    // max 5, gained from Sinister Strike
+
+    // Skill upgrade tiers (incremented by quiz system)
+    this.skillUpgrades   = [0, 0, 0, 0]
 
     // Shadow values for delta detection
     this._prev = this._snapshot()
@@ -157,7 +161,11 @@ export default class ServerPlayer {
   // ── Skill helpers ─────────────────────────────────────────────────────
 
   getSkillConfig(index) {
-    return CLASSES[this.className]?.skills?.[index] ?? null
+    const base = CLASSES[this.className]?.skills?.[index]
+    if (!base) return null
+    const tier = this.skillUpgrades[index]
+    if (tier === 0) return base
+    return applyUpgrades(base, this.className, index, tier)
   }
 
   /** Rebuild derived stats — delegates to the shared helper. */

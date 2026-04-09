@@ -31,4 +31,14 @@ export const EVENTS = {
   CHANNEL_INTERRUPTED: 'channel:interrupted',  // { playerId }
   TARGETED_HIT:        'targeted:hit',         // { casterX, casterY, targetX, targetY, effectType, color }
   COMBO_POINTS:        'player:comboPoints',   // { playerId, points }
+
+  // ── Quiz & Upgrade (between levels) ────────────────────────────────────
+  QUIZ_QUESTION:        'quiz:question',        // S→All: { question, options }
+  QUIZ_ANSWER:          'quiz:answer',          // C→S:   { chosenIndex }
+  QUIZ_PROGRESS:        'quiz:progress',        // S→All: { answered, total }
+  QUIZ_RESULTS:         'quiz:results',         // S→All: { correctIndex, playerResults: { [id]: bool } }
+  QUIZ_UPGRADE_OPTIONS: 'quiz:upgradeOptions',  // S→C:   { skills: [{ name, icon, currentTier, maxTier, preview }] }
+  QUIZ_UPGRADE:         'quiz:upgrade',         // C→S:   { skillIndex }
+  QUIZ_UPGRADE_CHOSEN:  'quiz:upgradeChosen',   // S→All: { playerId, skillIndex, skillName }
+  QUIZ_DONE:            'quiz:done',            // S→All: quiz resolved, host can continue
 }

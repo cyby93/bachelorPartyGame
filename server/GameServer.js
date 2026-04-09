@@ -14,6 +14,8 @@ import SkillSystem       from './systems/SkillSystem.js'
 import SpawnSystem       from './systems/SpawnSystem.js'
 import { ENEMY_TYPES }   from '../shared/EnemyTypeConfig.js'
 import { buildWallSegments, resolveWallCollision, hitsWall } from '../shared/WallCollision.js'
+import { QUIZ_QUESTIONS }  from '../shared/QuizQuestions.js'
+import { getUpgradePreview, getMaxTier } from '../shared/UpgradeUtils.js'
 
 /**
  * GameServer — authoritative game simulation.
@@ -81,6 +83,14 @@ export default class GameServer {
     // Objective progress — synced to clients via OBJECTIVE_UPDATE
     this.objectiveProgress = []
 
+    // ── Quiz & Upgrade system ─────────────────────────────────────────────
+    this._quizPhase         = null   // 'answering' | 'results' | 'upgrading'
+    this._quizQuestion      = null
+    this._quizAnswers       = new Map()   // playerId → chosenIndex
+    this._quizResults       = new Map()   // playerId → boolean
+    this._quizUpgradesDone  = new Set()
+    this._usedQuestionIds   = new Set()
+
     this.tick      = 0
     this.lastTick  = Date.now()
 
@@ -117,6 +127,8 @@ export default class GameServer {
     socket.on(EVENTS.RESTART_GAME,  ()   => this._onRestartGame(socket))
     socket.on(EVENTS.HOST_ADVANCE,  ()   => this._onHostAdvance(socket))
     socket.on(EVENTS.SET_LEVEL,     data => this._onSetLevel(socket, data))
+    socket.on(EVENTS.QUIZ_ANSWER,  data => this._onQuizAnswer(socket, data))
+    socket.on(EVENTS.QUIZ_UPGRADE, data => this._onQuizUpgrade(socket, data))
     socket.on('disconnect',         ()   => this._onDisconnect(socket))
   }
 
@@ -196,6 +208,7 @@ export default class GameServer {
         p.activeCast  = null
         p.shieldActive = false
         p.activeEffects = []
+        p.skillUpgrades = [0, 0, 0, 0]
         p.rebuildStats()
         p.setArenaSize(this.arenaWidth, this.arenaHeight)
         const { x, y } = this._randomPointNearCenter(300, 200)
@@ -206,16 +219,25 @@ export default class GameServer {
     })
 
     this._clearCombatState()
+    this._usedQuestionIds.clear()
     this._changeScene('lobby')
   }
 
   _onHostAdvance(socket) {
     if (!this.players.get(socket.id)?.isHost) return
+
+    if (this.scene === 'quiz' && this._quizPhase === 'done') {
+      // Quiz resolved — move to level-complete screen
+      this._quizPhase = null
+      this._quizQuestion = null
+      this._showLevelComplete()
+      return
+    }
+
     if (this.scene !== 'levelComplete') return
 
     const nextIndex = this.currentLevelIndex + 1
     if (nextIndex >= CAMPAIGN.length) {
-      // Campaign complete — final victory!
       this._changeScene('result')
     } else {
       this._startLevel(nextIndex)
@@ -1278,15 +1300,195 @@ export default class GameServer {
     if (isLastLevel) {
       // Campaign complete — final victory!
       this._changeScene('result')
+    } else if (GAME_CONFIG.QUIZ_BETWEEN_LEVELS) {
+      // Start quiz phase before showing level-complete
+      this._startQuiz()
     } else {
       // Show level-complete screen and wait for host to advance
-      this._changeScene('levelComplete', {
-        levelIndex,
-        levelName: this.currentLevel?.name ?? '',
-        totalLevels: CAMPAIGN.length,
-        stats: { ...this.stats },
-      })
+      this._showLevelComplete()
     }
+  }
+
+  _showLevelComplete() {
+    this._changeScene('levelComplete', {
+      levelIndex: this.currentLevelIndex,
+      levelName: this.currentLevel?.name ?? '',
+      totalLevels: CAMPAIGN.length,
+      stats: { ...this.stats },
+    })
+  }
+
+  // ── Quiz system ─────────────────────────────────────────────────────────────
+
+  _startQuiz() {
+    // Pick a random unused question
+    const available = QUIZ_QUESTIONS.filter(q => !this._usedQuestionIds.has(q.id))
+    if (available.length === 0) {
+      // All questions used — skip quiz
+      this._showLevelComplete()
+      return
+    }
+
+    const question = available[Math.floor(Math.random() * available.length)]
+    this._usedQuestionIds.add(question.id)
+
+    this._quizQuestion = question
+    this._quizAnswers.clear()
+    this._quizResults.clear()
+    this._quizUpgradesDone.clear()
+    this._quizPhase = 'answering'
+
+    this._changeScene('quiz', {
+      levelIndex: this.currentLevelIndex,
+      levelName: this.currentLevel?.name ?? '',
+      totalLevels: CAMPAIGN.length,
+    })
+
+    // Send question to all (without correctIndex)
+    this.io.emit(EVENTS.QUIZ_QUESTION, {
+      question: question.question,
+      options:  question.options,
+    })
+  }
+
+  _getQuizParticipants() {
+    const participants = []
+    this.players.forEach(p => { if (!p.isHost) participants.push(p) })
+    return participants
+  }
+
+  _onQuizAnswer(socket, data) {
+    if (this.scene !== 'quiz' || this._quizPhase !== 'answering') return
+    const player = this.players.get(socket.id)
+    if (!player || player.isHost) return
+    if (this._quizAnswers.has(socket.id)) return  // already answered
+
+    const { chosenIndex } = data ?? {}
+    if (typeof chosenIndex !== 'number') return
+
+    this._quizAnswers.set(socket.id, chosenIndex)
+
+    // Broadcast progress
+    const participants = this._getQuizParticipants()
+    this.io.emit(EVENTS.QUIZ_PROGRESS, {
+      answered: this._quizAnswers.size,
+      total:    participants.length,
+    })
+
+    // Check if all have answered
+    if (this._quizAnswers.size >= participants.length) {
+      this._resolveQuiz()
+    }
+  }
+
+  _resolveQuiz() {
+    const correct = this._quizQuestion.correctIndex
+
+    // Evaluate each answer
+    const participants = this._getQuizParticipants()
+    const playerResults = {}
+    let correctCount = 0
+    let wrongCount = 0
+
+    for (const p of participants) {
+      const answer = this._quizAnswers.get(p.id)
+      const isCorrect = answer === correct
+      this._quizResults.set(p.id, isCorrect)
+      playerResults[p.id] = isCorrect
+      if (isCorrect) correctCount++
+      else wrongCount++
+    }
+
+    this._quizPhase = 'results'
+
+    // Broadcast results to all
+    this.io.emit(EVENTS.QUIZ_RESULTS, {
+      correctIndex: correct,
+      playerResults,
+      correctCount,
+      wrongCount,
+    })
+
+    // Mark wrong players as upgrade-done immediately
+    for (const p of participants) {
+      if (!this._quizResults.get(p.id)) {
+        this._quizUpgradesDone.add(p.id)
+      }
+    }
+
+    if (correctCount === 0) {
+      // Nobody got it right — skip upgrade phase
+      setTimeout(() => this._finishQuiz(), 2000)
+      return
+    }
+
+    // Send upgrade options to correct players
+    this._quizPhase = 'upgrading'
+    for (const p of participants) {
+      if (!this._quizResults.get(p.id)) continue
+
+      const baseSkills = CLASSES[p.className]?.skills ?? []
+      const skills = baseSkills.map((skill, i) => {
+        const currentTier = p.skillUpgrades[i]
+        const maxTier = getMaxTier(p.className, i)
+        const preview = getUpgradePreview(skill, p.className, i, currentTier)
+        return {
+          name: skill.name,
+          icon: skill.icon,
+          skillIndex: i,
+          currentTier,
+          maxTier,
+          preview,  // null if already maxed
+        }
+      })
+
+      // Send to this specific player only
+      const sock = this.io.sockets.sockets.get(p.id)
+      if (sock) {
+        sock.emit(EVENTS.QUIZ_UPGRADE_OPTIONS, { skills })
+      }
+    }
+  }
+
+  _onQuizUpgrade(socket, data) {
+    if (this.scene !== 'quiz' || this._quizPhase !== 'upgrading') return
+    const player = this.players.get(socket.id)
+    if (!player || player.isHost) return
+    if (this._quizUpgradesDone.has(socket.id)) return
+    if (!this._quizResults.get(socket.id)) return  // didn't answer correctly
+
+    const { skillIndex } = data ?? {}
+    if (typeof skillIndex !== 'number' || skillIndex < 0 || skillIndex > 3) return
+
+    const maxTier = getMaxTier(player.className, skillIndex)
+    if (player.skillUpgrades[skillIndex] >= maxTier) return  // already maxed
+
+    // Apply upgrade
+    player.skillUpgrades[skillIndex]++
+    this._quizUpgradesDone.add(socket.id)
+
+    const skillName = CLASSES[player.className]?.skills?.[skillIndex]?.name ?? ''
+    console.log(`[~] ${player.name} upgraded ${skillName} to tier ${player.skillUpgrades[skillIndex]}`)
+
+    // Broadcast so host can show progress
+    this.io.emit(EVENTS.QUIZ_UPGRADE_CHOSEN, {
+      playerId:  player.id,
+      playerName: player.name,
+      skillIndex,
+      skillName,
+    })
+
+    // Check if all done
+    const participants = this._getQuizParticipants()
+    if (this._quizUpgradesDone.size >= participants.length) {
+      this._finishQuiz()
+    }
+  }
+
+  _finishQuiz() {
+    this._quizPhase = 'done'
+    this.io.emit(EVENTS.QUIZ_DONE)
+    // Stay on quiz scene — host must press CONTINUE to proceed
   }
 
   // ── Win / lose conditions ───────────────────────────────────────────────────

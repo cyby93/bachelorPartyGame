@@ -156,7 +156,8 @@ export default class HostGame {
     })
 
     // Forward boss / kill count / entities updates if present
-    if (delta.boss)                this.knownState.boss       = { ...(this.knownState.boss ?? {}), ...delta.boss }
+    // boss: null means "no boss this level" — must clear stale data
+    if ('boss' in delta)           this.knownState.boss       = delta.boss ? { ...(this.knownState.boss ?? {}), ...delta.boss } : null
     if (delta.killCount != null)   this.knownState.killCount  = delta.killCount
     if (delta.enemies   != null)   this.knownState.enemies    = delta.enemies
     if (delta.projectiles != null) this.knownState.projectiles = delta.projectiles
@@ -164,9 +165,10 @@ export default class HostGame {
     if (delta.stats       != null) this.knownState.stats       = delta.stats
     if (delta.aoeZones    != null) this.knownState.aoeZones    = delta.aoeZones
     if (delta.minions     != null) this.knownState.minions     = delta.minions
-    if (delta.gates       != null) this.knownState.gates       = delta.gates
-    if (delta.buildings   != null) this.knownState.buildings   = delta.buildings
-    if (delta.npcs        != null) this.knownState.npcs        = delta.npcs
+    // gates/buildings/npcs: null means "none this level" — must clear stale data from previous levels
+    if ('gates'     in delta)      this.knownState.gates       = delta.gates     ?? []
+    if ('buildings' in delta)      this.knownState.buildings   = delta.buildings ?? []
+    if ('npcs'      in delta)      this.knownState.npcs        = delta.npcs      ?? []
   }
 
   addPlayer(dto) {

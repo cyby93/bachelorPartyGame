@@ -82,8 +82,10 @@ export default class GameServer {
     // Debug: skip entrance cinematic when testing boss mechanics
     this.skipDialog = false
 
-    // Stats tracking
-    this.stats = { damage: {}, deaths: {}, kills: 0, startTime: 0 }
+    // Stats tracking — cumulative across entire campaign run
+    this.stats     = { damage: {}, heal: {}, deaths: {}, resurrections: {}, quiz: {}, kills: 0, startTime: 0 }
+    // Per-level stats — reset at the start of each level
+    this.levelStats = { damage: {}, heal: {}, resurrections: {}, kills: 0, startTime: 0 }
 
     // Revive tracking: deadPlayerId → { reviverId, startedAt }
     this.reviveTimers = new Map()
@@ -142,6 +144,7 @@ export default class GameServer {
     })
     socket.on(EVENTS.START_GAME,    ()   => this._onStartGame(socket))
     socket.on(EVENTS.RESTART_GAME,  ()   => this._onRestartGame(socket))
+    socket.on(EVENTS.QUIT_CAMPAIGN, ()   => this._onRestartGame(socket))
     socket.on(EVENTS.HOST_ADVANCE,  ()   => this._onHostAdvance(socket))
     socket.on(EVENTS.SET_LEVEL,     data => this._onSetLevel(socket, data))
     socket.on(EVENTS.QUIZ_ANSWER,  data => this._onQuizAnswer(socket, data))
@@ -216,6 +219,9 @@ export default class GameServer {
   _onRestartGame(socket) {
     if (!this.players.get(socket.id)?.isHost) return
 
+    this.startingLevelIndex = 0
+    this.skipDialog = false
+
     this._setArenaSize(GAME_CONFIG.CANVAS_WIDTH, GAME_CONFIG.CANVAS_HEIGHT)
 
     // Reset all players to full HP / alive
@@ -239,6 +245,7 @@ export default class GameServer {
     this._clearCombatState()
     this._usedQuestionIds.clear()
     this._changeScene('lobby')
+    this.io.emit(EVENTS.SET_LEVEL, { levelIndex: 0, levelName: CAMPAIGN[0].name, skipDialog: false })
   }
 
   _onHostAdvance(socket) {
@@ -263,7 +270,8 @@ export default class GameServer {
   }
 
   _startCampaign() {
-    this.stats = { damage: {}, deaths: {}, kills: 0, startTime: Date.now() }
+    this.stats     = { damage: {}, heal: {}, deaths: {}, resurrections: {}, quiz: {}, kills: 0, startTime: Date.now() }
+    this.levelStats = { damage: {}, heal: {}, resurrections: {}, kills: 0, startTime: Date.now() }
     this._clearCombatState()
     this._startLevel(this.startingLevelIndex ?? 0)
   }
@@ -274,6 +282,7 @@ export default class GameServer {
 
     this.currentLevelIndex = index
     this.currentLevel      = level
+    this.levelStats = { damage: {}, heal: {}, resurrections: {}, kills: 0, startTime: Date.now() }
     this._setArenaSize(level.arena?.width ?? GAME_CONFIG.CANVAS_WIDTH, level.arena?.height ?? GAME_CONFIG.CANVAS_HEIGHT)
     this._wallSegments = buildWallSegments(level.arena)
 
@@ -545,6 +554,23 @@ export default class GameServer {
     this.minions.forEach((m, id) => { if (m.ownerId === socket.id) this.minions.delete(id) })
 
     this.io.emit(EVENTS.PLAYER_LEFT, socket.id)
+
+    // If a player disconnects mid-quiz, re-check whether we can advance the phase
+    // so the remaining connected players are not left waiting forever.
+    if (this.scene === 'quiz') {
+      const participants = this._getQuizParticipants()
+      if (this._quizPhase === 'answering') {
+        if (participants.length === 0 || this._quizAnswers.size >= participants.length) {
+          this._resolveQuiz()
+        }
+      } else if (this._quizPhase === 'upgrading') {
+        // Treat the disconnected player as having finished their upgrade choice
+        this._quizUpgradesDone.add(socket.id)
+        if (participants.length === 0 || this._quizUpgradesDone.size >= participants.length) {
+          this._finishQuiz()
+        }
+      }
+    }
   }
 
   // ── Scene management ───────────────────────────────────────────────────────
@@ -639,6 +665,7 @@ export default class GameServer {
       buildings:    this.buildings,
       npcs:         this.npcs,
       stats:        this.stats,
+      levelStats:   this.levelStats,
       io:           this.io,
       cooldowns:    this.cooldowns,
       minions:      this.minions,
@@ -1837,6 +1864,9 @@ export default class GameServer {
         dead.revive()
         this.reviveTimers.delete(dead.id)
         console.log(`[~] revived ${dead.name}`)
+        const reviverId = existing.reviverId
+        this.stats.resurrections[reviverId]     = (this.stats.resurrections[reviverId]     ?? 0) + 1
+        this.levelStats.resurrections[reviverId] = (this.levelStats.resurrections[reviverId] ?? 0) + 1
       }
     })
   }
@@ -1933,7 +1963,7 @@ export default class GameServer {
       console.log('[~] NPC died — game over')
       this.currentLevelIndex = -1
       this.currentLevel      = null
-      this._changeScene('gameover')
+      this._changeScene('gameover', { cumulativeStats: { ...this.stats } })
       return
     }
 
@@ -1950,7 +1980,7 @@ export default class GameServer {
 
     if (isLastLevel) {
       // Campaign complete — final victory!
-      this._changeScene('result')
+      this._changeScene('result', { cumulativeStats: { ...this.stats } })
     } else if (GAME_CONFIG.QUIZ_BETWEEN_LEVELS) {
       // Start quiz phase before showing level-complete
       this._startQuiz()
@@ -1965,7 +1995,7 @@ export default class GameServer {
       levelIndex: this.currentLevelIndex,
       levelName: this.currentLevel?.name ?? '',
       totalLevels: CAMPAIGN.length,
-      stats: { ...this.stats },
+      stats: { ...this.levelStats },
     })
   }
 
@@ -2051,6 +2081,14 @@ export default class GameServer {
     }
 
     this._quizPhase = 'results'
+
+    // Track quiz stats cumulatively
+    for (const p of participants) {
+      const isCorrect = this._quizResults.get(p.id)
+      if (!this.stats.quiz[p.id]) this.stats.quiz[p.id] = { correct: 0, wrong: 0 }
+      if (isCorrect) this.stats.quiz[p.id].correct++
+      else this.stats.quiz[p.id].wrong++
+    }
 
     // Broadcast results to all
     this.io.emit(EVENTS.QUIZ_RESULTS, {
@@ -2153,7 +2191,7 @@ export default class GameServer {
       console.log('[~] All players dead — game over')
       this.currentLevelIndex = -1
       this.currentLevel      = null
-      this._changeScene('gameover')
+      this._changeScene('gameover', { cumulativeStats: { ...this.stats } })
     }
   }
 
@@ -2232,7 +2270,7 @@ export default class GameServer {
       boss:        this.boss ? this.boss.toDTO() : null,
       killCount:   this.killCount,
       tombstones,
-      stats:       this.stats,
+      stats:       this.levelStats,
       aoeZones:    this.skillSystem.getZonesDTO(),
       minions,
       gates:       this._gatesDTO(),

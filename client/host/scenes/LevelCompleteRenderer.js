@@ -7,6 +7,7 @@
  */
 
 import { Container, Graphics, Text } from 'pixi.js'
+import { CLASSES } from '../../../shared/ClassConfig.js'
 
 export default class LevelCompleteRenderer {
   /**
@@ -90,6 +91,12 @@ export default class LevelCompleteRenderer {
     progress.position.set(W / 2, H / 2 - 20)
     this._uiRoot.addChild(progress)
 
+    // Stats table (damage + healing per player)
+    const stats = this._meta?.stats
+    if (stats) {
+      this._buildStatsTable(W, H, stats)
+    }
+
     // Hint for host
     const hint = new Text({
       text:  'Host — press  CONTINUE  to advance to the next level',
@@ -98,5 +105,65 @@ export default class LevelCompleteRenderer {
     hint.anchor.set(0.5, 1)
     hint.position.set(W / 2, H - 20)
     this._uiRoot.addChild(hint)
+  }
+
+  _buildStatsTable(W, H, stats) {
+    const players = Object.values(this.game.knownState.players ?? {}).filter(p => !p.isHost)
+    if (players.length === 0) return
+
+    const PANEL_W = 500
+    const ROW_H   = 22
+    const PAD     = 12
+    const HEADER_H = 22
+    const panelH  = HEADER_H + players.length * ROW_H + PAD * 2
+    const panelX  = W / 2 - PANEL_W / 2
+    const panelY  = H / 2 + 20
+
+    const bg = new Graphics()
+    bg.rect(panelX, panelY, PANEL_W, panelH)
+    bg.fill({ color: 0x080810, alpha: 0.88 })
+    bg.stroke({ color: '#1e3a4a', width: 1 })
+    this._uiRoot.addChild(bg)
+
+    // Column headers
+    const colName = panelX + PAD
+    const colDmg  = panelX + PANEL_W * 0.5
+    const colHeal = panelX + PANEL_W * 0.75
+
+    const hdrStyle = { fontFamily: 'Arial', fontSize: 11, fontWeight: 'bold', fill: '#7fa8c0' }
+    const makeHdr = (txt, x, anchor = 0) => {
+      const t = new Text({ text: txt, style: hdrStyle })
+      t.anchor.set(anchor, 0)
+      t.position.set(x, panelY + PAD)
+      this._uiRoot.addChild(t)
+    }
+    makeHdr('PLAYER', colName)
+    makeHdr('DAMAGE', colDmg, 0.5)
+    makeHdr('HEALING', colHeal, 0.5)
+
+    const sorted = [...players].sort(
+      (a, b) => (stats.damage?.[b.id] ?? 0) - (stats.damage?.[a.id] ?? 0)
+    )
+
+    sorted.forEach((p, i) => {
+      const y     = panelY + PAD + HEADER_H + i * ROW_H
+      const color = CLASSES[p.className]?.color ?? '#ffffff'
+      const dmg   = (stats.damage?.[p.id] ?? 0).toLocaleString()
+      const heal  = (stats.heal?.[p.id] ?? 0).toLocaleString()
+
+      const nameT = new Text({ text: p.name, style: { fontFamily: 'Arial', fontSize: 14, fill: color } })
+      nameT.position.set(colName, y)
+      this._uiRoot.addChild(nameT)
+
+      const dmgT = new Text({ text: dmg, style: { fontFamily: 'Arial', fontSize: 14, fill: '#ff9988' } })
+      dmgT.anchor.set(0.5, 0)
+      dmgT.position.set(colDmg, y)
+      this._uiRoot.addChild(dmgT)
+
+      const healT = new Text({ text: heal, style: { fontFamily: 'Arial', fontSize: 14, fill: '#44ee99' } })
+      healT.anchor.set(0.5, 0)
+      healT.position.set(colHeal, y)
+      this._uiRoot.addChild(healT)
+    })
   }
 }

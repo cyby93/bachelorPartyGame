@@ -36,6 +36,7 @@ const levelSelector  = document.getElementById('level-selector')
 const selectedLevelNameEl = document.getElementById('selected-level-name')
 const prevLevelBtn   = document.getElementById('prev-level-btn')
 const nextLevelBtn   = document.getElementById('next-level-btn')
+const quitCampaignBtn = document.getElementById('quit-campaign-btn')
 const skipDialogChk  = document.getElementById('skip-dialog-chk')
 const levelPanelEl   = document.getElementById('level-panel')
 const levelIndexEl   = document.getElementById('level-index')
@@ -45,6 +46,13 @@ const objectiveValueEl = document.getElementById('objective-value')
 const shadeBuffCardEl  = document.getElementById('shade-buff-card')
 const shadeHpValueEl   = document.getElementById('shade-hp-value')
 const shadeBuffTextEl  = document.getElementById('shade-buff-text')
+
+// ── Quit Campaign ──────────────────────────────────────────────────────────
+quitCampaignBtn?.addEventListener('click', () => {
+  if (confirm('Quit the current campaign and return to the lobby?')) {
+    socket.emit(EVENTS.QUIT_CAMPAIGN)
+  }
+})
 
 // ── Fullscreen ─────────────────────────────────────────────────────────────
 fullscreenBtn?.addEventListener('click', () => {
@@ -217,6 +225,12 @@ function setSceneControls(scene) {
 
   // Level selector only visible in lobby
   if (scene !== 'lobby' && levelSelector) levelSelector.style.display = 'none'
+
+  // Quit Campaign button: visible during an active campaign run
+  const campaignScenes = ['battle', 'bossFight', 'levelComplete', 'quiz']
+  if (quitCampaignBtn) {
+    quitCampaignBtn.style.display = campaignScenes.includes(scene) ? '' : 'none'
+  }
 }
 
 // ── Socket events ──────────────────────────────────────────────────────────

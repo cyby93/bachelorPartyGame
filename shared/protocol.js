@@ -15,6 +15,7 @@ export const EVENTS = {
   START_GAME:    'host:start',
   RESTART_GAME:  'host:restart',
   HOST_ADVANCE:  'host:advance',    // host clicks "Continue" on level-complete screen
+  QUIT_CAMPAIGN: 'host:quit',       // host aborts campaign mid-run → back to lobby
   SET_LEVEL:     'host:setLevel',   // { levelIndex } — debug: pick starting level from lobby
 
   // ── Server → All Clients ─────────────────────────────────────────────────

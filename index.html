@@ -58,6 +58,12 @@
     }
     #fullscreen-btn:hover { background: #1e3a4a; color: #fff; }
 
+    #quit-campaign-btn {
+      padding: 8px; border-radius: 6px; border: 1px solid #5a1a1a;
+      background: #2a0a0a; color: #e05050; cursor: pointer; font-size: 13px; font-weight: bold;
+    }
+    #quit-campaign-btn:hover { background: #3d0f0f; color: #ff7070; border-color: #e05050; }
+
     #main-layout {
       flex: 1;
       min-width: 0;
@@ -228,6 +234,7 @@
       </label>
     </div>
     <button id="start-btn" disabled>START GAME</button>
+    <button id="quit-campaign-btn" style="display:none" title="Abort the current campaign and return to lobby">Quit Campaign</button>
     <button id="fullscreen-btn" title="Toggle fullscreen">⛶ Fullscreen</button>
   </div>
 

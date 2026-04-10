@@ -3,7 +3,7 @@
  * Visual for a single projectile with a fading trail.
  */
 
-import { Container, Graphics } from 'pixi.js'
+import { Container, Graphics, Sprite, Assets } from 'pixi.js'
 
 const TRAIL_LENGTH = 4
 
@@ -25,11 +25,12 @@ export default class ProjectileSprite {
     this._trailGfx = new Graphics()
     this.container.addChild(this._trailGfx)
 
-    // Body
-    const body = new Graphics()
-    body.circle(0, 0, this._radius)
-    body.fill({ color: colorNum, alpha: 0.92 })
-    body.stroke({ color: 0xffffff, width: 1, alpha: 0.4 })
+    // Body — tinted sprite so per-projectile color is preserved
+    const body = new Sprite(Assets.get('projectile_default'))
+    body.anchor.set(0.5)
+    body.width  = this._radius * 2
+    body.height = this._radius * 2
+    body.tint   = colorNum
     this.container.addChild(body)
 
     // Previous world positions for trail

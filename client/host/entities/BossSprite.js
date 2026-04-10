@@ -4,7 +4,7 @@
  * Supports different boss types via the `bossName` parameter.
  */
 
-import { Container, Graphics, Text } from 'pixi.js'
+import { Container, Graphics, Text, Sprite, Assets } from 'pixi.js'
 import { GAME_CONFIG } from '../../../shared/GameConfig.js'
 import OverheadDisplay from '../systems/OverheadDisplay.js'
 
@@ -19,7 +19,6 @@ export default class BossSprite {
 
     this._bossName = bossName ?? 'Illidan Stormrage'
     this._radius   = DEFAULT_R
-    this._wingTime = 0
 
     if (this._bossName === 'Shade of Akama') {
       this._buildShadeOfAkama()
@@ -54,30 +53,14 @@ export default class BossSprite {
   _buildIllidan() {
     const R = this._radius
 
-    // Body
-    const body = new Graphics()
-    body.circle(0, 0, R)
-    body.fill('#8b0000')
-    body.stroke({ color: '#ff2222', width: 3 })
-    this._body.addChild(body)
+    // Sprite: 120×220 PNG, body center is the PNG center → anchor(0.5,0.5)
+    // Width = R*2 (body diameter), height = 220 (wings extend upward beyond body)
+    const sprite = new Sprite(Assets.get('boss_illidan'))
+    sprite.anchor.set(0.5)
+    sprite.width  = R * 2   // 120px — body diameter
+    sprite.height = 220      // full height including wings above body
+    this._body.addChild(sprite)
 
-    // Wings
-    this._wings = new Graphics()
-    this._wings.poly([-R * 0.4, -R, -R * 0.8, -R * 1.6, -R * 0.2, -R * 0.7])
-    this._wings.fill({ color: '#4a0000', alpha: 0.9 })
-    this._wings.poly([R * 0.4, -R, R * 0.8, -R * 1.6, R * 0.2, -R * 0.7])
-    this._wings.fill({ color: '#4a0000', alpha: 0.9 })
-    this._body.addChild(this._wings)
-
-    // Eyes
-    const eyes = new Graphics()
-    eyes.circle(-R * 0.28, -R * 0.18, 6)
-    eyes.fill('#00ff66')
-    eyes.circle(R * 0.28, -R * 0.18, 6)
-    eyes.fill('#00ff66')
-    this._body.addChild(eyes)
-
-    // Name
     const nameLabel = new Text({
       text:  'Illidan Stormrage',
       style: { fontFamily: 'Arial', fontSize: 14, fontWeight: 'bold', fill: '#ff4444', align: 'center' },
@@ -90,32 +73,13 @@ export default class BossSprite {
   _buildShadeOfAkama() {
     const R = this._radius
 
-    // Body — dark purple/shadow themed
-    const body = new Graphics()
-    body.circle(0, 0, R)
-    body.fill('#2d1b4e')
-    body.stroke({ color: '#6a3d9a', width: 3 })
-    this._body.addChild(body)
+    // Sprite: 120×120 PNG, body center is PNG center → anchor(0.5,0.5)
+    const sprite = new Sprite(Assets.get('boss_akama'))
+    sprite.anchor.set(0.5)
+    sprite.width  = R * 2   // 120px
+    sprite.height = R * 2   // 120px
+    this._body.addChild(sprite)
 
-    // Shadow wisps (inner detail)
-    const wisps = new Graphics()
-    wisps.circle(-R * 0.2, -R * 0.15, R * 0.18)
-    wisps.fill({ color: '#1a0a30', alpha: 0.6 })
-    wisps.circle(R * 0.15, R * 0.1, R * 0.15)
-    wisps.fill({ color: '#1a0a30', alpha: 0.5 })
-    this._body.addChild(wisps)
-
-    // Eyes — ghostly white
-    const eyes = new Graphics()
-    eyes.circle(-R * 0.25, -R * 0.18, 5)
-    eyes.fill('#ccccff')
-    eyes.circle(R * 0.25, -R * 0.18, 5)
-    eyes.fill('#ccccff')
-    this._body.addChild(eyes)
-
-    // No wings for Shade
-
-    // Name
     const nameLabel = new Text({
       text:  'Shade of Akama',
       style: { fontFamily: 'Arial', fontSize: 14, fontWeight: 'bold', fill: '#9b59b6', align: 'center' },
@@ -147,12 +111,6 @@ export default class BossSprite {
     }
 
     if (state.maxHp) this._updateHpBar(state.hp / state.maxHp)
-
-    // Wing flutter animation (Illidan only)
-    if (this._wings) {
-      this._wingTime += 0.05
-      this._wings.y = Math.sin(this._wingTime) * 5
-    }
   }
 
   destroy() {

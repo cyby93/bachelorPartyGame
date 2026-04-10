@@ -10,7 +10,7 @@
  *   - Manages scene lifecycle (enter / exit / update)
  */
 
-import { Application, Container, Graphics } from 'pixi.js'
+import { Application, Container, Graphics, Assets } from 'pixi.js'
 import { GAME_CONFIG }  from '../../shared/GameConfig.js'
 import LobbyRenderer          from './scenes/LobbyRenderer.js'
 import BattleRenderer         from './scenes/BattleRenderer.js'
@@ -69,6 +69,9 @@ export default class HostGame {
 
     // ── Dungeon tile background (drawn once) ─────────────────────────────
     this._rebuildBackground()
+
+    // ── Sprite assets ─────────────────────────────────────────────────────
+    await this._loadSprites()
 
     // ── Scene renderers ───────────────────────────────────────────────────
     this.renderers = {
@@ -247,6 +250,21 @@ export default class HostGame {
 
   getPlayerRadius() {
     return GAME_CONFIG.PLAYER_RADIUS
+  }
+
+  async _loadSprites() {
+    const SPRITE_KEYS = [
+      'player_warrior', 'player_paladin', 'player_shaman', 'player_hunter',
+      'player_priest',  'player_mage',    'player_druid',  'player_rogue',
+      'player_warlock', 'player_deathknight',
+      'enemy_grunt',    'enemy_brute',    'enemy_archer',  'enemy_charger',
+      'enemy_healer',   'enemy_gaterepairer', 'enemy_leviathan', 'enemy_warlock',
+      'enemy_flameofazzinoth', 'enemy_shadowdemon', 'enemy_shadowfiend',
+      'boss_illidan',   'boss_akama',
+      'projectile_default',
+    ]
+    const manifest = SPRITE_KEYS.map(k => ({ alias: k, src: `/assets/sprites/${k}.png` }))
+    await Assets.load(manifest)
   }
 
   /** Draw a single wall segment with stone-like visual. */

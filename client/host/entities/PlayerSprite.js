@@ -14,7 +14,7 @@
  *   └── hpBarFill  (filled portion, redrawn on HP change)
  */
 
-import { Container, Graphics, Text } from 'pixi.js'
+import { Container, Graphics, Text, Sprite, Assets } from 'pixi.js'
 import { CLASSES }     from '../../../shared/ClassConfig.js'
 import { GAME_CONFIG } from '../../../shared/GameConfig.js'
 import OverheadDisplay from '../systems/OverheadDisplay.js'
@@ -23,17 +23,6 @@ const R     = GAME_CONFIG.PLAYER_RADIUS
 const BAR_W = 44
 const BAR_H = 5
 
-// Visual shape by class role
-const SHAPE = {
-  Warrior:  'square',
-  Paladin:  'square',
-  Mage:     'circle',
-  Priest:   'circle',
-  Hunter:   'triangle',
-  Rogue:    'triangle',
-  Shaman:   'pentagon',
-  Druid:    'pentagon',
-}
 
 export default class PlayerSprite {
   constructor(data) {
@@ -46,16 +35,14 @@ export default class PlayerSprite {
     this._body     = new Container()   // rotated child
     this.container.addChild(this._body)
 
-    // ── Shape ────────────────────────────────────────────────────────────
-    this._shapeGfx = new Graphics()
-    this._drawShape()
-    this._body.addChild(this._shapeGfx)
-
-    // Front dot (shows facing direction)
-    const dot = new Graphics()
-    dot.circle(R - 4, 0, 3)
-    dot.fill('#ffffff')
-    this._body.addChild(dot)
+    // ── Shape sprite (front dot is baked into the PNG, rotates with body) ──
+    const className = (data.className ?? 'Warrior').toLowerCase()
+    const tex = Assets.get(`player_${className}`)
+    this._shapeSprite = new Sprite(tex)
+    this._shapeSprite.anchor.set(0.5)
+    this._shapeSprite.width  = R * 2
+    this._shapeSprite.height = R * 2
+    this._body.addChild(this._shapeSprite)
 
     // ── Name label ───────────────────────────────────────────────────────
     this._nameText = new Text({
@@ -115,41 +102,6 @@ export default class PlayerSprite {
   }
 
   // ── Drawing helpers ────────────────────────────────────────────────────────
-
-  _drawShape() {
-    const g     = this._shapeGfx
-    const color = this._classData.color   // CSS string, e.g. '#3498db'
-    const shape = SHAPE[this._data.className] ?? 'pentagon'
-
-    g.clear()
-
-    switch (shape) {
-      case 'square':
-        g.rect(-R, -R, R * 2, R * 2)
-        break
-
-      case 'circle':
-        g.circle(0, 0, R)
-        break
-
-      case 'triangle':
-        g.poly([R, 0, -R, -R * 0.85, -R, R * 0.85])
-        break
-
-      case 'pentagon': {
-        const pts = []
-        for (let i = 0; i < 5; i++) {
-          const a = (i / 5) * Math.PI * 2 - Math.PI / 2
-          pts.push(Math.cos(a) * R, Math.sin(a) * R)
-        }
-        g.poly(pts)
-        break
-      }
-    }
-
-    g.fill({ color, alpha: 1 })
-    g.stroke({ color: '#ffffff', width: 2, alpha: 0.85 })
-  }
 
   _updateHpBar(hp) {
     if (hp === this._lastHp) return

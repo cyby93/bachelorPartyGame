@@ -10,12 +10,27 @@
  *   healer  → cross (green)
  */
 
-import { Container, Graphics, Text } from 'pixi.js'
+import { Container, Graphics, Text, Sprite, Assets } from 'pixi.js'
 import { GAME_CONFIG }    from '../../../shared/GameConfig.js'
 import { ENEMY_TYPES }    from '../../../shared/EnemyTypeConfig.js'
 import OverheadDisplay     from '../systems/OverheadDisplay.js'
 
 const DEFAULT_R = GAME_CONFIG.ENEMY_RADIUS
+
+// Maps server type string → sprite alias loaded in HostGame._loadSprites()
+const ENEMY_SPRITE_KEY = {
+  grunt:           'enemy_grunt',
+  brute:           'enemy_brute',
+  archer:          'enemy_archer',
+  charger:         'enemy_charger',
+  healer:          'enemy_healer',
+  gateRepairer:    'enemy_gaterepairer',
+  leviathan:       'enemy_leviathan',
+  warlock:         'enemy_warlock',
+  flameOfAzzinoth: 'enemy_flameofazzinoth',
+  shadowDemon:     'enemy_shadowdemon',
+  shadowfiend:     'enemy_shadowfiend',
+}
 
 export default class EnemySprite {
   constructor(data) {
@@ -25,13 +40,15 @@ export default class EnemySprite {
     const typeCfg = ENEMY_TYPES[this.type] ?? ENEMY_TYPES.grunt
     const R       = typeCfg.radius ?? DEFAULT_R
     const color   = typeCfg.color  ?? '#c0392b'
-    const shape   = typeCfg.shape  ?? 'triangle'
 
     this.container = new Container()
 
-    // Body — shape depends on enemy type
-    const body = new Graphics()
-    this._drawShape(body, shape, R, color)
+    // Body — sprite keyed by enemy type
+    const spriteKey = ENEMY_SPRITE_KEY[this.type] ?? 'enemy_grunt'
+    const body = new Sprite(Assets.get(spriteKey))
+    body.anchor.set(0.5)
+    body.width  = R * 2
+    body.height = R * 2
     this.container.addChild(body)
 
     // HP pip (single thin bar)
@@ -75,55 +92,6 @@ export default class EnemySprite {
       label.position.set(0, -R - 18)
       this.container.addChild(label)
     }
-  }
-
-  _drawShape(gfx, shape, R, color) {
-    const stroke = this._lighten(color)
-
-    switch (shape) {
-      case 'circle':
-        gfx.circle(0, 0, R)
-        gfx.fill(color)
-        gfx.stroke({ color: stroke, width: 1 })
-        break
-
-      case 'diamond':
-        gfx.poly([0, -R, R * 0.7, 0, 0, R, -R * 0.7, 0])
-        gfx.fill(color)
-        gfx.stroke({ color: stroke, width: 1 })
-        break
-
-      case 'arrow':
-        gfx.poly([0, -R, R * 0.6, R * 0.5, 0, R * 0.2, -R * 0.6, R * 0.5])
-        gfx.fill(color)
-        gfx.stroke({ color: stroke, width: 1 })
-        break
-
-      case 'cross': {
-        const arm = R * 0.35
-        gfx.rect(-arm, -R * 0.8, arm * 2, R * 1.6)
-        gfx.rect(-R * 0.8, -arm, R * 1.6, arm * 2)
-        gfx.fill(color)
-        gfx.stroke({ color: stroke, width: 1 })
-        break
-      }
-
-      case 'triangle':
-      default:
-        gfx.poly([0, -R, R * 0.9, R * 0.8, -R * 0.9, R * 0.8])
-        gfx.fill(color)
-        gfx.stroke({ color: stroke, width: 1 })
-        break
-    }
-  }
-
-  /** Produce a lighter variant of a hex colour for stroke/outline. */
-  _lighten(hex) {
-    const num = parseInt(hex.replace('#', ''), 16)
-    const r = Math.min(255, ((num >> 16) & 0xff) + 60)
-    const g = Math.min(255, ((num >> 8) & 0xff) + 60)
-    const b = Math.min(255, (num & 0xff) + 60)
-    return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`
   }
 
   _updateHpBar(hp) {

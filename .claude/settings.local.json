@@ -20,7 +20,18 @@
       "Read(//usr/local/bin/**)",
       "Read(//home/cyby/.local/bin/**)",
       "Bash(/mnt/c/Program Files/nodejs/node:*)",
-      "Bash(echo \"exit: $?\")"
+      "Bash(echo \"exit: $?\")",
+      "Bash(ldconfig -p)",
+      "Bash(apt-cache show:*)",
+      "Bash(/home/cyby/.nvm/versions/node/v25.9.0/bin/node --version)",
+      "Bash(/home/cyby/.nvm/versions/node/v25.9.0/bin/npm --version)",
+      "Bash(sudo apt-get:*)",
+      "Bash(npm.cmd --version)",
+      "Bash(\"/mnt/c/Program Files/nodejs/npm.cmd\" --version)",
+      "Bash(\"/mnt/c/Program Files/nodejs/npm.cmd\" install --save-dev pureimage)",
+      "Bash(cmd.exe /c \"npm install --save-dev pureimage\")",
+      "Bash(node.exe:*)",
+      "Bash(cmd.exe /c \"npm install --save-dev canvas\")"
     ]
   }
 }

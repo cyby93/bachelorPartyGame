@@ -68,6 +68,7 @@ In development, Vite proxies `/socket.io` and `/api` to the Express server on po
 - `shared/BossConfig.js`: boss phase data
 - `docs/SKILLS.md`: skill schema, valid type/subtype combinations, VFX expectations, design rules
 - `docs/RENDERERS.md`: host renderer lifecycle and extension points
+- `docs/SPRITES.md`: sprite pipeline — generator script, canvas-size rule, key naming, adding new sprites
 
 When changing skill behavior, keep `shared/SkillDatabase.js`, `shared/SkillValidator.js`, and `docs/SKILLS.md` aligned.
 

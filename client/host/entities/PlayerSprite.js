@@ -5,9 +5,8 @@
  *
  * Structure:
  *   container  (positioned at player world coords, NOT rotated)
- *   ├── body       (child Container — rotated to player.angle)
- *   │   ├── shapeGfx    (class-specific filled polygon/circle/square)
- *   │   └── frontDot    (small white dot pointing "forward")
+ *   ├── body       (child Container — rotated for non-directional classes only)
+ *   │   └── shapeSprite  (class sprite; texture swapped per direction for directional classes)
  *   ├── aimArrow   (child Graphics — rotated to player.aimAngle)
  *   ├── nameText   (above shape, always upright)
  *   ├── hpBarBg    (background bar, drawn once)
@@ -18,8 +17,25 @@ import { Container, Graphics, Text, Sprite, Assets } from 'pixi.js'
 import { CLASSES }     from '../../../shared/ClassConfig.js'
 import { GAME_CONFIG } from '../../../shared/GameConfig.js'
 import OverheadDisplay from '../systems/OverheadDisplay.js'
+import { DIRECTIONAL_CLASSES } from '../HostGame.js'
 
-const R     = GAME_CONFIG.PLAYER_RADIUS
+// Direction names ordered by angle sector (0=East, clockwise)
+const DIRS = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east']
+
+function angleToDir(angle) {
+  // angle: radians, 0=East, π/2=South (Pixi Y-down coordinate system)
+  // Normalise to [0, 2π), then bin into 8 equal sectors
+  const TAU  = Math.PI * 2
+  const norm = ((angle % TAU) + TAU) % TAU
+  const idx  = Math.round(norm / (Math.PI / 4)) % 8
+  return DIRS[idx]
+}
+
+const R        = GAME_CONFIG.PLAYER_RADIUS    // still used for non-directional sprite size
+const RX       = GAME_CONFIG.PLAYER_RADIUS_X  // oval hitbox horizontal semi-axis
+const RY       = GAME_CONFIG.PLAYER_RADIUS_Y  // oval hitbox vertical semi-axis
+const SPRITE_SIZE = 96                        // display size for all player sprites
+const SPRITE_H    = SPRITE_SIZE / 2           // half-height for UI element positioning
 const BAR_W = 44
 const BAR_H = 5
 
@@ -35,13 +51,24 @@ export default class PlayerSprite {
     this._body     = new Container()   // rotated child
     this.container.addChild(this._body)
 
-    // ── Shape sprite (front dot is baked into the PNG, rotates with body) ──
+    // ── Shape sprite ─────────────────────────────────────────────────────────
     const className = (data.className ?? 'Warrior').toLowerCase()
-    const tex = Assets.get(`player_${className}`)
-    this._shapeSprite = new Sprite(tex)
+    this._isDirectional = DIRECTIONAL_CLASSES.has(className)
+    this._className     = className
+    this._currentDir    = null   // track last direction to skip redundant texture swaps
+
+    if (this._isDirectional) {
+      // 8-directional art: start facing East, swap texture on direction change
+      const tex = Assets.get(`player_${className}_east`)
+      this._shapeSprite = new Sprite(tex)
+    } else {
+      // Legacy single sprite: continuously rotated to match player angle
+      const tex = Assets.get(`player_${className}`)
+      this._shapeSprite = new Sprite(tex)
+    }
+    this._shapeSprite.width  = SPRITE_SIZE
+    this._shapeSprite.height = SPRITE_SIZE
     this._shapeSprite.anchor.set(0.5)
-    this._shapeSprite.width  = R * 2
-    this._shapeSprite.height = R * 2
     this._body.addChild(this._shapeSprite)
 
     // ── Name label ───────────────────────────────────────────────────────
@@ -50,7 +77,7 @@ export default class PlayerSprite {
       style: { fontFamily: 'Arial', fontSize: 12, fontWeight: 'bold', fill: '#ffffff', align: 'center' },
     })
     this._nameText.anchor.set(0.5, 1)
-    this._nameText.position.set(0, -R - 5)
+    this._nameText.position.set(0, -SPRITE_H - 5)
     this.container.addChild(this._nameText)
 
     // ── HP bar ────────────────────────────────────────────────────────────
@@ -61,9 +88,9 @@ export default class PlayerSprite {
     this._hpBg.rect(-BAR_W / 2, 0, BAR_W, BAR_H)
     this._hpBg.fill('#1a1a1a')
     this._hpBg.stroke({ color: '#ffffff', width: 0.5, alpha: 0.25 })
-    this._hpBg.position.set(0, -R - 18)
+    this._hpBg.position.set(0, -SPRITE_H - 18)
 
-    this._hpFill.position.set(0, -R - 18)
+    this._hpFill.position.set(0, -SPRITE_H - 18)
 
     this.container.addChild(this._hpBg)
     this.container.addChild(this._hpFill)
@@ -74,7 +101,7 @@ export default class PlayerSprite {
 
     // ── Hit flash ────────────────────────────────────────────────────────────
     this._flashGfx = new Graphics()
-    this._flashGfx.circle(0, 0, R + 2)
+    this._flashGfx.ellipse(0, 0, RX + 2, RY + 2)
     this._flashGfx.fill({ color: 0xffffff, alpha: 1 })
     this._flashGfx.alpha = 0
     this._body.addChild(this._flashGfx)
@@ -95,7 +122,7 @@ export default class PlayerSprite {
 
     // ── Overhead display (cast bar + status icons) ──────────────────────────
     this.overhead = new OverheadDisplay(this.container, {
-      yOffset: -R - 18,
+      yOffset: -SPRITE_H - 18,
       showCastBar: true,
       showStatusIcons: true,
     })
@@ -121,7 +148,7 @@ export default class PlayerSprite {
 
   _drawShieldArc(angle, arc) {
     const g = this._shieldGfx
-    const shieldRadius = R + 12
+    const shieldRadius = SPRITE_H + 8
     const halfArc = arc / 2
 
     g.clear()
@@ -144,8 +171,8 @@ export default class PlayerSprite {
     g.clear()
 
     const GAP        = 6
-    const STEM_START = R + GAP
-    const STEM_END   = R + 22
+    const STEM_START = SPRITE_H + GAP
+    const STEM_END   = SPRITE_H + 22
     const STEM_H     = 3
     const HEAD_W     = 10
     const HEAD_H     = 9
@@ -171,7 +198,17 @@ export default class PlayerSprite {
    */
   update(state, renderPos, dt = 0) {
     this.container.position.set(renderPos.x, renderPos.y)
-    this._body.rotation = state.angle ?? 0
+
+    if (this._isDirectional) {
+      const dir = angleToDir(state.angle ?? 0)
+      if (dir !== this._currentDir) {
+        this._currentDir = dir
+        this._shapeSprite.texture = Assets.get(`player_${this._className}_${dir}`)
+      }
+      // No body rotation — the art encodes the direction
+    } else {
+      this._body.rotation = state.angle ?? 0
+    }
 
     if (state.hp != null) {
       // Trigger flash when HP drops

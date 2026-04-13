@@ -20,6 +20,11 @@ import QuizRenderer           from './scenes/QuizRenderer.js'
 
 function lerp(a, b, t) { return a + (b - a) * t }
 
+/** Classes that have 8 directional sprites in /public/assets/sprites/{class}/{dir}.png */
+export const DIRECTIONAL_CLASSES = new Set(['priest'])
+
+const DIRECTIONS = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west']
+
 export default class HostGame {
   constructor() {
     this.app            = null
@@ -255,7 +260,7 @@ export default class HostGame {
   async _loadSprites() {
     const SPRITE_KEYS = [
       'player_warrior', 'player_paladin', 'player_shaman', 'player_hunter',
-      'player_priest',  'player_mage',    'player_druid',  'player_rogue',
+      'player_mage',    'player_druid',  'player_rogue',
       'player_warlock', 'player_deathknight',
       'enemy_grunt',    'enemy_brute',    'enemy_archer',  'enemy_charger',
       'enemy_healer',   'enemy_gaterepairer', 'enemy_leviathan', 'enemy_warlock',
@@ -264,6 +269,14 @@ export default class HostGame {
       'projectile_default',
     ]
     const manifest = SPRITE_KEYS.map(k => ({ alias: k, src: `/assets/sprites/${k}.png` }))
+
+    // Load 8 directional sprites for classes that have them
+    for (const cls of DIRECTIONAL_CLASSES) {
+      for (const dir of DIRECTIONS) {
+        manifest.push({ alias: `player_${cls}_${dir}`, src: `/assets/sprites/${cls}/${dir}.png` })
+      }
+    }
+
     await Assets.load(manifest)
   }
 

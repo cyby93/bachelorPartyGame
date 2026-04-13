@@ -17,6 +17,22 @@ export default class CollisionSystem {
     return this.distance(a, b) < (a.radius + b.radius)
   }
 
+  /**
+   * True if a circle overlaps a player's oval hitbox.
+   * The player ellipse uses semi-axes (rx, ry); the circle is expanded by its radius
+   * and added to each axis as a simple approximation of the Minkowski sum.
+   *
+   * @param {{ x, y, rx, ry }} ellipse  – oval centre + semi-axes
+   * @param {{ x, y, radius }} circle
+   */
+  ellipseCircleOverlap(ellipse, circle) {
+    const dx = ellipse.x - circle.x
+    const dy = ellipse.y - circle.y
+    const rx = ellipse.rx + circle.radius
+    const ry = ellipse.ry + circle.radius
+    return (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1
+  }
+
   /** True if a point is inside a circle. */
   pointInCircle(point, circle) {
     return this.distance(point, circle) < circle.radius

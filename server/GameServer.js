@@ -22,6 +22,19 @@ import { QUIZ_QUESTIONS }  from '../shared/QuizQuestions.js'
 import { getUpgradePreview, getMaxTier } from '../shared/UpgradeUtils.js'
 
 /**
+ * Returns true if the point (cx, cy) with radius `otherRadius` overlaps the player's
+ * oval hitbox centred at (px, py). Uses a Minkowski-sum approximation: expand each
+ * ellipse axis by otherRadius.
+ */
+function playerHitsCircle(px, py, cx, cy, otherRadius) {
+  const dx = px - cx
+  const dy = py - cy
+  const rx = GAME_CONFIG.PLAYER_RADIUS_X + otherRadius
+  const ry = GAME_CONFIG.PLAYER_RADIUS_Y + otherRadius
+  return (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1
+}
+
+/**
  * GameServer — authoritative game simulation.
  *
  * Runs a fixed-rate tick loop (TICK_RATE Hz).
@@ -711,7 +724,7 @@ export default class GameServer {
       const isGateDead = (id) => this._isGateDead(id)
       this.players.forEach(p => {
         if (p.isHost || p.isDead) return
-        const resolved = resolveWallCollision(p.x, p.y, GAME_CONFIG.PLAYER_RADIUS, this._wallSegments, isGateDead)
+        const resolved = resolveWallCollision(p.x, p.y, GAME_CONFIG.PLAYER_RADIUS_X, this._wallSegments, isGateDead)
         p.x = resolved.x
         p.y = resolved.y
       })
@@ -996,8 +1009,7 @@ export default class GameServer {
       if (e.type === 'shadowDemon' && now - e._lastContactDamage > 1000) {
         this.players.forEach(p => {
           if (p.isHost || p.isDead) return
-          const dist = Math.hypot(p.x - e.x, p.y - e.y)
-          if (dist <= GAME_CONFIG.PLAYER_RADIUS + e.radius) {
+          if (playerHitsCircle(p.x, p.y, e.x, e.y, e.radius)) {
             if (p.isShieldBlocking(e.x, e.y)) return
             e._lastContactDamage = now
             p.takeDamage(p.maxHp * 10)   // effectively instant kill
@@ -1011,8 +1023,7 @@ export default class GameServer {
       if (e.type === 'shadowfiend' && !e._infectedTarget && now - e._lastContactDamage > 500) {
         this.players.forEach(p => {
           if (p.isHost || p.isDead || p.id === e.sourcePlayerId) return
-          const dist = Math.hypot(p.x - e.x, p.y - e.y)
-          if (dist <= GAME_CONFIG.PLAYER_RADIUS + e.radius) {
+          if (playerHitsCircle(p.x, p.y, e.x, e.y, e.radius)) {
             e._infectedTarget = true
             e._lastContactDamage = now
             e.isDead = true   // self-destruct after infecting
@@ -1036,9 +1047,7 @@ export default class GameServer {
       if (e.contactDamage > 0 && now - e._lastContactDamage > 500) {
         this.players.forEach(p => {
           if (p.isHost || p.isDead) return
-          const dist = Math.hypot(p.x - e.x, p.y - e.y)
-          const combined = (GAME_CONFIG.PLAYER_RADIUS + e.radius)
-          if (dist <= combined) {
+          if (playerHitsCircle(p.x, p.y, e.x, e.y, e.radius)) {
             if (p.isShieldBlocking(e.x, e.y)) return
             e._lastContactDamage = now
             p.takeDamage(e.contactDamage)
@@ -1143,8 +1152,7 @@ export default class GameServer {
       // Flame of Azzinoth burning aura — damage nearby players
       this.players.forEach(p => {
         if (p.isHost || p.isDead) return
-        const d = Math.hypot(p.x - action.x, p.y - action.y)
-        if (d <= action.radius + GAME_CONFIG.PLAYER_RADIUS) {
+        if (playerHitsCircle(p.x, p.y, action.x, action.y, action.radius)) {
           p.takeDamage(action.damage)
           this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: action.damage, type: 'damage', sourceSkill: 'Burning Aura' })
           if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
@@ -1240,8 +1248,7 @@ export default class GameServer {
         const r = attack.radius ?? 100
         this.players.forEach(p => {
           if (p.isHost || p.isDead) return
-          const d = Math.hypot(p.x - attack.bossX, p.y - attack.bossY)
-          if (d <= r + GAME_CONFIG.PLAYER_RADIUS) {
+          if (playerHitsCircle(p.x, p.y, attack.bossX, attack.bossY, r)) {
             if (p.isShieldBlocking(attack.bossX, attack.bossY)) return
             p.takeDamage(attack.damage ?? 25)
             if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
@@ -1259,8 +1266,7 @@ export default class GameServer {
     // Contact damage: per-player rate-limited
     this.players.forEach(p => {
       if (p.isHost || p.isDead) return
-      const d = Math.hypot(p.x - this.boss.x, p.y - this.boss.y)
-      if (d <= GAME_CONFIG.BOSS_RADIUS + GAME_CONFIG.PLAYER_RADIUS + 5) {
+      if (playerHitsCircle(p.x, p.y, this.boss.x, this.boss.y, GAME_CONFIG.BOSS_RADIUS + 5)) {
         if (p.isShieldBlocking(this.boss.x, this.boss.y)) return
         if (!p._lastBossContact) p._lastBossContact = 0
         if (now - p._lastBossContact > 500) {
@@ -1309,8 +1315,7 @@ export default class GameServer {
         this._illidanState.auraDreadLastTick = now
         this.players.forEach(p => {
           if (p.isHost || p.isDead) return
-          const d = Math.hypot(p.x - this.boss.x, p.y - this.boss.y)
-          if (d <= aura.radius + GAME_CONFIG.PLAYER_RADIUS) {
+          if (playerHitsCircle(p.x, p.y, this.boss.x, this.boss.y, aura.radius)) {
             p.takeDamage(aura.damage)
             this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: aura.damage, type: 'damage', sourceSkill: 'Aura of Dread' })
             if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
@@ -1322,8 +1327,7 @@ export default class GameServer {
     // Melee contact damage
     this.players.forEach(p => {
       if (p.isHost || p.isDead) return
-      const d = Math.hypot(p.x - this.boss.x, p.y - this.boss.y)
-      if (d <= this.boss.radius + GAME_CONFIG.PLAYER_RADIUS + 5) {
+      if (playerHitsCircle(p.x, p.y, this.boss.x, this.boss.y, this.boss.radius + 5)) {
         if (p.isShieldBlocking(this.boss.x, this.boss.y)) return
         if (!p._lastBossContact) p._lastBossContact = 0
         if (now - p._lastBossContact > 500) {
@@ -1355,8 +1359,7 @@ export default class GameServer {
           this.boss.isImmune = false
           this.players.forEach(p => {
             if (p.isHost || p.isDead) return
-            const d = Math.hypot(p.x - crashX, p.y - crashY)
-            if (d <= attack.radius + GAME_CONFIG.PLAYER_RADIUS) {
+            if (playerHitsCircle(p.x, p.y, crashX, crashY, attack.radius)) {
               if (p.isShieldBlocking(crashX, crashY)) return
               p.takeDamage(attack.damage)
               this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: attack.damage, type: 'damage', sourceSkill: 'Flame Crash' })
@@ -1381,7 +1384,7 @@ export default class GameServer {
           const dx = p.x - attack.bossX
           const dy = p.y - attack.bossY
           const dist = Math.hypot(dx, dy)
-          if (dist > attack.coneRange + GAME_CONFIG.PLAYER_RADIUS) return
+          if (dist > attack.coneRange + GAME_CONFIG.PLAYER_RADIUS_X) return
           const angle = Math.atan2(dy, dx)
           let diff = Math.abs(angle - facing)
           if (diff > Math.PI) diff = 2 * Math.PI - diff
@@ -1446,8 +1449,7 @@ export default class GameServer {
         const target = living[Math.floor(Math.random() * living.length)]
         this.players.forEach(p => {
           if (p.isHost || p.isDead) return
-          const d = Math.hypot(p.x - target.x, p.y - target.y)
-          if (d <= attack.splashRadius + GAME_CONFIG.PLAYER_RADIUS) {
+          if (playerHitsCircle(p.x, p.y, target.x, target.y, attack.splashRadius)) {
             if (p.isShieldBlocking(attack.bossX, attack.bossY)) return
             p.takeDamage(attack.damage)
             this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: attack.damage, type: 'damage', sourceSkill: 'Fireball' })
@@ -1503,8 +1505,7 @@ export default class GameServer {
         const primary = living[Math.floor(Math.random() * living.length)]
         this.players.forEach(p => {
           if (p.isHost || p.isDead) return
-          const d = Math.hypot(p.x - primary.x, p.y - primary.y)
-          if (d <= attack.splashRadius + GAME_CONFIG.PLAYER_RADIUS) {
+          if (playerHitsCircle(p.x, p.y, primary.x, primary.y, attack.splashRadius)) {
             if (p.isShieldBlocking(attack.bossX, attack.bossY)) return
             p.takeDamage(attack.damage)
             this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: attack.damage, type: 'damage', sourceSkill: 'Agonizing Flames' })
@@ -1531,8 +1532,7 @@ export default class GameServer {
         const target = living[Math.floor(Math.random() * living.length)]
         this.players.forEach(p => {
           if (p.isHost || p.isDead) return
-          const d = Math.hypot(p.x - target.x, p.y - target.y)
-          if (d <= attack.splashRadius + GAME_CONFIG.PLAYER_RADIUS) {
+          if (playerHitsCircle(p.x, p.y, target.x, target.y, attack.splashRadius)) {
             if (p.isShieldBlocking(attack.bossX, attack.bossY)) return
             p.takeDamage(attack.damage)
             this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: attack.damage, type: 'damage', sourceSkill: 'Shadow Blast' })
@@ -1639,8 +1639,7 @@ export default class GameServer {
         beam.lastDamageTick = now
         this.players.forEach(p => {
           if (p.isHost || p.isDead) return
-          const d = Math.hypot(p.x - tipX, p.y - tipY)
-          if (d <= 35 + GAME_CONFIG.PLAYER_RADIUS) {
+          if (playerHitsCircle(p.x, p.y, tipX, tipY, 35)) {
             p.takeDamage(beam.damage)
             this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: beam.damage, type: 'damage', sourceSkill: 'Eye Beams' })
             if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
@@ -1704,8 +1703,7 @@ export default class GameServer {
             if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
             this.players.forEach(other => {
               if (other.id === p.id || other.isHost || other.isDead) return
-              const d = Math.hypot(other.x - p.x, other.y - p.y)
-              if (d <= eff.params.dotRadius + GAME_CONFIG.PLAYER_RADIUS) {
+              if (playerHitsCircle(other.x, other.y, p.x, p.y, eff.params.dotRadius)) {
                 other.takeDamage(eff.params.dotDamage)
                 this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: other.id, amount: eff.params.dotDamage, type: 'damage', sourceSkill: 'Agonizing Flames' })
                 if (other.isDead) this.stats.deaths[other.id] = (this.stats.deaths[other.id] ?? 0) + 1
@@ -1779,8 +1777,7 @@ export default class GameServer {
     // Contact damage to players who wander too close
     this.players.forEach(p => {
       if (p.isHost || p.isDead) return
-      const d = Math.hypot(p.x - this.boss.x, p.y - this.boss.y)
-      if (d <= GAME_CONFIG.BOSS_RADIUS + GAME_CONFIG.PLAYER_RADIUS + 5) {
+      if (playerHitsCircle(p.x, p.y, this.boss.x, this.boss.y, GAME_CONFIG.BOSS_RADIUS + 5)) {
         if (p.isShieldBlocking(this.boss.x, this.boss.y)) return
         if (!p._lastBossContact) p._lastBossContact = 0
         if (now - p._lastBossContact > 500) {

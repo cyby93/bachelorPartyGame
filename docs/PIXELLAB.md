@@ -22,9 +22,15 @@ Applies to: player classes, enemies, bosses.
 
 ### Facing convention
 
-The **East (right)** frame is the canonical rest pose.
-The game engine rotates the sprite container to match the entity's angle at runtime,
-so the art itself never needs to rotate — just ensure the E frame faces right.
+All 8 direction frames are used at runtime. The engine selects the correct frame based
+on the entity's angle — **no runtime rotation is applied to directional sprites**.
+
+Sprites are stored in `/public/assets/sprites/{class_name}/{direction}.png`
+where `{direction}` is one of: `north`, `north-east`, `east`, `south-east`,
+`south`, `south-west`, `west`, `north-west`.
+
+To activate a class for directional rendering, add its lowercase name to
+`DIRECTIONAL_CLASSES` in `client/host/HostGame.js` once all 8 frames are ready.
 
 ### Base prompt template
 
@@ -64,10 +70,12 @@ Add a short description that captures silhouette, color palette, and any iconic 
 
 ### Size integration note
 
-Current placeholder sprites are **40×40**. When dropping 48×48 PixelLab art into the
-pipeline, update `sprite.width`/`sprite.height` in the relevant entity file
-(`PlayerSprite.js`, `EnemySprite.js`, `BossSprite.js`) and the canvas-size table in
-`SPRITES.md` to reflect the new dimensions.
+Directional player sprites are rendered at **48×48** in `PlayerSprite.js`.
+Non-directional (single-sprite) player classes are still sized at `PLAYER_RADIUS * 2`.
+When adding a new class to `DIRECTIONAL_CLASSES`, no size change is needed — the 48×48
+size is already applied automatically by the directional branch in `PlayerSprite.js`.
+For enemies and bosses, update `sprite.width`/`sprite.height` in `EnemySprite.js`
+/ `BossSprite.js` when switching those to directional art.
 
 ---
 

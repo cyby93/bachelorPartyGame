@@ -1047,9 +1047,9 @@ export default class SkillSystem {
           if (proj.hit.has(p.id)) return
           // Skip the caster unless this is a self-cast projectile
           if (p.id === proj.ownerId && !proj.selfCast) return
-          const projCircle   = { x: proj.x, y: proj.y, radius: proj.radius }
-          const playerCircle = { x: p.x,    y: p.y,    radius: GAME_CONFIG.PLAYER_RADIUS }
-          if (!this._collision.circlesOverlap(projCircle, playerCircle)) return
+          const projCircle     = { x: proj.x, y: proj.y, radius: proj.radius }
+          const playerEllipse  = { x: p.x,    y: p.y,    rx: GAME_CONFIG.PLAYER_RADIUS_X, ry: GAME_CONFIG.PLAYER_RADIUS_Y }
+          if (!this._collision.ellipseCircleOverlap(playerEllipse, projCircle)) return
           proj.hit.add(p.id)
           const amount = proj.healAmount ?? 0
           if (amount > 0) {
@@ -1083,9 +1083,9 @@ export default class SkillSystem {
         gs.players.forEach(p => {
           if (!proj.isAlive || p.isHost || p.isDead) return
           if (proj.hit.has(p.id)) return
-          const projCircle   = { x: proj.x, y: proj.y, radius: proj.radius }
-          const playerCircle = { x: p.x,    y: p.y,    radius: GAME_CONFIG.PLAYER_RADIUS }
-          if (!this._collision.circlesOverlap(projCircle, playerCircle)) return
+          const projCircle    = { x: proj.x, y: proj.y, radius: proj.radius }
+          const playerEllipse = { x: p.x,    y: p.y,    rx: GAME_CONFIG.PLAYER_RADIUS_X, ry: GAME_CONFIG.PLAYER_RADIUS_Y }
+          if (!this._collision.ellipseCircleOverlap(playerEllipse, projCircle)) return
 
           proj.hit.add(p.id)
           // Directional shield blocks the projectile entirely

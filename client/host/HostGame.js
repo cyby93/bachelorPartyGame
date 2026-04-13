@@ -21,7 +21,7 @@ import QuizRenderer           from './scenes/QuizRenderer.js'
 function lerp(a, b, t) { return a + (b - a) * t }
 
 /** Classes that have 8 directional sprites in /public/assets/sprites/{class}/{dir}.png */
-export const DIRECTIONAL_CLASSES = new Set(['priest'])
+export const DIRECTIONAL_CLASSES = new Set(['priest', 'warrior', 'paladin', 'hunter', 'druid', 'mage', 'warlock', 'deathknight', 'shaman'])
 
 const DIRECTIONS = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west']
 
@@ -32,10 +32,15 @@ const DIRECTIONS = ['north', 'north-east', 'east', 'south-east', 'south', 'south
  * Update frame counts here once ZIPs are extracted.
  */
 export const DIRECTIONAL_ANIMATIONS = {
-  priest: {
-    idle: { frames: 4, fps: 7  },  // breathing-idle (4 frames)
-    walk: { frames: 6, fps: 10 },  // walking-6-frames
-  },
+  priest:  { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  warrior: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  paladin: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  hunter:  { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  druid:   { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  mage:    { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  warlock:     { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  deathknight: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  shaman:      { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
 }
 
 export default class HostGame {
@@ -272,9 +277,8 @@ export default class HostGame {
 
   async _loadSprites() {
     const SPRITE_KEYS = [
-      'player_warrior', 'player_paladin', 'player_shaman', 'player_hunter',
-      'player_mage',    'player_druid',  'player_rogue',
-      'player_warlock', 'player_deathknight',
+      'player_shaman', 'player_rogue',
+      'player_deathknight',
       'enemy_grunt',    'enemy_brute',    'enemy_archer',  'enemy_charger',
       'enemy_healer',   'enemy_gaterepairer', 'enemy_leviathan', 'enemy_warlock',
       'enemy_flameofazzinoth', 'enemy_shadowdemon', 'enemy_shadowfiend',

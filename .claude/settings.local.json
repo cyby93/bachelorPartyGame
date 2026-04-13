@@ -36,7 +36,12 @@
       "Bash(node.exe:*)",
       "Bash(cmd.exe /c \"npm install --save-dev canvas\")",
       "Bash(curl:*)",
-      "Skill(update-config)"
+      "Skill(update-config)",
+      "Bash(mkdir:*)"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "pixellab"
+  ]
 }

@@ -17,7 +17,7 @@ import { Container, Graphics, Text, Sprite, Assets } from 'pixi.js'
 import { CLASSES }     from '../../../shared/ClassConfig.js'
 import { GAME_CONFIG } from '../../../shared/GameConfig.js'
 import OverheadDisplay from '../systems/OverheadDisplay.js'
-import { DIRECTIONAL_CLASSES } from '../HostGame.js'
+import { DIRECTIONAL_CLASSES, DIRECTIONAL_ANIMATIONS } from '../HostGame.js'
 
 // Direction names ordered by angle sector (0=East, clockwise)
 const DIRS = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east']
@@ -70,6 +70,14 @@ export default class PlayerSprite {
     this._shapeSprite.height = SPRITE_SIZE
     this._shapeSprite.anchor.set(0.5)
     this._body.addChild(this._shapeSprite)
+
+    // ── Animation state (directional classes only) ────────────────────────────
+    this._animCfg       = DIRECTIONAL_ANIMATIONS[className] ?? null
+    this._animState     = 'idle'   // 'idle' | 'walk'
+    this._animFrame     = 0
+    this._lastAnimFrame = -1       // force first-frame texture load
+    this._animTimer     = 0
+    this._lastRenderPos = null     // set on first update; used for movement detection
 
     // ── Name label ───────────────────────────────────────────────────────
     this._nameText = new Text({
@@ -201,11 +209,56 @@ export default class PlayerSprite {
 
     if (this._isDirectional) {
       const dir = angleToDir(state.angle ?? 0)
-      if (dir !== this._currentDir) {
-        this._currentDir = dir
-        this._shapeSprite.texture = Assets.get(`player_${this._className}_${dir}`)
+
+      if (this._animCfg) {
+        // ── Animated directional sprite ──────────────────────────────────────
+        // 1. Resolve animation state (walk > idle)
+        const moved = this._lastRenderPos !== null &&
+          (Math.abs(renderPos.x - this._lastRenderPos.x) > 0.3 ||
+           Math.abs(renderPos.y - this._lastRenderPos.y) > 0.3)
+
+        const newState = moved ? 'walk' : 'idle'
+        if (newState !== this._animState) {
+          this._animState = newState
+          this._animFrame = 0
+          this._animTimer = 0
+        }
+
+        // 2. Advance frame timer
+        const cfg = this._animCfg[this._animState]
+        this._animTimer += dt
+        const frameDuration = 1 / cfg.fps
+        if (this._animTimer >= frameDuration) {
+          this._animTimer -= frameDuration
+          this._animFrame  = (this._animFrame + 1) % cfg.frames
+        }
+
+        // 3. Swap texture when direction or frame changes
+        if (dir !== this._currentDir || this._animFrame !== this._lastAnimFrame) {
+          const key = `player_${this._className}_${this._animState}_${dir}_${this._animFrame}`
+          const tex = Assets.get(key)
+          if (tex) {
+            this._shapeSprite.texture = tex
+          } else {
+            // Animation not loaded yet — fall back to static directional sprite
+            const fallback = Assets.get(`player_${this._className}_${dir}`)
+            if (fallback) this._shapeSprite.texture = fallback
+          }
+          this._currentDir    = dir
+          this._lastAnimFrame = this._animFrame
+        }
+
+        this._lastRenderPos = { x: renderPos.x, y: renderPos.y }
+
+      } else {
+        // ── Static directional sprite (no animation config yet) ───────────────
+        if (dir !== this._currentDir) {
+          this._currentDir = dir
+          this._shapeSprite.texture = Assets.get(`player_${this._className}_${dir}`)
+        }
       }
-      // No body rotation — the art encodes the direction
+
+      // Do NOT rotate the body — direction is encoded in the art
     } else {
       this._body.rotation = state.angle ?? 0
     }

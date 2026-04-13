@@ -25,6 +25,19 @@ export const DIRECTIONAL_CLASSES = new Set(['priest'])
 
 const DIRECTIONS = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west']
 
+/**
+ * Animation config per directional class.
+ * Frames are stored at: /public/assets/sprites/{class}/{anim}/{dir}/{frameIndex}.png
+ * fps controls playback speed; frames is the number of frames in the cycle.
+ * Update frame counts here once ZIPs are extracted.
+ */
+export const DIRECTIONAL_ANIMATIONS = {
+  priest: {
+    idle: { frames: 4, fps: 7  },  // breathing-idle (4 frames)
+    walk: { frames: 6, fps: 10 },  // walking-6-frames
+  },
+}
+
 export default class HostGame {
   constructor() {
     this.app            = null
@@ -270,10 +283,24 @@ export default class HostGame {
     ]
     const manifest = SPRITE_KEYS.map(k => ({ alias: k, src: `/assets/sprites/${k}.png` }))
 
-    // Load 8 directional sprites for classes that have them
+    // Load 8 directional static sprites
     for (const cls of DIRECTIONAL_CLASSES) {
       for (const dir of DIRECTIONS) {
         manifest.push({ alias: `player_${cls}_${dir}`, src: `/assets/sprites/${cls}/${dir}.png` })
+      }
+    }
+
+    // Load animation frames: player_{cls}_{anim}_{dir}_{frameIndex}
+    for (const [cls, anims] of Object.entries(DIRECTIONAL_ANIMATIONS)) {
+      for (const [animName, cfg] of Object.entries(anims)) {
+        for (const dir of DIRECTIONS) {
+          for (let i = 0; i < cfg.frames; i++) {
+            manifest.push({
+              alias: `player_${cls}_${animName}_${dir}_${i}`,
+              src:   `/assets/sprites/${cls}/${animName}/${dir}/${i}.png`,
+            })
+          }
+        }
       }
     }
 

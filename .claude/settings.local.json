@@ -1,4 +1,7 @@
 {
+  "env": {
+    "PIXELLAB_API_KEY": "4ef78309-86c1-40e6-95be-87dbd7d012a3"
+  },
   "permissions": {
     "allow": [
       "Bash(git *)",
@@ -31,7 +34,9 @@
       "Bash(\"/mnt/c/Program Files/nodejs/npm.cmd\" install --save-dev pureimage)",
       "Bash(cmd.exe /c \"npm install --save-dev pureimage\")",
       "Bash(node.exe:*)",
-      "Bash(cmd.exe /c \"npm install --save-dev canvas\")"
+      "Bash(cmd.exe /c \"npm install --save-dev canvas\")",
+      "Bash(curl:*)",
+      "Skill(update-config)"
     ]
   }
 }

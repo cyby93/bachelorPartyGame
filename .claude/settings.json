@@ -7,7 +7,11 @@
       "Bash(node *)",
       "Bash(ls *)",
       "Bash(find *)",
-      "Bash(grep *)"
+      "Bash(grep *)",
+      "mcp__pixellab__create_map_object",
+      "mcp__pixellab__get_map_object",
+      "mcp__pixellab__create_character",
+      "mcp__pixellab__get_character"
     ]
   }
 }

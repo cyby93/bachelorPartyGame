@@ -21,7 +21,7 @@ import QuizRenderer           from './scenes/QuizRenderer.js'
 function lerp(a, b, t) { return a + (b - a) * t }
 
 /** Classes that have 8 directional sprites in /public/assets/sprites/{class}/{dir}.png */
-export const DIRECTIONAL_CLASSES = new Set(['priest', 'warrior', 'paladin', 'hunter', 'druid', 'mage', 'warlock', 'deathknight', 'shaman'])
+export const DIRECTIONAL_CLASSES = new Set(['priest', 'warrior', 'paladin', 'hunter', 'druid', 'mage', 'warlock', 'deathknight', 'shaman', 'rogue'])
 
 const DIRECTIONS = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west']
 
@@ -41,6 +41,7 @@ export const DIRECTIONAL_ANIMATIONS = {
   warlock:     { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
   deathknight: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
   shaman:      { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  rogue:       { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
 }
 
 export default class HostGame {
@@ -277,7 +278,7 @@ export default class HostGame {
 
   async _loadSprites() {
     const SPRITE_KEYS = [
-      'player_shaman', 'player_rogue',
+      'player_shaman',
       'player_deathknight',
       'enemy_grunt',    'enemy_brute',    'enemy_archer',  'enemy_charger',
       'enemy_healer',   'enemy_gaterepairer', 'enemy_leviathan', 'enemy_warlock',

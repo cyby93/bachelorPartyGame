@@ -34,7 +34,7 @@ function angleToDir(angle) {
 const R        = GAME_CONFIG.PLAYER_RADIUS    // still used for non-directional sprite size
 const RX       = GAME_CONFIG.PLAYER_RADIUS_X  // oval hitbox horizontal semi-axis
 const RY       = GAME_CONFIG.PLAYER_RADIUS_Y  // oval hitbox vertical semi-axis
-const SPRITE_SIZE = 96                        // display size for all player sprites
+const SPRITE_SIZE = 124                        // display size for all player sprites
 const SPRITE_H    = SPRITE_SIZE / 2           // half-height for UI element positioning
 const BAR_W = 44
 const BAR_H = 5

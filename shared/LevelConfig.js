@@ -8,7 +8,7 @@
  *
  * ── Objective schema ──────────────────────────────────────────────────────
  *  { type: 'killCount',  target: 50 }                    — kill any 50 enemies
- *  { type: 'killCount',  target: 10, enemyTypes: ['archer'] } — kill 10 archers
+ *  { type: 'killCount',  target: 10, enemyTypes: ['coilskarHarpooner'] } — kill 10 archers
  *  { type: 'survive',    durationMs: 60000 }             — survive 60 seconds
  *  { type: 'killBoss' }                                  — defeat the level's boss
  *  { type: 'surviveWaves' }                              — clear all discrete waves
@@ -41,10 +41,10 @@ export const CAMPAIGN = [
       betweenWaveDelayMs: 3000,
       spawnEdge: 'right',
       progression: [
-        { fromWave: 1, enemyTypes: ['grunt'],                                    countRange: [3, 4] },
-        { fromWave: 3, enemyTypes: ['grunt', 'archer'],                          countRange: [4, 6] },
-        { fromWave: 5, enemyTypes: ['grunt', 'archer', 'brute'],                 countRange: [5, 8] },
-        { fromWave: 7, enemyTypes: ['grunt', 'archer', 'brute', 'healer'],       countRange: [6, 10] },
+        { fromWave: 1, enemyTypes: ['felGuard'],                                    countRange: [3, 4] },
+        { fromWave: 3, enemyTypes: ['felGuard', 'coilskarHarpooner'],                          countRange: [4, 6] },
+        { fromWave: 5, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute'],                 countRange: [5, 8] },
+        { fromWave: 7, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic'],       countRange: [6, 10] },
       ],
     },
     difficulty: {
@@ -76,10 +76,10 @@ export const CAMPAIGN = [
       buffFactor: 0.25,            // 25% faster spawns per destroyed building
       spawnRadius: 80,             // spawn distance from building center
       enemyTypes: [
-        { type: 'grunt',   weight: 3 },
-        { type: 'brute',   weight: 1 },
-        { type: 'archer',  weight: 2 },
-        { type: 'charger', weight: 1 },
+        { type: 'felGuard',   weight: 3 },
+        { type: 'bonechewerBrute',   weight: 1 },
+        { type: 'coilskarHarpooner',  weight: 2 },
+        { type: 'illidariCenturion', weight: 1 },
       ],
     },
     spawning: null,
@@ -121,11 +121,11 @@ export const CAMPAIGN = [
       spawnNearActiveGate: true,
       spawnRadius: 80,
       enemyTypes: [
-        { type: 'grunt',        weight: 3 },
-        { type: 'brute',        weight: 1 },
-        { type: 'archer',       weight: 1 },
-        { type: 'healer',       weight: 1 },
-        { type: 'gateRepairer', weight: 2 },
+        { type: 'felGuard',        weight: 3 },
+        { type: 'bonechewerBrute',        weight: 1 },
+        { type: 'coilskarHarpooner',       weight: 1 },
+        { type: 'ashtonghueMystic',       weight: 1 },
+        { type: 'ritualChanneler', weight: 2 },
       ],
     },
     difficulty: {
@@ -199,10 +199,10 @@ export const CAMPAIGN = [
       maxAliveAtOnce: 8,
       activeInPhase: 2,
       enemyTypes: [
-        { type: 'grunt',  weight: 3 },
-        { type: 'archer', weight: 1 },
-        { type: 'brute',  weight: 1 },
-        { type: 'healer', weight: 1 },
+        { type: 'felGuard',  weight: 3 },
+        { type: 'coilskarHarpooner', weight: 1 },
+        { type: 'bonechewerBrute',  weight: 1 },
+        { type: 'ashtonghueMystic', weight: 1 },
       ],
     },
     difficulty: {

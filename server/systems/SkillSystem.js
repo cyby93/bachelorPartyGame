@@ -995,6 +995,20 @@ export default class SkillSystem {
         const projCircle = { x: proj.x, y: proj.y, radius: proj.radius }
         const enemyCircle = { x: e.x, y: e.y, radius: e.radius }
         if (this._collision.circlesOverlap(projCircle, enemyCircle)) {
+          // Shield check — shielded enemies block projectiles from the protected arc
+          if (e._shieldActive && e._shieldAngle != null) {
+            let diff = Math.atan2(proj.vy, proj.vx) - e._shieldAngle
+            // Normalise to [-π, π]
+            while (diff >  Math.PI) diff -= Math.PI * 2
+            while (diff < -Math.PI) diff += Math.PI * 2
+            if (Math.abs(diff) < e._shieldArc / 2) {
+              // Deflected — consume the projectile but deal no damage
+              proj.hit.add(e.id)
+              if (!proj.pierce) proj.isAlive = false
+              gs.io?.emit('skill:fired', { type: 'BUFF', subtype: 'SHIELD_DEFLECT', x: proj.x, y: proj.y, color: '#4db8e8' })
+              return
+            }
+          }
           this._handleProjectileHit(gs, proj, e)
         }
       })

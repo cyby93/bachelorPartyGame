@@ -97,7 +97,7 @@ export default class BaseRenderer {
 
   update(dt = 0.016) {
     const activeIds = this._syncPlayers(dt)
-    this._syncEnemies()
+    this._syncEnemies(dt)
     this._syncProjectiles()
     this._syncExtras(dt)
     this._renderBeams(dt)
@@ -139,7 +139,7 @@ export default class BaseRenderer {
     return activeIds
   }
 
-  _syncEnemies() {
+  _syncEnemies(dt = 0) {
     const enemies   = this.game.knownState.enemies ?? []
     const activeIds = new Set(enemies.map(e => e.id))
 
@@ -150,7 +150,7 @@ export default class BaseRenderer {
         this._enemyContainer.addChild(s.container)
         this._onEnemyCreated(e, s)
       }
-      this.enemySprites.get(e.id).update(e)
+      this.enemySprites.get(e.id).update(e, dt)
     }
 
     this.enemySprites.forEach((s, id) => {

@@ -26,6 +26,30 @@ export const DIRECTIONAL_CLASSES = new Set(['priest', 'warrior', 'paladin', 'hun
 const DIRECTIONS = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west']
 
 /**
+ * Enemy types that have 8-directional animated sprites.
+ * Sprites live at: /public/assets/sprites/{type}/{dir}.png  (static)
+ *                  /public/assets/sprites/{type}/{anim}/{dir}/{frameIndex}.png (animated)
+ * Asset keys: enemy_{type}_{dir}  /  enemy_{type}_{anim}_{dir}_{frame}
+ */
+export const DIRECTIONAL_ENEMIES = new Set([
+  'felGuard', 'bonechewerBrute', 'coilskarHarpooner', 'illidariCenturion',
+  'bonechewerBladeFury', 'ashtonghueMystic', 'bloodProphet',
+  'coilskarSerpentGuard', 'ritualChanneler',
+])
+
+export const DIRECTIONAL_ENEMY_ANIMATIONS = {
+  felGuard:             { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  bonechewerBrute:      { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  coilskarHarpooner:    { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  illidariCenturion:    { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  bonechewerBladeFury:  { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  ashtonghueMystic:     { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  bloodProphet:         { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  coilskarSerpentGuard: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  ritualChanneler:      { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+}
+
+/**
  * Animation config per directional class.
  * Frames are stored at: /public/assets/sprites/{class}/{anim}/{dir}/{frameIndex}.png
  * fps controls playback speed; frames is the number of frames in the cycle.
@@ -303,6 +327,27 @@ export default class HostGame {
             manifest.push({
               alias: `player_${cls}_${animName}_${dir}_${i}`,
               src:   `/assets/sprites/${cls}/${animName}/${dir}/${i}.png`,
+            })
+          }
+        }
+      }
+    }
+
+    // Load 8 directional static sprites for BT enemies
+    for (const type of DIRECTIONAL_ENEMIES) {
+      for (const dir of DIRECTIONS) {
+        manifest.push({ alias: `enemy_${type}_${dir}`, src: `/assets/sprites/${type}/${dir}.png` })
+      }
+    }
+
+    // Load animation frames: enemy_{type}_{anim}_{dir}_{frameIndex}
+    for (const [type, anims] of Object.entries(DIRECTIONAL_ENEMY_ANIMATIONS)) {
+      for (const [animName, cfg] of Object.entries(anims)) {
+        for (const dir of DIRECTIONS) {
+          for (let i = 0; i < cfg.frames; i++) {
+            manifest.push({
+              alias: `enemy_${type}_${animName}_${dir}_${i}`,
+              src:   `/assets/sprites/${type}/${animName}/${dir}/${i}.png`,
             })
           }
         }

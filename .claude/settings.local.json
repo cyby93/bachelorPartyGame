@@ -56,7 +56,8 @@
       "Bash(awk -F/ '{print $3}')",
       "WebSearch",
       "WebFetch(domain:www.wowhead.com)",
-      "WebFetch(domain:www.icy-veins.com)"
+      "WebFetch(domain:www.icy-veins.com)",
+      "Bash(unzip -l /tmp/felGuard_model.zip)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -1158,8 +1158,19 @@ export default class GameServer {
           if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
         }
       })
+    } else if (action.action === 'berserckAoeTick') {
+      // Bonechewer Blade Fury whirlwind spin — AoE damage around the enemy
+      this.players.forEach(p => {
+        if (p.isHost || p.isDead) return
+        if (playerHitsCircle(p.x, p.y, action.x, action.y, action.radius)) {
+          if (p.isShieldBlocking?.(action.x, action.y)) return
+          p.takeDamage(action.damage)
+          this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: action.damage, type: 'damage', sourceSkill: 'Whirlwind' })
+          if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
+        }
+      })
     }
-    // 'heal', 'channel', 'leaveBlaze', 'burningAuraTick' handled above
+    // 'heal', 'channel', 'leaveBlaze', 'burningAuraTick', 'berserckAoeTick' handled above
   }
 
   /** Activate the next gate in sequence. */

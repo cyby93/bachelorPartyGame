@@ -7,6 +7,111 @@
  */
 
 export const ENEMY_TYPES = {
+  // ════════════════════════════════════════════════════════════════════════
+  // BLACK TEMPLE ENEMIES
+  // ════════════════════════════════════════════════════════════════════════
+
+  // ── Illidari Fel Guard — fast melee pack unit ────────────────────────────
+  felGuard: {
+    hp: 35, speed: 1.3, radius: 15, contactDamage: 18,
+    spriteSize: 76,
+    color: '#1a7a1a',
+    ai: 'chase',
+  },
+
+  // ── Bonechewer Brute — slow tanky fel orc ───────────────────────────────
+  bonechewerBrute: {
+    hp: 100, speed: 0.8, radius: 24, contactDamage: 35,
+    spriteSize: 116,
+    color: '#8B0000',
+    ai: 'chase',
+  },
+
+  // ── Coilskar Harpooner — ranged naga ────────────────────────────────────
+  coilskarHarpooner: {
+    hp: 25, speed: 1.0, radius: 13, contactDamage: 5,
+    spriteSize: 76,
+    color: '#1a5f7a',
+    ai: 'ranged',
+    projectileSpeed: 280,
+    projectileDamage: 14,
+    attackRange: 320,
+    attackCooldown: 2500,
+  },
+
+  // ── Illidari Centurion — charging demon elite ────────────────────────────
+  illidariCenturion: {
+    hp: 70, speed: 1.4, radius: 20, contactDamage: 50,
+    spriteSize: 116,
+    color: '#2d6b2d',
+    ai: 'charger',
+    chargeSpeed: 5.5,
+    chargeRange: 260,
+    chargeCooldown: 4000,
+    chargeWindup: 500,
+    chargeSilenceDuration: 2000,  // ms — silences hit player on charge contact
+  },
+
+  // ── Bonechewer Blade Fury — berserking whirlwind orc ────────────────────
+  bonechewerBladeFury: {
+    hp: 60, speed: 1.3, radius: 18, contactDamage: 22,
+    spriteSize: 96,
+    color: '#cc2200',
+    ai: 'berserk',
+    berserckSpeed:    1.9,
+    berserckRadius:   65,
+    berserckDamage:   18,    // per AoE tick while spinning
+    berserckDuration: 2500,  // ms spinning
+    berserckCooldown: 9000,  // ms between activations
+    berserckExhaust:  600,   // ms slow after spin ends
+  },
+
+  // ── Ashtongue Mystic — broken draenei healer ────────────────────────────
+  ashtonghueMystic: {
+    hp: 45, speed: 1.0, radius: 14, contactDamage: 5,
+    spriteSize: 76,
+    color: '#7b4f9e',
+    ai: 'healer',
+    healAmount: 12,
+    healRadius: 130,
+    healCooldown: 3000,
+    preferredRange: 100,
+  },
+
+  // ── Bonechewer Blood Prophet — stationary fel orc damage buffer ──────────
+  bloodProphet: {
+    hp: 70, speed: 0, radius: 15, contactDamage: 0,
+    spriteSize: 96,
+    color: '#8B0000',
+    ai: 'channeler',
+    channelTarget: null,
+    hpBuffPerSecond: 50,
+    damageBuffPerSecond: 2,
+  },
+
+  // ── Coilskar Serpent Guard — shield-bearing naga tank ───────────────────
+  coilskarSerpentGuard: {
+    hp: 85, speed: 1.0, radius: 21, contactDamage: 28,
+    spriteSize: 116,
+    color: '#0d4f6b',
+    ai: 'shielded',
+    shieldArc: 2.094,  // 120° in radians (Math.PI * 2/3)
+  },
+
+  // ── Ashtongue Ritual Channeler — repairs ritual objectives ──────────────
+  ritualChanneler: {
+    hp: 40, speed: 1.1, radius: 13, contactDamage: 5,
+    spriteSize: 64,
+    color: '#6a3d9a',
+    ai: 'gateRepairer',
+    repairAmount: 8,
+    repairRange: 60,
+  },
+
+  // ════════════════════════════════════════════════════════════════════════
+  // PLACEHOLDER ENEMIES (kept for backwards-compat until LevelConfig updated)
+  // ════════════════════════════════════════════════════════════════════════
+
   // ── Basic melee ─────────────────────────────────────────────────────────
   grunt: {
     hp: 30,

@@ -4,7 +4,27 @@ Reference for downloading and extracting PixelLab character animations into the 
 
 ---
 
-## Character ID Registry
+## Enemy Character ID Registry
+
+| Enemy type key | PixelLab ID | Status |
+|---|---|---|
+| `felGuard` | `c8fd1b93-2e9f-4411-b089-46c5ea4a544c` | ✅ done (idle, walk) |
+| `bonechewerBrute` | `3ad55749-0601-4b9c-afbb-dc9fb9cda661` | ✅ done (idle, walk) |
+| `coilskarHarpooner` | `2e91f3bf-b45d-4c39-b6c9-d48f30fa02c6` | ✅ done (idle, walk) |
+| `illidariCenturion` | `51c583ac-735f-462a-ad5b-bf622757f708` | ✅ done (idle, walk) |
+| `bonechewerBladeFury` | `509eb7d2-04fb-452a-b450-cfc5f8f6b836` | ✅ done (idle, walk) |
+| `ashtonghueMystic` | `9b54e7c8-008a-427a-912c-48299b108fde` | ✅ done (idle, walk) |
+| `bloodProphet` | `dde73571-1b5f-4a04-9a6e-6745f699f8b4` | ✅ done (idle, walk) |
+| `coilskarSerpentGuard` | `af274f5c-2bbe-4030-b55b-f485fa69b31a` | ✅ done (idle, walk) |
+| `ritualChanneler` | `63b488b6-86a9-4388-b339-8acfbadd5395` | ✅ done (idle, walk) |
+
+Enemy sprites extract to: `public/assets/sprites/{typeKey}/{dir}.png` (static rotations)
+and `public/assets/sprites/{typeKey}/{idle|walk}/{dir}/{frame}.png` (animations).
+Asset key format: `enemy_{typeKey}_{dir}` / `enemy_{typeKey}_{anim}_{dir}_{frame}`.
+
+---
+
+## Player Character ID Registry
 
 | Class | PixelLab ID | Status |
 |---|---|---|

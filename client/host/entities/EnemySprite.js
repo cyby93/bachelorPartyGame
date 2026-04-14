@@ -37,9 +37,11 @@ export default class EnemySprite {
     this.id   = data.id
     this.type = data.type ?? 'grunt'
 
-    const typeCfg = ENEMY_TYPES[this.type] ?? ENEMY_TYPES.grunt
-    const R       = typeCfg.radius ?? DEFAULT_R
-    const color   = typeCfg.color  ?? '#c0392b'
+    const typeCfg    = ENEMY_TYPES[this.type] ?? ENEMY_TYPES.grunt
+    const R          = typeCfg.radius    ?? DEFAULT_R
+    const displaySize = typeCfg.spriteSize ?? R * 2   // visual size, independent of hitbox
+    const D          = displaySize / 2                // half display height for positioning
+    const color      = typeCfg.color  ?? '#c0392b'
 
     this.container = new Container()
 
@@ -47,31 +49,32 @@ export default class EnemySprite {
     const spriteKey = ENEMY_SPRITE_KEY[this.type] ?? 'enemy_grunt'
     const body = new Sprite(Assets.get(spriteKey))
     body.anchor.set(0.5)
-    body.width  = R * 2
-    body.height = R * 2
+    body.width  = displaySize
+    body.height = displaySize
     this.container.addChild(body)
 
     // HP pip (single thin bar)
     this._hpBg   = new Graphics()
     this._hpFill = new Graphics()
 
-    this._hpBg.rect(-R, 0, R * 2, 3)
+    this._hpBg.rect(-D, 0, D * 2, 3)
     this._hpBg.fill('#111111')
-    this._hpBg.position.set(0, -R - 6)
-    this._hpFill.position.set(0, -R - 6)
+    this._hpBg.position.set(0, -D - 6)
+    this._hpFill.position.set(0, -D - 6)
 
     this.container.addChild(this._hpBg)
     this.container.addChild(this._hpFill)
 
-    this._R      = R
-    this._color  = color
-    this._maxHp  = data.maxHp ?? typeCfg.hp ?? 30
-    this._lastHp = -1
+    this._R           = R
+    this._displaySize = displaySize
+    this._color       = color
+    this._maxHp       = data.maxHp ?? typeCfg.hp ?? 30
+    this._lastHp      = -1
     this._updateHpBar(data.hp ?? this._maxHp)
 
     // Overhead display (damage numbers only — no cast bar or status icons)
     this.overhead = new OverheadDisplay(this.container, {
-      yOffset: -R - 6,
+      yOffset: -D - 6,
       showCastBar: false,
       showStatusIcons: false,
     })
@@ -89,7 +92,7 @@ export default class EnemySprite {
         },
       })
       label.anchor.set(0.5, 1)
-      label.position.set(0, -R - 18)
+      label.position.set(0, -D - 18)
       this.container.addChild(label)
     }
   }
@@ -97,12 +100,12 @@ export default class EnemySprite {
   _updateHpBar(hp) {
     if (hp === this._lastHp) return
     this._lastHp = hp
-    const R = this._R
+    const D = this._displaySize / 2
 
     const pct = Math.max(0, hp / this._maxHp)
     this._hpFill.clear()
     if (pct > 0) {
-      this._hpFill.rect(-R, 0, R * 2 * pct, 3)
+      this._hpFill.rect(-D, 0, D * 2 * pct, 3)
       this._hpFill.fill(this._color)
     }
   }

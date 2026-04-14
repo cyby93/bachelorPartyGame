@@ -477,6 +477,12 @@ export default class BaseRenderer {
 
   onSkillFired(data) {
     this.vfx?.triggerSkillVFX(data)
+
+    // Trigger one-shot ability sprite animation on the caster
+    if (data.type !== 'CAST') {
+      const sprite = this.playerSprites?.get(data.playerId)
+      sprite?.triggerAbilityAnim()
+    }
   }
 
   onTargetedHit(data) {

@@ -32,7 +32,7 @@ const DIRECTIONS = ['north', 'north-east', 'east', 'south-east', 'south', 'south
  * Update frame counts here once ZIPs are extracted.
  */
 export const DIRECTIONAL_ANIMATIONS = {
-  priest:  { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  priest:  { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, ability: { frames: 4, fps: 12 }, cast: { frames: 6, fps: 8 } },
   warrior: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
   paladin: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
   hunter:  { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },

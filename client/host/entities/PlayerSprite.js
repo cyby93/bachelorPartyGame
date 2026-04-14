@@ -73,11 +73,12 @@ export default class PlayerSprite {
 
     // ── Animation state (directional classes only) ────────────────────────────
     this._animCfg       = DIRECTIONAL_ANIMATIONS[className] ?? null
-    this._animState     = 'idle'   // 'idle' | 'walk'
+    this._animState     = 'idle'   // 'idle' | 'walk' | 'ability' | 'cast'
     this._animFrame     = 0
     this._lastAnimFrame = -1       // force first-frame texture load
     this._animTimer     = 0
     this._lastRenderPos = null     // set on first update; used for movement detection
+    this._abilityTimer  = 0        // seconds remaining in one-shot ability animation
 
     // ── Name label ───────────────────────────────────────────────────────
     this._nameText = new Text({
@@ -198,6 +199,21 @@ export default class PlayerSprite {
     g.fill({ color: 0xffffff, alpha: 0.9 })
   }
 
+  // ── Ability animation trigger ─────────────────────────────────────────────
+
+  /**
+   * Play the one-shot 'ability' animation once, then return to idle/walk.
+   * No-op if the class has no 'ability' animation config.
+   */
+  triggerAbilityAnim() {
+    const cfg = this._animCfg?.ability
+    if (!cfg) return
+    this._animState    = 'ability'
+    this._animFrame    = 0
+    this._animTimer    = 0
+    this._abilityTimer = cfg.frames / cfg.fps
+  }
+
   // ── Per-frame update ───────────────────────────────────────────────────────
 
   /**
@@ -212,20 +228,38 @@ export default class PlayerSprite {
 
       if (this._animCfg) {
         // ── Animated directional sprite ──────────────────────────────────────
-        // 1. Resolve animation state (walk > idle)
+        // 1. Resolve animation state (cast > ability > walk > idle)
         const moved = this._lastRenderPos !== null &&
           (Math.abs(renderPos.x - this._lastRenderPos.x) > 0.3 ||
            Math.abs(renderPos.y - this._lastRenderPos.y) > 0.3)
 
-        const newState = moved ? 'walk' : 'idle'
-        if (newState !== this._animState) {
-          this._animState = newState
-          this._animFrame = 0
-          this._animTimer = 0
+        const isCasting = state.castProgress != null
+        if (isCasting && this._animCfg?.cast) {
+          if (this._animState !== 'cast') {
+            this._animState = 'cast'
+            this._animFrame = 0
+            this._animTimer = 0
+          }
+          this._abilityTimer = 0
+        } else if (this._abilityTimer > 0) {
+          this._abilityTimer -= dt
+          if (this._abilityTimer <= 0) {
+            this._abilityTimer = 0
+            this._animState = moved ? 'walk' : 'idle'
+            this._animFrame = 0
+            this._animTimer = 0
+          }
+        } else {
+          const newState = moved ? 'walk' : 'idle'
+          if (newState !== this._animState) {
+            this._animState = newState
+            this._animFrame = 0
+            this._animTimer = 0
+          }
         }
 
         // 2. Advance frame timer
-        const cfg = this._animCfg[this._animState]
+        const cfg = this._animCfg[this._animState] ?? this._animCfg.idle
         this._animTimer += dt
         const frameDuration = 1 / cfg.fps
         if (this._animTimer >= frameDuration) {

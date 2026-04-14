@@ -8,7 +8,7 @@ Reference for downloading and extracting PixelLab character animations into the 
 
 | Class | PixelLab ID | Status |
 |---|---|---|
-| `priest` | `59c665b2-8bf0-4937-873e-eadea392643d` | ✅ done |
+| `priest` | `59c665b2-8bf0-4937-873e-eadea392643d` | ✅ done (idle, walk, ability_neutral, cast) |
 | `warrior` | `f7dd4422-52ad-47aa-b2fe-3f23452c3170` | ✅ done |
 | `paladin` | `d631692d-4b5f-43a7-973d-8868d7d9c590` | ✅ done |
 | `druid` | `407467d9-5767-4fe5-ba61-e8a57e2d9b6b` | ✅ done |
@@ -31,7 +31,13 @@ public/assets/sprites/{class}/
 ├── idle/
 │   └── {dir}/
 │       ├── 0.png … 3.png   ← 4 frames, 0-indexed
-└── walk/
+├── walk/
+│   └── {dir}/
+│       ├── 0.png … 5.png   ← 6 frames, 0-indexed
+├── ability_neutral/        ← one-shot burst for instant abilities (priest only so far)
+│   └── {dir}/
+│       ├── 0.png … 3.png   ← 4 frames, 0-indexed
+└── cast/                   ← looping channel animation (priest only so far)
     └── {dir}/
         ├── 0.png … 5.png   ← 6 frames, 0-indexed
 ```

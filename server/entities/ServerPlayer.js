@@ -13,6 +13,7 @@ export default class ServerPlayer {
     this.name      = data.name
     this.className = data.className
     this.isHost    = data.isHost ?? false
+    this.isBot     = data.isBot  ?? false
 
     const classData  = CLASSES[this.className]
     this.maxHp       = classData.hp
@@ -182,6 +183,7 @@ export default class ServerPlayer {
       name:      this.name,
       className: this.className,
       isHost:    this.isHost,
+      isBot:     this.isBot,
       x:         Math.round(this.x),
       y:         Math.round(this.y),
       angle:     +this.angle.toFixed(3),

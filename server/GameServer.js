@@ -4,7 +4,7 @@ import { CAMPAIGN }        from '../shared/LevelConfig.js'
 import { BOSS_CONFIG }     from '../shared/BossConfig.js'
 import { ILLIDAN_CONFIG }  from '../shared/IllidanConfig.js'
 import DialogSystem        from './systems/DialogSystem.js'
-import { CLASSES, resolveClassName } from '../shared/ClassConfig.js'
+import { CLASSES, CLASS_NAMES, resolveClassName } from '../shared/ClassConfig.js'
 import ServerPlayer      from './entities/ServerPlayer.js'
 import ServerEnemy       from './entities/ServerEnemy.js'
 import ServerBoss        from './entities/ServerBoss.js'
@@ -93,7 +93,7 @@ export default class GameServer {
     this._dialogSystem   = null
 
     // Debug: skip entrance cinematic when testing boss mechanics
-    this.skipDialog = false
+    this.skipDialog = true
 
     // Stats tracking — cumulative across entire campaign run
     this.stats     = { damage: {}, heal: {}, deaths: {}, resurrections: {}, quiz: {}, kills: 0, startTime: 0 }
@@ -122,6 +122,10 @@ export default class GameServer {
     this._quizResults       = new Map()   // playerId → boolean
     this._quizUpgradesDone  = new Set()
     this._usedQuestionIds   = new Set()
+
+    // Bot players (server-side fake players for solo testing)
+    this.bots    = new Map()   // botId → { socket (stub), wanderAngle, wanderTimer }
+    this._botSeq = 0
 
     this.tick      = 0
     this.lastTick  = Date.now()
@@ -160,6 +164,8 @@ export default class GameServer {
     socket.on(EVENTS.QUIT_CAMPAIGN, ()   => this._onRestartGame(socket))
     socket.on(EVENTS.HOST_ADVANCE,  ()   => this._onHostAdvance(socket))
     socket.on(EVENTS.SET_LEVEL,     data => this._onSetLevel(socket, data))
+    socket.on(EVENTS.BOT_ADD,       data => this._onBotAdd(socket, data))
+    socket.on(EVENTS.BOT_REMOVE,    ()   => this._onBotRemove(socket))
     socket.on(EVENTS.QUIZ_ANSWER,  data => this._onQuizAnswer(socket, data))
     socket.on(EVENTS.QUIZ_UPGRADE, data => this._onQuizUpgrade(socket, data))
     socket.on('disconnect',         ()   => this._onDisconnect(socket))
@@ -168,7 +174,7 @@ export default class GameServer {
   // ── Socket event handlers ──────────────────────────────────────────────────
 
   _onJoin(socket, data) {
-    const { name, className, isHost } = data ?? {}
+    const { name, className, isHost, isBot } = data ?? {}
 
     const resolvedClass = resolveClassName(className) ?? 'Warrior'
     const { x, y } = this._randomPointNearCenter(300, 200)
@@ -178,6 +184,7 @@ export default class GameServer {
       name:      (name || 'Player').slice(0, 20),
       className: resolvedClass,
       isHost:    !!isHost,
+      isBot:     !!isBot,
       arenaWidth: this.arenaWidth,
       arenaHeight: this.arenaHeight,
       x,
@@ -210,6 +217,129 @@ export default class GameServer {
       index:  Number(data?.index) || 0,
       vector: data?.vector ?? { x: 1, y: 0 },
       action: data?.action ?? undefined,
+    })
+  }
+
+  // ── Bot player management (dev/testing tool) ───────────────────────────────
+
+  _onBotAdd(socket, data) {
+    if (!this.players.get(socket.id)?.isHost) return
+    if (this.bots.size >= 12) return
+
+    const id = `bot-${this._botSeq++}`
+    const className = resolveClassName(data?.className)
+      ?? CLASS_NAMES[Math.floor(Math.random() * CLASS_NAMES.length)]
+
+    // Fake socket — bots have no real client; emit is a no-op
+    const fakeSocket = { id, emit: () => {} }
+
+    this._onJoin(fakeSocket, { name: `Bot ${this._botSeq - 1}`, className, isHost: false, isBot: true })
+    this.bots.set(id, {
+      socket:       fakeSocket,
+      wanderAngle:  Math.random() * Math.PI * 2,
+      wanderTimer:  0,
+      skillCursor:  0,
+      skillTimer:   0,
+    })
+  }
+
+  _onBotRemove(socket) {
+    if (!this.players.get(socket.id)?.isHost) return
+    for (const [id, entry] of [...this.bots]) {
+      this._onDisconnect(entry.socket)
+      this.bots.delete(id)
+    }
+  }
+
+  _tickBotAI() {
+    if (this.bots.size === 0) return
+
+    // Combat distance profiles by class role
+    const MELEE_CLASSES  = new Set(['Warrior', 'Paladin', 'Rogue', 'DeathKnight'])
+    const BOT_PROFILE = {
+      melee:  { preferred: 80,  tooClose: 50,  tooFar: 160 },
+      ranged: { preferred: 280, tooClose: 180, tooFar: 420 },
+    }
+
+    this.bots.forEach((botState, botId) => {
+      const player = this.players.get(botId)
+      if (!player || player.isDead) return
+
+      const queue = this.inputQueues.get(botId)
+      if (!queue) return
+
+      const profile = MELEE_CLASSES.has(player.className)
+        ? BOT_PROFILE.melee
+        : BOT_PROFILE.ranged
+
+      // Low HP retreat — back away regardless of role
+      const hpRatio = player.hp / player.maxHp
+      if (hpRatio < 0.25) {
+        // Find nearest threat and flee from it
+        let threatX = player.x, threatY = player.y, threatDist = Infinity
+        this.enemies.forEach(e => {
+          if (e.isDead) return
+          const d = Math.hypot(e.x - player.x, e.y - player.y)
+          if (d < threatDist) { threatDist = d; threatX = e.x; threatY = e.y }
+        })
+        if (this.boss && !this.boss.isDead) {
+          const d = Math.hypot(this.boss.x - player.x, this.boss.y - player.y)
+          if (d < threatDist) { threatX = this.boss.x; threatY = this.boss.y }
+        }
+        const fdx = player.x - threatX, fdy = player.y - threatY
+        const flen = Math.hypot(fdx, fdy) || 1
+        queue.push({ type: 'move', x: fdx / flen, y: fdy / flen })
+        return
+      }
+
+      // Find nearest living enemy or boss
+      let target = null, bestDist = Infinity
+      this.enemies.forEach(e => {
+        if (e.isDead) return
+        const d = Math.hypot(e.x - player.x, e.y - player.y)
+        if (d < bestDist) { bestDist = d; target = e }
+      })
+      if (!target && this.boss && !this.boss.isDead) {
+        target = this.boss
+        bestDist = Math.hypot(this.boss.x - player.x, this.boss.y - player.y)
+      }
+
+      if (target) {
+        const dx = target.x - player.x
+        const dy = target.y - player.y
+        const len = bestDist || 1
+        const nx = dx / len, ny = dy / len  // unit vector toward target
+
+        // Movement: position relative to preferred combat distance
+        if (bestDist < profile.tooClose) {
+          // Back directly away
+          queue.push({ type: 'move', x: -nx, y: -ny })
+        } else if (bestDist > profile.tooFar) {
+          // Close in
+          queue.push({ type: 'move', x: nx, y: ny })
+        } else if (bestDist > profile.preferred) {
+          // Slowly approach — ranged bots use this band a lot
+          queue.push({ type: 'move', x: nx, y: ny })
+        } else {
+          // In preferred range: strafe sideways to stay active
+          queue.push({ type: 'move', x: -ny, y: nx })
+        }
+
+        // Skill rotation — cycle through slots every 3 ticks
+        if (--botState.skillTimer <= 0) {
+          botState.skillCursor = (botState.skillCursor + 1) % 4
+          botState.skillTimer  = 3
+        }
+        // CooldownSystem silently rejects if on cooldown — safe to push every tick
+        queue.push({ type: 'skill', index: botState.skillCursor, vector: { x: nx, y: ny } })
+      } else {
+        // No targets — wander, change direction every ~2s (40 ticks at 20 Hz)
+        if (--botState.wanderTimer <= 0) {
+          botState.wanderAngle = Math.random() * Math.PI * 2
+          botState.wanderTimer = 40 + Math.floor(Math.random() * 20)
+        }
+        queue.push({ type: 'move', x: Math.cos(botState.wanderAngle), y: Math.sin(botState.wanderAngle) })
+      }
     })
   }
 
@@ -696,6 +826,9 @@ export default class GameServer {
     const dt  = Math.min((now - this.lastTick) / 1000, 0.1)
     this.lastTick = now
     this.tick++
+
+    // 0. Bot AI — populate input queues before the drain
+    this._tickBotAI()
 
     // 1. Drain input queues
     this.inputQueues.forEach((queue, playerId) => {
@@ -2042,7 +2175,7 @@ export default class GameServer {
 
   _getQuizParticipants() {
     const participants = []
-    this.players.forEach(p => { if (!p.isHost) participants.push(p) })
+    this.players.forEach(p => { if (!p.isHost && !p.isBot) participants.push(p) })
     return participants
   }
 
@@ -2193,7 +2326,7 @@ export default class GameServer {
   _checkAllDead() {
     let livingCount = 0
     this.players.forEach(p => {
-      if (!p.isHost && !p.isDead) livingCount++
+      if (!p.isHost && !p.isBot && !p.isDead) livingCount++
     })
     if (livingCount === 0 && this.players.size > 0) {
       console.log('[~] All players dead — game over')

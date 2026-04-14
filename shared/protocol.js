@@ -17,6 +17,8 @@ export const EVENTS = {
   HOST_ADVANCE:  'host:advance',    // host clicks "Continue" on level-complete screen
   QUIT_CAMPAIGN: 'host:quit',       // host aborts campaign mid-run → back to lobby
   SET_LEVEL:     'host:setLevel',   // { levelIndex } — debug: pick starting level from lobby
+  BOT_ADD:       'host:botAdd',     // { className? } — undefined = random class
+  BOT_REMOVE:    'host:botRemove',  // remove all bots
 
   // ── Server → All Clients ─────────────────────────────────────────────────
   INIT:          'game:init',       // full state snapshot sent on join

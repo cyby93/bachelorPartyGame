@@ -38,6 +38,13 @@ const prevLevelBtn   = document.getElementById('prev-level-btn')
 const nextLevelBtn   = document.getElementById('next-level-btn')
 const quitCampaignBtn = document.getElementById('quit-campaign-btn')
 const skipDialogChk  = document.getElementById('skip-dialog-chk')
+const botAddBtn      = document.getElementById('bot-add-btn')
+const botRemoveBtn   = document.getElementById('bot-remove-btn')
+const botCountEl     = document.getElementById('bot-count')
+const botPanel       = document.getElementById('bot-panel')
+
+botAddBtn?.addEventListener('click', () => socket.emit(EVENTS.BOT_ADD, {}))
+botRemoveBtn?.addEventListener('click', () => socket.emit(EVENTS.BOT_REMOVE))
 const levelPanelEl   = document.getElementById('level-panel')
 const levelIndexEl   = document.getElementById('level-index')
 const currentLevelNameEl = document.getElementById('current-level-name')
@@ -105,11 +112,15 @@ function renderDOMPlayerList() {
     return
   }
 
+  const botCount = players.filter(p => p.isBot).length
+  if (botCountEl) botCountEl.textContent = `${botCount} / 12 bots`
+
   playerListEl.innerHTML = players.map(p => {
-    const color = CLASSES[p.className]?.color ?? '#aaa'
+    const color  = CLASSES[p.className]?.color ?? '#aaa'
+    const botTag = p.isBot ? ' <span style="color:#555;font-size:10px">[BOT]</span>' : ''
     return `
       <div class="player-item" style="border-left-color:${color}">
-        <span class="pname">${p.name}</span>
+        <span class="pname">${p.name}${botTag}</span>
         <span class="pclass" style="color:${color}">${p.className}</span>
       </div>`
   }).join('')
@@ -223,8 +234,9 @@ function setSceneControls(scene) {
     startBtn.style.display = 'none'
   }
 
-  // Level selector only visible in lobby
+  // Level selector and bot panel only visible in lobby
   if (scene !== 'lobby' && levelSelector) levelSelector.style.display = 'none'
+  if (botPanel) botPanel.style.display = (scene === 'lobby') ? '' : 'none'
 
   // Quit Campaign button: visible during an active campaign run
   const campaignScenes = ['battle', 'bossFight', 'levelComplete', 'quiz']

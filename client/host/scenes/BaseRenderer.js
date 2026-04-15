@@ -33,10 +33,12 @@ export default class BaseRenderer {
     this.playerSprites = new Map()   // id → PlayerSprite
     this.enemySprites  = new Map()   // id → EnemySprite
     this.projSprites   = new Map()   // id → ProjectileSprite
+    this._bossFireballSprites = new Map()   // id → ProjectileSprite (Illidan fireballs)
 
-    this._entityRoot          = new Container()
-    this._uiRoot              = new Container()
-    this._projectileContainer = new Container()
+    this._entityRoot               = new Container()
+    this._uiRoot                   = new Container()
+    this._projectileContainer      = new Container()
+    this._bossFireballContainer    = new Container()
 
     this._beamGfx    = new Graphics()
     this._flashBeams = []   // [{ x1, y1, x2, y2, color, expiresAt }]
@@ -52,6 +54,7 @@ export default class BaseRenderer {
   enter() {
     this.game.layers.entities.addChild(this._entityRoot)
     this.game.layers.fx.addChild(this._projectileContainer)
+    this.game.layers.fx.addChild(this._bossFireballContainer)
     this.game.layers.ui.addChild(this._uiRoot)
     this.vfx = new VFXManager(this.game.layers)
     this.game.layers.fx.addChild(this._beamGfx)
@@ -76,6 +79,9 @@ export default class BaseRenderer {
     this.projSprites.forEach(s => s.destroy())
     this.projSprites.clear()
 
+    this._bossFireballSprites.forEach(s => s.destroy())
+    this._bossFireballSprites.clear()
+
     this.minionGfx.forEach(gfx => gfx.destroy({ children: true }))
     this.minionGfx.clear()
 
@@ -86,6 +92,7 @@ export default class BaseRenderer {
 
     this.game.layers.entities.removeChild(this._entityRoot)
     this.game.layers.fx.removeChild(this._projectileContainer)
+    this.game.layers.fx.removeChild(this._bossFireballContainer)
     this.game.layers.ui.removeChild(this._uiRoot)
 
     this._uiRoot.removeChildren()
@@ -99,6 +106,7 @@ export default class BaseRenderer {
     const activeIds = this._syncPlayers(dt)
     this._syncEnemies(dt)
     this._syncProjectiles()
+    this._syncBossFireballs()
     this._syncExtras(dt)
     this._renderBeams(dt)
     this._updateVFX(dt)
@@ -181,6 +189,28 @@ export default class BaseRenderer {
         this._projectileContainer.removeChild(s.container)
         s.destroy()
         this.projSprites.delete(id)
+      }
+    })
+  }
+
+  _syncBossFireballs() {
+    const fireballs = this.game.knownState.illidanFireballs ?? []
+    const activeIds = new Set(fireballs.map(f => f.id))
+
+    for (const fb of fireballs) {
+      if (!this._bossFireballSprites.has(fb.id)) {
+        const s = new ProjectileSprite(fb)
+        this._bossFireballSprites.set(fb.id, s)
+        this._bossFireballContainer.addChild(s.container)
+      }
+      this._bossFireballSprites.get(fb.id).update(fb)
+    }
+
+    this._bossFireballSprites.forEach((s, id) => {
+      if (!activeIds.has(id)) {
+        this._bossFireballContainer.removeChild(s.container)
+        s.destroy()
+        this._bossFireballSprites.delete(id)
       }
     })
   }
@@ -512,6 +542,11 @@ export default class BaseRenderer {
 
   /** No-op in base — override in renderers that support channel interruption. */
   onChannelInterrupted(data) {}
+
+  onIllidanAuraPulse(data) {
+    if (!this.vfx) return
+    this.vfx.oneShot.aoeFlash(data.x, data.y, data.radius, data.color)
+  }
 
   onPlayerAdded(p) {
     if (p.isHost || this.playerSprites.has(p.id)) return

@@ -16,7 +16,8 @@ export default class ServerPlayer {
     this.isBot     = data.isBot  ?? false
 
     const classData  = CLASSES[this.className]
-    this.maxHp       = classData.hp
+    this.baseMaxHp   = classData.hp   // unmodified ceiling; Shear/effects reduce maxHp from here
+    this.maxHp       = this.baseMaxHp
     this.hp          = this.maxHp
     this.baseSpeed   = classData.speed   // px-units per frame at 60 FPS
     this.speed       = this.baseSpeed    // current (may be modified by effects)

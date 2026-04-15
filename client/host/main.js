@@ -388,6 +388,10 @@ socket.on(EVENTS.ILLIDAN_PHASE_TRANSITION, data => {
   game.activeRenderer?.onIllidanPhaseTransition?.(data)
 })
 
+socket.on(EVENTS.ILLIDAN_AURA_PULSE, data => {
+  game.activeRenderer?.onIllidanAuraPulse?.(data)
+})
+
 // ── Quiz events ───────────────────────────────────────────────────────────
 
 socket.on(EVENTS.QUIZ_QUESTION, data => {

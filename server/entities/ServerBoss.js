@@ -35,6 +35,7 @@ export default class ServerBoss {
     this.angle     = 0
     this.isDead    = false
     this.isImmune  = false
+    this.activeCast = null  // { attack, castTime, startedAt } for cast-based abilities
     this.phase     = 1
     this.isPlayer  = false
     this.id        = 'boss'
@@ -123,6 +124,8 @@ export default class ServerBoss {
    */
   updateAbilities(dt, players, now) {
     if (this.isDead) return []
+    // Don't start new abilities while a cast is in progress
+    if (this.activeCast) return []
     const attacks = []
 
     for (const ability of this._getActiveAbilities()) {
@@ -149,6 +152,22 @@ export default class ServerBoss {
       }
 
       this._abilityCooldowns[ability.name] = now
+
+      // Cast-based abilities: store the pending attack, show cast bar, become immune
+      if (ability.castTime) {
+        this.activeCast = {
+          attack: {
+            ...ability,
+            damage: Math.round((ability.damage ?? 0) * this._damageMult),
+            bossX: this.x, bossY: this.y, target: nearest,
+          },
+          castTime:  ability.castTime,
+          startedAt: now,
+        }
+        this.isImmune = true
+        break  // only one ability at a time; cast is now pending
+      }
+
       attacks.push({
         ...ability,
         damage: Math.round((ability.damage ?? 0) * this._damageMult),
@@ -159,8 +178,22 @@ export default class ServerBoss {
     return attacks
   }
 
+  /**
+   * Advances any in-progress cast. Returns the completed attack object when
+   * the cast time has elapsed, or null if still casting / nothing active.
+   */
+  tickCast(now) {
+    if (!this.activeCast) return null
+    const elapsed = now - this.activeCast.startedAt
+    if (elapsed < this.activeCast.castTime) return null
+    const attack = this.activeCast.attack
+    this.activeCast = null
+    this.isImmune   = false
+    return attack
+  }
+
   toDTO() {
-    return {
+    const dto = {
       id:       'boss',
       name:     this.name,
       x:        Math.round(this.x),
@@ -174,5 +207,13 @@ export default class ServerBoss {
       isImmune:   this.isImmune || undefined,
       damageMult: +this._damageMult.toFixed(2),
     }
+    if (this.activeCast) {
+      const elapsed = Date.now() - this.activeCast.startedAt
+      dto.castProgress = Math.min(1, elapsed / this.activeCast.castTime)
+      dto.castName     = this.activeCast.attack.name
+    } else {
+      dto.castProgress = null  // explicit null clears stale value in client knownState merge
+    }
+    return dto
   }
 }

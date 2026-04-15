@@ -24,16 +24,24 @@ export function rebuildStats(player) {
   player.isRooted        = false
   player.isStunned       = false
   player.isInvisible     = false
+  let maxHpReduction     = 0
   for (const effect of player.activeEffects) {
     const p = effect.params ?? {}
     if (p.speedMultiplier    != null) player.speedMult    *= p.speedMultiplier
     if (p.damageMultiplier   != null) player.damageMult   *= p.damageMultiplier
     if (p.fireRateMultiplier != null) player.fireRateMult *= p.fireRateMultiplier
     if (p.damageReduction    != null) player.damageReduction = Math.max(player.damageReduction, p.damageReduction)
+    if (p.maxHpReduction     != null) maxHpReduction = Math.max(maxHpReduction, p.maxHpReduction)
     if (p.rooted)    player.isRooted    = true
     if (p.stunned)   player.isStunned   = true
     if (p.invisible) player.isInvisible = true
   }
+  // Apply max-HP reduction (Shear). baseMaxHp is set once at spawn; maxHp derives from it.
+  const base = player.baseMaxHp ?? player.maxHp
+  player.baseMaxHp = base
+  player.maxHp = Math.round(base * (1 - maxHpReduction))
+  // Clamp current HP so it can't exceed the new (lower) ceiling
+  if (player.hp > player.maxHp) player.hp = player.maxHp
 
   // Grant any newly-added shield effects
   if (player.shieldAbsorb == null) player.shieldAbsorb = 0
@@ -787,6 +795,18 @@ export default class SkillSystem {
       return
     }
 
+    if (effectType === 'PLAYER_DAMAGE') {
+      // Boss-owned zone that damages players (not enemies or boss itself)
+      gs.players.forEach(p => {
+        if (p.isDead || p.isHost) return
+        if (this._collision.distance({ x: cx, y: cy }, { x: p.x, y: p.y }) <= radius + GAME_CONFIG.PLAYER_RADIUS_X) {
+          this._dealDamage(gs, null, p, config.damage ?? 0, config.name)
+          if (p.isDead && gs.stats) gs.stats.deaths[p.id] = (gs.stats.deaths[p.id] ?? 0) + 1
+        }
+      })
+      return
+    }
+
     // Default: DAMAGE
     this._aoeHitEnemies(gs, player, config, cx, cy, radius)
   }
@@ -1292,7 +1312,8 @@ export default class SkillSystem {
       }
 
       const before = p.activeEffects.length
-      p.activeEffects = p.activeEffects.filter(e => e.expiresAt > now)
+      // illidan: effects are managed and expired by GameServer._tickIllidanEffects; skip them here
+      p.activeEffects = p.activeEffects.filter(e => e.expiresAt > now || e.source?.startsWith('illidan:'))
       if (p.activeEffects.length !== before) {
         rebuildStats(p)
       }

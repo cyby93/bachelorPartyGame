@@ -48,4 +48,5 @@ export const EVENTS = {
   // ── Illidan encounter (Level 5) ─────────────────────────────────────────
   ILLIDAN_DIALOG_LINE:      'illidan:dialog_line',      // S→All: { speaker, text }
   ILLIDAN_PHASE_TRANSITION: 'illidan:phase_transition', // S→All: { phase }
+  ILLIDAN_AURA_PULSE:       'illidan:aura_pulse',       // S→All: { x, y, radius, color }
 }

@@ -233,9 +233,9 @@ export const CAMPAIGN = [
     // delayAfter: ms to wait after this line before showing the next.
     dialog: [
       { speaker: 'akama',   text: 'Illidan! The time has come to end this.',       delayAfter: 3000 },
-      { speaker: 'illidan', text: 'Akama... your treachery has finally caught up.', delayAfter: 3500 },
-      { speaker: 'akama',   text: 'My people will be free. I will see to that.',    delayAfter: 3000 },
-      { speaker: 'illidan', text: 'You are not prepared!',                          delayAfter: 2500 },
+      // { speaker: 'illidan', text: 'Akama... your treachery has finally caught up.', delayAfter: 3500 },
+      // { speaker: 'akama',   text: 'My people will be free. I will see to that.',    delayAfter: 3000 },
+      // { speaker: 'illidan', text: 'You are not prepared!',                          delayAfter: 2500 },
     ],
   },
 ]

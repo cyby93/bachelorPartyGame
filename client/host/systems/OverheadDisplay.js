@@ -13,18 +13,23 @@ import VFXAssets from './VFXAssets.js'
 
 // Status effect → icon letter + color mapping
 const EFFECT_ICONS = {
-  sprint:       { letter: 'S', color: 0x00ffff },
-  speed:        { letter: 'S', color: 0x00ffff },
-  bloodlust:    { letter: 'B', color: 0xff4444 },
-  shield:       { letter: 'W', color: 0xffff00 },
-  stealth:      { letter: 'I', color: 0x9966ff },
-  invisible:    { letter: 'I', color: 0x9966ff },
-  root:         { letter: 'R', color: 0x8b4513 },
-  stun:         { letter: 'X', color: 0xff8800 },
-  bear:         { letter: 'B', color: 0x8b4513 },
-  damage_boost: { letter: 'D', color: 0xff0000 },
-  armor:        { letter: 'A', color: 0xcccccc },
-  reduction:    { letter: 'A', color: 0xcccccc },
+  sprint:          { letter: 'S', color: 0x00ffff },
+  speed:           { letter: 'S', color: 0x00ffff },
+  bloodlust:       { letter: 'B', color: 0xff4444 },
+  shield:          { letter: 'W', color: 0xffff00 },
+  stealth:         { letter: 'I', color: 0x9966ff },
+  invisible:       { letter: 'I', color: 0x9966ff },
+  root:            { letter: 'R', color: 0x8b4513 },
+  stun:            { letter: 'X', color: 0xff8800 },
+  bear:            { letter: 'B', color: 0x8b4513 },
+  damage_boost:    { letter: 'D', color: 0xff0000 },
+  armor:           { letter: 'A', color: 0xcccccc },
+  reduction:       { letter: 'A', color: 0xcccccc },
+  // Illidan debuffs
+  shear:           { letter: 'C', color: 0xff4400 },
+  parasitic:       { letter: 'P', color: 0x9900cc },
+  darkBarrage:     { letter: 'D', color: 0x330099 },
+  agonizingFlames: { letter: 'F', color: 0xff8800 },
 }
 
 export default class OverheadDisplay {
@@ -148,6 +153,11 @@ export default class OverheadDisplay {
       if (p.rooted) keys.push('root')
       if (p.stunned) keys.push('stun')
       if (p.transformSprite === 'bear') keys.push('bear')
+      // Illidan debuffs
+      if (p.shear)           keys.push('shear')
+      if (p.parasitic)       keys.push('parasitic')
+      if (p.darkBarrage)     keys.push('darkBarrage')
+      if (p.agonizingFlames) keys.push('agonizingFlames')
     }
 
     // Deduplicate

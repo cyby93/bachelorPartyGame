@@ -13,12 +13,17 @@ function parseColor(hex) {
 
 // Effect source pattern → aura ring color
 const AURA_COLORS = {
-  speed:        0x00ffff,
-  damage_boost: 0xff4444,
-  reduction:    0xffff00,
-  shield:       0xffcc00,
-  bear:         0x8b4513,
-  default:      0xaaaaaa,
+  speed:           0x00ffff,
+  damage_boost:    0xff4444,
+  reduction:       0xffff00,
+  shield:          0xffcc00,
+  bear:            0x8b4513,
+  // Illidan debuffs
+  shear:           0xff4400,
+  parasitic:       0x9900cc,
+  darkBarrage:     0x3300aa,
+  agonizingFlames: 0xff8800,
+  default:         0xaaaaaa,
 }
 
 function getAuraColor(params) {
@@ -28,6 +33,11 @@ function getAuraColor(params) {
   if (params.damageReduction) return AURA_COLORS.reduction
   if (params.shield) return AURA_COLORS.shield
   if (params.transformSprite === 'bear') return AURA_COLORS.bear
+  // Illidan debuffs
+  if (params.shear)           return AURA_COLORS.shear
+  if (params.parasitic)       return AURA_COLORS.parasitic
+  if (params.darkBarrage)     return AURA_COLORS.darkBarrage
+  if (params.agonizingFlames) return AURA_COLORS.agonizingFlames
   return AURA_COLORS.default
 }
 
@@ -52,11 +62,11 @@ export default class AuraSystem {
     const entry = this._entityAuras.get(entityId)
     entry.container = entityContainer
 
-    // Filter to effects that should show aura rings (buffs only, not debuffs on enemies)
+    // Filter to effects that should show aura rings
     const auraEffects = (effects ?? []).filter(e => {
       const p = e.params ?? {}
-      // Show ring for speed buffs, damage buffs, damage reduction, shields, transforms
       return p.speedMultiplier || p.damageMultiplier || p.damageReduction || p.shield || p.transformSprite
+        || p.shear || p.parasitic || p.darkBarrage || p.agonizingFlames
     })
 
     // Handle invisible: set entity alpha instead of ring

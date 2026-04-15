@@ -42,10 +42,10 @@ export default class BossSprite {
     this._lastHpPct = -1
     this._updateHpBar(1.0)
 
-    // Overhead display (damage numbers only)
+    // Overhead display — cast bar enabled so players can see boss ability wind-ups
     this.overhead = new OverheadDisplay(this.container, {
       yOffset: -this._radius - 26,
-      showCastBar: false,
+      showCastBar: true,
       showStatusIcons: false,
     })
   }
@@ -61,13 +61,6 @@ export default class BossSprite {
     sprite.height = 220      // full height including wings above body
     this._body.addChild(sprite)
 
-    const nameLabel = new Text({
-      text:  'Illidan Stormrage',
-      style: { fontFamily: 'Arial', fontSize: 14, fontWeight: 'bold', fill: '#ff4444', align: 'center' },
-    })
-    nameLabel.anchor.set(0.5, 1)
-    nameLabel.position.set(0, -R - 10)
-    this.container.addChild(nameLabel)
   }
 
   _buildShadeOfAkama() {
@@ -111,6 +104,8 @@ export default class BossSprite {
     }
 
     if (state.maxHp) this._updateHpBar(state.hp / state.maxHp)
+
+    this.overhead.updateCastBar(state.castProgress ?? 0)
   }
 
   destroy() {

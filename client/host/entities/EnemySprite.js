@@ -89,10 +89,13 @@ export default class EnemySprite {
     this.container.addChild(this._berserckGfx)
     this._drawBerserckRing(typeCfg.berserckRadius ?? 65)
 
-    // HP pip
+    // HP pip — fixed 30px wide, 4px tall
+    const HP_W = 30, HP_H = 4
+    this._hpBarW = HP_W
+    this._hpBarH = HP_H
     this._hpBg   = new Graphics()
     this._hpFill = new Graphics()
-    this._hpBg.rect(-D, 0, D * 2, 3)
+    this._hpBg.rect(-HP_W / 2, 0, HP_W, HP_H)
     this._hpBg.fill('#111111')
     this._hpBg.position.set(0, -D - 6)
     this._hpFill.position.set(0, -D - 6)
@@ -128,11 +131,12 @@ export default class EnemySprite {
   _updateHpBar(hp) {
     if (hp === this._lastHp) return
     this._lastHp = hp
-    const D   = this._displaySize / 2
+    const W   = this._hpBarW
+    const H   = this._hpBarH
     const pct = Math.max(0, hp / this._maxHp)
     this._hpFill.clear()
     if (pct > 0) {
-      this._hpFill.rect(-D, 0, D * 2 * pct, 3)
+      this._hpFill.rect(-W / 2, 0, W * pct, H)
       this._hpFill.fill(this._color)
     }
   }

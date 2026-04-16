@@ -73,7 +73,7 @@ const SkillDatabase = {
       cooldown:  1200,
       damage:    10,
       range:     70,
-      angle:     Math.PI / 4,   // 45° cone
+      angle:     Math.PI / 3,   // 60° cone
       icon:      '🔨'
     },
     {
@@ -81,7 +81,7 @@ const SkillDatabase = {
       type:      'PROJECTILE',
       inputType: 'AIMED',
       cooldown:  7000,
-      damage:    50,
+      damage:    40,
       speed:     420,
       radius:    18,
       range:     500,
@@ -96,7 +96,7 @@ const SkillDatabase = {
       type:      'SHIELD',
       inputType: 'DIRECTIONAL',
       cooldown:  3000,
-      arc:       Math.PI / 2,   // 90° block arc
+      arc:       Math.PI / 3,   // 60° block arc
       icon:      '🔆'
     },
     {
@@ -106,7 +106,7 @@ const SkillDatabase = {
       inputType: 'INSTANT',
       cooldown:  7000,
       damage:    3,
-      radius:    200,
+      radius:    100,
       duration:  6000,
       tickRate:  500,
       effectType: 'DUAL',
@@ -122,11 +122,11 @@ const SkillDatabase = {
       type:      'CAST',
       castBar:   true,
       inputType: 'DIRECTIONAL',
-      cooldown:  1000,
+      cooldown:  0,
       castTime:  1000,
       payload: {
         type:    'PROJECTILE',
-        damage:  5,
+        damage:  7,
         speed:   600,
         radius:  10,
         range:   500,
@@ -140,9 +140,9 @@ const SkillDatabase = {
       castBar:          true,
       subtype:         'HEAL_ALLY',
       inputType:       'DIRECTIONAL',
-      cooldown:        3000,
-      castTime:         1200,
-      healAmount:      20,
+      cooldown:        0,
+      castTime:         1500,
+      healAmount:      15,
       range:           400,
       maxChains:       2,
       chainRadius:     200,
@@ -158,7 +158,7 @@ const SkillDatabase = {
       duration:  12000,
       totemAbility: {
         type:     'PROJECTILE',
-        damage:   5,
+        damage:   4,
         speed:    400,
         radius:   8,
         range:    250,
@@ -310,7 +310,7 @@ const SkillDatabase = {
       type:      'CAST',
       castBar:   true,
       inputType: 'DIRECTIONAL',
-      cooldown:  1000,
+      cooldown:  0,
       castTime:  1000,
       payload: {
         type:    'PROJECTILE',
@@ -348,7 +348,7 @@ const SkillDatabase = {
       castBar:   true,
       inputType: 'DIRECTIONAL',
       cooldown:  7000,
-      castTime:  3000,
+      castTime:  2000,
       payload: {
         type:    'PROJECTILE',
         damage:  90,
@@ -374,7 +374,7 @@ const SkillDatabase = {
       type:      'CAST',
       castBar:   true,
       inputType: 'DIRECTIONAL',
-      cooldown:  800,
+      cooldown:  0,
       castTime:  800,
       payload: {
         type:    'PROJECTILE',
@@ -450,7 +450,7 @@ const SkillDatabase = {
       cooldown:       500,
       damage:         5,
       range:          70,
-      angle:          Math.PI / 6,   // 30° cone — very precise
+      angle:          Math.PI / 3,   // 60° cone — very precise
       addsComboPoint: true,
       icon:           '🗡️'
     },
@@ -498,7 +498,7 @@ const SkillDatabase = {
       type:      'CAST',
       castBar:   true,
       inputType: 'DIRECTIONAL',
-      cooldown:  1000,
+      cooldown:  0,
       castTime:  1000,
       payload: {
         type:    'PROJECTILE',
@@ -516,7 +516,7 @@ const SkillDatabase = {
       castBar:          true,
       subtype:          'DAMAGE_ENEMY',
       inputType:        'DIRECTIONAL',
-      cooldown:         1000,
+      cooldown:         0,
       castTime:         1000,
       range:            600,
       damage:       2,

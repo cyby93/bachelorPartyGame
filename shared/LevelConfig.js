@@ -41,10 +41,10 @@ export const CAMPAIGN = [
       betweenWaveDelayMs: 3000,
       spawnEdge: 'right',
       progression: [
-        { fromWave: 1, enemyTypes: ['felGuard'],                                    countRange: [3, 4] },
-        { fromWave: 3, enemyTypes: ['felGuard', 'coilskarHarpooner'],                          countRange: [4, 6] },
-        { fromWave: 5, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute'],                 countRange: [5, 8] },
-        { fromWave: 7, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic'],       countRange: [6, 10] },
+        { fromWave: 1, enemyTypes: ['felGuard', 'coilskarHarpooner'],                                    countRange: [3, 4] },
+        { fromWave: 2, enemyTypes: ['felGuard', 'coilskarHarpooner'],                          countRange: [4, 6] },
+        { fromWave: 3, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic'],                 countRange: [5, 8] },
+        { fromWave: 4, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic', 'coilskarSerpentGuard', 'bloodProphet', 'ritualChanneler'],       countRange: [6, 10] },
       ],
     },
     difficulty: {
@@ -76,10 +76,14 @@ export const CAMPAIGN = [
       buffFactor: 0.25,            // 25% faster spawns per destroyed building
       spawnRadius: 80,             // spawn distance from building center
       enemyTypes: [
-        { type: 'felGuard',   weight: 3 },
-        { type: 'bonechewerBrute',   weight: 1 },
-        { type: 'coilskarHarpooner',  weight: 2 },
-        { type: 'illidariCenturion', weight: 1 },
+        { type: 'felGuard',   weight: 4 },
+        { type: 'bonechewerBrute',   weight: 2 },
+        { type: 'coilskarHarpooner',  weight: 3 },
+        { type: 'illidariCenturion', weight: 2 },
+        { type: 'bonechewerBladeFury', weight: 2 },
+        { type: 'ashtonghueMystic', weight: 2 },
+        { type: 'bloodProphet', weight: 2 },
+        { type: 'coilskarSerpentGuard', weight: 1 },
       ],
     },
     spawning: null,
@@ -97,7 +101,7 @@ export const CAMPAIGN = [
     name: 'The Black Temple Gates',
     arena: {
       width: 1100,
-      height: 400,
+      height: 600,
       rooms: [
         { id: 'left',  x: 0,   y: 0, width: 530, height: 400 },
         { id: 'right', x: 570, y: 0, width: 530, height: 400 },

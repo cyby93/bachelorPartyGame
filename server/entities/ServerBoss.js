@@ -48,12 +48,23 @@ export default class ServerBoss {
     this.baseSpeed      = cfg.speed
     this.speed          = this.baseSpeed
 
+    // ── Enrage timer ──────────────────────────────────────────────────────
+    this._fightStartTime  = Date.now()
+    this._enrageActive    = false
+
     /**
      * Optional callback wired by GameServer for encounter-specific logic.
      * Called with (newPhase) whenever the phase changes.
      * @type {((phase: number) => void) | null}
      */
     this.onPhaseChange = null
+
+    /**
+     * Optional callback fired once when enrage triggers.
+     * Wire in GameServer to emit a client event if needed.
+     * @type {(() => void) | null}
+     */
+    this.onEnrage = null
 
     // Contact damage rate-limiter per player: Map<playerId, timestamp>
     // Stored externally on ServerPlayer as _lastBossContact
@@ -93,6 +104,15 @@ export default class ServerBoss {
   update(dt, players) {
     if (this.isDead) return
 
+    // Check enrage timer
+    if (!this._enrageActive && this._config.enrageTimer) {
+      if (Date.now() - this._fightStartTime >= this._config.enrageTimer) {
+        this._enrageActive = true
+        console.log('[Boss] ENRAGE — attack and cast speed doubled')
+        this.onEnrage?.()
+      }
+    }
+
     // Chase nearest living non-host player
     let nearest = null
     let bestDist = Infinity
@@ -128,9 +148,12 @@ export default class ServerBoss {
     if (this.activeCast) return []
     const attacks = []
 
+    const attackSpeedMult = this._enrageActive ? (this._config.enrageAttackSpeedMult ?? 1) : 1
+    const castSpeedMult   = this._enrageActive ? (this._config.enrageCastSpeedMult   ?? 1) : 1
+
     for (const ability of this._getActiveAbilities()) {
       const lastUsed = this._abilityCooldowns[ability.name] ?? 0
-      if (now - lastUsed < ability.cooldown) continue
+      if (now - lastUsed < ability.cooldown / attackSpeedMult) continue
 
       // Find nearest living non-host player
       let nearest = null
@@ -161,7 +184,7 @@ export default class ServerBoss {
             damage: Math.round((ability.damage ?? 0) * this._damageMult),
             bossX: this.x, bossY: this.y, target: nearest,
           },
-          castTime:  ability.castTime,
+          castTime:  ability.castTime / castSpeedMult,
           startedAt: now,
         }
         this.isImmune = true

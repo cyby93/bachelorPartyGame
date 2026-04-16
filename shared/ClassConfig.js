@@ -12,7 +12,7 @@ export const CLASS_NAMES = [
 ]
 
 export const CLASSES = {
-  Warrior:     { name: 'Warrior',       color: '#3498db', hp: 150, speed: 2.5, skills: SkillDatabase.Warrior     },
+  Warrior:     { name: 'Warrior',       color: '#3498db', hp: 1150, speed: 2.5, skills: SkillDatabase.Warrior     },
   Paladin:     { name: 'Paladin',       color: '#f39c12', hp: 140, speed: 2.3, skills: SkillDatabase.Paladin     },
   Shaman:      { name: 'Shaman',        color: '#9b59b6', hp: 110, speed: 2.6, skills: SkillDatabase.Shaman      },
   Hunter:      { name: 'Hunter',        color: '#27ae60', hp: 100, speed: 3.0, skills: SkillDatabase.Hunter      },

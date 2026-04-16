@@ -215,7 +215,8 @@ export default class HostGame {
     if (delta.tombstones  != null) this.knownState.tombstones  = delta.tombstones
     if (delta.stats       != null) this.knownState.stats       = delta.stats
     if (delta.aoeZones    != null) this.knownState.aoeZones    = delta.aoeZones
-    if (delta.minions     != null) this.knownState.minions     = delta.minions
+    if (delta.minions          != null) this.knownState.minions          = delta.minions
+    if (delta.illidanFireballs != null) this.knownState.illidanFireballs = delta.illidanFireballs
     // gates/buildings/npcs: null means "none this level" — must clear stale data from previous levels
     if ('gates'     in delta)      this.knownState.gates       = delta.gates     ?? []
     if ('buildings' in delta)      this.knownState.buildings   = delta.buildings ?? []

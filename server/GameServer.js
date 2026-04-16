@@ -1142,7 +1142,7 @@ export default class GameServer {
       }
 
       // Shadow Demon: instant kill on contact (Level 5)
-      if (e.type === 'shadowDemon' && now - e._lastContactDamage > 1000) {
+      if (e.type === 'shadowDemon' && now - (e._lastContactDamage ?? 0) > 1000) {
         this.players.forEach(p => {
           if (p.isHost || p.isDead) return
           if (playerHitsCircle(p.x, p.y, e.x, e.y, e.radius)) {
@@ -1728,8 +1728,8 @@ export default class GameServer {
             id,
             x: sx, y: sy,
             type: 'shadowDemon',
-            hp: base.hp, maxHp: base.hp,
-            speed: base.speed,
+            hp: attack.hp ?? base.hp, maxHp: attack.hp ?? base.hp,
+            speed: attack.speed ?? base.speed,
             radius: base.radius,
             contactDamage: 0,
           })
@@ -1792,7 +1792,7 @@ export default class GameServer {
 
     this.boss.phase = 3
     this.boss.isImmune = false
-    this.boss.speed = 2.0
+    this.boss.speed = 0
     this.boss.x = this.arenaWidth  / 2
     this.boss.y = this.arenaHeight / 2
 

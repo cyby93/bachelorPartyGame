@@ -4,7 +4,22 @@
  *
  * Each key is a stable type id referenced by LevelConfig.js and ServerEnemy.
  * Client uses `color` and `shape` for rendering; server uses everything else.
+ *
+ * ── Stat formulas ─────────────────────────────────────────────────────────
+ * All HP and damage values are expressed as multiples of the balance constants
+ * R (RANGED_BASE_DPS), X (ENEMY_HP_MULT), and Y (ENEMY_DAMAGE_MULT) from
+ * BalanceConfig.js. Tune those constants to rescale the entire game at once.
+ *
+ *   L5 reference unit: hp = X×R = 50   damage = Y×R = 40   (at defaults)
+ *
+ * Heal amounts scale with X×R (HP pool), not Y×R (damage).
  */
+
+import { BALANCE } from './BalanceConfig.js'
+
+const R = BALANCE.RANGED_BASE_DPS
+const X = BALANCE.ENEMY_HP_MULT
+const Y = BALANCE.ENEMY_DAMAGE_MULT
 
 export const ENEMY_TYPES = {
   // ════════════════════════════════════════════════════════════════════════
@@ -13,7 +28,7 @@ export const ENEMY_TYPES = {
 
   // ── Illidari Fel Guard — fast melee pack unit ────────────────────────────
   felGuard: {
-    hp: 35, speed: 1.3, radius: 15, contactDamage: 18,
+    hp: Math.round(0.70 * X * R), speed: 1.3, radius: 15, contactDamage: Math.round(0.45 * Y * R),
     spriteSize: 76,
     color: '#1a7a1a',
     ai: 'chase',
@@ -21,7 +36,7 @@ export const ENEMY_TYPES = {
 
   // ── Bonechewer Brute — slow tanky fel orc ───────────────────────────────
   bonechewerBrute: {
-    hp: 100, speed: 0.8, radius: 24, contactDamage: 35,
+    hp: Math.round(2.00 * X * R), speed: 0.8, radius: 24, contactDamage: Math.round(0.875 * Y * R),
     spriteSize: 116,
     color: '#8B0000',
     ai: 'chase',
@@ -29,19 +44,19 @@ export const ENEMY_TYPES = {
 
   // ── Coilskar Harpooner — ranged naga ────────────────────────────────────
   coilskarHarpooner: {
-    hp: 25, speed: 1.0, radius: 13, contactDamage: 5,
+    hp: Math.round(0.50 * X * R), speed: 1.0, radius: 13, contactDamage: Math.round(0.125 * Y * R),
     spriteSize: 76,
     color: '#1a5f7a',
     ai: 'ranged',
     projectileSpeed: 280,
-    projectileDamage: 14,
+    projectileDamage: Math.round(0.35 * Y * R),
     attackRange: 320,
     attackCooldown: 2500,
   },
 
   // ── Illidari Centurion — charging demon elite ────────────────────────────
   illidariCenturion: {
-    hp: 70, speed: 1.4, radius: 20, contactDamage: 50,
+    hp: Math.round(1.40 * X * R), speed: 1.4, radius: 20, contactDamage: Math.round(1.25 * Y * R),
     spriteSize: 116,
     color: '#2d6b2d',
     ai: 'charger',
@@ -54,13 +69,13 @@ export const ENEMY_TYPES = {
 
   // ── Bonechewer Blade Fury — berserking whirlwind orc ────────────────────
   bonechewerBladeFury: {
-    hp: 60, speed: 1.3, radius: 18, contactDamage: 22,
+    hp: Math.round(1.20 * X * R), speed: 1.3, radius: 18, contactDamage: Math.round(0.55 * Y * R),
     spriteSize: 96,
     color: '#cc2200',
     ai: 'berserk',
     berserckSpeed:    1.9,
     berserckRadius:   65,
-    berserckDamage:   18,    // per AoE tick while spinning
+    berserckDamage:   Math.round(0.45 * Y * R),    // per AoE tick while spinning
     berserckDuration: 2500,  // ms spinning
     berserckCooldown: 9000,  // ms between activations
     berserckExhaust:  600,   // ms slow after spin ends
@@ -68,11 +83,11 @@ export const ENEMY_TYPES = {
 
   // ── Ashtongue Mystic — broken draenei healer ────────────────────────────
   ashtonghueMystic: {
-    hp: 45, speed: 1.0, radius: 14, contactDamage: 5,
+    hp: Math.round(0.90 * X * R), speed: 1.0, radius: 14, contactDamage: Math.round(0.125 * Y * R),
     spriteSize: 76,
     color: '#7b4f9e',
     ai: 'healer',
-    healAmount: 12,
+    healAmount: Math.round(0.24 * X * R),
     healRadius: 130,
     healCooldown: 3000,
     preferredRange: 100,
@@ -80,7 +95,7 @@ export const ENEMY_TYPES = {
 
   // ── Bonechewer Blood Prophet — stationary fel orc damage buffer ──────────
   bloodProphet: {
-    hp: 70, speed: 0, radius: 15, contactDamage: 0,
+    hp: Math.round(1.40 * X * R), speed: 0, radius: 15, contactDamage: 0,
     spriteSize: 96,
     color: '#8B0000',
     ai: 'channeler',
@@ -91,7 +106,7 @@ export const ENEMY_TYPES = {
 
   // ── Coilskar Serpent Guard — shield-bearing naga tank ───────────────────
   coilskarSerpentGuard: {
-    hp: 85, speed: 1.0, radius: 21, contactDamage: 28,
+    hp: Math.round(1.70 * X * R), speed: 1.0, radius: 21, contactDamage: Math.round(0.70 * Y * R),
     spriteSize: 116,
     color: '#0d4f6b',
     ai: 'shielded',
@@ -100,7 +115,7 @@ export const ENEMY_TYPES = {
 
   // ── Ashtongue Ritual Channeler — repairs ritual objectives ──────────────
   ritualChanneler: {
-    hp: 40, speed: 1.1, radius: 13, contactDamage: 5,
+    hp: Math.round(0.80 * X * R), speed: 1.1, radius: 13, contactDamage: Math.round(0.125 * Y * R),
     spriteSize: 64,
     color: '#6a3d9a',
     ai: 'gateRepairer',
@@ -114,21 +129,21 @@ export const ENEMY_TYPES = {
 
   // ── Basic melee ─────────────────────────────────────────────────────────
   grunt: {
-    hp: 30,
+    hp: Math.round(1.00 * X * R),
     speed: 1.2,
     radius: 15,
-    contactDamage: 15,
+    contactDamage: Math.round(1.00 * Y * R),
     spriteSize: 76,
     color: '#c0392b',
-    shape: 'triangle',      // existing shape
+    shape: 'triangle',
     ai: 'chase',
   },
 
   brute: {
-    hp: 80,
+    hp: Math.round(2.40 * X * R),
     speed: 0.9,
     radius: 22,
-    contactDamage: 30,
+    contactDamage: Math.round(2.50 * Y * R),
     spriteSize: 96,
     color: '#8e44ad',
     shape: 'circle',
@@ -137,26 +152,26 @@ export const ENEMY_TYPES = {
 
   // ── Ranged ──────────────────────────────────────────────────────────────
   archer: {
-    hp: 20,
+    hp: Math.round(0.50 * X * R),
     speed: 1.0,
     radius: 12,
-    contactDamage: 5,
+    contactDamage: Math.round(0.125 * Y * R),
     spriteSize: 76,
     color: '#e67e22',
     shape: 'diamond',
     ai: 'ranged',
     projectileSpeed: 160,
-    projectileDamage: 12,
+    projectileDamage: Math.round(0.40 * Y * R),
     attackRange: 300,
     attackCooldown: 2500,
   },
 
   // ── Charger ─────────────────────────────────────────────────────────────
   charger: {
-    hp: 50,
+    hp: Math.round(1.00 * X * R),
     speed: 1.4,             // walk speed (charge is faster)
     radius: 18,
-    contactDamage: 40,
+    contactDamage: Math.round(1.30 * Y * R),
     spriteSize: 96,
     color: '#e74c3c',
     shape: 'arrow',
@@ -169,15 +184,15 @@ export const ENEMY_TYPES = {
 
   // ── Healer ──────────────────────────────────────────────────────────────
   healer: {
-    hp: 40,
+    hp: Math.round(0.80 * X * R),
     speed: 1.0,
     radius: 14,
-    contactDamage: 5,
+    contactDamage: Math.round(0.125 * Y * R),
     spriteSize: 76,
     color: '#2ecc71',
     shape: 'cross',
     ai: 'healer',
-    healAmount: 10,
+    healAmount: Math.round(0.20 * X * R),
     healRadius: 120,
     healCooldown: 3000,
     preferredRange: 100,    // tries to stay this far from the pack centre
@@ -185,10 +200,10 @@ export const ENEMY_TYPES = {
 
   // ── Gate Repairer (Level 2) ─────────────────────────────────────────────
   gateRepairer: {
-    hp: 35,
+    hp: Math.round(0.70 * X * R),
     speed: 1.1,
     radius: 13,
-    contactDamage: 5,
+    contactDamage: Math.round(0.125 * Y * R),
     spriteSize: 76,
     color: '#8B4513',
     shape: 'square',
@@ -199,16 +214,16 @@ export const ENEMY_TYPES = {
 
   // ── Leviathan (Level 3) ─────────────────────────────────────────────────
   leviathan: {
-    hp: 300,
+    hp: Math.round(6.00 * X * R),
     speed: 1.0,
     radius: 50,
-    contactDamage: 25,
+    contactDamage: Math.round(0.625 * Y * R),
     spriteSize: 116,
     color: '#2E8B57',
     shape: 'circle',
     ai: 'leviathan',
     projectileSpeed: 180,
-    projectileDamage: 15,
+    projectileDamage: Math.round(0.375 * Y * R),
     attackRange: 400,
     attackCooldown: 2000,
     maxRangedTargets: 2,
@@ -221,7 +236,7 @@ export const ENEMY_TYPES = {
 
   // ── Warlock / Channeler (Level 4) ───────────────────────────────────────
   warlock: {
-    hp: 60,
+    hp: Math.round(1.20 * X * R),
     speed: 0,
     radius: 14,
     contactDamage: 0,
@@ -238,7 +253,7 @@ export const ENEMY_TYPES = {
 
   // Phase 2 adds — must be kited to avoid Blaze zones; burning aura damages nearby players
   flameOfAzzinoth: {
-    hp: 4000,
+    hp: Math.round(10.00 * X * R),
     speed: 0.5,
     radius: 40,
     contactDamage: 0,     // dealt via aura tick, not contact
@@ -255,7 +270,7 @@ export const ENEMY_TYPES = {
 
   // Phase 3 — chases one random player, instantly kills on contact, retargets on death
   shadowDemon: {
-    hp: 80,
+    hp: Math.round(1.60 * X * R),
     speed: 3.5,
     radius: 18,
     contactDamage: 0,     // dealt as instant kill logic in GameServer
@@ -268,7 +283,7 @@ export const ENEMY_TYPES = {
   // Spawned when Parasitic Shadowfiend debuff expires on a player;
   // infects the next player it touches
   shadowfiend: {
-    hp: 60,
+    hp: Math.round(1.20 * X * R),
     speed: 2.0,
     radius: 16,
     contactDamage: 0,     // infection applied by GameServer, not contact damage

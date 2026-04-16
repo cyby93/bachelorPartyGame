@@ -26,7 +26,7 @@ const SkillDatabase = {
       type:      'MELEE',
       inputType: 'DIRECTIONAL',
       cooldown:  1000,
-      damage:    50,
+      damage:    750,
       range:     80,
       angle:     Math.PI / 3,   // 60° cone
       icon:      '⚔️'

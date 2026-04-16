@@ -4,11 +4,19 @@
  *
  * Extracted here rather than into BossConfig.js to keep Illidan-specific
  * mechanics isolated from the generic boss entity.
+ *
+ * maxHp is the 1-player base. LevelConfig.js applies hpMult at runtime:
+ *   hpMult = 1.0 + (playerCount - 1) × 0.10   → ×2.2 at 13 players
+ *   Illidan HP (13p, Normal) = maxHp × 2.2 ≈ R × 11,638
+ *
+ * Tune RANGED_BASE_DPS (R) in BalanceConfig.js until the fight feels right.
  */
+
+import { BALANCE } from './BalanceConfig.js'
 
 export const ILLIDAN_CONFIG = {
   name:          'Illidan Stormrage',
-  maxHp:         8000,
+  maxHp:         Math.round(1058 * BALANCE.RANGED_BASE_DPS * BALANCE.RLEF),
   speed:         0.1,
   radius:        20,
   meleeDamage:   80,
@@ -21,41 +29,41 @@ export const ILLIDAN_CONFIG = {
    */
   phaseAbilities: {
     1: [
-      {
-        name:      'Flame Crash',
-        cooldown:  6000,
-        type:      'flameCrash',
-        castTime:  1500,
-        damage:    80,
-        radius:    120,
-        groundFire: { radius: 80, duration: 30000, tickDamage: 15, tickRate: 500 },
-      },
-      {
-        name:          'Draw Soul',
-        cooldown:      2000,
-        type:          'drawSoul',
-        damage:        50,
-        coneAngle:     90,   // degrees
-        coneRange:     200,
-        healPerTarget: 500,
-      },
-      {
-        name:           'Shear',
-        cooldown:       8000,
-        type:           'shear',
-        maxHpReduction: 0.9,  // reduces effective max HP by 60%
-        duration:       3000,
-      },
-      {
-        name:          'Parasitic Shadowfiend',
-        cooldown:      6000,
-        type:          'parasiticShadowfiend',
-        dotDamage:     5,
-        dotInterval:   2000,
-        dotDuration:   3000,
-        spawnCount:    2,
-        shadowfiendHp: 460,
-      },
+      // {
+      //   name:      'Flame Crash',
+      //   cooldown:  6000,
+      //   type:      'flameCrash',
+      //   castTime:  1500,
+      //   damage:    80,
+      //   radius:    120,
+      //   groundFire: { radius: 80, duration: 30000, tickDamage: 15, tickRate: 500 },
+      // },
+      // {
+      //   name:          'Draw Soul',
+      //   cooldown:      2000,
+      //   type:          'drawSoul',
+      //   damage:        50,
+      //   coneAngle:     90,   // degrees
+      //   coneRange:     200,
+      //   healPerTarget: 500,
+      // },
+      // {
+      //   name:           'Shear',
+      //   cooldown:       8000,
+      //   type:           'shear',
+      //   maxHpReduction: 0.9,  // reduces effective max HP by 60%
+      //   duration:       3000,
+      // },
+      // {
+      //   name:          'Parasitic Shadowfiend',
+      //   cooldown:      6000,
+      //   type:          'parasiticShadowfiend',
+      //   dotDamage:     5,
+      //   dotInterval:   2000,
+      //   dotDuration:   3000,
+      //   spawnCount:    2,
+      //   shadowfiendHp: 460,
+      // },
     ],
 
     2: [
@@ -66,23 +74,23 @@ export const ILLIDAN_CONFIG = {
         damage:       100,
         splashRadius: 80,
       },
-      {
-        name:        'Dark Barrage',
-        cooldown:    12000,
-        type:        'darkBarrage',
-        dotDamage:   20,
-        dotInterval: 1000,
-        dotDuration: 10000,
-      },
-      {
-        name:         'Eye Beams',
-        cooldown:     12000,
-        type:         'eyeBeams',
-        drawDuration: 2000,   // ms to draw the line
-        lineLength:   420,
-        groundFire:   { radius: 30, duration: 26000, tickDamage: 30, tickRate: 1000 },
-        damage:       60,     // damage per tip-hit while drawing
-      },
+      // {
+      //   name:        'Dark Barrage',
+      //   cooldown:    12000,
+      //   type:        'darkBarrage',
+      //   dotDamage:   20,
+      //   dotInterval: 1000,
+      //   dotDuration: 10000,
+      // },
+      // {
+      //   name:         'Eye Beams',
+      //   cooldown:     12000,
+      //   type:         'eyeBeams',
+      //   drawDuration: 2000,   // ms to draw the line
+      //   lineLength:   420,
+      //   groundFire:   { radius: 30, duration: 26000, tickDamage: 30, tickRate: 1000 },
+      //   damage:       60,     // damage per tip-hit while drawing
+      // },
     ],
 
     3: [
@@ -99,17 +107,19 @@ export const ILLIDAN_CONFIG = {
       },
       {
         name:         'Shadow Blast',
-        cooldown:     3000,
+        cooldown:     8000,
         type:         'shadowBlast',
-        castTime:     3000,
+        castTime:     2000,
         damage:       120,
         splashRadius: 80,
       },
       {
         name:    'Summon Shadow Demons',
-        cooldown: 30000,
+        cooldown: 5000,
         type:    'summonShadowDemons',
         count:   4,
+        hp:      800,
+        speed:   0.6,
       },
     ],
   },
@@ -119,6 +129,15 @@ export const ILLIDAN_CONFIG = {
    * Applied every tickRate ms to all players within radius.
    */
   phase3Aura: { radius: 120, damage: 10, tickRate: 3000 },
+
+  /**
+   * Enrage — triggers if the fight exceeds enrageTimer ms.
+   * Attack and cast cooldowns are divided by their respective multipliers,
+   * forcing the encounter to resolve one way or another.
+   */
+  enrageTimer:          BALANCE.ILLIDAN_ENRAGE_MS,
+  enrageAttackSpeedMult: BALANCE.ILLIDAN_ENRAGE_ATTACK_MULT,
+  enrageCastSpeedMult:   BALANCE.ILLIDAN_ENRAGE_CAST_MULT,
 
   /**
    * Phase thresholds. HP-based phases (1→2). Phase 2→3 is triggered externally

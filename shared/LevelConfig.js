@@ -223,7 +223,7 @@ export const CAMPAIGN = [
     // Adds (Flame of Azzinoth) are spawned programmatically by GameServer in Phase 2.
     spawning: null,
     difficulty: {
-      hpMult:     { base: 1.0, perPlayer: 0.06 },
+      hpMult:     { base: 1.0, perPlayer: 0.10 },  // +10%/player → ×2.2 at 13p (brainstorm derivation)
       damageMult: { base: 1.0, perPlayer: 0.06 },
       spawnMult:  { base: 1.0, perPlayer: 0.0  },
     },

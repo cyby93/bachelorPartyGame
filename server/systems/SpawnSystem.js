@@ -30,7 +30,8 @@ export default class SpawnSystem {
     // Pre-compute multipliers once per level
     this._hpMult     = this._mult(this.difficulty.hpMult)
     this._damageMult = this._mult(this.difficulty.damageMult)
-    this._spawnMult  = this._mult(this.difficulty.spawnMult)
+    this._spawnMult  = this._mult(this.difficulty.spawnMult)   // scales interval (frequency)
+    this._countMult  = this._mult(this.difficulty.countMult)   // scales count per spawn event
 
     // Mode detection
     this.mode = this.config?.mode ?? 'continuous'
@@ -48,6 +49,8 @@ export default class SpawnSystem {
       this._waveClearedAt   = 0
       this.allWavesComplete = false
       this._progression     = this.config.progression ?? []
+      // 'random2' edge: two edges chosen fresh each wave, stored here
+      this._waveEdges       = null
     }
 
     // ── Phase gating (for Level 4 — only spawn in certain boss phases) ──
@@ -110,7 +113,9 @@ export default class SpawnSystem {
     if (enemies.size >= maxAlive) return []
 
     const [minCount, maxCount] = this.config.countPerWave ?? [1, 3]
-    const count = Math.floor(Math.random() * (maxCount - minCount + 1)) + minCount
+    const scaledMin = Math.ceil(minCount * this._countMult)
+    const scaledMax = Math.ceil(maxCount * this._countMult)
+    const count = Math.floor(Math.random() * (scaledMax - scaledMin + 1)) + scaledMin
 
     const spawned = []
     for (let i = 0; i < count; i++) {
@@ -165,9 +170,19 @@ export default class SpawnSystem {
 
     const prog = this._getProgression(this.currentWave)
     const [minCount, maxCount] = prog.countRange
-    const scaledMin = Math.ceil(minCount * this._spawnMult)
-    const scaledMax = Math.ceil(maxCount * this._spawnMult)
+    const scaledMin = Math.ceil(minCount * this._countMult)
+    const scaledMax = Math.ceil(maxCount * this._countMult)
     const count = Math.floor(Math.random() * (scaledMax - scaledMin + 1)) + scaledMin
+
+    // 'random2': pick two fresh edges for this wave — all enemies spawn from those sides
+    if (this.config.spawnEdge === 'random2') {
+      const all = ['top', 'bottom', 'left', 'right']
+      for (let i = all.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [all[i], all[j]] = [all[j], all[i]]
+      }
+      this._waveEdges = all.slice(0, 2)
+    }
 
     // Build type table from this wave's available types
     const waveTypeTable = []
@@ -274,7 +289,13 @@ export default class SpawnSystem {
       return { x: margin + Math.random() * (W - 2 * margin), y: H - margin }
     }
 
-    // Random edge (default)
+    // 'random2': use the two edges chosen at wave-start (falls back to full random)
+    if (edge === 'random2') {
+      const edges = this._waveEdges ?? ['left', 'right']
+      return this._edgePos(edges[Math.floor(Math.random() * edges.length)], margin)
+    }
+
+    // 'all' or anything else — random edge
     return this._randomEdgePos(margin)
   }
 

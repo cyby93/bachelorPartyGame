@@ -25,7 +25,8 @@ export default class BuildingSpawnSystem {
     const pc = Math.max(playerCount, 1)
     this._hpMult     = this._mult(difficulty.hpMult, pc)
     this._damageMult = this._mult(difficulty.damageMult, pc)
-    this._spawnMult  = this._mult(difficulty.spawnMult, pc)
+    this._spawnMult  = this._mult(difficulty.spawnMult, pc)   // scales interval
+    this._countMult  = this._mult(difficulty.countMult, pc)   // scales count per spawn + cap
 
     // Per-building spawn timers: buildingId → lastSpawnTime
     this._lastSpawn = new Map()
@@ -70,8 +71,10 @@ export default class BuildingSpawnSystem {
 
     const baseInterval   = this.config.baseInterval ?? 3000
     const buffFactor     = this.config.buffFactor ?? 0.25
-    const maxPerBuilding = this.config.maxAlivePerBuilding ?? 6
+    const maxPerBuilding = Math.ceil((this.config.maxAlivePerBuilding ?? 6) * this._countMult)
     const [minCount, maxCount] = this.config.countPerSpawn ?? [1, 2]
+    const scaledMin      = Math.ceil(minCount * this._countMult)
+    const scaledMax      = Math.ceil(maxCount * this._countMult)
     const spawnRadius    = this.config.spawnRadius ?? 80
 
     // Effective interval decreases as buildings die
@@ -94,7 +97,7 @@ export default class BuildingSpawnSystem {
       const alive = this._aliveCount.get(building.id) ?? 0
       if (alive >= maxPerBuilding) return
 
-      const count = Math.floor(Math.random() * (maxCount - minCount + 1)) + minCount
+      const count = Math.floor(Math.random() * (scaledMax - scaledMin + 1)) + scaledMin
       const toSpawn = Math.min(count, maxPerBuilding - alive)
 
       for (let i = 0; i < toSpawn; i++) {

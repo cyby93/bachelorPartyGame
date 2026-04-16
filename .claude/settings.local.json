@@ -57,7 +57,11 @@
       "WebSearch",
       "WebFetch(domain:www.wowhead.com)",
       "WebFetch(domain:www.icy-veins.com)",
-      "Bash(unzip -l /tmp/felGuard_model.zip)"
+      "Bash(unzip -l /tmp/felGuard_model.zip)",
+      "Bash(python \".claude/skills/bmad-agent-builder/scripts/scan-path-standards.py\" \"skills/agent-balance-theorist\")",
+      "Bash(python \".claude/skills/bmad-agent-builder/scripts/scan-scripts.py\" \"skills/agent-balance-theorist\")",
+      "Bash(python \"skills/agent-balance-theorist/scripts/tests/test-init-sanctum.py\")",
+      "Bash(python \"skills/agent-balance-theorist/scripts/init-sanctum.py\" \".\" \"skills/agent-balance-theorist\")"
     ]
   },
   "enableAllProjectMcpServers": true,

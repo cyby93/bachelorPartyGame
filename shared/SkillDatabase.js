@@ -140,7 +140,7 @@ const SkillDatabase = {
       castBar:          true,
       subtype:         'HEAL_ALLY',
       inputType:       'DIRECTIONAL',
-      cooldown:        0,
+      cooldown:        1500,
       castTime:         1500,
       healAmount:      15,
       range:           400,

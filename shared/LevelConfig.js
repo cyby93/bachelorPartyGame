@@ -26,6 +26,11 @@
  *  Applied to enemy HP, damage, and spawn frequency at spawn time.
  */
 
+import { BALANCE } from './BalanceConfig.js'
+
+const R = BALANCE.RANGED_BASE_DPS
+const X = BALANCE.ENEMY_HP_MULT
+
 export const CAMPAIGN = [
   // ── Level 1: Survive the Waves ────────────────────────────────────────
   {
@@ -37,20 +42,25 @@ export const CAMPAIGN = [
     ],
     spawning: {
       mode: 'wave',
-      waveCount: 1,
+      waveCount: 8,
       betweenWaveDelayMs: 3000,
-      spawnEdge: 'right',
+      // 'random2' — server picks 2 random edges per wave so the horde
+      // is grouped and players can't predict which sides to watch.
+      // ⚠ Requires server-side support: on each wave start, randomly
+      //   select 2 of ['top','bottom','left','right'] and spawn from those only.
+      spawnEdge: 'random2',
       progression: [
         { fromWave: 1, enemyTypes: ['felGuard', 'coilskarHarpooner'],                                    countRange: [3, 4] },
         { fromWave: 2, enemyTypes: ['felGuard', 'coilskarHarpooner'],                          countRange: [4, 6] },
         { fromWave: 3, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic'],                 countRange: [5, 8] },
-        { fromWave: 4, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic', 'coilskarSerpentGuard', 'bloodProphet', 'ritualChanneler'],       countRange: [6, 10] },
+        { fromWave: 4, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic', 'coilskarSerpentGuard', 'bloodProphet', 'illidariCenturion'], countRange: [6, 10] },
       ],
     },
     difficulty: {
       hpMult:     { base: 1.0, perPlayer: 0.05 },
       damageMult: { base: 1.0, perPlayer: 0.05 },
       spawnMult:  { base: 1.0, perPlayer: 0.10 },
+      countMult:  { base: 1.0, perPlayer: 0.05 },
     },
     boss: null,
   },
@@ -64,10 +74,10 @@ export const CAMPAIGN = [
       { type: 'destroyBuildings' },
     ],
     buildings: [
-      { id: 'b1', position: { x: 120, y: 120 }, hp: 600, width: 60, height: 60 },
-      { id: 'b2', position: { x: 880, y: 120 }, hp: 600, width: 60, height: 60 },
-      { id: 'b3', position: { x: 120, y: 880 }, hp: 600, width: 60, height: 60 },
-      { id: 'b4', position: { x: 880, y: 880 }, hp: 600, width: 60, height: 60 },
+      { id: 'b1', position: { x: 120, y: 120 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
+      { id: 'b2', position: { x: 880, y: 120 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
+      { id: 'b3', position: { x: 120, y: 880 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
+      { id: 'b4', position: { x: 880, y: 880 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
     ],
     buildingSpawning: {
       baseInterval: 3000,          // ms between spawns per building
@@ -86,11 +96,24 @@ export const CAMPAIGN = [
         { type: 'coilskarSerpentGuard', weight: 1 },
       ],
     },
-    spawning: null,
+    // Reinforcements pour in from all 4 edges — distinct from building-local
+    // spawning and reinforces the "surrounded siege" feeling
+    spawning: {
+      mode: 'continuous',
+      interval: 5000,
+      countPerWave: [1, 2],
+      maxAliveAtOnce: 6,
+      spawnEdge: 'all',
+      enemyTypes: [
+        { type: 'felGuard',          weight: 3 },
+        { type: 'coilskarHarpooner', weight: 2 },
+      ],
+    },
     difficulty: {
       hpMult:     { base: 1.0, perPlayer: 0.06 },
       damageMult: { base: 1.0, perPlayer: 0.05 },
       spawnMult:  { base: 1.0, perPlayer: 0.10 },
+      countMult:  { base: 1.0, perPlayer: 0.05 },
     },
     boss: null,
   },
@@ -114,8 +137,8 @@ export const CAMPAIGN = [
       { type: 'destroyGates' },
     ],
     gates: [
-      { id: 'gate1', passageId: 'passage1', hp: 500, position: { x: 550, y: 200 }, width: 40, height: 100 },
-      { id: 'gate2', passageId: null,        hp: 500, position: { x: 1070, y: 200 }, width: 48, height: 80 },
+      { id: 'gate1', passageId: 'passage1', hp: Math.round(10 * X * R), position: { x: 550, y: 200 }, width: 40, height: 100 },
+      { id: 'gate2', passageId: null,        hp: Math.round(10 * X * R), position: { x: 1070, y: 200 }, width: 48, height: 80 },
     ],
     spawning: {
       mode: 'continuous',
@@ -136,6 +159,7 @@ export const CAMPAIGN = [
       hpMult:     { base: 1.0, perPlayer: 0.06 },
       damageMult: { base: 1.0, perPlayer: 0.06 },
       spawnMult:  { base: 1.0, perPlayer: 0.10 },
+      countMult:  { base: 1.0, perPlayer: 0.05 },
     },
     boss: null,
   },
@@ -148,7 +172,19 @@ export const CAMPAIGN = [
     objectives: [
       { type: 'killAll' },
     ],
-    spawning: null,
+    // Ambient naga trickle — keeps healers relevant and players moving
+    // while the Leviathan split mechanic plays out
+    spawning: {
+      mode: 'continuous',
+      interval: 8000,
+      countPerWave: [1, 2],
+      maxAliveAtOnce: 4,
+      spawnEdge: 'all',
+      enemyTypes: [
+        { type: 'coilskarHarpooner',   weight: 3 },
+        { type: 'coilskarSerpentGuard', weight: 1 },
+      ],
+    },
     initialEnemies: [
       {
         type: 'leviathan',
@@ -161,6 +197,7 @@ export const CAMPAIGN = [
       hpMult:     { base: 1.0, perPlayer: 0.08 },
       damageMult: { base: 1.0, perPlayer: 0.05 },
       spawnMult:  { base: 1.0, perPlayer: 0.0 },
+      countMult:  { base: 1.0, perPlayer: 0.05 },
     },
     boss: null,
   },
@@ -177,7 +214,7 @@ export const CAMPAIGN = [
       {
         id: 'akama',
         name: 'Akama',
-        hp: 2000,
+        hp: Math.round(40 * X * R),   // 2000 at defaults — scales with R
         speed: 0.8,
         radius: 25,
         meleeDamage: 15,
@@ -213,6 +250,7 @@ export const CAMPAIGN = [
       hpMult:     { base: 1.0, perPlayer: 0.06 },
       damageMult: { base: 1.0, perPlayer: 0.04 },
       spawnMult:  { base: 1.0, perPlayer: 0.08 },
+      countMult:  { base: 1.0, perPlayer: 0.05 },
     },
   },
 
@@ -229,6 +267,7 @@ export const CAMPAIGN = [
     difficulty: {
       hpMult:     { base: 1.0, perPlayer: 0.10 },  // +10%/player → ×2.2 at 13p (brainstorm derivation)
       damageMult: { base: 1.0, perPlayer: 0.06 },
+      // countMult not applicable — Illidan adds are spawned programmatically, not via SpawnSystem
       spawnMult:  { base: 1.0, perPlayer: 0.0  },
     },
     boss: 'ILLIDAN',

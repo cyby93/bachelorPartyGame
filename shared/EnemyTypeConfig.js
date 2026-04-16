@@ -214,7 +214,7 @@ export const ENEMY_TYPES = {
 
   // ── Leviathan (Level 3) ─────────────────────────────────────────────────
   leviathan: {
-    hp: Math.round(6.00 * X * R),
+    hp: Math.round(12.00 * X * R),
     speed: 1.0,
     radius: 50,
     contactDamage: Math.round(0.625 * Y * R),
@@ -268,12 +268,13 @@ export const ENEMY_TYPES = {
     auraTickRate:  2000,
   },
 
-  // Phase 3 — chases one random player, instantly kills on contact, retargets on death
+  // Phase 3 — slowly crawls toward one random player, instantly kills on contact, retargets on death
+  // Mechanic: party must stop and focus it down before it reaches its target
   shadowDemon: {
-    hp: Math.round(1.60 * X * R),
-    speed: 3.5,
+    hp: Math.round(10 * X * R),   // 500 at defaults — tanky enough to require focused fire
+    speed: 0.6,                    // slow crawl — gives the party time to react
     radius: 18,
-    contactDamage: 0,     // dealt as instant kill logic in GameServer
+    contactDamage: 0,              // dealt as instant kill logic in GameServer
     spriteSize: 80,
     color: '#7700cc',
     shape: 'diamond',

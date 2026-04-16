@@ -105,12 +105,12 @@ const SkillDatabase = {
       subtype:   'AOE_SELF',
       inputType: 'INSTANT',
       cooldown:  7000,
-      damage:    2,
+      damage:    3,
       radius:    200,
       duration:  6000,
       tickRate:  500,
       effectType: 'DUAL',
-      healAmount: 4,
+      healAmount: 2,
       icon:      '⭐'
     }
   ],
@@ -142,7 +142,7 @@ const SkillDatabase = {
       inputType:       'DIRECTIONAL',
       cooldown:        3000,
       castTime:         1200,
-      healAmount:      30,
+      healAmount:      20,
       range:           400,
       maxChains:       2,
       chainRadius:     200,
@@ -251,8 +251,8 @@ const SkillDatabase = {
       subtype:      'BURST',
       inputType:    'AIMED',
       cooldown:     3000,
-      damage:       7,
-      healAmount:   20,
+      damage:       6,
+      healAmount:   10,
       speed:        500,
       radius:       10,
       range:        600,
@@ -269,8 +269,8 @@ const SkillDatabase = {
       autoRefire: true,
       cooldown:   1000,
       radius:     320,
-      damage:     4,
-      healAmount: 7,
+      damage:     3,
+      healAmount: 3,
       effectType: 'DUAL',
       icon:       '💚'
     },
@@ -280,10 +280,10 @@ const SkillDatabase = {
       subtype:          'TARGETED',
       inputType:        'DIRECTIONAL',
       cooldown:         5000,
-      duration:         10000,
+      duration:         7000,
       range:            600,
       selfCastFallback: true,
-      effectParams:     { shield: 40 },
+      effectParams:     { shield: 25 },
       icon:             '🔮'
     },
     {
@@ -435,7 +435,7 @@ const SkillDatabase = {
         subtype:    'AOE_SELF',
         radius:     700,
         effectType: 'HEAL',
-        healAmount: 4,
+        healAmount: 6,
       },
       icon:      '⭐'
     }
@@ -539,7 +539,7 @@ const SkillDatabase = {
       range:     1000,
       tickRate:  500,
       damagePerTick: 4,
-      healPerTick:   8,
+      healPerTick:   4,
       icon:      '💜'
     },
     {
@@ -601,7 +601,7 @@ const SkillDatabase = {
       inputType: 'INSTANT',
       cooldown:  12000,
       duration:  7000,
-      effectParams: { damageReduction: 0.8, shield: 100 },
+      effectParams: { damageReduction: 0.8, shield: 50 },
       icon:      '💎'
     }
   ]

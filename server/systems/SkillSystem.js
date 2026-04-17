@@ -1711,6 +1711,7 @@ export default class SkillSystem {
       onHitEffect: config.onHitEffect    ?? null,
       canHitAllies: config.canHitAllies  ?? false,
       selfCast:    overrides.selfCast   ?? false,
+      spriteKey:   config.spriteKey     ?? null,
     })
   }
 }

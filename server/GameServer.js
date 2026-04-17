@@ -2438,11 +2438,12 @@ export default class GameServer {
     this.projectiles.forEach(proj => {
       if (proj.isAlive) {
         projectiles.push({
-          id:     proj.id,
-          x:      Math.round(proj.x),
-          y:      Math.round(proj.y),
-          radius: proj.radius,
-          color:  proj.color,
+          id:        proj.id,
+          x:         Math.round(proj.x),
+          y:         Math.round(proj.y),
+          radius:    proj.radius,
+          color:     proj.color,
+          spriteKey: proj.spriteKey ?? null,
         })
       }
     })

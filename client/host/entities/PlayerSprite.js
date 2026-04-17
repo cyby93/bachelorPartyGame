@@ -104,9 +104,10 @@ export default class PlayerSprite {
     this.container.addChild(this._hpBg)
     this.container.addChild(this._hpFill)
 
-    this._maxHp  = data.maxHp ?? this._classData.hp
-    this._lastHp = -1         // force first draw
-    this._updateHpBar(data.hp ?? this._maxHp)
+    this._maxHp        = data.maxHp ?? this._classData.hp
+    this._lastHp       = -1   // force first draw
+    this._lastShield   = 0
+    this._updateHpBar(data.hp ?? this._maxHp, 0)
 
     // ── Hit flash ────────────────────────────────────────────────────────────
     this._flashGfx = new Graphics()
@@ -139,17 +140,27 @@ export default class PlayerSprite {
 
   // ── Drawing helpers ────────────────────────────────────────────────────────
 
-  _updateHpBar(hp) {
-    if (hp === this._lastHp) return
-    this._lastHp = hp
+  _updateHpBar(hp, shield = 0) {
+    if (hp === this._lastHp && shield === this._lastShield) return
+    this._lastHp     = hp
+    this._lastShield = shield
 
-    const pct   = Math.max(0, hp / this._maxHp)
-    const color = pct > 0.5 ? '#2ecc71' : pct > 0.25 ? '#f39c12' : '#e74c3c'
+    // Bar denominator is maxHp + shield so the shield extends the bar proportionally
+    const total     = this._maxHp + shield
+    const hpPct     = total > 0 ? Math.max(0, hp / total) : 0
+    const shieldPct = total > 0 ? Math.max(0, shield / total) : 0
+    // Color thresholds use actual hp vs maxHp, not the combined ratio
+    const hpRatio   = this._maxHp > 0 ? hp / this._maxHp : 0
+    const hpColor   = hpRatio > 0.5 ? '#2ecc71' : hpRatio > 0.25 ? '#f39c12' : '#e74c3c'
 
     this._hpFill.clear()
-    if (pct > 0) {
-      this._hpFill.rect(-BAR_W / 2, 0, BAR_W * pct, BAR_H)
-      this._hpFill.fill(color)
+    if (hpPct > 0) {
+      this._hpFill.rect(-BAR_W / 2, 0, BAR_W * hpPct, BAR_H)
+      this._hpFill.fill(hpColor)
+    }
+    if (shieldPct > 0) {
+      this._hpFill.rect(-BAR_W / 2 + BAR_W * hpPct, 0, BAR_W * shieldPct, BAR_H)
+      this._hpFill.fill('#888888')
     }
   }
 
@@ -297,12 +308,14 @@ export default class PlayerSprite {
       this._body.rotation = state.angle ?? 0
     }
 
-    if (state.hp != null) {
+    if (state.hp != null || state.shieldAbsorb != null) {
+      const hp     = state.hp           ?? this._lastHp
+      const shield = state.shieldAbsorb ?? this._lastShield
       // Trigger flash when HP drops
-      if (state.hp < this._lastHp && this._lastHp !== -1) {
+      if (state.hp != null && state.hp < this._lastHp && this._lastHp !== -1) {
         this._flashTimer = 0.1
       }
-      this._updateHpBar(state.hp)
+      this._updateHpBar(hp, shield)
     }
 
     // Tick flash

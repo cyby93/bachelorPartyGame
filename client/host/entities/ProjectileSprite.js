@@ -25,12 +25,14 @@ export default class ProjectileSprite {
     this._trailGfx = new Graphics()
     this.container.addChild(this._trailGfx)
 
-    // Body — tinted sprite so per-projectile color is preserved
-    const body = new Sprite(Assets.get('projectile_default'))
+    // Body — use skill-specific sprite if available, else default
+    const textureKey = data.spriteKey ?? 'projectile_default'
+    const body = new Sprite(Assets.get(textureKey))
     body.anchor.set(0.5)
     body.width  = this._radius * 2
     body.height = this._radius * 2
-    body.tint   = colorNum
+    // Custom sprites carry their own colors — only tint default sprite with class color
+    body.tint   = textureKey === 'projectile_default' ? colorNum : 0xffffff
     this.container.addChild(body)
 
     // Previous world positions for trail

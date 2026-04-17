@@ -148,7 +148,7 @@ export default class OverheadDisplay {
       if (p.speedMultiplier && p.speedMultiplier > 1) keys.push('speed')
       if (p.damageMultiplier && p.damageMultiplier > 1) keys.push('damage_boost')
       if (p.damageReduction) keys.push('reduction')
-      if (p.shield) keys.push('shield')
+      // shield is now shown as a sprite overlay via AuraSystem — no status icon needed
       if (p.invisible) keys.push('invisible')
       if (p.rooted) keys.push('root')
       if (p.stunned) keys.push('stun')

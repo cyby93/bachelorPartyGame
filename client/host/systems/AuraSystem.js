@@ -4,7 +4,7 @@
  * Rings pulse gently; invisible effect sets entity alpha instead.
  */
 
-import { Graphics } from 'pixi.js'
+import { Graphics, Sprite, Assets } from 'pixi.js'
 
 function parseColor(hex) {
   if (typeof hex === 'string') return parseInt(hex.replace('#', ''), 16)
@@ -91,10 +91,20 @@ export default class AuraSystem {
     // Add new rings
     for (const eff of auraEffects) {
       if (entry.rings.has(eff.src)) continue
-      const color = getAuraColor(eff.params)
-      const ring = new Graphics()
-      ring.circle(0, 0, baseRadius + 6)
-      ring.stroke({ color, width: 2, alpha: 0.5 })
+      let ring
+      if (eff.params?.shield) {
+        // Shield gets a dedicated sprite overlay instead of a generic ring
+        // Size to slightly exceed the character body so the ward wraps around them
+        ring = new Sprite(Assets.get('aura_pw_shield'))
+        ring.anchor.set(0.5)
+        ring.width  = (baseRadius + 10) * 2
+        ring.height = (baseRadius + 10) * 2
+      } else {
+        const color = getAuraColor(eff.params)
+        ring = new Graphics()
+        ring.circle(0, 0, baseRadius + 6)
+        ring.stroke({ color, width: 2, alpha: 0.5 })
+      }
       entityContainer.addChild(ring)
       entry.rings.set(eff.src, ring)
     }

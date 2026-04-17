@@ -209,7 +209,8 @@ export default class ServerPlayer {
     if (cur.y      !== prev.y)      delta.y      = cur.y
     if (cur.angle  !== prev.angle)  delta.angle  = cur.angle
     if (cur.aimAngle !== prev.aimAngle) delta.aimAngle = cur.aimAngle
-    if (cur.hp     !== prev.hp)     delta.hp     = cur.hp
+    if (cur.hp           !== prev.hp)           delta.hp           = cur.hp
+    if (cur.shieldAbsorb !== prev.shieldAbsorb) delta.shieldAbsorb = cur.shieldAbsorb
 
     // Visibility state change
     if (cur.isInvisible  !== prev.isInvisible)  delta.isInvisible  = cur.isInvisible
@@ -263,9 +264,10 @@ export default class ServerPlayer {
       isInvisible:  this.isInvisible,
       comboPoints:  this.comboPoints,
       isAiming:     this.isAiming,
-      shieldActive: this.shieldActive,
-      shieldAngle: +this.shieldAngle.toFixed(3),
-      shieldArc:   +this.shieldArc.toFixed(3),
+      shieldActive:  this.shieldActive,
+      shieldAngle:  +this.shieldAngle.toFixed(3),
+      shieldArc:    +this.shieldArc.toFixed(3),
+      shieldAbsorb:  this.shieldAbsorb ?? 0,
     }
   }
 

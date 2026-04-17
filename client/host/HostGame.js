@@ -310,6 +310,8 @@ export default class HostGame {
       'enemy_flameofazzinoth', 'enemy_shadowdemon', 'enemy_shadowfiend',
       'boss_illidan',   'boss_akama',
       'projectile_default',
+      'projectile_penance',
+      'aura_pw_shield',
     ]
     const manifest = SPRITE_KEYS.map(k => ({ alias: k, src: `/assets/sprites/${k}.png` }))
 

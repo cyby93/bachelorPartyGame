@@ -39,31 +39,46 @@ Slow crawl (speed 0.6), tanky (hp 10×XR = 500 at defaults), instant kill on con
 
 ---
 
-## Class Balance Snapshot (R=10, DPS calculator, 2026-04-16)
+## Calculator Architecture (as of 2026-04-17)
 
-All classes are ~1.6–2.7× their role targets. RLEF=0.5 offsets this by design.
+Both calculators use a tick-based greedy simulation (50ms ticks, 5-min fight).
+
+**Action loop — two phases per tick:**
+1. Phase 1: fire all available instant-cast (0 cast time) abilities — they don't block the player
+2. Phase 2: select best cast-time ability by priority score and begin casting
+
+**Multi-target mode:** `--targets=N` flag on both calculators. Scales DoTs, AOE, SPAWN/TOTEM, HoTs, and Chain Heal chains by N. Single-target abilities unchanged.
+
+## Class Balance Snapshot (R=10, fixed calculators, 2026-04-17)
+
+All classes are ~1.5–2.7× their role targets. RLEF=0.5 offsets this by design.
+
+**Single-target DPS:**
 
 | Class | Role | DPS | vs target |
 |-------|------|-----|-----------|
-| Mage | ranged | 24.3 | ×2.4 |
+| Mage | ranged | 25.2 | ×2.5 |
 | Hunter | ranged | 20.2 | ×2.0 |
 | Rogue | ranged | 19.5 | ×1.9 |
 | Paladin | melee | 19.2 | **×2.7** ← outlier |
-| Warlock | ranged | 16.3 | ×1.6 |
+| Warlock | ranged | 16.7 | ×1.7 |
 | DeathKnight | melee | 14.7 | ×2.1 |
 | Warrior | melee | 13.0 | ×1.9 |
-| Shaman | healer | 7.0 | ×2.3 |
-| Druid | healer | 7.0 | ×2.3 |
+| Shaman | healer | 9.6 | ×3.2 |
+| Druid | healer | 7.3 | ×2.4 |
 | Priest | healer | 5.0 | ×1.7 |
 
-Healers: Priest 11.3 HPS, Shaman 10.0, Druid 9.7 — tightly balanced.
+**Single-target HPS:** Priest 11.3, Shaman 10.0, Druid 9.7 — tightly balanced.
+**3-target HPS:** Shaman 30.0, Priest 17.3, Druid 16.7 — Shaman is the raid healer by design (Chain Heal hits all 3 chains).
 
 ---
 
 ## Open Questions
 
-- **Paladin outlier (×2.7 DPS + 3.4 off-role HPS):** Not addressed. Needs a tuning pass.
-- **L5 Phase 1 warlock defenders:** Would improve pacing but requires engine support for dual-phase spawning per level. Deferred.
-- **Draw Soul cooldown = 8000:** Set by Cyby. Verify it feels right in practice — may be too infrequent if Phase 1 is supposed to feel threatening.
+- **Paladin outlier (×2.7 DPS + 3.4 off-role HPS):** Not addressed. Explicitly deferred by Cyby — fine-tuning pass later.
+- **Hunter pet multi-target:** Does Call of the Wild split attacks across targets or focus one? If focus-one, 3-target DPS is inflated — 36.5 may be misleading.
+- **Tranquility (Druid) multi-target:** Currently doesn't scale in HPS multi-target mode — CHANNEL heals excluded. Would need an AOE flag in SkillDatabase to get the multiplier.
+- **L5 Phase 1 warlock defenders:** Requires engine support for dual-phase spawning per level. Deferred.
+- **Draw Soul cooldown = 8000:** Set by Cyby. Verify it feels right in practice.
 - **'random2' edge:** Implemented but untested. Confirm it creates the intended "grouped horde from 2 sides" feeling.
 - **All balance is theoretical.** First playtest will be the real calibration point. Expect to retune R and individual ability values afterward.

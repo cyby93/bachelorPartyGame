@@ -259,6 +259,7 @@ const SkillDatabase = {
       pierce:       false,
       canHitAllies: true,
       selfCastFallback: true,
+      spriteKey:    'projectile_penance',
       icon:         '✝️'
     },
     {

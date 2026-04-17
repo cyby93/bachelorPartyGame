@@ -8,10 +8,13 @@
  * Handles: direct heals, HoT (ticks passively while casting other spells),
  * channel heals, persistent AOE heals, and shields (counted as effective HPS).
  *
- * Single-target healing — Chain Heal counts primary target only.
- * No HPS target is defined; compare healers against each other.
+ * Single-target by default. Pass --targets=N for multi-target simulation.
+ * In multi-target mode, AOE heals scale by N, Chain Heal counts its chains
+ * (up to N targets), and HoTs tick on N players simultaneously.
+ * Single-target heals (direct, shield, channel) are unchanged.
  *
  * Run: node tools/hps-calculator.js
+ *      node tools/hps-calculator.js --targets=3
  */
 
 import SkillDatabase from '../shared/SkillDatabase.js'
@@ -21,6 +24,9 @@ import { BALANCE }   from '../shared/BalanceConfig.js'
 
 const SIM_MS  = 5 * 60 * 1000
 const TICK_MS = 50
+
+const targetsArg   = process.argv.find(a => a.startsWith('--targets='))
+const TARGET_COUNT = targetsArg ? Math.max(1, parseInt(targetsArg.split('=')[1], 10)) : 1
 
 const R = BALANCE.RANGED_BASE_DPS
 
@@ -36,7 +42,11 @@ const HEALER_CLASSES = new Set(['Shaman', 'Druid', 'Priest'])
 function getInstantHeal(skill) {
   switch (skill.type) {
     case 'TARGETED':
-      if (skill.subtype === 'HEAL_ALLY') return skill.healAmount ?? 0
+      if (skill.subtype === 'HEAL_ALLY') {
+        // Chain Heal hits primary + up to maxChains targets, capped at TARGET_COUNT
+        const targets = Math.min((skill.maxChains ?? 0) + 1, TARGET_COUNT)
+        return (skill.healAmount ?? 0) * targets
+      }
       return 0
 
     case 'PROJECTILE':
@@ -45,12 +55,12 @@ function getInstantHeal(skill) {
       return 0
 
     case 'AOE':
-      // Persistent ticking AOE heal (e.g. Consecration ticking)
+      // Persistent ticking AOE heal
       if (skill.healAmount && skill.duration && skill.tickRate) {
-        return Math.floor(skill.duration / skill.tickRate) * skill.healAmount
+        return Math.floor(skill.duration / skill.tickRate) * skill.healAmount * TARGET_COUNT
       }
-      // Instant-burst AOE heal (e.g. Holy Nova — no duration/tickRate)
-      return skill.healAmount ?? 0
+      // Instant-burst AOE heal (e.g. Holy Nova)
+      return (skill.healAmount ?? 0) * TARGET_COUNT
 
     case 'CHANNEL':
       // Direct healPerTick on the skill (e.g. Drain Life)
@@ -74,8 +84,7 @@ function getInstantHeal(skill) {
 
 /** How long the player is blocked (can't cast anything else). */
 function getCastTime(skill) {
-  if (skill.type === 'CAST' || skill.type === 'CHANNEL') return skill.castTime ?? 0
-  return 0
+  return skill.castTime ?? 0
 }
 
 /** True if this skill produces any healing or shielding output. */
@@ -102,7 +111,7 @@ function priorityScore(skill, hotExpiry) {
 
   if (skill.hot && !hotExpiry.has(skill.name)) {
     const hotTicks  = Math.floor(skill.hot.duration / skill.hot.tickRate)
-    const hotTotal  = skill.hot.healPerTick * hotTicks
+    const hotTotal  = skill.hot.healPerTick * hotTicks * TARGET_COUNT
     const totalHeal = getInstantHeal(skill) + hotTotal
     const costMs    = Math.max(castTime, 1)
     return totalHeal / costMs
@@ -129,7 +138,7 @@ function simulate(className, skills) {
       if (t >= expiry) { hotExpiry.delete(name); continue }
       const skill = skills.find(s => s.name === name)
       if (!skill?.hot) continue
-      skillHeal.set(name, skillHeal.get(name) + skill.hot.healPerTick * (TICK_MS / skill.hot.tickRate))
+      skillHeal.set(name, skillHeal.get(name) + skill.hot.healPerTick * (TICK_MS / skill.hot.tickRate) * TARGET_COUNT)
     }
 
     // ── Player action ──────────────────────────────────────────────────────
@@ -190,7 +199,8 @@ function run() {
   const W_BAR   = 22
 
   console.log()
-  console.log('  HPS Calculator — 5-minute healing rotation (single-target, greedy)')
+  const modeLabel = TARGET_COUNT === 1 ? 'single-target' : `${TARGET_COUNT} targets`
+  console.log(`  HPS Calculator — 5-minute healing rotation (${modeLabel}, greedy)`)
   console.log(`  BalanceConfig: R=${R}  |  No HPS target set — compare healers against each other`)
   console.log()
 
@@ -222,7 +232,11 @@ function run() {
   console.log()
   console.log('  Notes:')
   console.log('  • Bar is relative to the top healer (not an absolute target).')
-  console.log('  • Chain Heal counts primary target only — actual output is higher with chaining.')
+  if (TARGET_COUNT === 1) {
+    console.log('  • Chain Heal counts primary target only — run with --targets=N to model chaining.')
+  } else {
+    console.log(`  • Chain Heal counts up to min(maxChains+1, ${TARGET_COUNT}) targets.`)
+  }
   console.log('  • Shields (Power Word: Shield) counted as effective HPS (absorbed damage).')
   console.log('  • Mass Resurrection excluded — utility spell, not a sustained HPS contributor.')
   console.log('  • [off-role] = class has incidental healing (e.g. self-heal, hybrid), not a dedicated healer.')

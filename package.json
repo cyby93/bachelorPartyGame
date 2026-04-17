@@ -14,7 +14,11 @@
     "build": "vite build",
     "preview": "vite preview",
     "dps": "node tools/dps-calculator.js",
-    "hps": "node tools/hps-calculator.js"
+    "hps": "node tools/hps-calculator.js",
+    "dps3": "node tools/dps-calculator.js --targets=3",
+    "hps3": "node tools/hps-calculator.js --targets=3",
+    "hps5": "node tools/hps-calculator.js --targets=5",
+    "dps5": "node tools/dps-calculator.js --targets=5"
   },
   "dependencies": {
     "express": "^4.18.2",

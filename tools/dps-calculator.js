@@ -9,9 +9,12 @@
  * just before expiry), persistent AoE zones, spawns (totem/pet), traps,
  * and the Rogue stealth multiplier.
  *
- * Single-target only — AoE abilities count as hitting 1 enemy.
+ * Single-target by default. Pass --targets=N for multi-target simulation.
+ * In multi-target mode, DoTs, AoE zones, and totems/pets scale by N targets.
+ * Single-target abilities (projectiles, direct casts) are unchanged.
  *
  * Run: node tools/dps-calculator.js
+ *      node tools/dps-calculator.js --targets=3
  */
 
 import SkillDatabase from '../shared/SkillDatabase.js'
@@ -21,6 +24,9 @@ import { BALANCE }   from '../shared/BalanceConfig.js'
 
 const SIM_MS   = 5 * 60 * 1000   // simulation duration (ms)
 const TICK_MS  = 50               // simulation tick granularity (ms)
+
+const targetsArg  = process.argv.find(a => a.startsWith('--targets='))
+const TARGET_COUNT = targetsArg ? Math.max(1, parseInt(targetsArg.split('=')[1], 10)) : 1
 
 const R = BALANCE.RANGED_BASE_DPS
 const DPS_TARGETS = {
@@ -59,9 +65,9 @@ function getInstantDamage(skill) {
     case 'AOE':
       if (skill.duration && skill.tickRate) {
         const ticks = Math.floor(skill.duration / skill.tickRate)
-        return (skill.damage ?? 0) * ticks
+        return (skill.damage ?? 0) * ticks * TARGET_COUNT
       }
-      return skill.damage ?? 0
+      return (skill.damage ?? 0) * TARGET_COUNT
 
     case 'CAST': {
       const p = skill.payload ?? {}
@@ -87,14 +93,14 @@ function getInstantDamage(skill) {
 
     case 'SPAWN':
       if (skill.subtype === 'TRAP' && skill.trapEffect)
-        return skill.trapEffect.damage ?? 0
+        return (skill.trapEffect.damage ?? 0) * TARGET_COUNT
       if (skill.subtype === 'TOTEM' && skill.totemAbility) {
         const ta = skill.totemAbility
-        return Math.floor(skill.duration / ta.tickRate) * (ta.damage ?? 0)
+        return Math.floor(skill.duration / ta.tickRate) * (ta.damage ?? 0) * TARGET_COUNT
       }
       if (skill.subtype === 'PET' && skill.petStats) {
         const p = skill.petStats
-        return (skill.duration / p.attackRate) * p.damage
+        return (skill.duration / p.attackRate) * p.damage * TARGET_COUNT
       }
       return 0
 
@@ -105,8 +111,7 @@ function getInstantDamage(skill) {
 
 /** How long the player is blocked (can't cast anything else). */
 function getCastTime(skill) {
-  if (skill.type === 'CAST' || skill.type === 'CHANNEL') return skill.castTime ?? 0
-  return 0
+  return skill.castTime ?? 0
 }
 
 /** True if this skill contributes any damage to a single target. */
@@ -137,9 +142,10 @@ function priorityScore(skill, dotExpiry, t) {
   const cycle    = Math.max(skill.cooldown ?? 0, castTime, 1)
 
   if (skill.dot && !dotExpiry.has(skill.name)) {
-    // DoT not active: factor in the full DoT value as incremental gain
+    // DoT not active: factor in the full DoT value as incremental gain.
+    // In multi-target mode, one cast applies the DoT to all targets.
     const dotTicks    = Math.floor(skill.dot.duration / skill.dot.tickRate)
-    const dotTotal    = skill.dot.damagePerTick * dotTicks
+    const dotTotal    = skill.dot.damagePerTick * dotTicks * TARGET_COUNT
     const totalDmg    = getInstantDamage(skill) + dotTotal
     const costMs      = Math.max(castTime, 1)   // opportunity cost = time player is blocked
     return totalDmg / costMs
@@ -177,7 +183,7 @@ function simulate(className, skills) {
       if (!skill?.dot) continue
       // Accumulate proportional tick damage each simulation tick
       const dot = skill.dot
-      skillDmg.set(name, skillDmg.get(name) + dot.damagePerTick * (TICK_MS / dot.tickRate))
+      skillDmg.set(name, skillDmg.get(name) + dot.damagePerTick * (TICK_MS / dot.tickRate) * TARGET_COUNT)
     }
 
     // ── Player action ─────────────────────────────────────────────────────────
@@ -196,24 +202,34 @@ function simulate(className, skills) {
 
     if (available.length === 0) continue
 
-    // Sort by priority (highest DPS-per-time-invested first)
-    available.sort((a, b) => priorityScore(b, dotExpiry, t) - priorityScore(a, dotExpiry, t))
-
-    const skill       = available[0]
-    const castTime    = getCastTime(skill)
-    const instantDmg  = getInstantDamage(skill)
-
-    // Set cooldown from activation time
-    cdReady.set(skill.name, t + (skill.cooldown ?? 0))
-
-    // Block player if cast/channel
-    if (castTime > 0) playerFreeAt = t + castTime
-
-    // Stealth: Vanish enables a multiplier on the next attack
-    if (skill.subtype === 'STEALTH') {
-      stealthMult = skill.effectParams?.shadowStrikeMultiplier ?? 1.5
-      continue  // Vanish itself deals no damage
+    // ── Phase 1: weave in all available instant-cast abilities ─────────────────
+    // Instants don't block the player — fire them all before starting the next cast.
+    const instants = available.filter(s => getCastTime(s) === 0)
+    instants.sort((a, b) => priorityScore(b, dotExpiry, t) - priorityScore(a, dotExpiry, t))
+    for (const instant of instants) {
+      cdReady.set(instant.name, t + (instant.cooldown ?? 0))
+      if (instant.subtype === 'STEALTH') {
+        stealthMult = instant.effectParams?.shadowStrikeMultiplier ?? 1.5
+        continue
+      }
+      const effectiveDmg = Math.round(getInstantDamage(instant) * stealthMult)
+      stealthMult = 1.0
+      skillDmg.set(instant.name, skillDmg.get(instant.name) + effectiveDmg)
+      if (instant.dot) dotExpiry.set(instant.name, t + instant.dot.duration)
     }
+
+    // ── Phase 2: select best cast-time ability and begin casting ───────────────
+    const castable = available.filter(s => getCastTime(s) > 0 && (cdReady.get(s.name) ?? 0) <= t)
+    if (castable.length === 0) continue
+
+    castable.sort((a, b) => priorityScore(b, dotExpiry, t) - priorityScore(a, dotExpiry, t))
+
+    const skill      = castable[0]
+    const castTime   = getCastTime(skill)
+    const instantDmg = getInstantDamage(skill)
+
+    cdReady.set(skill.name, t + (skill.cooldown ?? 0))
+    playerFreeAt = t + castTime
 
     // Apply stealth multiplier once to the next damaging hit
     const effectiveDmg = Math.round(instantDmg * stealthMult)
@@ -221,7 +237,6 @@ function simulate(className, skills) {
 
     skillDmg.set(skill.name, skillDmg.get(skill.name) + effectiveDmg)
 
-    // Start DoT if skill has one
     if (skill.dot) {
       dotExpiry.set(skill.name, t + skill.dot.duration)
     }
@@ -261,7 +276,8 @@ function run() {
   const W_BAR   = 22
 
   console.log()
-  console.log('  DPS Calculator — 5-minute target dummy (single-target, greedy rotation)')
+  const modeLabel = TARGET_COUNT === 1 ? 'single-target' : `${TARGET_COUNT} targets`
+  console.log(`  DPS Calculator — 5-minute target dummy (${modeLabel}, greedy rotation)`)
   console.log(`  BalanceConfig: R=${R}  Targets → ranged: ${DPS_TARGETS.ranged} | melee: ${DPS_TARGETS.melee.toFixed(1)} | healer: ${DPS_TARGETS.healer.toFixed(1)}`)
   console.log()
 

@@ -12,6 +12,7 @@ import ServerNPC         from './entities/ServerNPC.js'
 import ServerGate        from './entities/ServerGate.js'
 import ServerBuilding    from './entities/ServerBuilding.js'
 import BuildingSpawnSystem from './systems/BuildingSpawnSystem.js'
+import PortalBeamSystem   from './systems/PortalBeamSystem.js'
 import TrainingDummy, { RangedDummy, MeleeDummy, MovingDummy } from './entities/TrainingDummy.js'
 import CooldownSystem    from './systems/CooldownSystem.js'
 import SkillSystem       from './systems/SkillSystem.js'
@@ -81,12 +82,14 @@ export default class GameServer {
     // Buildings (destructible spawners)
     this.buildings = new Map()    // id → ServerBuilding
     this.buildingSpawnSystem = null
+    this.portalBeamSystem    = null
 
     // Level 4: warlock/boss phase tracking
     this._bossPhase = 1
     this._warlockCount = 0
 
     // Level 5: Illidan encounter state
+    this.minionSpawnSystem  = null   // ambient minions (activated after dialog)
     this._illidanState      = null
     this._activeEyeBeams    = []
     this._eyeBeamSeq        = 0
@@ -95,7 +98,7 @@ export default class GameServer {
     this._dialogSystem      = null
 
     // Debug: skip entrance cinematic when testing boss mechanics
-    this.skipDialog = true
+    this.skipDialog = false
 
     // Stats tracking — cumulative across entire campaign run
     this.stats     = { damage: {}, heal: {}, deaths: {}, resurrections: {}, quiz: {}, kills: 0, startTime: 0 }
@@ -538,11 +541,12 @@ export default class GameServer {
     const firstRoom = level.arena?.rooms?.[0]
     this.players.forEach(p => {
       if (p.isHost) return
-      p.hp           = p.maxHp
-      p.isDead       = false
-      p.activeCast   = null
-      p.shieldActive = false
-      p.activeEffects = []
+      p.hp              = p.maxHp
+      p.isDead          = false
+      p.activeCast      = null
+      p.shieldActive    = false
+      p.activeEffects   = []
+      p.bladestormActive = false
       p.rebuildStats()
       p.setArenaSize(this.arenaWidth, this.arenaHeight)
       if (firstRoom) {
@@ -596,6 +600,13 @@ export default class GameServer {
       if (level.buildingSpawning) {
         this.buildingSpawnSystem = new BuildingSpawnSystem(
           level.buildingSpawning, diff, playerCount,
+          this.arenaWidth, this.arenaHeight
+        )
+      }
+      // Portal beam mechanic (The Siege)
+      if (level.beamMechanic && level.mirrors?.length) {
+        this.portalBeamSystem = new PortalBeamSystem(
+          level.beamMechanic, level.mirrors,
           this.arenaWidth, this.arenaHeight
         )
       }
@@ -669,7 +680,7 @@ export default class GameServer {
       }
     }
 
-    // Illidan encounter setup (Level 5)
+    // Illidan encounter setup (Level 6)
     if (level.boss === 'ILLIDAN' && this.boss) {
       this._illidanState = {
         phase2AddsSpawned:    false,
@@ -686,18 +697,42 @@ export default class GameServer {
         if (phase === 2) this._onIllidanPhase2()
       }
 
-      // Start entrance cinematic — boss is immune until dialog completes
-      if (level.dialog?.length && !this.skipDialog) {
-        this.boss.isImmune = true
-        this._dialogSystem = new DialogSystem({
-          lines: level.dialog,
-          onComplete: () => {
-            if (this.boss) this.boss.isImmune = false
-            this._dialogSystem = null
-          },
-        })
-        this._dialogSystem.start((event, data) => this.io.emit(event, data))
-      }
+      // Illidan's minionSpawning (currently null) is handled by the generic dialog/no-dialog
+      // block below — no activation here. Phase-scripted adds (Flames, Shadow Demons) are
+      // spawned programmatically via _onIllidanPhase2 and never go through minionSpawnSystem.
+    }
+
+    // Entrance cinematic for any boss level with a dialog array.
+    // Applies to both Shade of Akama (Level 5) and Illidan (Level 6).
+    if (level.boss && level.dialog?.length && !this.skipDialog && this.boss) {
+      // Ensure boss is immune during the cinematic.
+      // For Shade: warlocks block above already set isImmune = true; this is a no-op.
+      // For Illidan: sets immunity so he stands still during the intro.
+      this.boss.isImmune = true
+      this._dialogSystem = new DialogSystem({
+        lines: level.dialog,
+        onComplete: () => {
+          this._dialogSystem = null
+          // If this level has warlocks, immunity is held until all warlocks die — don't release it here.
+          // For boss levels without warlocks (Illidan included), dialog end = boss becomes vulnerable.
+          if (this.boss && !level.warlocks) this.boss.isImmune = false
+          // Activate ambient minion spawning now that dialog is done (used by Shade Phase 2).
+          // Illidan's minionSpawning is null so this is a safe no-op for Level 6.
+          if (level.minionSpawning && !this.minionSpawnSystem) {
+            this.minionSpawnSystem = new SpawnSystem(
+              { spawning: level.minionSpawning, difficulty: level.difficulty ?? {}, arena: level.arena },
+              playerCount
+            )
+          }
+        },
+      })
+      this._dialogSystem.start((event, data) => this.io.emit(event, data))
+    } else if (level.boss && level.minionSpawning && !this.minionSpawnSystem) {
+      // No dialog (skipDialog=true or no dialog array) — activate minion spawning immediately.
+      this.minionSpawnSystem = new SpawnSystem(
+        { spawning: level.minionSpawning, difficulty: level.difficulty ?? {}, arena: level.arena },
+        playerCount
+      )
     }
 
     // Init objective progress
@@ -720,6 +755,7 @@ export default class GameServer {
       npcs:        this._npcsDTO(),
       rooms:       level.arena?.rooms ?? [],
       passages:    level.arena?.passages ?? [],
+      mirrors:     level.mirrors ?? [],
     })
   }
 
@@ -761,6 +797,7 @@ export default class GameServer {
     this._activeGateIndex = 0
     this.buildings.clear()
     this.buildingSpawnSystem = null
+    this.portalBeamSystem    = null
     this._bossPhase    = 1
     this._warlockCount = 0
     this._lastSpawn    = 0
@@ -768,7 +805,8 @@ export default class GameServer {
     this.skillSystem.activeZones    = []
     this.skillSystem._pendingBursts = []
 
-    // Illidan state
+    // Illidan state + minion spawn system
+    this.minionSpawnSystem = null
     if (this._dialogSystem) { this._dialogSystem.destroy(); this._dialogSystem = null }
     this._illidanState       = null
     this._activeEyeBeams     = []
@@ -1018,6 +1056,24 @@ export default class GameServer {
         for (const e of bSpawned) this.enemies.set(e.id, e)
       }
 
+      // Spawn ambient minions (Level 5 — activated after dialog)
+      if (this.minionSpawnSystem) {
+        const mSpawned = this.minionSpawnSystem.tick(now, this.enemies, this._enemyIdSeq, null)
+        for (const e of mSpawned) this.enemies.set(e.id, e)
+      }
+
+      // Portal beam mechanic (Level 2 — The Siege)
+      if (this.portalBeamSystem) {
+        const gs = this._gs()
+        this.portalBeamSystem.tick(
+          now,
+          this.buildings,
+          this.players,
+          (event, data) => this.io.emit(event, data),
+          (player, dmg) => this.skillSystem._dealDamage(gs, null, player, dmg, 'Portal Beam')
+        )
+      }
+
       // Update enemies (AI + contact damage + split-on-death)
       this._updateEnemies(dt, now)
 
@@ -1067,6 +1123,9 @@ export default class GameServer {
     const { index, vector, action } = input
     const config = player.getSkillConfig(index)
     if (!config) return
+
+    // Bladestorm suppresses all other skills while active
+    if (player.bladestormActive && config.subtype !== 'BLADESTORM') return
 
     // Vanish/stealth breaks when any ability other than the stealth skill itself is used
     if (player.isInvisible) {
@@ -1196,10 +1255,13 @@ export default class GameServer {
 
         // Notify spawn systems
         if (this.spawnSystem) {
-          this.spawnSystem.onEnemyDied()
+          this.spawnSystem.onEnemyDied(id)
         }
         if (this.buildingSpawnSystem) {
           this.buildingSpawnSystem.onEnemyDied(id)
+        }
+        if (this.minionSpawnSystem) {
+          this.minionSpawnSystem.onEnemyDied(id)
         }
 
         // Split-on-death: queue child spawns
@@ -1384,6 +1446,7 @@ export default class GameServer {
         distTraveled: 0,
         damage: action.damage,
         color: action.color,
+        spriteKey: action.spriteKey ?? null,
         isAlive: true,
         isEnemyProj: true,
         ownerId: enemyId,
@@ -2145,6 +2208,12 @@ export default class GameServer {
         gate.isActive = false
         needAdvance = true
         console.log(`[~] Gate ${gate.id} destroyed`)
+
+        // Phase-aware spawn switching — when gate1 dies, move enemies to Room 2 spawn points
+        if (gate.id === 'gate1' && this.spawnSystem?.setSpawnPhase) {
+          this.spawnSystem.setSpawnPhase(2)
+          console.log('[~] SpawnSystem advanced to phase 2 (gate1 destroyed)')
+        }
       }
     })
 

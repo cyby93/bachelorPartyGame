@@ -265,7 +265,13 @@
   onpointercancel={onPointerCancel}
 >
   {#if skill}
-    <span class="skill-icon">{skill.icon}</span>
+    <span class="skill-icon">
+      {#if skill.iconFile}
+        <img src="/icons/abilities/{skill.iconFile}.jpg" alt={skill.name} class="skill-icon-img" />
+      {:else}
+        {skill.icon}
+      {/if}
+    </span>
     <span class="skill-name">{skill.name}</span>
     <CooldownOverlay {expiresAt} />
   {/if}
@@ -304,6 +310,7 @@
     box-shadow: inset 0 0 12px rgba(0, 210, 100, 0.6);
   }
 
-  .skill-icon { font-size: 32px; line-height: 1; }
+  .skill-icon { font-size: 96px; line-height: 1; display: flex; align-items: center; justify-content: center; width: 96px; height: 96px; }
+  .skill-icon-img { width: 96px; height: 96px; object-fit: contain; display: block; }
   .skill-name { font-size: 11px; color: #7fa8c0; text-align: center; padding: 0 4px; }
 </style>

@@ -184,14 +184,16 @@ export default class SkillSystem {
   _executeMelee(gs, player, config, v) {
     const halfAngle = (config.angle ?? Math.PI / 3) / 2
     let hitCount = 0
+    let totalDamageDealt = 0
 
     // Hit enemies
     gs.enemies.forEach(e => {
       if (e.isDead) return
       if (this._collision.inCone({ x: player.x, y: player.y }, v, halfAngle, config.range, { x: e.x, y: e.y })) {
-        this._dealDamage(gs, player, e, config.damage ?? 0)
+        const dealt = this._dealDamage(gs, player, e, config.damage ?? 0)
+        totalDamageDealt += dealt
         hitCount++
-        // Apply debuff if effectParams present (e.g. Frost Strike slow)
+        // Apply debuff if effectParams present (e.g. Obliterate slow)
         if (config.effectParams) {
           const ep = config.effectParams
           e.activeEffects = e.activeEffects ?? []
@@ -210,7 +212,8 @@ export default class SkillSystem {
     // Hit boss
     if (gs.boss && !gs.boss.isDead && !gs.boss.isImmune) {
       if (this._collision.inCone({ x: player.x, y: player.y }, v, halfAngle, config.range, { x: gs.boss.x, y: gs.boss.y })) {
-        this._dealDamage(gs, player, gs.boss, config.damage ?? 0)
+        const dealt = this._dealDamage(gs, player, gs.boss, config.damage ?? 0)
+        totalDamageDealt += dealt
         hitCount++
       }
     }
@@ -237,6 +240,16 @@ export default class SkillSystem {
       })
     }
 
+    // Lifesteal: heal caster for 100% of damage dealt (e.g. DK Obliterate)
+    if (config.lifesteal && totalDamageDealt > 0) {
+      const healAmt = Math.round(totalDamageDealt * config.lifesteal)
+      if (healAmt > 0) {
+        player.heal(healAmt)
+        this._trackHeal(gs, player.id, healAmt)
+        if (gs.io) gs.io.emit('effect:damage', { targetId: player.id, amount: healAmt, type: 'heal', sourceSkill: config.name })
+      }
+    }
+
     // Combo point generation (Sinister Strike)
     if (config.addsComboPoint && hitCount > 0) {
       player.comboPoints = Math.min(5, (player.comboPoints ?? 0) + 1)
@@ -247,7 +260,14 @@ export default class SkillSystem {
   }
 
   _executeAOE(gs, player, config, v) {
-    if (config.subtype === 'AOE_SELF') {
+    if (config.subtype === 'BLADESTORM') {
+      // Player-attached spinning AOE — zone follows the caster each tick
+      const color = CLASSES[player.className]?.color ?? '#ffff00'
+      this.addZone(player.id, config, player.x, player.y, color, { followOwner: true })
+      player.bladestormActive = true
+      // Fire immediately for the first tick
+      this._executeAOEAtPoint(gs, player, config, player.x, player.y)
+    } else if (config.subtype === 'AOE_SELF') {
       // If skill has both duration and tickRate, create a persistent ground zone
       if (config.duration && config.tickRate) {
         const color = CLASSES[player.className]?.color ?? '#ffff00'
@@ -256,6 +276,18 @@ export default class SkillSystem {
         this._executeAOEAtPoint(gs, player, config, player.x, player.y)
       } else {
         this._executeAOEAtPoint(gs, player, config, player.x, player.y)
+      }
+    } else if (config.subtype === 'AOE_ADJACENT') {
+      // Spawn zone so its EDGE touches the caster — center is one radius out in aim direction
+      const r = config.radius ?? 100
+      const cx = player.x + v.x * r
+      const cy = player.y + v.y * r
+      if (config.duration && config.tickRate) {
+        const color = CLASSES[player.className]?.color ?? '#ffff00'
+        this.addZone(player.id, config, cx, cy, color)
+        this._executeAOEAtPoint(gs, player, config, cx, cy)
+      } else {
+        this._executeAOEAtPoint(gs, player, config, cx, cy)
       }
     } else if (config.subtype === 'AOE_LOBBED') {
       // Spawn a lobbed projectile that detonates at target
@@ -677,6 +709,30 @@ export default class SkillSystem {
     const spawnX = player.x + v.x * 30
     const spawnY = player.y + v.y * 30
 
+    // WILD_BEAST: randomly pick one beast variant and flatten stats into petStats
+    if (config.subtype === 'WILD_BEAST' && config.beastVariants?.length) {
+      const variants = config.beastVariants
+      const chosen = variants[Math.floor(Math.random() * variants.length)]
+      const resolvedConfig = {
+        ...config,
+        chosenBeast: chosen.beast,
+        petStats: {
+          hp:          chosen.hp,
+          speed:       chosen.speed,
+          damage:      chosen.damage,
+          attackRange: chosen.attackRange,
+          attackRate:  chosen.attackRate,
+          radius:      chosen.radius,
+          invincible:  chosen.invincible ?? false,
+          taunt:       chosen.taunt ?? false,
+          tauntRadius: chosen.tauntRadius ?? 0,
+          ranged:      chosen.ranged ?? false,
+        },
+      }
+      gs.minions.set(id, new ServerMinion({ id, ownerId: player.id, config: resolvedConfig, x: spawnX, y: spawnY, color }))
+      return
+    }
+
     gs.minions.set(id, new ServerMinion({ id, ownerId: player.id, config, x: spawnX, y: spawnY, color }))
   }
 
@@ -868,8 +924,8 @@ export default class SkillSystem {
   // ── Damage helper ──────────────────────────────────────────────────────────
 
   _dealDamage(gs, attacker, target, amount, sourceSkill) {
-    if (amount <= 0) return
-    if (target.isDead) return
+    if (amount <= 0) return 0
+    if (target.isDead) return 0
 
     let remaining = amount
 
@@ -878,7 +934,7 @@ export default class SkillSystem {
       const absorbed = Math.min(target.shieldAbsorb, remaining)
       target.shieldAbsorb -= absorbed
       remaining -= absorbed
-      if (remaining <= 0) return
+      if (remaining <= 0) return 0
     }
 
     // Damage reduction
@@ -897,7 +953,7 @@ export default class SkillSystem {
     }
 
     const finalAmount = Math.round(remaining)
-    if (finalAmount <= 0) return
+    if (finalAmount <= 0) return 0
 
     const wasDead = target.isDead
     target.takeDamage(finalAmount)
@@ -934,6 +990,8 @@ export default class SkillSystem {
       attacker.activeEffects = attacker.activeEffects.filter(e => !(e.params?.invisible))
       rebuildStats(attacker)
     }
+
+    return finalAmount
   }
 
   // Track healing done by a caster (cumulative + per-level)
@@ -1454,8 +1512,7 @@ export default class SkillSystem {
         if (gs.cooldowns) {
           const effectiveCooldown = Math.round(cast.config.cooldown / (p.fireRateMult ?? 1))
           gs.cooldowns.start(p.id, cast.skillIndex, effectiveCooldown)
-          const expiresAt = now + effectiveCooldown
-          if (gs.io) gs.io.emit('skill:cooldown', { playerId: p.id, skillIndex: cast.skillIndex, expiresAt })
+          if (gs.io) gs.io.emit('skill:cooldown', { playerId: p.id, skillIndex: cast.skillIndex, durationMs: effectiveCooldown })
         }
         if (gs.io) gs.io.emit('channel:interrupted', { playerId: p.id })
         p.activeCast = null
@@ -1475,9 +1532,19 @@ export default class SkillSystem {
       // BEAM: drain life from target
       if (cast.config.subtype === 'BEAM') {
         const target = this._resolveTarget(gs, cast.beamTargetId)
-        if (!target || target.isDead) { p.activeCast = null; return }
+        if (!target || target.isDead) {
+          this._applyChannelCooldown(gs, p, cast)
+          if (gs.io) gs.io.emit('channel:interrupted', { playerId: p.id })
+          p.activeCast = null
+          return
+        }
         const dist = Math.hypot(target.x - p.x, target.y - p.y)
-        if (dist > cast.beamRange * 1.3) { p.activeCast = null; return }
+        if (dist > cast.beamRange * 1.3) {
+          this._applyChannelCooldown(gs, p, cast)
+          if (gs.io) gs.io.emit('channel:interrupted', { playerId: p.id })
+          p.activeCast = null
+          return
+        }
         const dmg = cast.config.damagePerTick ?? 0
         const heal = cast.config.healPerTick ?? 0
         if (dmg > 0) this._dealDamage(gs, p, target, dmg, cast.config.name)
@@ -1496,6 +1563,17 @@ export default class SkillSystem {
     })
   }
 
+  /**
+   * Apply the full cooldown for an interrupted/broken channel and emit it to clients.
+   * Uses the same durationMs format as all other COOLDOWN events.
+   */
+  _applyChannelCooldown(gs, player, cast) {
+    if (!gs.cooldowns || cast.skillIndex == null) return
+    const effectiveCooldown = Math.round(cast.config.cooldown / (player.fireRateMult ?? 1))
+    gs.cooldowns.start(player.id, cast.skillIndex, effectiveCooldown)
+    if (gs.io) gs.io.emit('skill:cooldown', { playerId: player.id, skillIndex: cast.skillIndex, durationMs: effectiveCooldown })
+  }
+
   _tickMinions(gs, dt) {
     if (!gs.minions) return
     gs.minions.forEach((m, id) => {
@@ -1509,13 +1587,23 @@ export default class SkillSystem {
     for (let i = this.activeZones.length - 1; i >= 0; i--) {
       const zone = this.activeZones[i]
       if (now >= zone.expiresAt) {
+        // Clear bladestormActive flag when the zone expires
+        if (zone.config.subtype === 'BLADESTORM') {
+          const owner = gs.players.get(zone.ownerId)
+          if (owner) owner.bladestormActive = false
+        }
         this.activeZones.splice(i, 1)
         continue
+      }
+      const owner = gs.players.get(zone.ownerId)
+      // Follow-owner zones (e.g. Bladestorm) — update position to caster's current location
+      if (zone.followOwner && owner && !owner.isDead) {
+        zone.x = owner.x
+        zone.y = owner.y
       }
       // Tick damage/heal at tickRate intervals
       if (now - zone.lastTick >= zone.tickRate) {
         zone.lastTick = now
-        const owner = gs.players.get(zone.ownerId)
         this._executeAOEAtPoint(gs, owner, zone.config, zone.x, zone.y)
       }
     }
@@ -1523,8 +1611,15 @@ export default class SkillSystem {
 
   /**
    * Create a persistent AOE ground zone.
+   * @param {string}  ownerId
+   * @param {object}  config
+   * @param {number}  x
+   * @param {number}  y
+   * @param {string}  color
+   * @param {object}  [opts]               – optional flags
+   * @param {boolean} [opts.followOwner]   – if true, zone tracks owner position each tick (Bladestorm)
    */
-  addZone(ownerId, config, x, y, color) {
+  addZone(ownerId, config, x, y, color, opts = {}) {
     const id = ++this._zoneSeq
     this.activeZones.push({
       id,
@@ -1537,6 +1632,7 @@ export default class SkillSystem {
       expiresAt: Date.now() + (config.duration ?? 5000),
       tickRate: config.tickRate ?? 500,
       lastTick: Date.now(),
+      followOwner: opts.followOwner ?? false,
     })
     return id
   }
@@ -1562,13 +1658,15 @@ export default class SkillSystem {
       const color = CLASSES[player.className]?.color ?? '#ffffff'
       const v = normalize(vector)
       this._spawnProjectile(gs, player, {
-        speed:    payload.speed  ?? 300,
-        radius:   payload.radius ?? 15,
-        range:    payload.range  ?? 500,
-        damage:   payload.damage ?? 0,
-        healAmount: payload.healAmount ?? 0,
-        effectType: payload.effectType ?? 'DAMAGE',
-        pierce:   payload.pierce ?? false,
+        speed:       payload.speed  ?? 300,
+        radius:      payload.radius ?? 15,
+        range:       payload.range  ?? 500,
+        damage:      payload.damage ?? 0,
+        healAmount:  payload.healAmount ?? 0,
+        effectType:  payload.effectType ?? 'DAMAGE',
+        pierce:      payload.pierce ?? false,
+        onHitEffect: payload.onHitEffect ?? null,
+        dot:         payload.dot ?? null,
       }, {
         vx: v.x * (payload.speed ?? 300),
         vy: v.y * (payload.speed ?? 300),

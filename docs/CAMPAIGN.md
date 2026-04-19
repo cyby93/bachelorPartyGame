@@ -75,6 +75,8 @@ Current campaign entries look like:
 | `initialEnemies` | pre-placed enemies at level start (Level 3) |
 | `bossSpawnPosition` | custom boss spawn position override |
 | `dialog` | Illidan entrance cinematic lines `[{ speaker, text, delayAfter }]` (Level 5 only) |
+| `mirrors` | Fixed waypoint positions the beam system can route through. Optional on any level. Shape: `[{ id, position: { x, y } }]` |
+| `beams` | Active beam definitions. Optional on any level. Shape: `[{ id, source: buildingId, target: buildingId, waypoints?: [mirrorId] }]` |
 
 ---
 

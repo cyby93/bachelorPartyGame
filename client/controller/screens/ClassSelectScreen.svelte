@@ -6,16 +6,16 @@
   let className = $state(null)
 
   const CLASS_ICONS = {
-    Warrior:     '⚔️',
-    Paladin:     '🔨',
-    Shaman:      '⚡',
-    Hunter:      '🏹',
-    Priest:      '✝️',
-    Mage:        '🔥',
-    Druid:       '🌿',
-    Rogue:       '🗡️',
-    Warlock:     '💀',
-    DeathKnight: '💎',
+    Warrior:     'classicon_warrior',
+    Paladin:     'classicon_paladin',
+    Shaman:      'classicon_shaman',
+    Hunter:      'classicon_hunter',
+    Priest:      'classicon_priest',
+    Mage:        'classicon_mage',
+    Druid:       'classicon_druid',
+    Rogue:       'classicon_rogue',
+    Warlock:     'classicon_warlock',
+    DeathKnight: 'classicon_deathknight',
   }
 
   const ROLES = {
@@ -46,7 +46,7 @@
         style="--class-color: {CLASSES[cls].color}"
         onclick={() => className = cls}
       >
-        <span class="icon">{CLASS_ICONS[cls]}</span>
+        <img class="class-icon" src="/icons/classes/{CLASS_ICONS[cls]}.jpg" alt={cls} />
         <span class="cls-name">{CLASSES[cls].name}</span>
         <span class="role">{ROLES[cls]}</span>
       </button>
@@ -95,7 +95,7 @@
     background: color-mix(in srgb, var(--class-color) 15%, #16202a);
   }
 
-  .class-card .icon     { font-size: 28px; line-height: 1; }
+  .class-card .class-icon { width: 40px; height: 40px; object-fit: contain; display: block; }
   .class-card .cls-name { font-size: 13px; font-weight: bold; }
   .class-card .role     { font-size: 10px; color: #7fa8c0; text-align: center; }
 

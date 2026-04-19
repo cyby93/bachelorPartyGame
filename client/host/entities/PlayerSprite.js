@@ -130,11 +130,12 @@ export default class PlayerSprite {
     this.container.addChild(this._aimArrow)
     this._aimPulse = 0
 
-    // ── Overhead display (cast bar + status icons) ──────────────────────────
+    // ── Overhead display (cast bar + status icons + combo pips for Rogue) ─────
     this.overhead = new OverheadDisplay(this.container, {
       yOffset: -SPRITE_H - 18,
       showCastBar: true,
       showStatusIcons: true,
+      showComboPips: className === 'rogue',
     })
   }
 
@@ -353,6 +354,9 @@ export default class PlayerSprite {
     this.overhead.updateCastBar(state.castProgress ?? 0, state.isChanneling ?? false)
     if (state.effects) {
       this.overhead.setStatusIcons(state.effects)
+    }
+    if (this._className === 'rogue') {
+      this.overhead.setComboPoints(state.comboPoints ?? 0)
     }
     this.overhead.update(dt)
   }

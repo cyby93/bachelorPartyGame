@@ -459,6 +459,61 @@ export default class BaseRenderer {
       dot.fill('#ffdd00')
       root.addChild(dot)
 
+    } else if (m.minionType === 'WILD_BEAST') {
+      // Beast color by variant
+      const BEAST_COLORS = { bear: 0x8B5E3C, hawk: 0xFFCC00, panther: 0x3B1A5A }
+      const beastColor = BEAST_COLORS[m.chosenBeast] ?? 0x888888
+
+      const body = new Graphics()
+      body.circle(0, 2, 13)
+      body.fill({ color: beastColor, alpha: 0.95 })
+      body.stroke({ color: 0xffffff, width: 2, alpha: 0.5 })
+      root.addChild(body)
+
+      // Ear shapes — distinct silhouettes per beast
+      if (m.chosenBeast === 'bear') {
+        // Round stubby ears
+        const earL = new Graphics()
+        earL.circle(-8, -12, 5)
+        earL.fill({ color: beastColor, alpha: 0.95 })
+        earL.stroke({ color: 0xffffff, width: 1, alpha: 0.35 })
+        root.addChild(earL)
+
+        const earR = new Graphics()
+        earR.circle(8, -12, 5)
+        earR.fill({ color: beastColor, alpha: 0.95 })
+        earR.stroke({ color: 0xffffff, width: 1, alpha: 0.35 })
+        root.addChild(earR)
+      } else if (m.chosenBeast === 'hawk') {
+        // Pointed wing-tips (triangle crest)
+        const crest = new Graphics()
+        crest.poly([0, -24, -7, -12, 7, -12])
+        crest.fill({ color: beastColor, alpha: 0.95 })
+        root.addChild(crest)
+      } else {
+        // Panther — pointed ears
+        const earL = new Graphics()
+        earL.poly([-10, -10, -4, -20, 0, -10])
+        earL.fill({ color: beastColor, alpha: 0.95 })
+        root.addChild(earL)
+
+        const earR = new Graphics()
+        earR.poly([10, -10, 4, -20, 0, -10])
+        earR.fill({ color: beastColor, alpha: 0.95 })
+        root.addChild(earR)
+      }
+
+      const hpBg = new Graphics()
+      hpBg.rect(-13, 19, 26, 4)
+      hpBg.fill('#111111')
+      root.addChild(hpBg)
+
+      const hpFill = new Graphics()
+      root.addChild(hpFill)
+      root._hpFill = hpFill
+      root._maxHp  = m.maxHp
+      root._lastHp = -1
+
     } else if (m.minionType === 'PET') {
       const body = new Graphics()
       body.circle(0, 2, 11)
@@ -498,7 +553,7 @@ export default class BaseRenderer {
   _updateMinionGfx(root, m) {
     root.position.set(m.x, m.y)
 
-    if (root._minionType === 'PET' && root._hpFill && m.hp !== root._lastHp) {
+    if ((root._minionType === 'PET' || root._minionType === 'WILD_BEAST') && root._hpFill && m.hp !== root._lastHp) {
       root._lastHp = m.hp
       const pct = Math.max(0, m.hp / (root._maxHp || 1))
       root._hpFill.clear()

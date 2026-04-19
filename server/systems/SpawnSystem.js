@@ -27,6 +27,9 @@ export default class SpawnSystem {
     this.arenaHeight = levelConfig.arena?.height ?? GAME_CONFIG.CANVAS_HEIGHT
     this._lastSpawn  = 0
 
+    // Track only this system's own alive enemies — independent of building-spawned enemies
+    this._ownedEnemyIds = new Set()
+
     // Pre-compute multipliers once per level
     this._hpMult     = this._mult(this.difficulty.hpMult)
     this._damageMult = this._mult(this.difficulty.damageMult)
@@ -56,6 +59,10 @@ export default class SpawnSystem {
     // ── Phase gating (for Level 4 — only spawn in certain boss phases) ──
     this.activeInPhase = this.config?.activeInPhase ?? null
     this._phaseActive  = this.activeInPhase === null  // null = always active
+
+    // ── Gate-phase spawn points (for Level 3 — spawn points change when a gate dies) ──
+    this._spawnPhases    = this.config?.spawnPhases ?? null   // array of { phase, spawnPoints }
+    this._activeSpawnPhase = 1                                // starts at phase 1
   }
 
   /** Returns the scaling multiplier for a given difficulty dimension. */
@@ -85,6 +92,15 @@ export default class SpawnSystem {
   }
 
   /**
+   * Switch the active spawn-point phase (used for gate-destruction events, e.g., Level 3).
+   * @param {number} phase – the new phase number to activate
+   */
+  setSpawnPhase(phase) {
+    if (!this._spawnPhases) return
+    this._activeSpawnPhase = phase
+  }
+
+  /**
    * Call once per server tick.
    * @param {number} now          – Date.now()
    * @param {Map}    enemies      – live enemies map
@@ -109,8 +125,14 @@ export default class SpawnSystem {
     if (now - this._lastSpawn < interval) return []
     this._lastSpawn = now
 
+    // Prune owned set — remove any ids no longer alive in the global map
+    for (const id of this._ownedEnemyIds) {
+      if (!enemies.has(id)) this._ownedEnemyIds.delete(id)
+    }
+
     const maxAlive = Math.ceil((this.config.maxAliveAtOnce ?? 15) * this._spawnMult)
-    if (enemies.size >= maxAlive) return []
+    // Use own counter so building-spawned enemies don't eat into our cap
+    if (this._ownedEnemyIds.size >= maxAlive) return []
 
     const [minCount, maxCount] = this.config.countPerWave ?? [1, 3]
     const scaledMin = Math.ceil(minCount * this._countMult)
@@ -119,18 +141,33 @@ export default class SpawnSystem {
 
     const spawned = []
     for (let i = 0; i < count; i++) {
-      if (enemies.size + spawned.length >= maxAlive) break
+      if (this._ownedEnemyIds.size + spawned.length >= maxAlive) break
 
       const typeName = this._typeTable[Math.floor(Math.random() * this._typeTable.length)]
       const base     = ENEMY_TYPES[typeName]
       if (!base) continue
 
-      const { x, y } = spawnPos
-        ? this._randomNearPos(spawnPos.x, spawnPos.y, this.config.spawnRadius ?? 150)
-        : this._edgePos(this.config.spawnEdge, 30)
+      // Resolve active spawn points — spawnPhases override static spawnPoints
+      const activePhasePts = this._spawnPhases
+        ?.find(p => p.phase === this._activeSpawnPhase)
+        ?.spawnPoints
+      const pts = activePhasePts ?? this.config.spawnPoints
+      let x, y
+      if (pts?.length) {
+        const pt = pts[Math.floor(Math.random() * pts.length)]
+        const res = this._randomNearPos(pt.x, pt.y, this.config.spawnRadius ?? 60)
+        x = res.x; y = res.y
+      } else if (spawnPos) {
+        const res = this._randomNearPos(spawnPos.x, spawnPos.y, this.config.spawnRadius ?? 150)
+        x = res.x; y = res.y
+      } else {
+        const res = this._edgePos(this.config.spawnEdge, 30)
+        x = res.x; y = res.y
+      }
 
       const enemy = this._createEnemy(idSeqRef, typeName, base, x, y)
       spawned.push(enemy)
+      this._ownedEnemyIds.add(enemy.id)
     }
 
     return spawned
@@ -222,10 +259,13 @@ export default class SpawnSystem {
     return best
   }
 
-  /** Notify that a wave enemy has died (called by GameServer). */
-  onEnemyDied() {
-    if (this.mode !== 'wave') return
-    this.waveEnemiesAlive = Math.max(0, this.waveEnemiesAlive - 1)
+  /** Notify that an enemy has died (called by GameServer). */
+  onEnemyDied(enemyId) {
+    if (this.mode === 'wave') {
+      this.waveEnemiesAlive = Math.max(0, this.waveEnemiesAlive - 1)
+    }
+    // Remove from owned set so the slot becomes available for continuous spawning
+    if (enemyId != null) this._ownedEnemyIds.delete(enemyId)
   }
 
   // ── Enemy factory ─────────────────────────────────────────────────────

@@ -71,7 +71,7 @@ export const CAMPAIGN = [
 
   // ── Level 2: The Siege (Destroy the Buildings) ────────────────────────
   {
-    id: 'level_siege',
+    id: 'level_2',
     name: 'The Siege',
     arena: { width: 1200, height: 1200 },
     objectives: [
@@ -83,6 +83,22 @@ export const CAMPAIGN = [
       { id: 'b3', position: { x: 60, y: 1140 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
       { id: 'b4', position: { x: 1140, y: 1140 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
     ],
+    // Portal beam mechanic: two buildings link via a mirror every 10 seconds.
+    // 3-second warning phase, then damage phase. Cyby will tune damage values.
+    // mirrors?: [{ id: string, position: { x: number, y: number } }]
+    mirrors: [
+      { id: 'm1', position: { x: 600, y: 200 } },
+      { id: 'm2', position: { x: 200, y: 600 } },
+      { id: 'm3', position: { x: 1000, y: 600 } },
+      { id: 'm4', position: { x: 600, y: 1000 } },
+    ],
+    beamMechanic: {
+      cycleMs:         10000,  // full cycle length (warning + damage combined)
+      warningMs:       3000,   // warning phase duration before damage starts
+      damageMs:        2000,   // how long the damage phase lasts
+      damagePerSecond: 40,     // DPS to players caught in the beam rectangle
+      beamWidth:       60,     // half-width of each beam rectangle
+    },
     buildingSpawning: {
       baseInterval: 3000,          // ms between spawns per building
       countPerSpawn: [1, 2],       // min/max enemies per spawn event
@@ -124,39 +140,62 @@ export const CAMPAIGN = [
 
   // ── Level 3: Destroy the Gates ────────────────────────────────────────
   {
-    id: 'level_2',
+    id: 'level_3',
     name: 'The Black Temple Gates',
     arena: {
       width: 1100,
       height: 600,
       rooms: [
-        { id: 'left',  x: 0,   y: 0, width: 530, height: 400 },
-        { id: 'right', x: 570, y: 0, width: 530, height: 400 },
+        // Left room: players start here. Full arena height.
+        { id: 'left',  x: 0,   y: 0, width: 530, height: 600 },
+        // Right room: between gate1 and gate2. Full arena height.
+        { id: 'right', x: 570, y: 0, width: 530, height: 600 },
       ],
       passages: [
-        { id: 'passage1', fromRoom: 'left', toRoom: 'right', x: 530, y: 150, width: 40, height: 100, blockedByGate: 'gate1' },
+        // Passage in the middle of the wall, vertically centered in the 600px arena
+        { id: 'passage1', fromRoom: 'left', toRoom: 'right', x: 530, y: 250, width: 40, height: 100, blockedByGate: 'gate1' },
       ],
     },
     objectives: [
       { type: 'destroyGates' },
     ],
     gates: [
-      { id: 'gate1', passageId: 'passage1', hp: Math.round(10 * X * R), position: { x: 550, y: 200 }, width: 40, height: 100 },
-      { id: 'gate2', passageId: null,        hp: Math.round(10 * X * R), position: { x: 1070, y: 200 }, width: 48, height: 80 },
+      // Gate1 blocks passage1 — x=550 is center of 40px gap (530+20), y=300 is center of passage (250..350)
+      { id: 'gate1', passageId: 'passage1', hp: Math.round(10 * X * R), position: { x: 550, y: 300 }, width: 40, height: 100 },
+      // Gate2 at the far right edge of the right room — x=1062 center, y=300 matches gate1
+      { id: 'gate2', passageId: null,       hp: Math.round(10 * X * R), position: { x: 1062, y: 300 }, width: 48, height: 100 },
     ],
     spawning: {
       mode: 'continuous',
       interval: 2000,
       countPerWave: [1, 3],
       maxAliveAtOnce: 12,
-      spawnNearActiveGate: true,
-      spawnRadius: 80,
+      spawnRadius: 60,
       enemyTypes: [
-        { type: 'felGuard',        weight: 3 },
-        { type: 'bonechewerBrute',        weight: 1 },
-        { type: 'coilskarHarpooner',       weight: 1 },
-        { type: 'ashtonghueMystic',       weight: 1 },
-        { type: 'ritualChanneler', weight: 2 },
+        { type: 'felGuard',          weight: 3 },
+        { type: 'bonechewerBrute',   weight: 1 },
+        { type: 'coilskarHarpooner', weight: 1 },
+        { type: 'ashtonghueMystic',  weight: 1 },
+        { type: 'ritualChanneler',   weight: 2 },
+      ],
+      // Phase-gated spawn points — server switches activeSpawnPhase when gate1 is destroyed.
+      // phase 1: Gate 1 alive → spawn in Room 1 (left room) near gate1, top and bottom wall edges.
+      // phase 2: Gate 1 destroyed → spawn in Room 2 (right room) on the left side (near where gate1 was).
+      spawnPhases: [
+        {
+          phase: 1,
+          spawnPoints: [
+            { x: 490, y: 30  },   // Room 1, top wall edge, near gate1
+            { x: 490, y: 570 },   // Room 1, bottom wall edge, near gate1
+          ],
+        },
+        {
+          phase: 2,
+          spawnPoints: [
+            { x: 620, y: 30  },   // Room 2, top edge, left side (near where gate1 was)
+            { x: 620, y: 300 },   // Room 2, mid-height, left side
+          ],
+        },
       ],
     },
     difficulty: {
@@ -168,9 +207,9 @@ export const CAMPAIGN = [
     boss: null,
   },
 
-  // ── Level 3: The Leviathan ────────────────────────────────────────────
+  // ── Level 4: The Leviathan ────────────────────────────────────────────
   {
-    id: 'level_3',
+    id: 'level_4',
     name: 'Serpentshrine Cavern',
     arena: { width: 1600, height: 1200 },
     objectives: [
@@ -206,9 +245,9 @@ export const CAMPAIGN = [
     boss: null,
   },
 
-  // ── Level 4: Shade of Akama ──────────────────────────────────────────
+  // ── Level 5: Shade of Akama ──────────────────────────────────────────
   {
-    id: 'level_4',
+    id: 'level_5',
     name: 'The Refectory',
     arena: { width: 1400, height: 900 },
     objectives: [
@@ -236,18 +275,18 @@ export const CAMPAIGN = [
       circleRadius: 120,
       centerEntityId: 'shade',
     },
-    // Phase 2 spawning (activated when all warlocks die)
+    // Ambient spawning throughout the encounter — active from phase 1
     spawning: {
       mode: 'continuous',
       interval: 3000,
       countPerWave: [1, 2],
       maxAliveAtOnce: 8,
-      activeInPhase: 2,
+      spawnEdge: 'all',
       enemyTypes: [
-        { type: 'felGuard',  weight: 3 },
+        { type: 'felGuard',          weight: 3 },
         { type: 'coilskarHarpooner', weight: 1 },
-        { type: 'bonechewerBrute',  weight: 1 },
-        { type: 'ashtonghueMystic', weight: 1 },
+        { type: 'bonechewerBrute',   weight: 1 },
+        { type: 'ashtonghueMystic',  weight: 1 },
       ],
     },
     difficulty: {
@@ -256,11 +295,21 @@ export const CAMPAIGN = [
       spawnMult:  { base: 1.0, perPlayer: 0.08 },
       countMult:  { base: 1.0, perPlayer: 0.05 },
     },
+
+    // Entrance cinematic. Boss is immune until all lines have played.
+    // After dialog completes, boss becomes vulnerable AND minionSpawning activates.
+    // delayAfter: ms to wait after this line before showing the next.
+    // TODO(Cyby): Replace [PLACEHOLDER] lines with final text.
+    dialog: [
+      { speaker: 'akama', text: '[PLACEHOLDER] Brothers, today we take back what was stolen from us.',     delayAfter: 3500 },
+      // { speaker: 'akama', text: '[PLACEHOLDER] The Shade has drained this place long enough. Fight with me!', delayAfter: 3500 },
+      // { speaker: 'shade', text: '[PLACEHOLDER] You cannot kill what has already been consumed.',            delayAfter: 3000 },
+    ],
   },
 
-  // ── Level 5: Illidan Stormrage ────────────────────────────────────────
+  // ── Level 6: Illidan Stormrage ────────────────────────────────────────
   {
-    id: 'level_5',
+    id: 'level_6',
     name: "Illidan's Sanctum",
     arena: { width: 1440, height: 900 },
     objectives: [
@@ -268,6 +317,8 @@ export const CAMPAIGN = [
     ],
     // Adds (Flame of Azzinoth) are spawned programmatically by GameServer in Phase 2.
     spawning: null,
+    // No ambient minionSpawning on Illidan — all adds are phase-scripted (Flames, Shadow Demons).
+    minionSpawning: null,
     difficulty: {
       hpMult:     { base: 1.0, perPlayer: 0.10 },  // +10%/player → ×2.2 at 13p (brainstorm derivation)
       damageMult: { base: 1.0, perPlayer: 0.06 },
@@ -277,12 +328,13 @@ export const CAMPAIGN = [
     boss: 'ILLIDAN',
 
     // Entrance cinematic. Boss is immune until all lines have played.
-    // delayAfter: ms to wait after this line before showing the next.
+    // After dialog completes, boss becomes vulnerable.
+    // TODO(Cyby): Replace [PLACEHOLDER] lines with final Illidan text.
     dialog: [
-      { speaker: 'akama',   text: 'Illidan! The time has come to end this.',       delayAfter: 3000 },
-      // { speaker: 'illidan', text: 'Akama... your treachery has finally caught up.', delayAfter: 3500 },
-      // { speaker: 'akama',   text: 'My people will be free. I will see to that.',    delayAfter: 3000 },
-      // { speaker: 'illidan', text: 'You are not prepared!',                          delayAfter: 2500 },
+      { speaker: 'illidan', text: '[PLACEHOLDER] You are not prepared!', delayAfter: 3500 },
+      // { speaker: 'illidan', text: '[PLACEHOLDER] I have waited ten thousand years for this.',  delayAfter: 3500 },
+      // { speaker: 'akama',   text: '[PLACEHOLDER] I have watched you waste away, Illidan.',     delayAfter: 3000 },
     ],
+
   },
 ]

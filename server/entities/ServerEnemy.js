@@ -464,6 +464,7 @@ export default class ServerEnemy {
           damage: this._projDamage,
           speed: this._projSpeed,
           color: ENEMY_TYPES[this.type]?.color ?? '#2E8B57',
+          spriteKey: 'projectile_ichor',
           // Exclude melee target from projectile hits
           excludeTargetId: this._meleeTarget.id,
         })

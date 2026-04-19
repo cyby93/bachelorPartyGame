@@ -35,7 +35,7 @@ const EFFECT_ICONS = {
 export default class OverheadDisplay {
   /**
    * @param {Container} entityContainer - the entity's main container
-   * @param {object} config - { yOffset, showCastBar, showStatusIcons, showDamageNumbers }
+   * @param {object} config - { yOffset, showCastBar, showStatusIcons, showComboPips }
    */
   constructor(entityContainer, config = {}) {
     this._entity = entityContainer
@@ -43,6 +43,7 @@ export default class OverheadDisplay {
       yOffset: config.yOffset ?? -30,
       showCastBar: config.showCastBar ?? true,
       showStatusIcons: config.showStatusIcons ?? true,
+      showComboPips: config.showComboPips ?? false,
     }
 
     this._container = new Container()
@@ -81,6 +82,18 @@ export default class OverheadDisplay {
       this._iconContainer = new Container()
       this._iconContainer.position.set(0, this._config.yOffset - 18)
       this._container.addChild(this._iconContainer)
+    }
+
+    // ── Combo point bar (Rogue only) ──────────────────────────────
+    this._comboBarGfx     = null
+    this._lastComboPoints = -1
+    this._lastComboMax    = -1
+    if (this._config.showComboPips) {
+      this._comboBarGfx = new Graphics()
+      // Sit flush below the HP bar (yOffset is the HP bar's Y, bar height is 5px)
+      const HP_BAR_H = 5
+      this._comboBarGfx.position.set(0, this._config.yOffset + HP_BAR_H)
+      this._container.addChild(this._comboBarGfx)
     }
   }
 
@@ -181,6 +194,37 @@ export default class OverheadDisplay {
       icon.position.set(startX + i * spacing, 0)
       this._iconContainer.addChild(icon)
     })
+  }
+
+  /**
+   * Render combo point bar for the Rogue.
+   * Bar sits flush below the HP bar — same width, zero gap.
+   * Fills 20% per combo point (5 pts = full).
+   * @param {number} points  - current combo points (0–max)
+   * @param {number} maxPts  - maximum combo points (default 5)
+   */
+  setComboPoints(points, maxPts = 5) {
+    if (!this._comboBarGfx) return
+    if (points === this._lastComboPoints && maxPts === this._lastComboMax) return
+    this._lastComboPoints = points
+    this._lastComboMax    = maxPts
+
+    const BAR_W = 44   // must match HP bar width (PlayerSprite BAR_W)
+    const BAR_H = 3
+
+    this._comboBarGfx.clear()
+
+    // Background
+    this._comboBarGfx.rect(-BAR_W / 2, 0, BAR_W, BAR_H)
+    this._comboBarGfx.fill({ color: 0x111111, alpha: 0.8 })
+
+    // Fill
+    if (points > 0) {
+      const pct   = Math.min(1, points / maxPts)
+      const fillW = BAR_W * pct
+      this._comboBarGfx.rect(-BAR_W / 2, 0, fillW, BAR_H)
+      this._comboBarGfx.fill({ color: 0xffdd00, alpha: 0.95 })
+    }
   }
 
   update(dt) {

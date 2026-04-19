@@ -4,9 +4,16 @@
   let { playerName = '', className = '', onready } = $props()
 
   const CLASS_ICONS = {
-    Warrior: '⚔️', Paladin: '🔨', Shaman:      '⚡',  Hunter:  '🏹',
-    Priest:  '✝️', Mage:    '🔥', Druid:       '🌿',  Rogue:   '🗡️',
-    Warlock: '💀', DeathKnight: '💎',
+    Warrior:     'classicon_warrior',
+    Paladin:     'classicon_paladin',
+    Shaman:      'classicon_shaman',
+    Hunter:      'classicon_hunter',
+    Priest:      'classicon_priest',
+    Mage:        'classicon_mage',
+    Druid:       'classicon_druid',
+    Rogue:       'classicon_rogue',
+    Warlock:     'classicon_warlock',
+    DeathKnight: 'classicon_deathknight',
   }
 
   const ROLES = {
@@ -25,7 +32,7 @@
 <div class="lobby">
   <!-- Top bar: hero info + stats -->
   <div class="top-bar" style="--class-color: {classColor}">
-    <span class="icon">{CLASS_ICONS[className] ?? '?'}</span>
+    <img class="top-class-icon" src="/icons/classes/{CLASS_ICONS[className] ?? 'classicon_warrior'}.jpg" alt={className} />
     <div class="hero-info">
       <span class="hero-name" style="color: {classColor}">{playerName}</span>
       <span class="class-tag">{cls?.name ?? className} · {ROLES[className]}</span>
@@ -40,7 +47,13 @@
   <div class="skills-grid">
     {#each skills as skill}
       <div class="skill-card">
-        <span class="skill-icon">{skill.icon}</span>
+        <span class="skill-icon">
+          {#if skill.iconFile}
+            <img src="/icons/abilities/{skill.iconFile}.jpg" alt={skill.name} class="skill-icon-img" />
+          {:else}
+            {skill.icon}
+          {/if}
+        </span>
         <div class="skill-info">
           <span class="skill-name">{skill.name}</span>
           <span class="skill-meta">{skill.inputType} · {(skill.cooldown / 1000).toFixed(1)}s CD</span>
@@ -76,7 +89,7 @@
     flex-shrink: 0;
   }
 
-  .icon { font-size: 26px; flex-shrink: 0; }
+  .top-class-icon { width: 40px; height: 40px; object-fit: contain; display: block; flex-shrink: 0; }
 
   .hero-info {
     display: flex;
@@ -111,14 +124,15 @@
   .skill-card {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     background: #16202a;
     border-radius: 8px;
-    padding: 8px 10px;
+    padding: 10px;
     min-width: 0;
   }
 
-  .skill-icon  { font-size: 18px; flex-shrink: 0; }
+  .skill-icon  { font-size: 96px; line-height: 1; flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 96px; height: 96px; }
+  .skill-icon-img { width: 96px; height: 96px; object-fit: contain; display: block; }
   .skill-info  { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .skill-name  { font-size: 12px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .skill-meta  { font-size: 10px; color: #7fa8c0; }

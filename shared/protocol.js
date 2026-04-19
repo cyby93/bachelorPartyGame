@@ -49,4 +49,9 @@ export const EVENTS = {
   ILLIDAN_DIALOG_LINE:      'illidan:dialog_line',      // S→All: { speaker, text }
   ILLIDAN_PHASE_TRANSITION: 'illidan:phase_transition', // S→All: { phase }
   ILLIDAN_AURA_PULSE:       'illidan:aura_pulse',       // S→All: { x, y, radius, color }
+
+  // ── Level 2: Portal Beam Mechanic ───────────────────────────────────────
+  PORTAL_BEAM_WARNING: 'portal:beam_warning', // S→All: { beamId, points: [{x,y}] } — 3s warning phase
+  PORTAL_BEAM_DAMAGE:  'portal:beam_damage',  // S→All: { beamId, points: [{x,y}] } — active damage phase
+  PORTAL_BEAM_END:     'portal:beam_end',     // S→All: { beamId }
 }

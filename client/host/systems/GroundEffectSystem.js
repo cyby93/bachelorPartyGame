@@ -74,6 +74,14 @@ export default class GroundEffectSystem {
         this._zones.set(z.id, zone)
       }
 
+      // Reposition every frame so followOwner zones (e.g. Bladestorm) track their owner
+      if (zone.x !== z.x || zone.y !== z.y) {
+        zone.x = z.x
+        zone.y = z.y
+        zone.gfx.position.set(z.x, z.y)
+        zone.borderGfx.position.set(z.x, z.y)
+      }
+
       // Update — fade out in last 500ms
       const fadeStart = 500
       if (z.remaining < fadeStart) {

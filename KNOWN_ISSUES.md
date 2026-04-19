@@ -6,11 +6,8 @@ Hunter:
     - swap multishot with aimed shot?
     - reduce pet cd when hittin enemy by shot?
 Rogue: 
-    - the combo points should be visible on host UI (player overhead)
 Warlock:
-    - Bug: drain life cooldown not displaying when channel is interrupted
 Death Knight:
-    - Some flavor needs to be added: Frost strike should have lifesteal effect?
     - Death and decay aiming shall be better or do not throw the ability that far (maybe just put the circle in front of him)
 Druid:
     - Tranquility radius is not working it heals always in a specific circle
@@ -32,4 +29,5 @@ Level 3:
     ---------------
 
 Level 5:
-    - The simple minion spawning should start as the level starts, not just when the cultists are dead.
+    - Minion spawning (voidSentinel / shadowWeaver / felHound) now fires after dialog completes via minionSpawning config.
+      Saurfang: verify SpawnSystem handles minionSpawning enemy types and that voidSentinel/shadowWeaver/felHound are registered in EnemyTypeConfig.

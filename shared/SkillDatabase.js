@@ -29,7 +29,8 @@ const SkillDatabase = {
       damage:    8,
       range:     80,
       angle:     Math.PI / 3,   // 60° cone
-      icon:      '⚔️'
+      icon:      '⚔️',
+      iconFile:  'ability_warrior_cleave'
     },
     {
       name:      'Thunder Clap',
@@ -38,21 +39,25 @@ const SkillDatabase = {
       inputType: 'INSTANT',
       cooldown:  3000,
       damage:    15,
-      radius:    100,
+      radius:    120,
       effectType: 'DEBUFF',
       effectParams: { speedMultiplier: 0.5, duration: 2000 },
-      icon:      '🌀'
+      icon:      '🌀',
+      iconFile:  'ability_thunderclap'
     },
     {
-      name:      'Charge',
-      type:      'DASH',
-      inputType: 'DIRECTIONAL',
-      cooldown:  8000,
-      speed:     800,
-      distance:  300,
-      effectType: 'DEBUFF',
-      effectParams: { stunned: true, duration: 1000 },
-      icon:      '💨'
+      name:      'Bladestorm',
+      type:      'AOE',
+      subtype:   'BLADESTORM',  // player-attached spinning AOE — follows caster, blocks other skills
+      inputType: 'INSTANT',
+      cooldown:  12000,
+      damage:    6,             // damage per tick — tune via BalanceConfig
+      radius:    100,           // slightly larger than Cleave range
+      duration:  4000,          // 4 seconds of spinning
+      tickRate:  300,           // hits every 300 ms
+      effectType: 'DAMAGE',
+      icon:      '🌀',
+      iconFile:  'ability_warrior_bladestorm'
     },
     {
       name:      'Shield Wall',
@@ -60,7 +65,8 @@ const SkillDatabase = {
       inputType: 'DIRECTIONAL',
       cooldown:  5000,
       arc:       Math.PI,        // 180° block arc
-      icon:      '🛡️'
+      icon:      '🛡️',
+      iconFile:  'ability_defend'
     }
   ],
 
@@ -74,7 +80,8 @@ const SkillDatabase = {
       damage:    10,
       range:     70,
       angle:     Math.PI / 3,   // 60° cone
-      icon:      '🔨'
+      icon:      '🔨',
+      iconFile:  'spell_paladin_hammerofwrath'
     },
     {
       name:      "Avenger's Shield",
@@ -90,7 +97,8 @@ const SkillDatabase = {
       chainRange: 15000,
       onHitEffect: { speedMultiplier: 0.5, duration: 2000 },
       spriteKey:   'projectile_avengers_shield',
-      icon:      '🛡️'
+      icon:      '🛡️',
+      iconFile:  'spell_holy_avengersshield'
     },
     {
       name:      'Divine Shield',
@@ -98,7 +106,8 @@ const SkillDatabase = {
       inputType: 'DIRECTIONAL',
       cooldown:  3000,
       arc:       Math.PI / 3,   // 60° block arc
-      icon:      '🔆'
+      icon:      '🔆',
+      iconFile:  'spell_holy_divineshield'
     },
     {
       name:      'Consecration',
@@ -112,7 +121,8 @@ const SkillDatabase = {
       tickRate:  700,
       effectType: 'DUAL',
       healAmount: 3,
-      icon:      '⭐'
+      icon:      '⭐',
+      iconFile:  'spell_holy_innerfire'
     }
   ],
 
@@ -133,7 +143,8 @@ const SkillDatabase = {
         range:   500,
         pierce:  false,
       },
-      icon:      '⚡'
+      icon:      '⚡',
+      iconFile:  'spell_nature_lightning'
     },
     {
       name:            'Chain Heal',
@@ -148,7 +159,8 @@ const SkillDatabase = {
       maxChains:       2,
       chainRadius:     200,
       selfCastFallback: true,
-      icon:            '🌊'
+      icon:            '🌊',
+      iconFile:        'spell_nature_healingwavegreater'
     },
     {
       name:      'Searing Totem',
@@ -165,7 +177,8 @@ const SkillDatabase = {
         range:    300,
         tickRate: 1000,
       },
-      icon:      '🔥'
+      icon:      '🔥',
+      iconFile:  'spell_fire_searingtotem'
     },
     {
       name:      'Bloodlust',
@@ -177,7 +190,8 @@ const SkillDatabase = {
       duration:  10000,
       effectType: 'BUFF',
       effectParams: { speedMultiplier: 1.3, fireRateMultiplier: 1.3 },
-      icon:      '⛈️'
+      icon:      '⛈️',
+      iconFile:  'spell_nature_bloodlust'
     }
   ],
 
@@ -193,38 +207,71 @@ const SkillDatabase = {
       radius:    8,
       range:     1000,
       pierce:    false,
-      icon:      '🏹'
+      icon:      '🏹',
+      iconFile:  'ability_marksmanship'
     },
     {
-      name:      'Multi-Shot',
-      type:      'PROJECTILE',
-      subtype:   'MULTI',
+      name:      'Aimed Shot',
+      type:      'CAST',
+      castBar:   true,
       inputType: 'DIRECTIONAL',
-      cooldown:  5000,
-      damage:    14,
-      speed:     650,
-      radius:    6,
-      range:     1000,
-      pierce:    false,
-      projectileCount: 10,
-      spreadAngle: Math.PI / 3,
-      icon:      '🎯'
+      cooldown:  4000,
+      castTime:  1500,          // noticeable cast time
+      payload: {
+        type:     'PROJECTILE',
+        damage:   45,           // greatly more than Shoot Bow (5)
+        speed:    800,
+        radius:   10,
+        range:    1200,
+        pierce:   false,
+        onHitEffect: { speedMultiplier: 0.5, duration: 3000 },  // 50% slow for 3s
+      },
+      icon:      '🎯',
+      iconFile:  'inv_spear_07'
     },
     {
       name:      'Call of the Wild',
       type:      'SPAWN',
-      subtype:   'PET',
+      subtype:   'WILD_BEAST',  // randomly picks bear / hawk / panther at cast time
       inputType: 'INSTANT',
-      cooldown:  20000,
+      cooldown:  2000,
       duration:  20000,
-      petStats: {
-        hp:          80,
-        speed:       2.0,
-        damage:      5,
-        attackRange: 45,
-        attackRate:  1000,
-      },
-      icon:      '🐺'
+      // Beast variants — server picks one at random each cast
+      beastVariants: [
+        {
+          beast:       'bear',
+          hp:          120,
+          speed:       1.6,
+          radius:      22,
+          damage:      8,
+          attackRange: 50,
+          attackRate:  1200,
+          taunt:       true,     // forces nearby enemies to target this minion
+          tauntRadius: 150,
+        },
+        {
+          beast:       'hawk',
+          hp:          Infinity, // invincible — cannot be targeted or damaged
+          invincible:  true,
+          speed:       3.5,
+          radius:      10,
+          damage:      3,
+          attackRange: 300,
+          attackRate:  400,
+          ranged:      true,
+        },
+        {
+          beast:       'panther',
+          hp:          60,
+          speed:       2.8,
+          radius:      14,
+          damage:      12,
+          attackRange: 45,
+          attackRate:  800,
+        },
+      ],
+      icon:      '🐺',
+      iconFile:  'ability_hunter_invigeration'
     },
     {
       name:      'Explosive Trap',
@@ -240,7 +287,8 @@ const SkillDatabase = {
         radius:     120,
         effectType: 'DAMAGE',
       },
-      icon:      '🪤'
+      icon:      '🪤',
+      iconFile:  'spell_fire_selfdestruct'
     }
   ],
 
@@ -261,7 +309,8 @@ const SkillDatabase = {
       canHitAllies: true,
       selfCastFallback: true,
       spriteKey:    'projectile_penance',
-      icon:         '✝️'
+      icon:         '✝️',
+      iconFile:     'spell_holy_penance'
     },
     {
       name:       'Holy Nova',
@@ -274,7 +323,8 @@ const SkillDatabase = {
       damage:     40,
       healAmount: 30,
       effectType: 'DUAL',
-      icon:       '💚'
+      icon:       '💚',
+      iconFile:   'spell_holy_holynova'
     },
     {
       name:             'Power Word: Shield',
@@ -286,7 +336,8 @@ const SkillDatabase = {
       range:            600,
       selfCastFallback: true,
       effectParams:     { shield: 30 },
-      icon:             '🔮'
+      icon:             '🔮',
+      iconFile:         'spell_holy_powerwordshield'
     },
     {
       name:      'Mass Resurrection',
@@ -301,7 +352,8 @@ const SkillDatabase = {
         effectType: 'REVIVE',
         healPercent: 0.3
       },
-      icon:      '👼'
+      icon:      '👼',
+      iconFile:  'spell_holy_resurrection'
     }
   ],
 
@@ -322,7 +374,8 @@ const SkillDatabase = {
         range:   550,
         pierce:  false,
       },
-      icon:      '🔥'
+      icon:      '🔥',
+      iconFile:  'spell_fire_firebolt'
     },
     {
       name:      'Frost Nova',
@@ -333,7 +386,8 @@ const SkillDatabase = {
       radius:    180,
       effectType: 'DEBUFF',
       effectParams: { rooted: true, duration: 2000 },
-      icon:      '❄️'
+      icon:      '❄️',
+      iconFile:  'spell_frost_frostnova'
     },
     {
       name:      'Blink',
@@ -342,7 +396,8 @@ const SkillDatabase = {
       inputType: 'DIRECTIONAL',
       cooldown:  7000,
       distance:  250,
-      icon:      '✨'
+      icon:      '✨',
+      iconFile:  'spell_arcane_blink'
     },
     {
       name:      'Pyroblast',
@@ -365,7 +420,8 @@ const SkillDatabase = {
           radius:  100
         }
       },
-      icon:      '☄️'
+      icon:      '☄️',
+      iconFile:  'spell_fire_fireball02'
     }
   ],
 
@@ -386,7 +442,8 @@ const SkillDatabase = {
         range:   700,
         pierce:  false,
       },
-      icon:      '☀'
+      icon:      '☀',
+      iconFile:  'spell_nature_wrathv2'
     },
     {
       name:             'Moonfire',
@@ -403,7 +460,8 @@ const SkillDatabase = {
         sourceSkill:   'Moonfire',
       },
       selfCastFallback: true,   // tap with no aim = closest enemy
-      icon:             '🌙'
+      icon:             '🌙',
+      iconFile:         'spell_nature_starfall'
     },
     {
       name:             'Regrowth',
@@ -422,7 +480,8 @@ const SkillDatabase = {
         sourceSkill: 'Regrowth',
       },
       selfCastFallback: true,
-      icon:             '🌿'
+      icon:             '🌿',
+      iconFile:         'spell_nature_resistnature'
     },
     {
       name:      'Tranquility',
@@ -435,11 +494,12 @@ const SkillDatabase = {
       payload: {
         type:       'AOE',
         subtype:    'AOE_SELF',
-        radius:     10,
+        radius:     300,          // heal all players within 300px of caster each tick
         effectType: 'HEAL',
         healAmount: 15,
       },
-      icon:      '⭐'
+      icon:      '⭐',
+      iconFile:  'spell_nature_tranquility'
     }
   ],
 
@@ -454,7 +514,8 @@ const SkillDatabase = {
       range:          70,
       angle:          Math.PI / 3,   // 60° cone — very precise
       addsComboPoint: true,
-      icon:           '🗡️'
+      icon:           '🗡️',
+      iconFile:       'spell_shadow_ritualofsacrifice'
     },
     {
       name:      'Vanish',
@@ -469,7 +530,8 @@ const SkillDatabase = {
         breaksOnAttack:         true,
         shadowStrikeMultiplier: 1.5,
       },
-      icon: '👤'
+      icon:     '👤',
+      iconFile: 'ability_vanish'
     },
     {
       name:      'Sprint',
@@ -478,7 +540,8 @@ const SkillDatabase = {
       cooldown:  10000,
       duration:  5000,
       effectParams: { speedMultiplier: 2.0 },
-      icon:      '☠️'
+      icon:      '☠️',
+      iconFile:  'ability_rogue_sprint'
     },
     {
       name:        'Ambush',
@@ -489,7 +552,8 @@ const SkillDatabase = {
       range:       350,
       damage:      60,
       comboDamage: 20,
-      icon:        '💀'
+      icon:        '💀',
+      iconFile:    'ability_rogue_ambush'
     }
   ],
 
@@ -510,7 +574,8 @@ const SkillDatabase = {
         range:   600,
         pierce:  false,
       },
-      icon:      '🔮'
+      icon:      '🔮',
+      iconFile:  'spell_shadow_shadowbolt'
     },
     {
       name:             'Corruption',
@@ -529,7 +594,8 @@ const SkillDatabase = {
         sourceSkill:   'Corruption',
       },
       selfCastFallback: false,
-      icon:             '☠️'
+      icon:             '☠️',
+      iconFile:         'spell_shadow_abominationexplosion'
     },
     {
       name:      'Drain Life',
@@ -542,7 +608,8 @@ const SkillDatabase = {
       tickRate:  500,
       damagePerTick: 4,
       healPerTick:   4,
-      icon:      '💜'
+      icon:      '💜',
+      iconFile:  'spell_shadow_lifedrain02'
     },
     {
       name:      'Fear',
@@ -553,14 +620,15 @@ const SkillDatabase = {
       radius:    250,
       effectType: 'FEAR',
       fearDuration: 2500,
-      icon:      '😱'
+      icon:      '😱',
+      iconFile:  'spell_shadow_deathscream'
     }
   ],
 
   // ── DEATH KNIGHT ────────────────────────────────────────────────────────
   DeathKnight: [
     {
-      name:      'Frost Strike',
+      name:      'Obliterate',
       type:      'MELEE',
       inputType: 'DIRECTIONAL',
       cooldown:  700,
@@ -568,7 +636,9 @@ const SkillDatabase = {
       range:     70,
       angle:     Math.PI / 3,   // 60° cone
       effectParams: { speedMultiplier: 0.6, duration: 1500 },
-      icon:      '❄️'
+      lifesteal: 1.0,           // 100% lifesteal — heals DK for full damage dealt
+      icon:      '❄️',
+      iconFile:  'spell_deathknight_classicon'
     },
     {
       name:             'Death Grip',
@@ -580,22 +650,22 @@ const SkillDatabase = {
       damage:           10,
       range:            350,
       effectType:       'GRIP',
-      icon:             '🪝'
+      icon:             '🪝',
+      iconFile:         'spell_deathknight_strangulate'
     },
     {
       name:      'Death and Decay',
       type:      'AOE',
-      subtype:   'AOE_LOBBED',
-      inputType: 'TARGETED',
+      subtype:   'AOE_ADJACENT',   // spawns adjacent to caster: edge touches caster, extends outward
+      inputType: 'DIRECTIONAL',
       cooldown:  12000,
       damage:    4,
       radius:    120,
-      speed:     500,
-      range:     300,
       duration:  7000,
       tickRate:  500,
       effectType: 'DAMAGE',
-      icon:      '💀'
+      icon:      '💀',
+      iconFile:  'spell_shadow_deathanddecay'
     },
     {
       name:      'Anti-Magic Shell',
@@ -604,7 +674,8 @@ const SkillDatabase = {
       cooldown:  10000,
       duration:  7000,
       effectParams: { damageReduction: 0.8, shield: 60 },
-      icon:      '💎'
+      icon:      '💎',
+      iconFile:  'spell_deathknight_iceboundfortitude'
     }
   ]
 }

@@ -262,11 +262,11 @@ export const UPGRADE_CONFIG = {
 
   // ── DEATH KNIGHT ────────────────────────────────────────────────────────
   DeathKnight: [
-    // S0: Frost Strike (MELEE) — damage 65, range 50, cooldown 1000
+    // S0: Obliterate (MELEE) — damage 65, range 50, cooldown 1000
     [
-      { label: 'Frost Strike +1', deltas: { damage: 15, cooldown: -100 } },
-      { label: 'Frost Strike +2', deltas: { damage: 15, 'effectParams.duration': 500 } },
-      { label: 'Frost Strike +3', deltas: { damage: 20, range: 10, cooldown: -100 } },
+      { label: 'Obliterate +1', deltas: { damage: 15, cooldown: -100 } },
+      { label: 'Obliterate +2', deltas: { damage: 15, 'effectParams.duration': 500 } },
+      { label: 'Obliterate +3', deltas: { damage: 20, range: 10, cooldown: -100 } },
     ],
     // S1: Death Grip (TARGETED/GRIP) — range 350, cooldown 1000
     [

@@ -392,6 +392,20 @@ socket.on(EVENTS.ILLIDAN_AURA_PULSE, data => {
   game.activeRenderer?.onIllidanAuraPulse?.(data)
 })
 
+// ── Level 2: Portal Beam events ──────────────────────────────────────────
+
+socket.on(EVENTS.PORTAL_BEAM_WARNING, data => {
+  game.activeRenderer?.onPortalBeamWarning?.(data)
+})
+
+socket.on(EVENTS.PORTAL_BEAM_DAMAGE, data => {
+  game.activeRenderer?.onPortalBeamDamage?.(data)
+})
+
+socket.on(EVENTS.PORTAL_BEAM_END, data => {
+  game.activeRenderer?.onPortalBeamEnd?.(data)
+})
+
 // ── Quiz events ───────────────────────────────────────────────────────────
 
 socket.on(EVENTS.QUIZ_QUESTION, data => {

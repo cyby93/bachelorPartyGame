@@ -17,7 +17,7 @@ export default class VFXManager {
   constructor(layers) {
     this.particles = new ParticleSystem(layers.fx)
     this.oneShot   = new OneShotEffectSystem(layers.fx)
-    this.ground    = new GroundEffectSystem(layers.groundFx)
+    this.ground    = new GroundEffectSystem(layers.groundFx, this.particles)
     this.auras     = new AuraSystem()
     this.floatingText = new FloatingTextPool(layers.worldUi)
   }
@@ -44,8 +44,29 @@ export default class VFXManager {
 
       case 'AOE':
         if (subtype === 'AOE_SELF' || !subtype) {
-          this.oneShot.aoeFlash(x, y, radius || 100, color)
-          this.particles.hitSpark(x, y, color)
+          if (data.skillName === 'Holy Nova') {
+            this.oneShot.holyNovaRing(x, y, radius || 100)
+            this.particles.holyNovaBurst(x, y, radius || 100)
+            this.oneShot.impactFlash(x, y, color)
+          } else if (data.skillName === 'Frost Nova') {
+            this.oneShot.frostNovaRing(x, y, radius || 100)
+            this.particles.frostNovaBurst(x, y, radius || 100)
+            this.oneShot.impactFlash(x, y, color)
+          } else if (data.skillName === 'Fear') {
+            this.oneShot.fearRing(x, y, radius || 100)
+            this.particles.fearBurst(x, y, radius || 100)
+          } else if (data.skillName === 'Consecration') {
+            this.oneShot.consecrationBurst(x, y, radius || 100)
+            this.particles.consecrationSparkle(x, y)
+            this.oneShot.impactFlash(x, y, color)
+          } else if (data.skillName === 'Bloodlust') {
+            this.oneShot.bloodlustWave(x, y)
+            this.particles.bloodlustBurst(x, y)
+            this.oneShot.impactFlash(x, y, color)
+          } else {
+            this.oneShot.aoeFlash(x, y, radius || 100, color)
+            this.particles.hitSpark(x, y, color)
+          }
         } else if (subtype === 'AOE_LOBBED') {
           // Lobbed AOE flash will trigger on impact via projectile system
           // Show a small indicator at cast position
@@ -76,17 +97,31 @@ export default class VFXManager {
         break
 
       case 'CAST':
-        // Cast start — small glow
-        this.oneShot.impactFlash(x, y, color)
+        if (data.skillName === 'Mass Resurrection') {
+          this.oneShot.massResurrectionRing(x, y)
+          this.particles.massResurrectionBurst(x, y)
+        } else {
+          this.oneShot.impactFlash(x, y, color)
+        }
         break
 
       case 'CHANNEL':
-        // Channel start — same as cast glow
-        this.oneShot.impactFlash(x, y, color)
+        if (data.skillName === 'Tranquility') {
+          this.oneShot.tranquilityField(x, y, radius || 700)
+          this.particles.tranquilityBurst(x, y)
+        } else {
+          this.oneShot.impactFlash(x, y, color)
+        }
         break
 
       case 'TARGETED':
         // Instant ray hit — flash at caster origin
+        this.oneShot.impactFlash(x, y, color)
+        break
+
+      case 'EXPLOSION':
+        this.oneShot.explosionBurst(x, y, radius || 120)
+        this.particles.explosionBurst(x, y, radius || 120)
         this.oneShot.impactFlash(x, y, color)
         break
 

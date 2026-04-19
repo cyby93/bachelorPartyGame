@@ -11,10 +11,32 @@ function parseColor(hex) {
   return hex ?? 0xffffff
 }
 
+// Skill-specific color overrides (class colors are often wrong for dark/decay effects)
+function _zoneColor(skillName, fallback) {
+  if (skillName === 'Death and Decay') return '#33aa33'  // sickly green
+  if (skillName === 'Consecration')    return '#ffcc00'  // holy gold
+  return fallback
+}
+
+function _zoneFillAlpha(skillName) {
+  if (skillName === 'Death and Decay') return 0.28
+  if (skillName === 'Consecration')    return 0.22
+  return 0.20
+}
+
+function _zoneBorderWidth(skillName) {
+  if (skillName === 'Death and Decay') return 4
+  if (skillName === 'Consecration')    return 3
+  return 3
+}
+
+const AMBIENT_INTERVAL = 0.18  // seconds between ambient particle emits per zone
+
 export default class GroundEffectSystem {
-  constructor(layer) {
+  constructor(layer, particles = null) {
     this._layer = layer
-    this._zones = new Map()  // id → { gfx, borderGfx, data }
+    this._particles = particles
+    this._zones = new Map()  // id → { gfx, borderGfx, skillName, radius, x, y, color, emitAccum }
     this._time = 0
   }
 
@@ -32,11 +54,14 @@ export default class GroundEffectSystem {
       let zone = this._zones.get(z.id)
 
       if (!zone) {
-        // Create new zone
-        const c = parseColor(z.color)
+        // Skill-specific color overrides for better visual identity
+        const skillColor = _zoneColor(z.skillName, z.color)
+        const c = parseColor(skillColor)
+        const fillAlpha = _zoneFillAlpha(z.skillName)
+
         const gfx = new Graphics()
         gfx.circle(0, 0, z.radius)
-        gfx.fill({ color: c, alpha: 0.12 })
+        gfx.fill({ color: c, alpha: fillAlpha })
         gfx.position.set(z.x, z.y)
 
         const borderGfx = new Graphics()
@@ -45,7 +70,7 @@ export default class GroundEffectSystem {
         this._layer.addChild(gfx)
         this._layer.addChild(borderGfx)
 
-        zone = { gfx, borderGfx, color: c, radius: z.radius }
+        zone = { gfx, borderGfx, color: c, radius: z.radius, skillName: z.skillName, x: z.x, y: z.y, emitAccum: 0 }
         this._zones.set(z.id, zone)
       }
 
@@ -61,10 +86,11 @@ export default class GroundEffectSystem {
       }
 
       // Pulse the border ring
-      const pulse = 0.4 + 0.3 * Math.sin(this._time * 4)
+      const pulse = 0.5 + 0.4 * Math.sin(this._time * 4)
+      const borderWidth = _zoneBorderWidth(zone.skillName)
       zone.borderGfx.clear()
       zone.borderGfx.circle(0, 0, zone.radius)
-      zone.borderGfx.stroke({ color: zone.color, width: 2, alpha: pulse })
+      zone.borderGfx.stroke({ color: zone.color, width: borderWidth, alpha: pulse })
     }
 
     // Remove expired zones
@@ -81,6 +107,17 @@ export default class GroundEffectSystem {
 
   update(dt) {
     this._time += dt
+
+    if (!this._particles) return
+    this._zones.forEach(zone => {
+      const sn = zone.skillName
+      if (sn !== 'Consecration' && sn !== 'Death and Decay') return
+      zone.emitAccum += dt
+      if (zone.emitAccum < AMBIENT_INTERVAL) return
+      zone.emitAccum -= AMBIENT_INTERVAL
+      if (sn === 'Consecration')    this._particles.consecrationAmbient(zone.x, zone.y, zone.radius)
+      else                          this._particles.deathDecayAmbient(zone.x, zone.y, zone.radius)
+    })
   }
 
   destroy() {

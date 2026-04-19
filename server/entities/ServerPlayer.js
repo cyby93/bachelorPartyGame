@@ -13,7 +13,8 @@ export default class ServerPlayer {
     this.name      = data.name
     this.className = data.className
     this.isHost    = data.isHost ?? false
-    this.isBot     = data.isBot  ?? false
+    this.isBot        = data.isBot        ?? false
+    this.sessionToken = data.sessionToken ?? null
 
     const classData  = CLASSES[this.className]
     this.baseMaxHp   = classData.hp   // unmodified ceiling; Shear/effects reduce maxHp from here

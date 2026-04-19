@@ -13,11 +13,13 @@ function parseColor(hex) {
 
 // Effect source pattern → aura ring color
 const AURA_COLORS = {
+  haste:           0xff6600,   // Bloodlust — orange, distinct from cyan speed
   speed:           0x00ffff,
   damage_boost:    0xff4444,
   reduction:       0xffff00,
   shield:          0xffcc00,
   bear:            0x8b4513,
+  feared:          0xbb44ff,   // Fear debuff on enemies
   // Illidan debuffs
   shear:           0xff4400,
   parasitic:       0x9900cc,
@@ -28,11 +30,14 @@ const AURA_COLORS = {
 
 function getAuraColor(params) {
   if (!params) return AURA_COLORS.default
+  // Haste (Bloodlust) — check before generic speed so it gets its own color
+  if (params.fireRateMultiplier && params.fireRateMultiplier > 1) return AURA_COLORS.haste
   if (params.speedMultiplier && params.speedMultiplier > 1) return AURA_COLORS.speed
   if (params.damageMultiplier && params.damageMultiplier > 1) return AURA_COLORS.damage_boost
   if (params.damageReduction) return AURA_COLORS.reduction
   if (params.shield) return AURA_COLORS.shield
   if (params.transformSprite === 'bear') return AURA_COLORS.bear
+  if (params.feared) return AURA_COLORS.feared
   // Illidan debuffs
   if (params.shear)           return AURA_COLORS.shear
   if (params.parasitic)       return AURA_COLORS.parasitic
@@ -65,7 +70,8 @@ export default class AuraSystem {
     // Filter to effects that should show aura rings
     const auraEffects = (effects ?? []).filter(e => {
       const p = e.params ?? {}
-      return p.speedMultiplier || p.damageMultiplier || p.damageReduction || p.shield || p.transformSprite
+      return p.speedMultiplier || p.fireRateMultiplier || p.damageMultiplier || p.damageReduction
+        || p.shield || p.transformSprite || p.feared
         || p.shear || p.parasitic || p.darkBarrage || p.agonizingFlames
     })
 

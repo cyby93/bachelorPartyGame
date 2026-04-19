@@ -994,6 +994,18 @@ export default class SkillSystem {
               this.addZone(proj.ownerId, aoCfg, proj.x, proj.y, color)
             }
             this._executeAOEAtPoint(gs, owner ?? null, aoCfg, proj.x, proj.y)
+            // Emit VFX signal for instant-detonation AOEs only
+            // Persistent zones get their visual from GroundEffectSystem via aoeZones state
+            if ((!aoCfg.duration || !aoCfg.tickRate) && gs.io) {
+              gs.io.emit('skill:fired', {
+                type:      'EXPLOSION',
+                skillName: aoCfg.name ?? null,
+                x:         Math.round(proj.x),
+                y:         Math.round(proj.y),
+                radius:    aoCfg.radius ?? 120,
+                color:     proj.color ?? '#ff6600',
+              })
+            }
           }
           proj.isAlive = false
           gs.projectiles.delete(id)
@@ -1262,6 +1274,7 @@ export default class SkillSystem {
             chainLeft:    proj.chainLeft - 1,
             chainRange:   proj.chainRange,
             onHitEffect:  proj.onHitEffect,
+            spriteKey:    proj.spriteKey ?? null,
           })
         }
       }
@@ -1537,6 +1550,7 @@ export default class SkillSystem {
       y: Math.round(z.y),
       radius: z.radius,
       color: z.color,
+      skillName: z.config?.name ?? null,
       remaining: Math.max(0, z.expiresAt - now),
       duration: z.expiresAt - z.createdAt,
     }))

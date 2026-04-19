@@ -103,13 +103,25 @@ export default class ServerMinion {
     // Trigger the trap
     const effect = this.config.trapEffect
     if (effect) {
+      const radius = effect.radius ?? 120
       skillSystem._executeAOEAtPoint(gs, this._asPlayer(), {
-        radius:      effect.radius     ?? 120,
+        radius,
         damage:      effect.damage     ?? 0,
         healAmount:  effect.healAmount ?? 0,
         effectType:  effect.effectType ?? 'DAMAGE',
         effectParams: effect.effectParams,
       }, this.x, this.y)
+
+      if (gs.io) {
+        gs.io.emit('skill:fired', {
+          type:      'EXPLOSION',
+          skillName: this.config.name ?? null,
+          x:         Math.round(this.x),
+          y:         Math.round(this.y),
+          radius,
+          color:     '#ff6600',
+        })
+      }
     }
 
     this.isDead = true

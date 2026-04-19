@@ -158,11 +158,18 @@ export default class BaseRenderer {
         this._enemyContainer.addChild(s.container)
         this._onEnemyCreated(e, s)
       }
-      this.enemySprites.get(e.id).update(e, dt)
+      const sprite = this.enemySprites.get(e.id)
+      sprite.update(e, dt)
+
+      // Sync status auras based on server state flags
+      const enemyEffects = []
+      if (e.isFeared) enemyEffects.push({ src: 'fear', params: { feared: true } })
+      this.vfx?.auras.sync(e.id, sprite.container, enemyEffects, e.radius ?? 20)
     }
 
     this.enemySprites.forEach((s, id) => {
       if (!activeIds.has(id)) {
+        this.vfx?.auras.removeEntity(id)
         this._onEnemyRemoved(s, id)
         this._enemyContainer.removeChild(s.container)
         s.destroy()

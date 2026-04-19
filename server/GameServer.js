@@ -176,19 +176,31 @@ export default class GameServer {
   // ── Socket event handlers ──────────────────────────────────────────────────
 
   _onJoin(socket, data) {
-    const { name, className, isHost, isBot } = data ?? {}
+    const { name, className, isHost, isBot, sessionToken } = data ?? {}
+
+    // Reconnect: reclaim a bot-controlled character via session token
+    if (sessionToken && !isBot && !isHost) {
+      for (const [botId, botEntry] of this.bots) {
+        const existing = this.players.get(botId)
+        if (existing?.sessionToken === sessionToken) {
+          this._reclaimBotPlayer(socket, botId, existing)
+          return
+        }
+      }
+    }
 
     const resolvedClass = resolveClassName(className) ?? 'Warrior'
     const { x, y } = this._randomPointNearCenter(300, 200)
 
     const player = new ServerPlayer({
-      id:        socket.id,
-      name:      (name || 'Player').slice(0, 20),
-      className: resolvedClass,
-      isHost:    !!isHost,
-      isBot:     !!isBot,
-      arenaWidth: this.arenaWidth,
-      arenaHeight: this.arenaHeight,
+      id:           socket.id,
+      name:         (name || 'Player').slice(0, 20),
+      className:    resolvedClass,
+      isHost:       !!isHost,
+      isBot:        !!isBot,
+      sessionToken: sessionToken ?? null,
+      arenaWidth:   this.arenaWidth,
+      arenaHeight:  this.arenaHeight,
       x,
       y,
     })
@@ -203,6 +215,29 @@ export default class GameServer {
 
     // Tell everyone else
     this.io.emit(EVENTS.PLAYER_JOINED, player.toDTO())
+  }
+
+  _reclaimBotPlayer(socket, oldId, player) {
+    player.id    = socket.id
+    player.isBot = false
+
+    this.players.set(socket.id, player)
+    this.players.delete(oldId)
+
+    this.inputQueues.set(socket.id, this.inputQueues.get(oldId) ?? [])
+    this.inputQueues.delete(oldId)
+
+    // Cooldowns stay keyed to old id — clear them (minor penalty is acceptable)
+    this.cooldowns.clearPlayer(oldId)
+
+    this.bots.delete(oldId)
+
+    // Tell clients old id is gone, new player entity takes over
+    this.io.emit(EVENTS.PLAYER_LEFT, oldId)
+    socket.emit(EVENTS.INIT, this._fullState())
+    this.io.emit(EVENTS.PLAYER_JOINED, player.toDTO())
+
+    console.log(`[↩] reclaimed  ${player.name.padEnd(16)} socket=${socket.id}`)
   }
 
   _onInputMove(socket, data) {
@@ -237,17 +272,21 @@ export default class GameServer {
 
     this._onJoin(fakeSocket, { name: `Bot ${this._botSeq - 1}`, className, isHost: false, isBot: true })
     this.bots.set(id, {
-      socket:       fakeSocket,
-      wanderAngle:  Math.random() * Math.PI * 2,
-      wanderTimer:  0,
-      skillCursor:  0,
-      skillTimer:   0,
+      socket:           fakeSocket,
+      wanderAngle:      Math.random() * Math.PI * 2,
+      wanderTimer:      0,
+      skillCursor:      0,
+      skillTimer:       0,
+      skillNextAllowed: {},
+      strafeDir:        Math.random() < 0.5 ? 1 : -1,
+      strafeDirTimer:   0,
     })
   }
 
   _onBotRemove(socket) {
     if (!this.players.get(socket.id)?.isHost) return
     for (const [id, entry] of [...this.bots]) {
+      if (entry.disconnected) continue   // real disconnected players — don't remove
       this._onDisconnect(entry.socket)
       this.bots.delete(id)
     }
@@ -256,12 +295,15 @@ export default class GameServer {
   _tickBotAI() {
     if (this.bots.size === 0) return
 
-    // Combat distance profiles by class role
     const MELEE_CLASSES  = new Set(['Warrior', 'Paladin', 'Rogue', 'DeathKnight'])
+    const HEALER_CLASSES = new Set(['Priest', 'Druid', 'Shaman'])
     const BOT_PROFILE = {
       melee:  { preferred: 80,  tooClose: 50,  tooFar: 160 },
       ranged: { preferred: 280, tooClose: 180, tooFar: 420 },
+      healer: { preferred: 350, tooClose: 200, tooFar: 550 },
     }
+
+    const now = Date.now()
 
     this.bots.forEach((botState, botId) => {
       const player = this.players.get(botId)
@@ -270,14 +312,31 @@ export default class GameServer {
       const queue = this.inputQueues.get(botId)
       if (!queue) return
 
-      const profile = MELEE_CLASSES.has(player.className)
-        ? BOT_PROFILE.melee
-        : BOT_PROFILE.ranged
+      // Lazy-init per-bot state fields added after construction
+      if (!botState.skillNextAllowed) botState.skillNextAllowed = {}
+      if (botState.strafeDir   == null) botState.strafeDir      = Math.random() < 0.5 ? 1 : -1
+      if (botState.strafeDirTimer == null) botState.strafeDirTimer = 0
 
-      // Low HP retreat — back away regardless of role
+      const isHealer = HEALER_CLASSES.has(player.className)
+      const isMelee  = MELEE_CLASSES.has(player.className)
+      const profile  = isHealer ? BOT_PROFILE.healer
+                     : isMelee  ? BOT_PROFILE.melee
+                     : BOT_PROFILE.ranged
+
+      // ── Healer: find most-injured ally ──────────────────────────────────
+      let healTarget = null
+      if (isHealer) {
+        let worstRatio = 1
+        this.players.forEach(p => {
+          if (p.id === botId || p.isDead || p.isHost) return
+          const ratio = p.hp / p.maxHp
+          if (ratio < worstRatio) { worstRatio = ratio; healTarget = p }
+        })
+      }
+
+      // ── Low HP retreat ───────────────────────────────────────────────────
       const hpRatio = player.hp / player.maxHp
       if (hpRatio < 0.25) {
-        // Find nearest threat and flee from it
         let threatX = player.x, threatY = player.y, threatDist = Infinity
         this.enemies.forEach(e => {
           if (e.isDead) return
@@ -294,7 +353,7 @@ export default class GameServer {
         return
       }
 
-      // Find nearest living enemy or boss
+      // ── Find nearest enemy/boss ──────────────────────────────────────────
       let target = null, bestDist = Infinity
       this.enemies.forEach(e => {
         if (e.isDead) return
@@ -310,30 +369,69 @@ export default class GameServer {
         const dx = target.x - player.x
         const dy = target.y - player.y
         const len = bestDist || 1
-        const nx = dx / len, ny = dy / len  // unit vector toward target
+        const nx = dx / len, ny = dy / len
 
-        // Movement: position relative to preferred combat distance
-        if (bestDist < profile.tooClose) {
-          // Back directly away
+        // ── Movement ──────────────────────────────────────────────────────
+        if (isHealer) {
+          // Stay near group center; flee if enemy gets too close
+          if (bestDist < profile.tooClose) {
+            queue.push({ type: 'move', x: -nx, y: -ny })
+          } else {
+            let cx = 0, cy = 0, count = 0
+            this.players.forEach(p => {
+              if (p.isHost || p.isDead) return
+              cx += p.x; cy += p.y; count++
+            })
+            if (count > 0) {
+              const gcx = cx / count - player.x
+              const gcy = cy / count - player.y
+              const gLen = Math.hypot(gcx, gcy) || 1
+              queue.push({ type: 'move', x: gcx / gLen, y: gcy / gLen })
+            }
+          }
+        } else if (bestDist < profile.tooClose) {
           queue.push({ type: 'move', x: -nx, y: -ny })
         } else if (bestDist > profile.tooFar) {
-          // Close in
           queue.push({ type: 'move', x: nx, y: ny })
         } else if (bestDist > profile.preferred) {
-          // Slowly approach — ranged bots use this band a lot
           queue.push({ type: 'move', x: nx, y: ny })
-        } else {
-          // In preferred range: strafe sideways to stay active
+        } else if (isMelee) {
+          // Melee: strafe to stay unpredictable
           queue.push({ type: 'move', x: -ny, y: nx })
+        } else {
+          // Ranged: orbit with a flipping strafe direction
+          if (--botState.strafeDirTimer <= 0) {
+            if (Math.random() < 0.35) botState.strafeDir = -botState.strafeDir
+            botState.strafeDirTimer = 30 + Math.floor(Math.random() * 30)
+          }
+          const sd = botState.strafeDir
+          queue.push({ type: 'move', x: -ny * sd, y: nx * sd })
         }
 
-        // Skill rotation — cycle through slots every 3 ticks
+        // ── Skill rotation with cast-time guard ───────────────────────────
         if (--botState.skillTimer <= 0) {
           botState.skillCursor = (botState.skillCursor + 1) % 4
           botState.skillTimer  = 3
         }
-        // CooldownSystem silently rejects if on cooldown — safe to push every tick
-        queue.push({ type: 'skill', index: botState.skillCursor, vector: { x: nx, y: ny } })
+
+        const slot   = botState.skillCursor
+        const config = player.getSkillConfig(slot)
+
+        if (config && (botState.skillNextAllowed[slot] ?? 0) <= now) {
+          const castDelay = config.castTime ?? 0
+          if (castDelay > 0) botState.skillNextAllowed[slot] = now + castDelay
+
+          // Healers aim HEAL_ALLY skills at the most-injured ally
+          let aimVec = { x: nx, y: ny }
+          if (isHealer && config.subtype === 'HEAL_ALLY' && healTarget) {
+            const htx = healTarget.x - player.x
+            const hty = healTarget.y - player.y
+            const htLen = Math.hypot(htx, hty) || 1
+            aimVec = { x: htx / htLen, y: hty / htLen }
+          }
+
+          queue.push({ type: 'skill', index: slot, vector: aimVec })
+        }
       } else {
         // No targets — wander, change direction every ~2s (40 ticks at 20 Hz)
         if (--botState.wanderTimer <= 0) {
@@ -693,6 +791,25 @@ export default class GameServer {
   _onDisconnect(socket) {
     const player = this.players.get(socket.id)
     console.log(`[-] disconnect  ${player?.name ?? socket.id}`)
+
+    // During active combat, convert to bot so the character keeps fighting
+    if (player && !player.isHost && !player.isBot &&
+        (this.scene === 'battle' || this.scene === 'bossFight')) {
+      player.isBot = true
+      this.bots.set(socket.id, {
+        socket:           { id: socket.id, emit: () => {} },
+        wanderAngle:      Math.random() * Math.PI * 2,
+        wanderTimer:      0,
+        skillCursor:      0,
+        skillTimer:       0,
+        skillNextAllowed: {},
+        strafeDir:        Math.random() < 0.5 ? 1 : -1,
+        strafeDirTimer:   0,
+        disconnected:     true,
+      })
+      console.log(`[↩] bot-ified   ${player.name} (will reclaim on reconnect)`)
+      return
+    }
 
     this.players.delete(socket.id)
     this.inputQueues.delete(socket.id)

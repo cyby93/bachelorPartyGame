@@ -89,6 +89,7 @@ const SkillDatabase = {
       chain:     2,
       chainRange: 15000,
       onHitEffect: { speedMultiplier: 0.5, duration: 2000 },
+      spriteKey:   'projectile_avengers_shield',
       icon:      '🛡️'
     },
     {
@@ -269,9 +270,9 @@ const SkillDatabase = {
       inputType:  'INSTANT',
       autoRefire: true,
       cooldown:   1000,
-      radius:     320,
-      damage:     4,
-      healAmount: 3,
+      radius:     200,
+      damage:     40,
+      healAmount: 30,
       effectType: 'DUAL',
       icon:       '💚'
     },
@@ -434,7 +435,7 @@ const SkillDatabase = {
       payload: {
         type:       'AOE',
         subtype:    'AOE_SELF',
-        radius:     700,
+        radius:     10,
         effectType: 'HEAL',
         healAmount: 15,
       },

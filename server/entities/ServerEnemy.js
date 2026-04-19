@@ -748,6 +748,7 @@ export default class ServerEnemy {
     if (this._isRepairing)          dto.isRepairing  = true
     if (this._shieldActive)         dto.shieldAngle  = this._shieldAngle
     if (this._berserckState === 'berserk') dto.isBerserking = true
+    if (this.isFeared)                     dto.isFeared     = true
     dto.angle = this._facingAngle
     return dto
   }

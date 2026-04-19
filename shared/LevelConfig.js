@@ -50,10 +50,14 @@ export const CAMPAIGN = [
       //   select 2 of ['top','bottom','left','right'] and spawn from those only.
       spawnEdge: 'random2',
       progression: [
-        { fromWave: 1, enemyTypes: ['felGuard', 'coilskarHarpooner'],                                    countRange: [3, 4] },
-        { fromWave: 2, enemyTypes: ['felGuard', 'coilskarHarpooner'],                          countRange: [4, 6] },
-        { fromWave: 3, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic'],                 countRange: [5, 8] },
-        { fromWave: 4, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic', 'coilskarSerpentGuard', 'bloodProphet', 'illidariCenturion'], countRange: [6, 10] },
+        { fromWave: 1, enemyTypes: ['felGuard', 'coilskarHarpooner'],
+          countRange: [3, 4] },
+        { fromWave: 3, enemyTypes: ['felGuard', 'coilskarHarpooner'],
+          countRange: [4, 6] },
+        { fromWave: 5, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic'],
+          countRange: [5, 8] },
+        { fromWave: 7, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic', 'coilskarSerpentGuard', 'bloodProphet', 'illidariCenturion'],
+          countRange: [6, 10] },
       ],
     },
     difficulty: {
@@ -69,31 +73,31 @@ export const CAMPAIGN = [
   {
     id: 'level_siege',
     name: 'The Siege',
-    arena: { width: 1000, height: 1000 },
+    arena: { width: 1200, height: 1200 },
     objectives: [
       { type: 'destroyBuildings' },
     ],
     buildings: [
-      { id: 'b1', position: { x: 120, y: 120 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
-      { id: 'b2', position: { x: 880, y: 120 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
-      { id: 'b3', position: { x: 120, y: 880 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
-      { id: 'b4', position: { x: 880, y: 880 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
+      { id: 'b1', position: { x: 60, y: 60 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
+      { id: 'b2', position: { x: 1140, y: 60 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
+      { id: 'b3', position: { x: 60, y: 1140 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
+      { id: 'b4', position: { x: 1140, y: 1140 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
     ],
     buildingSpawning: {
       baseInterval: 3000,          // ms between spawns per building
       countPerSpawn: [1, 2],       // min/max enemies per spawn event
-      maxAlivePerBuilding: 6,      // cap per building
+      maxAlivePerBuilding: 1,      // cap per building
       buffFactor: 0.25,            // 25% faster spawns per destroyed building
       spawnRadius: 80,             // spawn distance from building center
       enemyTypes: [
         { type: 'felGuard',   weight: 4 },
-        { type: 'bonechewerBrute',   weight: 2 },
-        { type: 'coilskarHarpooner',  weight: 3 },
-        { type: 'illidariCenturion', weight: 2 },
-        { type: 'bonechewerBladeFury', weight: 2 },
-        { type: 'ashtonghueMystic', weight: 2 },
-        { type: 'bloodProphet', weight: 2 },
-        { type: 'coilskarSerpentGuard', weight: 1 },
+        // { type: 'bonechewerBrute',   weight: 2 },
+        // { type: 'coilskarHarpooner',  weight: 3 },
+        // { type: 'illidariCenturion', weight: 2 },
+        // { type: 'bonechewerBladeFury', weight: 2 },
+        // { type: 'ashtonghueMystic', weight: 2 },
+        // { type: 'bloodProphet', weight: 2 },
+        // { type: 'coilskarSerpentGuard', weight: 1 },
       ],
     },
     // Reinforcements pour in from all 4 edges — distinct from building-local
@@ -102,7 +106,7 @@ export const CAMPAIGN = [
       mode: 'continuous',
       interval: 5000,
       countPerWave: [1, 2],
-      maxAliveAtOnce: 6,
+      maxAliveAtOnce: 1,
       spawnEdge: 'all',
       enemyTypes: [
         { type: 'felGuard',          weight: 3 },
@@ -168,7 +172,7 @@ export const CAMPAIGN = [
   {
     id: 'level_3',
     name: 'Serpentshrine Cavern',
-    arena: { width: 1200, height: 900 },
+    arena: { width: 1600, height: 1200 },
     objectives: [
       { type: 'killAll' },
     ],

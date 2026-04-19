@@ -314,6 +314,7 @@ export default class HostGame {
       'aura_pw_shield',
     ]
     const manifest = SPRITE_KEYS.map(k => ({ alias: k, src: `/assets/sprites/${k}.png` }))
+    manifest.push({ alias: 'projectile_avengers_shield', src: '/assets/sprites/abilities/avengers_shield.png' })
 
     // Load 8 directional static sprites
     for (const cls of DIRECTIONAL_CLASSES) {

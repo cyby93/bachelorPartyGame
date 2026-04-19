@@ -35,6 +35,10 @@
   // ── Socket (plain let — must NOT be Proxy-wrapped)
   let socket
 
+  // ── Session token — persists across reconnects so the server can reclaim the character
+  const sessionToken = localStorage.getItem('sessionToken') ?? crypto.randomUUID()
+  localStorage.setItem('sessionToken', sessionToken)
+
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
   const isStandalone = !!window.navigator.standalone
 
@@ -68,7 +72,7 @@
       myId = socket.id
       // Reconnect: if already past the join screen, re-register with the server
       if (screen !== 'name' && screen !== 'classSelect' && playerName && className) {
-        socket.emit(EVENTS.JOIN, { name: playerName, className, isHost: false })
+        socket.emit(EVENTS.JOIN, { name: playerName, className, isHost: false, sessionToken })
       }
     })
 
@@ -153,7 +157,7 @@
 
   function handleClassReady(cls) {
     className = cls
-    socket.emit(EVENTS.JOIN, { name: playerName, className: cls, isHost: false })
+    socket.emit(EVENTS.JOIN, { name: playerName, className: cls, isHost: false, sessionToken })
     screen = 'lobby'
   }
 

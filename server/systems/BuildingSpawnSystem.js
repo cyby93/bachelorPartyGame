@@ -52,7 +52,7 @@ export default class BuildingSpawnSystem {
       const w = entry.weight ?? 1
       for (let i = 0; i < w; i++) table.push(entry.type)
     }
-    return table.length ? table : ['grunt']
+    return table.length ? table : ['felGuard']
   }
 
   /**

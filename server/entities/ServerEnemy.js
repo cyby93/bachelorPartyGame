@@ -11,8 +11,8 @@ import { GAME_CONFIG }   from '../../shared/GameConfig.js'
 import { ENEMY_TYPES }   from '../../shared/EnemyTypeConfig.js'
 
 export default class ServerEnemy {
-  constructor({ id, x, y, type = 'grunt', hp, maxHp, speed, radius, contactDamage, generation }) {
-    const base = ENEMY_TYPES[type] ?? ENEMY_TYPES.grunt
+  constructor({ id, x, y, type = 'felGuard', hp, maxHp, speed, radius, contactDamage, generation }) {
+    const base = ENEMY_TYPES[type] ?? ENEMY_TYPES.felGuard
 
     this.id            = id
     this.x             = x

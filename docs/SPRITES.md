@@ -40,10 +40,9 @@ cause the shape to appear scaled up or down relative to the hitbox.
 | Entity group | Radius (R) | Canvas size |
 |---|---|---|
 | Players | 20 | 40×40 |
-| Enemy grunt / shadowfiend | 15–16 | 30×32 |
-| Enemy archer / healer / gateRepairer / warlock | 12–14 | 24–28 |
-| Enemy charger / shadowDemon | 18 | 36×36 |
-| Enemy brute | 22 | 44×44 |
+| Enemy shadowfiend | 16 | 32×32 |
+| Enemy gateRepairer / warlock | 13–14 | 26–28 |
+| Enemy shadowDemon | 18 | 36×36 |
 | Enemy flameOfAzzinoth | 40 | 80×80 |
 | Enemy leviathan | 50 | 100×100 |
 | Boss Akama | 60 | 120×120 |

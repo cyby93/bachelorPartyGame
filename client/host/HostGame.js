@@ -330,8 +330,7 @@ export default class HostGame {
     const SPRITE_KEYS = [
       'player_shaman',
       'player_deathknight',
-      'enemy_grunt',    'enemy_brute',    'enemy_archer',  'enemy_charger',
-      'enemy_healer',   'enemy_gaterepairer', 'enemy_leviathan', 'enemy_warlock',
+      'enemy_gaterepairer', 'enemy_leviathan', 'enemy_warlock',
       'enemy_flameofazzinoth', 'enemy_shadowdemon', 'enemy_shadowfiend',
       'boss_akama',
       'projectile_default',

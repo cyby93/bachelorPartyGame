@@ -4,8 +4,7 @@
  *
  * BT enemies (felGuard, bonechewerBrute, etc.) use 8-directional animated
  * sprites identical in structure to player sprites.
- * Legacy placeholder enemies (grunt, brute, etc.) fall back to a single
- * static texture.
+ * Non-directional enemies fall back to a single static texture keyed in STATIC_SPRITE_KEY.
  */
 
 import { Container, Graphics, Text, Sprite, Assets } from 'pixi.js'
@@ -26,13 +25,8 @@ function angleToDir(angle) {
   return DIRS[idx]
 }
 
-// Static sprite keys for legacy placeholder enemies
-const LEGACY_SPRITE_KEY = {
-  grunt:           'enemy_grunt',
-  brute:           'enemy_brute',
-  archer:          'enemy_archer',
-  charger:         'enemy_charger',
-  healer:          'enemy_healer',
+// Static sprite key per type, used when no directional animation exists
+const STATIC_SPRITE_KEY = {
   gateRepairer:    'enemy_gaterepairer',
   leviathan:       'enemy_leviathan',
   warlock:         'enemy_warlock',
@@ -44,9 +38,9 @@ const LEGACY_SPRITE_KEY = {
 export default class EnemySprite {
   constructor(data) {
     this.id   = data.id
-    this.type = data.type ?? 'grunt'
+    this.type = data.type ?? 'felGuard'
 
-    const typeCfg     = ENEMY_TYPES[this.type] ?? ENEMY_TYPES.grunt
+    const typeCfg     = ENEMY_TYPES[this.type] ?? ENEMY_TYPES.felGuard
     const R           = typeCfg.radius    ?? DEFAULT_R
     const displaySize = typeCfg.spriteSize ?? R * 2
     const D           = displaySize / 2
@@ -67,9 +61,9 @@ export default class EnemySprite {
     // Body sprite
     let initialTex
     if (this._isDirectional) {
-      initialTex = Assets.get(`enemy_${this.type}_south`) ?? Assets.get(LEGACY_SPRITE_KEY[this.type] ?? 'enemy_grunt')
+      initialTex = Assets.get(`enemy_${this.type}_south`) ?? Assets.get(STATIC_SPRITE_KEY[this.type] ?? `enemy_felguard_south`)
     } else {
-      initialTex = Assets.get(LEGACY_SPRITE_KEY[this.type] ?? 'enemy_grunt')
+      initialTex = Assets.get(STATIC_SPRITE_KEY[this.type] ?? `enemy_felguard_south`)
     }
     this._body = new Sprite(initialTex)
     this._body.anchor.set(0.5)

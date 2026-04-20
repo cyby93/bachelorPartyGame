@@ -79,7 +79,7 @@ function drawShape(ctx, cx, cy, R, shape, fillColor, strokeColor, strokeWidth = 
       break
 
     case 'arrow':
-      // Mirrors EnemySprite charger
+      // Arrow/chevron shape
       ctx.moveTo(cx,                    cy - R + strokeWidth)
       ctx.lineTo(cx + R * 0.6,          cy + R * 0.5)
       ctx.lineTo(cx,                    cy + R * 0.2)
@@ -139,15 +139,10 @@ for (const cls of PLAYER_CLASSES) {
   save(canvas, cls.key)
 }
 
-// ─── Enemy sprites (11) ───────────────────────────────────────────────────────
+// ─── Enemy sprites (6) ────────────────────────────────────────────────────────
 // Canvas = R*2 × R*2 per enemy type (sizes vary).
 
 const ENEMIES = [
-  { key: 'enemy_grunt',           shape: 'triangle', color: '#c0392b', R: 15 },
-  { key: 'enemy_brute',           shape: 'circle',   color: '#8e44ad', R: 22 },
-  { key: 'enemy_archer',          shape: 'diamond',  color: '#e67e22', R: 12 },
-  { key: 'enemy_charger',         shape: 'arrow',    color: '#e74c3c', R: 18 },
-  { key: 'enemy_healer',          shape: 'cross',    color: '#2ecc71', R: 14 },
   { key: 'enemy_gaterepairer',    shape: 'square',   color: '#8b4513', R: 13 },
   { key: 'enemy_leviathan',       shape: 'circle',   color: '#2e8b57', R: 50 },
   { key: 'enemy_warlock',         shape: 'diamond',  color: '#6a0dad', R: 14 },

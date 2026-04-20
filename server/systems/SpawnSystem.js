@@ -73,7 +73,7 @@ export default class SpawnSystem {
 
   /** Expand weighted enemy types into a flat lookup array. */
   _buildTypeTable() {
-    if (!this.config?.enemyTypes?.length) return ['grunt']
+    if (!this.config?.enemyTypes?.length) return ['felGuard']
     const table = []
     for (const entry of this.config.enemyTypes) {
       const w = entry.weight ?? 1
@@ -231,7 +231,7 @@ export default class SpawnSystem {
       const w = configEntry?.weight ?? 1
       for (let i = 0; i < w; i++) waveTypeTable.push(typeName)
     }
-    if (waveTypeTable.length === 0) waveTypeTable.push('grunt')
+    if (waveTypeTable.length === 0) waveTypeTable.push('felGuard')
 
     const spawned = []
     for (let i = 0; i < count; i++) {
@@ -252,7 +252,7 @@ export default class SpawnSystem {
 
   /** Find the progression entry for the given wave number. */
   _getProgression(wave) {
-    let best = this._progression[0] ?? { enemyTypes: ['grunt'], countRange: [3, 4] }
+    let best = this._progression[0] ?? { enemyTypes: ['felGuard'], countRange: [3, 4] }
     for (const entry of this._progression) {
       if (wave >= entry.fromWave) best = entry
     }

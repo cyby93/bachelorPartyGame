@@ -35,6 +35,16 @@
   // ── Socket (plain let — must NOT be Proxy-wrapped)
   let socket
 
+  // ── Socket event validation — lightweight guard, no external deps
+  // Returns false and logs a warning if any required field is missing.
+  function validate(eventName, data, requiredFields) {
+    if (!data || requiredFields.some(f => data[f] === undefined)) {
+      console.warn(`[socket] malformed ${eventName}:`, data)
+      return false
+    }
+    return true
+  }
+
   // ── Session token — persists across reconnects so the server can reclaim the character
   const sessionToken = localStorage.getItem('sessionToken') ?? crypto.randomUUID()
   localStorage.setItem('sessionToken', sessionToken)
@@ -76,7 +86,26 @@
       }
     })
 
-    socket.on(EVENTS.SCENE_CHANGE, ({ scene, levelName, levelIndex, totalLevels }) => {
+    // INIT — full state snapshot on join/reconnect.
+    // The controller doesn't render full state, but we guard the shape
+    // so future consumers can rely on a validated payload.
+    socket.on(EVENTS.INIT, data => {
+      if (!validate(EVENTS.INIT, data, ['players'])) return
+      // Controller currently derives identity from socket.id, not from INIT payload.
+      // Guard is here to catch malformed broadcasts early.
+    })
+
+    // skill:fired — VFX event consumed by the host renderer, not the controller.
+    // Guard is here so any future controller-side feedback (e.g. haptics, hit flash)
+    // has a validated entry point rather than raw unguarded data.
+    socket.on(EVENTS.SKILL_FIRED, data => {
+      if (!validate(EVENTS.SKILL_FIRED, data, ['skillName', 'type', 'x', 'y'])) return
+      // No controller-side action today. Guard logged; future handlers go here.
+    })
+
+    socket.on(EVENTS.SCENE_CHANGE, data => {
+      if (!validate(EVENTS.SCENE_CHANGE, data, ['scene'])) return
+      const { scene, levelName, levelIndex, totalLevels } = data
       if (scene === 'battle' || scene === 'bossFight') {
         screen = 'game'
         overlayScreen = null
@@ -105,6 +134,7 @@
     })
 
     socket.on(EVENTS.STATE_DELTA, delta => {
+      if (!validate(EVENTS.STATE_DELTA, delta, ['tick', 'players'])) return
       if (!myId) return
       const me = delta.players?.[myId]
       if (!me) return
@@ -112,22 +142,26 @@
     })
 
     socket.on(EVENTS.COOLDOWN, data => {
+      if (!validate(EVENTS.COOLDOWN, data, ['playerId', 'skillIndex', 'durationMs'])) return
       if (data.playerId !== myId) return
       cooldowns = cooldowns.map((v, i) => i === data.skillIndex ? Date.now() + data.durationMs : v)
     })
 
     socket.on(EVENTS.COMBO_POINTS, data => {
+      if (!validate(EVENTS.COMBO_POINTS, data, ['playerId', 'points'])) return
       if (data.playerId !== myId) return
       comboPoints = data.points
     })
 
     // ── Quiz events ─────────────────────────────────────────────────────
     socket.on(EVENTS.QUIZ_QUESTION, data => {
+      if (!validate(EVENTS.QUIZ_QUESTION, data, ['question', 'options'])) return
       overlayScreen = 'quizAnswer'
       overlayData = data   // { question, options }
     })
 
     socket.on(EVENTS.QUIZ_RESULTS, data => {
+      if (!validate(EVENTS.QUIZ_RESULTS, data, ['correctIndex', 'playerResults'])) return
       const myResult = data.playerResults?.[myId]
       const correctAnswer = overlayData?.options?.[data.correctIndex] ?? ''
       overlayScreen = 'quizResult'
@@ -135,6 +169,7 @@
     })
 
     socket.on(EVENTS.QUIZ_UPGRADE_OPTIONS, data => {
+      if (!validate(EVENTS.QUIZ_UPGRADE_OPTIONS, data, ['skills'])) return
       overlayScreen = 'upgradeSelect'
       overlayData = data   // { skills: [...] }
     })

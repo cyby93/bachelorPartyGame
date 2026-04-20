@@ -12,9 +12,9 @@ _Curated long-term knowledge. Every token here loads every session — keep it t
 | Ability | spriteKey | File | Trail Style |
 |---|---|---|---|
 | Penance (Priest) | `projectile_penance` | `public/assets/sprites/projectile_penance.png` | `divine` |
-| Avenger's Shield (Paladin) | `projectile_avengers_shield` | `public/assets/sprites/abilities/avengers_shield.png` | `holy` |
+| Avenger's Shield (Paladin) | `projectile_avengers_shield` | `public/assets/sprites/projectile_avengers_shield.png` | `holy` |
 
-New sprites in `abilities/` subfolder need a manual manifest entry in `HostGame.js` (not auto-generated from SPRITE_KEYS).
+All sprites live in the flat `public/assets/sprites/` directory. To add a new projectile: drop `{spriteKey}.png` there and add the key to `SPRITE_KEYS` in `HostGame.js`. No separate manifest entry or subdirectory needed.
 
 ## Projectile Trail System (`ProjectileSprite.js`)
 
@@ -51,7 +51,7 @@ Rule: sprites are wrong for burst effects — shapes + particles only.
 | Bloodlust | AOE_SELF | `bloodlustWave` (0.55s, 3 staggered rings) | `bloodlustBurst` (30 particles, massive) | Fixed radii (80/160/280px), not game radius 2500 |
 | Mass Resurrection | CAST | `massResurrectionRing` (2.0s = castTime) | `massResurrectionBurst` (gravity -150, souls) | Ring duration matches castTime — peaks on revive |
 | Tranquility | CHANNEL | `tranquilityRing` (0.6s, green) | `tranquilityBurst` (gravity -90) | Channel start only; per-tick VFX needs Saurfang |
-| Explosive Trap | — | `explosionBurst` (0.3s, fire) | `explosionBurst` | **Server gap**: detonation emits no `skill:fired` — needs Saurfang |
+| Explosive Trap | EXPLOSION | `explosionBurst` (0.3s, fire) | `explosionBurst` | Emission live in `ServerMinion._updateTrap()`. Payload: `{ type, skillName, x, y, radius, color: '#ff6600' }` |
 
 ## Ricochet Bug (fixed 2026-04-17)
 

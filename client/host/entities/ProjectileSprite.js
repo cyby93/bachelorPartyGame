@@ -7,28 +7,15 @@ import { Container, Graphics, Sprite, Assets } from 'pixi.js'
 
 const TRAIL_LENGTH = 5
 
-// Maps spriteKey → trail style. Add entries as new ability sprites are created.
-const TRAIL_STYLE_MAP = {
-  'projectile_avengers_shield': 'holy',
-  'projectile_penance':         'divine',
-  'projectile_ichor':           'ichor',
-}
-
-// Spin speed (radians per frame at 60fps). Per-sprite tuning.
-const SPIN_SPEED_MAP = {
-  'projectile_avengers_shield': 0.14,
-  'projectile_ichor':           0.04,  // slow, heavy wobble
-}
-
-// Scale the body sprite size down from radius*2. Values < 1 make the ball smaller.
-const BODY_SCALE_MAP = {
-  'projectile_penance': 0.88,
-}
-
-// How many trail history points to keep per style.
-const TRAIL_LENGTH_MAP = {
-  'divine': 8,
-  'ichor':  7,
+// Per-spriteKey visual config. Add an entry here when creating a new ability sprite.
+// trailStyle:  which trail renderer to use ('holy' | 'divine' | 'ichor' | 'default')
+// spinSpeed:   body rotation in radians/frame at 60fps (0 = no spin)
+// bodyScale:   multiplier on radius*2 — values < 1 shrink the body
+// trailLength: history points kept; defaults to TRAIL_LENGTH (5) when omitted
+const PROJECTILE_CONFIG = {
+  'projectile_avengers_shield': { trailStyle: 'holy',   spinSpeed: 0.14 },
+  'projectile_penance':         { trailStyle: 'divine', bodyScale: 0.88, trailLength: 8 },
+  'projectile_ichor':           { trailStyle: 'ichor',  spinSpeed: 0.04, trailLength: 7 },
 }
 
 const DIVINE_COLORS = [0xfffbe0, 0xffeeaa, 0xffd966]
@@ -43,13 +30,15 @@ export default class ProjectileSprite {
       ? parseInt(data.color.replace('#', ''), 16)
       : (data.color ?? 0xffff00)
 
+    const cfg = PROJECTILE_CONFIG[data.spriteKey] ?? {}
+
     this._color       = colorNum
     this._radius      = data.radius ?? 8
-    this._trailStyle  = TRAIL_STYLE_MAP[data.spriteKey] ?? 'default'
-    this._spinSpeed   = SPIN_SPEED_MAP[data.spriteKey] ?? 0
-    this._trailMax    = TRAIL_LENGTH_MAP[this._trailStyle] ?? TRAIL_LENGTH
+    this._trailStyle  = cfg.trailStyle  ?? 'default'
+    this._spinSpeed   = cfg.spinSpeed   ?? 0
+    this._trailMax    = cfg.trailLength ?? TRAIL_LENGTH
     this._rotation    = 0
-    this._particles   = []  // lingering holy sparkles: { x, y, born, life, r, color }
+    this._particles   = []  // lingering sparkles / drips: { x, y, born, life, r, color }
 
     this.container = new Container()
 
@@ -57,7 +46,7 @@ export default class ProjectileSprite {
     this.container.addChild(this._trailGfx)
 
     const textureKey  = data.spriteKey ?? 'projectile_default'
-    const bodyScale   = BODY_SCALE_MAP[textureKey] ?? 1
+    const bodyScale   = cfg.bodyScale ?? 1
     this._body = new Sprite(Assets.get(textureKey))
     this._body.anchor.set(0.5)
     this._body.width  = this._radius * 2 * bodyScale

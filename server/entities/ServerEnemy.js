@@ -99,17 +99,17 @@ export default class ServerEnemy {
     this._auraTickRate   = base.auraTickRate  ?? 2000
 
     // Berserk AI (Bonechewer Blade Fury)
-    this._berserckState       = 'chase'   // 'chase' | 'berserk' | 'exhausted'
-    this._berserckTimer       = 0         // ms until next berserk activation (counts up)
-    this._berserckStateTimer  = 0         // ms spent in current berserk/exhausted state
-    this._berserckHpTriggered = false     // one-time HP-based trigger fired
-    this._berserckSpeed       = base.berserckSpeed    ?? 1.9
-    this._berserckRadius      = base.berserckRadius   ?? 65
-    this._berserckDamage      = base.berserckDamage   ?? 18
-    this._berserckDuration    = base.berserckDuration ?? 2500
-    this._berserckCooldown    = base.berserckCooldown ?? 9000
-    this._berserckExhaust     = base.berserckExhaust  ?? 600
-    this._berserckAoeTimer    = 0         // ms since last AoE tick during berserk
+    this._berserkState       = 'chase'   // 'chase' | 'berserk' | 'exhausted'
+    this._berserkTimer       = 0         // ms until next berserk activation (counts up)
+    this._berserkStateTimer  = 0         // ms spent in current berserk/exhausted state
+    this._berserkHpTriggered = false     // one-time HP-based trigger fired
+    this._berserkSpeed       = base.berserkSpeed    ?? 1.9
+    this._berserkRadius      = base.berserkRadius   ?? 65
+    this._berserkDamage      = base.berserkDamage   ?? 18
+    this._berserkDuration    = base.berserkDuration ?? 2500
+    this._berserkCooldown    = base.berserkCooldown ?? 9000
+    this._berserkExhaust     = base.berserkExhaust  ?? 600
+    this._berserkAoeTimer    = 0         // ms since last AoE tick during berserk
 
     // Shielded AI (Coilskar Serpent Guard)
     this._shieldArc    = base.shieldArc ?? (Math.PI * 2 / 3)  // 120° default
@@ -188,8 +188,8 @@ export default class ServerEnemy {
       case 'shadowDemon':     _action = this._aiShadowDemon(dt, pps, players); break
       case 'shadowfiend':     _action = this._aiShadowfiend(dt, pps, players); break
       case 'berserk':         _action = this._aiBerserk(dt, pps, players, ctx); break
-      case 'shielded':        _action = this._aiShielded(dt, pps, players); break
-      default:                _action = this._aiChase(dt, pps, players); break
+      case 'shielded':        _action = this._aiShielded(dt, pps, players, ctx?.minions); break
+      default:                _action = this._aiChase(dt, pps, players, ctx?.minions); break
     }
 
     // Update facing angle from movement delta
@@ -204,8 +204,8 @@ export default class ServerEnemy {
 
   // ── AI: Chase (default) ──────────────────────────────────────────────────
 
-  _aiChase(dt, pps, players) {
-    const nearest = this._findNearest(players)
+  _aiChase(dt, pps, players, minions = null) {
+    const nearest = this._findNearest(players, minions)
     if (!nearest) return null
 
     const dx   = nearest.x - this.x
@@ -225,7 +225,7 @@ export default class ServerEnemy {
   // ── AI: Ranged ───────────────────────────────────────────────────────────
 
   _aiRanged(dt, pps, players, ctx) {
-    const nearest = this._findNearest(players)
+    const nearest = this._findNearest(players, ctx?.minions)
     if (!nearest) return null
 
     const dx   = nearest.x - this.x
@@ -297,7 +297,7 @@ export default class ServerEnemy {
     }
 
     // Idle — walk toward player, attempt charge when close enough
-    const nearest = this._findNearest(players)
+    const nearest = this._findNearest(players, ctx?.minions)
     if (!nearest) return null
 
     const dx   = nearest.x - this.x
@@ -414,7 +414,7 @@ export default class ServerEnemy {
 
     // If no ranged slots, behave as chase AI
     if (rangedSlots === 0) {
-      return this._aiChase(dt, pps, players)
+      return this._aiChase(dt, pps, players, ctx?.minions)
     }
 
     // Find all living, non-host, non-invisible players sorted by distance
@@ -483,7 +483,7 @@ export default class ServerEnemy {
    */
   _aiFlameOfAzzinoth(dt, pps, players, ctx) {
     // Chase nearest player
-    this._aiChase(dt, pps, players)
+    this._aiChase(dt, pps, players, ctx?.minions)
 
     const now = ctx?.now ?? Date.now()
     const actions = []
@@ -589,7 +589,7 @@ export default class ServerEnemy {
 
     // If no active gate (destroyed), fall back to chase AI
     if (!gate || gate.isDead) {
-      return this._aiChase(dt, pps, players)
+      return this._aiChase(dt, pps, players, ctx?.minions)
     }
 
     const dx   = gate.x - this.x
@@ -639,63 +639,63 @@ export default class ServerEnemy {
     const dtMs     = dt * 1000
 
     // One-time HP trigger: go berserk the first time HP drops below 40%
-    if (!this._berserckHpTriggered && this.hp / this.maxHp <= 0.4) {
-      this._berserckHpTriggered = true
-      if (this._berserckState === 'chase') {
-        this._berserckState      = 'berserk'
-        this._berserckStateTimer = 0
-        this._berserckAoeTimer   = 0
+    if (!this._berserkHpTriggered && this.hp / this.maxHp <= 0.4) {
+      this._berserkHpTriggered = true
+      if (this._berserkState === 'chase') {
+        this._berserkState      = 'berserk'
+        this._berserkStateTimer = 0
+        this._berserkAoeTimer   = 0
       }
     }
 
-    if (this._berserckState === 'berserk') {
-      this._berserckStateTimer += dtMs
-      this._berserckAoeTimer   += dtMs
+    if (this._berserkState === 'berserk') {
+      this._berserkStateTimer += dtMs
+      this._berserkAoeTimer   += dtMs
 
       // Move faster during spin
-      const berserckPps = this._berserckSpeed * 60
-      this._aiChase(dt, berserckPps, players)
+      const berserkPps = this._berserkSpeed * 60
+      this._aiChase(dt, berserkPps, players, ctx?.minions)
 
       // Periodic AoE damage tick (~every 600ms)
-      if (this._berserckAoeTimer >= 600) {
-        this._berserckAoeTimer = 0
+      if (this._berserkAoeTimer >= 600) {
+        this._berserkAoeTimer = 0
         return {
-          action: 'berserckAoeTick',
+          action: 'berserkAoeTick',
           x: this.x,
           y: this.y,
-          radius: this._berserckRadius,
-          damage: this._berserckDamage,
+          radius: this._berserkRadius,
+          damage: this._berserkDamage,
         }
       }
 
       // End berserk after duration
-      if (this._berserckStateTimer >= this._berserckDuration) {
-        this._berserckState      = 'exhausted'
-        this._berserckStateTimer = 0
+      if (this._berserkStateTimer >= this._berserkDuration) {
+        this._berserkState      = 'exhausted'
+        this._berserkStateTimer = 0
       }
       return null
     }
 
-    if (this._berserckState === 'exhausted') {
-      this._berserckStateTimer += dtMs
+    if (this._berserkState === 'exhausted') {
+      this._berserkStateTimer += dtMs
       // Move at half speed while exhausted
-      this._aiChase(dt, pps * 0.5, players)
-      if (this._berserckStateTimer >= this._berserckExhaust) {
-        this._berserckState  = 'chase'
-        this._berserckTimer  = 0
+      this._aiChase(dt, pps * 0.5, players, ctx?.minions)
+      if (this._berserkStateTimer >= this._berserkExhaust) {
+        this._berserkState  = 'chase'
+        this._berserkTimer  = 0
       }
       return null
     }
 
     // Chase state — walk normally, activate berserk on cooldown
-    this._berserckTimer += dtMs
-    if (this._berserckTimer >= this._berserckCooldown) {
-      this._berserckState      = 'berserk'
-      this._berserckTimer      = 0
-      this._berserckStateTimer = 0
-      this._berserckAoeTimer   = 0
+    this._berserkTimer += dtMs
+    if (this._berserkTimer >= this._berserkCooldown) {
+      this._berserkState      = 'berserk'
+      this._berserkTimer      = 0
+      this._berserkStateTimer = 0
+      this._berserkAoeTimer   = 0
     }
-    return this._aiChase(dt, pps, players)
+    return this._aiChase(dt, pps, players, ctx?.minions)
   }
 
   // ── AI: Shielded (Coilskar Serpent Guard) ────────────────────────────────
@@ -705,17 +705,17 @@ export default class ServerEnemy {
    * Maintains _shieldAngle pointing toward the nearest player each tick.
    * Projectile blocking is handled in SkillSystem (collision check).
    */
-  _aiShielded(dt, pps, players) {
-    const nearest = this._findNearest(players)
+  _aiShielded(dt, pps, players, minions = null) {
+    const nearest = this._findNearest(players, minions)
     if (nearest) {
       this._shieldAngle = Math.atan2(nearest.y - this.y, nearest.x - this.x)
     }
-    return this._aiChase(dt, pps, players)
+    return this._aiChase(dt, pps, players, minions)
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
-  _findNearest(players) {
+  _findNearest(players, minions = null) {
     let nearest = null
     let bestDist = Infinity
     players.forEach(p => {
@@ -723,6 +723,14 @@ export default class ServerEnemy {
       const d = Math.hypot(p.x - this.x, p.y - this.y)
       if (d < bestDist) { bestDist = d; nearest = p }
     })
+    if (minions) {
+      minions.forEach(m => {
+        if (m.isDead) return
+        if (m.minionType !== 'PET' && m.minionType !== 'WILD_BEAST') return
+        const d = Math.hypot(m.x - this.x, m.y - this.y)
+        if (d < bestDist) { bestDist = d; nearest = m }
+      })
+    }
     return nearest
   }
 
@@ -748,7 +756,7 @@ export default class ServerEnemy {
     if (this.generation > 0)        dto.generation   = this.generation
     if (this._isRepairing)          dto.isRepairing  = true
     if (this._shieldActive)         dto.shieldAngle  = this._shieldAngle
-    if (this._berserckState === 'berserk') dto.isBerserking = true
+    if (this._berserkState === 'berserk') dto.isBerserking = true
     if (this.isFeared)                     dto.isFeared     = true
     dto.angle = this._facingAngle
     return dto

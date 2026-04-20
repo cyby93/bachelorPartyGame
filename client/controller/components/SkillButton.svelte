@@ -258,7 +258,6 @@
   class="skill-btn"
   class:held
   class:fired
-  class:on-cd={expiresAt > Date.now()}
   bind:this={btnEl}
   onpointerdown={onPointerDown}
   onpointerup={onPointerUp}
@@ -280,7 +279,7 @@
 <style>
   .skill-btn {
     background: #16202a;
-    border: 0;
+    border: 2px solid transparent;
     padding: 0;
     display: flex;
     flex-direction: column;

@@ -302,6 +302,12 @@ export default class HostGame {
   }
 
   async _loadSprites() {
+    // Convention: all flat sprites under /assets/sprites/{key}.png — alias === filename without extension.
+    // Projectile sprites must follow the projectile_* naming convention so ProjectileSprite.js
+    // can look them up by spriteKey directly (e.g. 'projectile_fireball' → projectile_fireball.png).
+    // To add a new projectile sprite: drop {spriteKey}.png in public/assets/sprites/ and add the
+    // key here. No other files need changing (ProjectileSprite.js will fall back to projectile_default
+    // if the key has no PROJECTILE_CONFIG entry, which is safe for basic tinted circles).
     const SPRITE_KEYS = [
       'player_shaman',
       'player_deathknight',
@@ -310,11 +316,12 @@ export default class HostGame {
       'enemy_flameofazzinoth', 'enemy_shadowdemon', 'enemy_shadowfiend',
       'boss_illidan',   'boss_akama',
       'projectile_default',
+      'projectile_avengers_shield',
+      'projectile_fireball',
       'projectile_penance',
       'aura_pw_shield',
     ]
     const manifest = SPRITE_KEYS.map(k => ({ alias: k, src: `/assets/sprites/${k}.png` }))
-    manifest.push({ alias: 'projectile_avengers_shield', src: '/assets/sprites/abilities/avengers_shield.png' })
 
     // Load 8 directional static sprites
     for (const cls of DIRECTIONAL_CLASSES) {

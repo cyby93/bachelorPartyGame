@@ -20,7 +20,73 @@ export default class VFXManager {
     this.ground    = new GroundEffectSystem(layers.groundFx, this.particles)
     this.auras     = new AuraSystem()
     this.floatingText = new FloatingTextPool(layers.worldUi)
+
+    this._skillHandlers = new Map()
+    this._typeHandlers  = new Map()
+    this._buildHandlers()
   }
+
+  // ── Handler registration ─────────────────────────────────────────────────────
+
+  /**
+   * Register a VFX handler for a specific skill name.
+   * Called at boot for built-in skills; can also be called at runtime to extend.
+   * skillName-based handlers take priority over type-based fallbacks.
+   */
+  registerSkillVFX(skillName, handler) {
+    this._skillHandlers.set(skillName, handler)
+  }
+
+  _buildHandlers() {
+    const os = this.oneShot
+    const ps = this.particles
+
+    // ── Named-skill handlers (highest priority) ──────────────────────────────
+    const skills = [
+      ['Holy Nova',         (d) => { os.holyNovaRing(d.x, d.y, d.radius || 100); ps.holyNovaBurst(d.x, d.y, d.radius || 100); os.impactFlash(d.x, d.y, d.color) }],
+      ['Frost Nova',        (d) => { os.frostNovaRing(d.x, d.y, d.radius || 100); ps.frostNovaBurst(d.x, d.y, d.radius || 100); os.impactFlash(d.x, d.y, d.color) }],
+      ['Fear',              (d) => { os.fearRing(d.x, d.y, d.radius || 100); ps.fearBurst(d.x, d.y, d.radius || 100) }],
+      ['Consecration',      (d) => { os.consecrationBurst(d.x, d.y, d.radius || 100); ps.consecrationSparkle(d.x, d.y); os.impactFlash(d.x, d.y, d.color) }],
+      ['Bloodlust',         (d) => { os.bloodlustWave(d.x, d.y); ps.bloodlustBurst(d.x, d.y); os.impactFlash(d.x, d.y, d.color) }],
+      ['Mass Resurrection', (d) => { os.massResurrectionRing(d.x, d.y); ps.massResurrectionBurst(d.x, d.y) }],
+      ['Tranquility',       (d) => { os.tranquilityField(d.x, d.y, d.radius || 700); ps.tranquilityBurst(d.x, d.y) }],
+    ]
+    for (const [name, fn] of skills) this._skillHandlers.set(name, fn)
+
+    // ── Type-based fallbacks ─────────────────────────────────────────────────
+    this._typeHandlers.set('MELEE', (d) => {
+      os.meleeArc(d.x, d.y, d.angle, d.range || 80, d.color)
+    })
+    this._typeHandlers.set('AOE', (d) => {
+      if (d.subtype === 'AOE_LOBBED') { os.impactFlash(d.x, d.y, d.color); return }
+      os.aoeFlash(d.x, d.y, d.radius || 100, d.color)
+      ps.hitSpark(d.x, d.y, d.color)
+    })
+    this._typeHandlers.set('DASH', (d) => {
+      const dist = d.range || 200
+      if (d.subtype === 'BACKWARDS') {
+        os.dashTrail(d.x, d.y, d.x - Math.cos(d.angle) * dist, d.y - Math.sin(d.angle) * dist, d.color)
+      } else {
+        os.dashTrail(d.x, d.y, d.x + Math.cos(d.angle) * dist, d.y + Math.sin(d.angle) * dist, d.color)
+      }
+    })
+    this._typeHandlers.set('BUFF',      (d) => os.impactFlash(d.x, d.y, d.color))
+    this._typeHandlers.set('SHIELD',    (d) => os.impactFlash(d.x, d.y, d.color))
+    this._typeHandlers.set('CAST',      (d) => os.impactFlash(d.x, d.y, d.color))
+    this._typeHandlers.set('CHANNEL',   (d) => os.impactFlash(d.x, d.y, d.color))
+    this._typeHandlers.set('TARGETED',  (d) => os.impactFlash(d.x, d.y, d.color))
+    this._typeHandlers.set('EXPLOSION', (d) => {
+      os.explosionBurst(d.x, d.y, d.radius || 120)
+      ps.explosionBurst(d.x, d.y, d.radius || 120)
+      os.impactFlash(d.x, d.y, d.color)
+    })
+    this._typeHandlers.set('SPAWN', (d) => {
+      os.impactFlash(d.x, d.y, d.color)
+      ps.hitSpark(d.x, d.y, d.color)
+    })
+  }
+
+  // ── Public API ───────────────────────────────────────────────────────────────
 
   update(dt) {
     this.particles.update(dt)
@@ -32,108 +98,12 @@ export default class VFXManager {
 
   /**
    * Dispatch VFX based on skill fired data from server.
+   * Named-skill handlers take priority; falls back to type-based handler.
    * @param {object} data - { playerId, skillName, type, subtype, x, y, angle, radius, range, color }
    */
   triggerSkillVFX(data) {
-    const { type, subtype, x, y, angle, radius, range, color } = data
-
-    switch (type) {
-      case 'MELEE':
-        this.oneShot.meleeArc(x, y, angle, range || 80, color)
-        break
-
-      case 'AOE':
-        if (subtype === 'AOE_SELF' || !subtype) {
-          if (data.skillName === 'Holy Nova') {
-            this.oneShot.holyNovaRing(x, y, radius || 100)
-            this.particles.holyNovaBurst(x, y, radius || 100)
-            this.oneShot.impactFlash(x, y, color)
-          } else if (data.skillName === 'Frost Nova') {
-            this.oneShot.frostNovaRing(x, y, radius || 100)
-            this.particles.frostNovaBurst(x, y, radius || 100)
-            this.oneShot.impactFlash(x, y, color)
-          } else if (data.skillName === 'Fear') {
-            this.oneShot.fearRing(x, y, radius || 100)
-            this.particles.fearBurst(x, y, radius || 100)
-          } else if (data.skillName === 'Consecration') {
-            this.oneShot.consecrationBurst(x, y, radius || 100)
-            this.particles.consecrationSparkle(x, y)
-            this.oneShot.impactFlash(x, y, color)
-          } else if (data.skillName === 'Bloodlust') {
-            this.oneShot.bloodlustWave(x, y)
-            this.particles.bloodlustBurst(x, y)
-            this.oneShot.impactFlash(x, y, color)
-          } else {
-            this.oneShot.aoeFlash(x, y, radius || 100, color)
-            this.particles.hitSpark(x, y, color)
-          }
-        } else if (subtype === 'AOE_LOBBED') {
-          // Lobbed AOE flash will trigger on impact via projectile system
-          // Show a small indicator at cast position
-          this.oneShot.impactFlash(x, y, color)
-        }
-        break
-
-      case 'DASH': {
-        const dist = data.range || 200
-        const toX = x + Math.cos(angle) * dist
-        const toY = y + Math.sin(angle) * dist
-        if (subtype === 'BACKWARDS') {
-          this.oneShot.dashTrail(x, y, x - Math.cos(angle) * dist, y - Math.sin(angle) * dist, color)
-        } else {
-          this.oneShot.dashTrail(x, y, toX, toY, color)
-        }
-        break
-      }
-
-      case 'BUFF':
-        // Aura rings are handled separately via state sync
-        // Show a small flash at cast position for feedback
-        this.oneShot.impactFlash(x, y, color)
-        break
-
-      case 'SHIELD':
-        this.oneShot.impactFlash(x, y, color)
-        break
-
-      case 'CAST':
-        if (data.skillName === 'Mass Resurrection') {
-          this.oneShot.massResurrectionRing(x, y)
-          this.particles.massResurrectionBurst(x, y)
-        } else {
-          this.oneShot.impactFlash(x, y, color)
-        }
-        break
-
-      case 'CHANNEL':
-        if (data.skillName === 'Tranquility') {
-          this.oneShot.tranquilityField(x, y, radius || 700)
-          this.particles.tranquilityBurst(x, y)
-        } else {
-          this.oneShot.impactFlash(x, y, color)
-        }
-        break
-
-      case 'TARGETED':
-        // Instant ray hit — flash at caster origin
-        this.oneShot.impactFlash(x, y, color)
-        break
-
-      case 'EXPLOSION':
-        this.oneShot.explosionBurst(x, y, radius || 120)
-        this.particles.explosionBurst(x, y, radius || 120)
-        this.oneShot.impactFlash(x, y, color)
-        break
-
-      case 'SPAWN':
-        // Spawn burst — flash + particles
-        this.oneShot.impactFlash(x, y, color)
-        this.particles.hitSpark(x, y, color)
-        break
-
-      default:
-        break
-    }
+    const handler = this._skillHandlers.get(data.skillName) ?? this._typeHandlers.get(data.type)
+    handler?.(data)
   }
 
   /**

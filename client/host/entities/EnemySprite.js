@@ -84,10 +84,10 @@ export default class EnemySprite {
     this.container.addChild(this._shieldGfx)
 
     // Berserk ring (Blade Fury) — hidden by default
-    this._berserckGfx   = new Graphics()
-    this._berserckGfx.alpha = 0
-    this.container.addChild(this._berserckGfx)
-    this._drawBerserckRing(typeCfg.berserckRadius ?? 65)
+    this._berserkGfx   = new Graphics()
+    this._berserkGfx.alpha = 0
+    this.container.addChild(this._berserkGfx)
+    this._drawBerserkRing(typeCfg.berserkRadius ?? 65)
 
     // HP pip — fixed 30px wide, 4px tall
     const HP_W = 30, HP_H = 4
@@ -154,8 +154,8 @@ export default class EnemySprite {
     g.stroke({ color: 0x4db8e8, width: 3, alpha: 0.85 })
   }
 
-  _drawBerserckRing(radius) {
-    const g = this._berserckGfx
+  _drawBerserkRing(radius) {
+    const g = this._berserkGfx
     g.clear()
     g.circle(0, 0, radius)
     g.stroke({ color: 0xff3300, width: 2, alpha: 0.7 })
@@ -219,7 +219,7 @@ export default class EnemySprite {
     }
 
     // Berserk ring (Blade Fury)
-    this._berserckGfx.alpha = state.isBerserking ? 0.8 : 0
+    this._berserkGfx.alpha = state.isBerserking ? 0.8 : 0
   }
 
   destroy() {

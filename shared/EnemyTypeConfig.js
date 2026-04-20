@@ -73,12 +73,12 @@ export const ENEMY_TYPES = {
     spriteSize: 96,
     color: '#cc2200',
     ai: 'berserk',
-    berserckSpeed:    1.9,
-    berserckRadius:   65,
-    berserckDamage:   Math.round(0.45 * Y * R),    // per AoE tick while spinning
-    berserckDuration: 2500,  // ms spinning
-    berserckCooldown: 9000,  // ms between activations
-    berserckExhaust:  600,   // ms slow after spin ends
+    berserkSpeed:    1.9,
+    berserkRadius:   65,
+    berserkDamage:   Math.round(0.45 * Y * R),    // per AoE tick while spinning
+    berserkDuration: 2500,  // ms spinning
+    berserkCooldown: 9000,  // ms between activations
+    berserkExhaust:  600,   // ms slow after spin ends
   },
 
   // ── Ashtongue Mystic — broken draenei healer ────────────────────────────

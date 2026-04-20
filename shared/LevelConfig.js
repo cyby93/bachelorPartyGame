@@ -259,7 +259,7 @@ export const CAMPAIGN = [
         name: 'Akama',
         hp: Math.round(40 * X * R),   // 2000 at defaults — scales with R
         speed: 0.8,
-        radius: 25,
+        radius: 48,
         meleeDamage: 15,
         attackCooldown: 1500,
         attackRange: 50,

@@ -3,14 +3,14 @@
  * Server-side boss entity: Illidan Stormrage with phase-based AI.
  */
 
-import { BOSS_CONFIG }    from '../../shared/BossConfig.js'
-import { ILLIDAN_CONFIG } from '../../shared/IllidanConfig.js'
-import { GAME_CONFIG }    from '../../shared/GameConfig.js'
+import { ILLIDAN_CONFIG }        from '../../shared/IllidanConfig.js'
+import { SHADE_OF_AKAMA_CONFIG } from '../../shared/ShadeOfAkamaConfig.js'
+import { DEFAULT_BOSS_RADIUS }   from '../../shared/BaseBossConfig.js'
 
-/** Config lookup: Illidan uses its own file; others use BOSS_CONFIG. */
 function resolveConfig(configKey) {
-  if (configKey === 'ILLIDAN') return ILLIDAN_CONFIG
-  return BOSS_CONFIG[configKey] ?? BOSS_CONFIG.SHADE_OF_AKAMA
+  if (configKey === 'ILLIDAN')        return ILLIDAN_CONFIG
+  if (configKey === 'SHADE_OF_AKAMA') return SHADE_OF_AKAMA_CONFIG
+  return SHADE_OF_AKAMA_CONFIG
 }
 
 export default class ServerBoss {
@@ -27,7 +27,10 @@ export default class ServerBoss {
     this.maxHp     = Math.round(cfg.maxHp * hpMult)
     this.hp        = this.maxHp
     this._damageMult = damageMult
-    this.radius    = cfg.radius ?? GAME_CONFIG.BOSS_RADIUS
+    this.radius      = cfg.radius ?? DEFAULT_BOSS_RADIUS
+    this.hitboxShape = cfg.hitboxShape ?? 'oval'
+    this.radiusX     = this.hitboxShape === 'oval' ? this.radius / 2 : this.radius
+    this.radiusY     = this.radius
     this.arenaWidth = overrides.arenaWidth ?? GAME_CONFIG.CANVAS_WIDTH
     this.arenaHeight = overrides.arenaHeight ?? GAME_CONFIG.CANVAS_HEIGHT
     this.x         = this.arenaWidth / 2
@@ -103,6 +106,7 @@ export default class ServerBoss {
 
   update(dt, players) {
     if (this.isDead) return
+    if (this.activeCast) return  // freeze in place while winding up an ability
 
     // Check enrage timer
     if (!this._enrageActive && this._config.enrageTimer) {
@@ -176,7 +180,7 @@ export default class ServerBoss {
 
       this._abilityCooldowns[ability.name] = now
 
-      // Cast-based abilities: store the pending attack, show cast bar, become immune
+      // Cast-based abilities: store the pending attack, show cast bar
       if (ability.castTime) {
         this.activeCast = {
           attack: {
@@ -187,7 +191,6 @@ export default class ServerBoss {
           castTime:  ability.castTime / castSpeedMult,
           startedAt: now,
         }
-        this.isImmune = true
         break  // only one ability at a time; cast is now pending
       }
 
@@ -211,7 +214,6 @@ export default class ServerBoss {
     if (elapsed < this.activeCast.castTime) return null
     const attack = this.activeCast.attack
     this.activeCast = null
-    this.isImmune   = false
     return attack
   }
 

@@ -1,8 +1,8 @@
 import { EVENTS }          from '../shared/protocol.js'
 import { GAME_CONFIG }     from '../shared/GameConfig.js'
 import { CAMPAIGN }        from '../shared/LevelConfig.js'
-import { BOSS_CONFIG }     from '../shared/BossConfig.js'
-import { ILLIDAN_CONFIG }  from '../shared/IllidanConfig.js'
+import { ILLIDAN_CONFIG }        from '../shared/IllidanConfig.js'
+import { SHADE_OF_AKAMA_CONFIG } from '../shared/ShadeOfAkamaConfig.js'
 import DialogSystem        from './systems/DialogSystem.js'
 import { CLASSES, CLASS_NAMES, resolveClassName } from '../shared/ClassConfig.js'
 import ServerPlayer      from './entities/ServerPlayer.js'
@@ -36,6 +36,18 @@ function playerHitsCircle(px, py, cx, cy, otherRadius) {
   const rx = GAME_CONFIG.PLAYER_RADIUS_X + otherRadius
   const ry = GAME_CONFIG.PLAYER_RADIUS_Y + otherRadius
   return (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1
+}
+
+/** Shape-aware collision: player oval vs entity hitbox (circle or oval). Optional pad expands the entity hitbox. */
+function playerHitsEntity(px, py, entity, pad = 0) {
+  const dx = px - entity.x
+  const dy = py - entity.y
+  if (entity.hitboxShape === 'oval') {
+    const rx = GAME_CONFIG.PLAYER_RADIUS_X + entity.radiusX + pad
+    const ry = GAME_CONFIG.PLAYER_RADIUS_Y + entity.radiusY + pad
+    return (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1
+  }
+  return playerHitsCircle(px, py, entity.x, entity.y, entity.radius + pad)
 }
 
 /**
@@ -1172,7 +1184,7 @@ export default class GameServer {
       if (e.type === 'shadowDemon' && now - (e._lastContactDamage ?? 0) > 1000) {
         this.players.forEach(p => {
           if (p.isHost || p.isDead) return
-          if (playerHitsCircle(p.x, p.y, e.x, e.y, e.radius)) {
+          if (playerHitsEntity(p.x, p.y, e)) {
             if (p.isShieldBlocking(e.x, e.y)) return
             e._lastContactDamage = now
             p.takeDamage(p.maxHp * 10)   // effectively instant kill
@@ -1186,7 +1198,7 @@ export default class GameServer {
       if (e.type === 'shadowfiend' && !e._infectedTarget && now - e._lastContactDamage > 500) {
         this.players.forEach(p => {
           if (p.isHost || p.isDead || p.id === e.sourcePlayerId) return
-          if (playerHitsCircle(p.x, p.y, e.x, e.y, e.radius)) {
+          if (playerHitsEntity(p.x, p.y, e)) {
             e._infectedTarget = true
             e._lastContactDamage = now
             e.isDead = true   // self-destruct after infecting
@@ -1210,7 +1222,7 @@ export default class GameServer {
       if (e.contactDamage > 0 && now - e._lastContactDamage > 500) {
         this.players.forEach(p => {
           if (p.isHost || p.isDead) return
-          if (playerHitsCircle(p.x, p.y, e.x, e.y, e.radius)) {
+          if (playerHitsEntity(p.x, p.y, e)) {
             if (p.isShieldBlocking(e.x, e.y)) return
             e._lastContactDamage = now
             p.takeDamage(e.contactDamage)
@@ -1383,7 +1395,7 @@ export default class GameServer {
       this.boss.isImmune = false
       // Activate Phase 2 AI (boss now targets NPC)
       this.boss.phase = 2
-      this.boss.speed = BOSS_CONFIG.SHADE_OF_AKAMA?.phases?.[1]?.speed ?? 0.6
+      this.boss.speed = SHADE_OF_AKAMA_CONFIG.phases[1]?.speed ?? 0.6
     }
 
     // Activate NPCs
@@ -1411,7 +1423,7 @@ export default class GameServer {
     // ── Generic boss (Shade of Akama) ──────────────────────────────────────
     if (this.boss.isImmune) return  // Shade Phase 1: idle, immune
 
-    const bossConfig = BOSS_CONFIG[this.currentLevel?.boss]
+    const bossConfig = this.currentLevel?.boss === 'SHADE_OF_AKAMA' ? SHADE_OF_AKAMA_CONFIG : null
     if (bossConfig?.targetNPC && this._bossPhase >= 2) {
       const npc = this.npcs.get(bossConfig.targetNPC)
       this._updateBossTargetingNPC(dt, now, npc, bossConfig)
@@ -1453,7 +1465,7 @@ export default class GameServer {
     // Contact damage: per-player rate-limited
     this.players.forEach(p => {
       if (p.isHost || p.isDead) return
-      if (playerHitsCircle(p.x, p.y, this.boss.x, this.boss.y, GAME_CONFIG.BOSS_RADIUS + 5)) {
+      if (playerHitsEntity(p.x, p.y, this.boss, 5)) {
         if (p.isShieldBlocking(this.boss.x, this.boss.y)) return
         if (!p._lastBossContact) p._lastBossContact = 0
         if (now - p._lastBossContact > 500) {
@@ -1498,7 +1510,7 @@ export default class GameServer {
     // Contact damage to players who wander too close
     this.players.forEach(p => {
       if (p.isHost || p.isDead) return
-      if (playerHitsCircle(p.x, p.y, this.boss.x, this.boss.y, GAME_CONFIG.BOSS_RADIUS + 5)) {
+      if (playerHitsEntity(p.x, p.y, this.boss, 5)) {
         if (p.isShieldBlocking(this.boss.x, this.boss.y)) return
         if (!p._lastBossContact) p._lastBossContact = 0
         if (now - p._lastBossContact > 500) {

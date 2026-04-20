@@ -21,6 +21,9 @@ export default class ServerEnemy {
     this.hp            = hp    ?? base.hp
     this.maxHp         = maxHp ?? base.hp
     this.radius        = radius ?? base.radius
+    this.hitboxShape   = base.hitboxShape ?? 'oval'
+    this.radiusX       = this.hitboxShape === 'oval' ? this.radius / 2 : this.radius
+    this.radiusY       = this.radius
     this.speed         = speed  ?? base.speed
     this.contactDamage = contactDamage ?? base.contactDamage
     this.isDead        = false

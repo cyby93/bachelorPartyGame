@@ -2,8 +2,8 @@
  * shared/IllidanConfig.js
  * Full encounter configuration for Illidan Stormrage (Level 5).
  *
- * Extracted here rather than into BossConfig.js to keep Illidan-specific
- * mechanics isolated from the generic boss entity.
+ * Illidan-specific mechanics are isolated here from the generic boss entity
+ * (ShadeOfAkamaConfig.js). Common defaults come from BaseBossConfig.js.
  *
  * maxHp is the 1-player base. LevelConfig.js applies hpMult at runtime:
  *   hpMult = 1.0 + (playerCount - 1) × 0.10   → ×2.2 at 13 players
@@ -30,6 +30,7 @@
  *  the 12-min enrage. Upgrades are the margin between a clean kill and a wipe.
  */
 
+import { BASE_BOSS_DEFAULTS } from './BaseBossConfig.js'
 import { BALANCE } from './BalanceConfig.js'
 
 const R = BALANCE.RANGED_BASE_DPS
@@ -37,13 +38,16 @@ const X = BALANCE.ENEMY_HP_MULT
 const Y = BALANCE.ENEMY_DAMAGE_MULT
 
 export const ILLIDAN_CONFIG = {
+  ...BASE_BOSS_DEFAULTS,
   name:           'Illidan Stormrage',
   maxHp:          Math.round(2116 * R * BALANCE.RLEF),
-  speed:          0.1,
-  radius:         20,
+  speed:          0.7,
   meleeDamage:    Math.round(2 * Y * R),      // 80 at defaults
   attackCooldown: 3000,
   attackRange:    80,
+
+  spriteType:  'illidan',
+  phaseModels: { 1: 'illidan', 2: 'illidan', 3: 'illidan_demon' },
 
   /**
    * Phase-keyed ability sets.
@@ -135,7 +139,7 @@ export const ILLIDAN_CONFIG = {
       },
       {
         name:         'Shadow Blast',
-        cooldown:     2500,
+        cooldown:     10000,
         type:         'shadowBlast',
         castTime:     2500,
         damage:       Math.round(2 * Y * R),        // 80 at defaults

@@ -15,7 +15,6 @@ export const GAME_CONFIG = {
   PLAYER_RADIUS:   20,   // legacy circle radius — used for wall push and spawn padding
   PLAYER_RADIUS_X: 15,   // oval hitbox horizontal semi-axis (wider — screen left/right)
   PLAYER_RADIUS_Y: 30,   // oval hitbox vertical semi-axis   (narrower — foreshortened depth)
-  BOSS_RADIUS:     60,
   ENEMY_RADIUS:    15,
 
   // Revive mechanic
@@ -27,4 +26,7 @@ export const GAME_CONFIG = {
 
   // Quiz & upgrade system (between levels)
   QUIZ_BETWEEN_LEVELS: true,
+
+  // Debug flags — set to true locally to aid development, never commit as true
+  DEBUG_HITBOXES: true,
 }

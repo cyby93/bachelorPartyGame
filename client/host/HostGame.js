@@ -35,6 +35,7 @@ export const DIRECTIONAL_ENEMIES = new Set([
   'felGuard', 'bonechewerBrute', 'coilskarHarpooner', 'illidariCenturion',
   'bonechewerBladeFury', 'ashtonghueMystic', 'bloodProphet',
   'coilskarSerpentGuard', 'ritualChanneler',
+  'flameOfAzzinoth',
 ])
 
 export const DIRECTIONAL_ENEMY_ANIMATIONS = {
@@ -47,6 +48,24 @@ export const DIRECTIONAL_ENEMY_ANIMATIONS = {
   bloodProphet:         { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
   coilskarSerpentGuard: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
   ritualChanneler:      { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  flameOfAzzinoth:      { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+}
+
+/** Boss types with 8-directional animated sprites. Asset keys: {type}_{dir} / {type}_{anim}_{dir}_{frame} */
+export const DIRECTIONAL_BOSSES = new Set(['illidan', 'illidan_demon'])
+
+export const DIRECTIONAL_BOSS_ANIMATIONS = {
+  illidan:       { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  illidan_demon: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  // Shade of Akama reuses NPC akama sprites — already loaded by DIRECTIONAL_NPC_ANIMATIONS
+  akama:         { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+}
+
+/** NPC types with 8-directional animated sprites. Asset keys: {type}_{dir} / {type}_{anim}_{dir}_{frame} */
+export const DIRECTIONAL_NPCS = new Set(['akama'])
+
+export const DIRECTIONAL_NPC_ANIMATIONS = {
+  akama: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
 }
 
 /**
@@ -314,7 +333,7 @@ export default class HostGame {
       'enemy_grunt',    'enemy_brute',    'enemy_archer',  'enemy_charger',
       'enemy_healer',   'enemy_gaterepairer', 'enemy_leviathan', 'enemy_warlock',
       'enemy_flameofazzinoth', 'enemy_shadowdemon', 'enemy_shadowfiend',
-      'boss_illidan',   'boss_akama',
+      'boss_akama',
       'projectile_default',
       'projectile_avengers_shield',
       'projectile_fireball',
@@ -360,6 +379,38 @@ export default class HostGame {
               alias: `enemy_${type}_${animName}_${dir}_${i}`,
               src:   `/assets/sprites/${type}/${animName}/${dir}/${i}.png`,
             })
+          }
+        }
+      }
+    }
+
+    // Boss directional sprites
+    for (const type of DIRECTIONAL_BOSSES) {
+      for (const dir of DIRECTIONS) {
+        manifest.push({ alias: `${type}_${dir}`, src: `/assets/sprites/${type}/${dir}.png` })
+      }
+    }
+    for (const [type, anims] of Object.entries(DIRECTIONAL_BOSS_ANIMATIONS)) {
+      for (const [animName, cfg] of Object.entries(anims)) {
+        for (const dir of DIRECTIONS) {
+          for (let i = 0; i < cfg.frames; i++) {
+            manifest.push({ alias: `${type}_${animName}_${dir}_${i}`, src: `/assets/sprites/${type}/${animName}/${dir}/${i}.png` })
+          }
+        }
+      }
+    }
+
+    // NPC directional sprites
+    for (const type of DIRECTIONAL_NPCS) {
+      for (const dir of DIRECTIONS) {
+        manifest.push({ alias: `${type}_${dir}`, src: `/assets/sprites/${type}/${dir}.png` })
+      }
+    }
+    for (const [type, anims] of Object.entries(DIRECTIONAL_NPC_ANIMATIONS)) {
+      for (const [animName, cfg] of Object.entries(anims)) {
+        for (const dir of DIRECTIONS) {
+          for (let i = 0; i < cfg.frames; i++) {
+            manifest.push({ alias: `${type}_${animName}_${dir}_${i}`, src: `/assets/sprites/${type}/${animName}/${dir}/${i}.png` })
           }
         }
       }

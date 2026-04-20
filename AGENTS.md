@@ -65,7 +65,9 @@ In development, Vite proxies `/socket.io` and `/api` to the Express server on po
 - `shared/GameConfig.js`: map size, radii, tick values, revive settings
 - `shared/ClassConfig.js`: class stats, colors, skill loadouts
 - `shared/SkillDatabase.js`: skill definitions
-- `shared/BossConfig.js`: boss phase data
+- `shared/BaseBossConfig.js`: shared boss defaults and `DEFAULT_BOSS_RADIUS`
+- `shared/IllidanConfig.js`: Illidan encounter config (phases, abilities, enrage)
+- `shared/ShadeOfAkamaConfig.js`: Shade of Akama encounter config
 - `docs/SKILLS.md`: skill schema, valid type/subtype combinations, VFX expectations, design rules
 - `docs/RENDERERS.md`: host renderer lifecycle and extension points
 - `docs/SPRITES.md`: sprite pipeline — generator script, canvas-size rule, key naming, adding new sprites

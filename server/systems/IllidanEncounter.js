@@ -200,6 +200,7 @@ export default class IllidanEncounter {
 
     console.log('[Illidan] Phase 3 — demon form')
 
+    this.boss._phases  = []   // prevent _updatePhase() from resetting phase back to 2
     this.boss.phase    = 3
     this.boss.isImmune = false
     this.boss.speed    = 0
@@ -486,6 +487,7 @@ export default class IllidanEncounter {
         this.skillSystem.addZone('boss', {
           radius: gf.radius, duration: gf.duration,
           damage: gf.tickDamage, tickRate: gf.tickRate,
+          effectType: 'PLAYER_DAMAGE',
         }, tipX, tipY, '#6600cc')
       }
 

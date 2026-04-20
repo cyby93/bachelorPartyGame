@@ -13,6 +13,10 @@
  *   L5 reference unit: hp = X×R = 50   damage = Y×R = 40   (at defaults)
  *
  * Heal amounts scale with X×R (HP pool), not Y×R (damage).
+ *
+ * ── Hitbox shape ──────────────────────────────────────────────────────────
+ *  hitboxShape: 'oval' (default) — ry = radius, rx = radius/2
+ *  hitboxShape: 'circle'          — radius used as-is
  */
 
 import { BALANCE } from './BalanceConfig.js'
@@ -28,7 +32,10 @@ export const ENEMY_TYPES = {
 
   // ── Illidari Fel Guard — fast melee pack unit ────────────────────────────
   felGuard: {
-    hp: Math.round(0.70 * X * R), speed: 1.3, radius: 15, contactDamage: Math.round(0.45 * Y * R),
+    hp: Math.round(0.70 * X * R), 
+    speed: 1.3, 
+    radius: 15,
+    contactDamage: Math.round(0.45 * Y * R),
     spriteSize: 76,
     color: '#1a7a1a',
     ai: 'chase',
@@ -255,9 +262,10 @@ export const ENEMY_TYPES = {
   flameOfAzzinoth: {
     hp: Math.round(10.00 * X * R),
     speed: 0.5,
-    radius: 40,
+    radius: 60,
+    hitboxShape: 'oval',
     contactDamage: 0,     // dealt via aura tick, not contact
-    spriteSize: 96,
+    spriteSize: 240,
     color: '#ff5500',
     shape: 'circle',
     ai: 'flameOfAzzinoth',

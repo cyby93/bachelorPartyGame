@@ -124,6 +124,17 @@ export default class EnemySprite {
       label.position.set(0, -D - 18)
       this.container.addChild(label)
     }
+
+    if (GAME_CONFIG.DEBUG_HITBOXES) {
+      const hb = new Graphics()
+      if (typeCfg.hitboxShape === 'oval') {
+        hb.ellipse(0, 0, R / 2, R)
+      } else {
+        hb.circle(0, 0, R)
+      }
+      hb.stroke({ color: 0xff00ff, width: 1.5, alpha: 0.9 })
+      this.container.addChild(hb)
+    }
   }
 
   // ── Drawing helpers ────────────────────────────────────────────────────────

@@ -16,7 +16,7 @@ export const CLASSES = {
   Paladin:     { name: 'Paladin',       color: '#f39c12', hp: 120, speed: 2.0, skills: SkillDatabase.Paladin     },
   Shaman:      { name: 'Shaman',        color: '#9b59b6', hp: 100, speed: 2.0, skills: SkillDatabase.Shaman      },
   Hunter:      { name: 'Hunter',        color: '#27ae60', hp: 80, speed: 2.0, skills: SkillDatabase.Hunter      },
-  Priest:      { name: 'Priest',        color: '#ecf0f1', hp:  80, speed: 1.8, skills: SkillDatabase.Priest      },
+  Priest:      { name: 'Priest',        color: '#ecf0f1', hp:  8000, speed: 1.8, skills: SkillDatabase.Priest      },
   Mage:        { name: 'Mage',          color: '#e74c3c', hp:  80, speed: 1.8, skills: SkillDatabase.Mage        },
   Druid:       { name: 'Druid',         color: '#16a085', hp: 100, speed: 2.0, skills: SkillDatabase.Druid       },
   Rogue:       { name: 'Rogue',         color: '#34495e', hp:  100, speed: 2.2, skills: SkillDatabase.Rogue       },

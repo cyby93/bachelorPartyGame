@@ -12,11 +12,26 @@
  *   boss, minion, tombstone rendering; hit sparks; aura sync; mode UI.
  */
 
-import { Container, Graphics, Text } from 'pixi.js'
+import { Container, Graphics, Text, Sprite, Assets } from 'pixi.js'
 import { GAME_CONFIG }  from '../../../shared/GameConfig.js'
 import { CLASSES }      from '../../../shared/ClassConfig.js'
 import BossSprite       from '../entities/BossSprite.js'
 import BaseRenderer     from './BaseRenderer.js'
+import { DIRECTIONAL_NPCS, DIRECTIONAL_NPC_ANIMATIONS } from '../HostGame.js'
+import { ILLIDAN_CONFIG }        from '../../../shared/IllidanConfig.js'
+import { SHADE_OF_AKAMA_CONFIG } from '../../../shared/ShadeOfAkamaConfig.js'
+
+const BOSS_CONFIG_BY_NAME = {
+  [ILLIDAN_CONFIG.name]:        ILLIDAN_CONFIG,
+  [SHADE_OF_AKAMA_CONFIG.name]: SHADE_OF_AKAMA_CONFIG,
+}
+
+const _NPC_DIRS = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east']
+function _npcAngleToDir(angle) {
+  const TAU  = Math.PI * 2
+  const norm = ((angle % TAU) + TAU) % TAU
+  return _NPC_DIRS[Math.round(norm / (Math.PI / 4)) % 8]
+}
 
 export default class BattleRenderer extends BaseRenderer {
   constructor(game, mode) {
@@ -218,10 +233,10 @@ export default class BattleRenderer extends BaseRenderer {
     // Boss
     if (state.boss && !state.boss.isDead) {
       if (!this.bossSprite) {
-        this.bossSprite = new BossSprite(state.boss.name)
+        this.bossSprite = new BossSprite(BOSS_CONFIG_BY_NAME[state.boss.name] ?? ILLIDAN_CONFIG)
         this.bossContainer.addChild(this.bossSprite.container)
       }
-      this.bossSprite.update(state.boss)
+      this.bossSprite.update(state.boss, dt)
     }
     if (state.boss?.isDead && this.bossSprite) {
       this.bossContainer.removeChild(this.bossSprite.container)
@@ -239,9 +254,6 @@ export default class BattleRenderer extends BaseRenderer {
 
       if (!this.npcGfx.has(npc.id)) {
         const container = new Container()
-
-        const body = new Graphics()
-        container.addChild(body)
 
         const nameLabel = new Text({
           text:  npc.name ?? 'NPC',
@@ -261,19 +273,71 @@ export default class BattleRenderer extends BaseRenderer {
         const hpFill = new Graphics()
         container.addChild(hpFill)
 
-        this.npcGfx.set(npc.id, { container, body, hpFill, radius: r })
+        if (DIRECTIONAL_NPCS.has(npc.id)) {
+          const body = new Sprite(Assets.get(`${npc.id}_south`) ?? Assets.get('enemy_grunt'))
+          body.anchor.set(0.5)
+          body.width  = r * 2
+          body.height = r * 2
+          container.addChild(body)
+          this.npcGfx.set(npc.id, {
+            container, body, hpFill, radius: r,
+            _isDirectional: true,
+            _animState: 'idle', _animFrame: 0, _lastAnimFrame: -1,
+            _animTimer: 0, _currentDir: null,
+            _lastRenderX: null, _lastRenderY: null,
+          })
+        } else {
+          const body = new Graphics()
+          container.addChild(body)
+          this.npcGfx.set(npc.id, { container, body, hpFill, radius: r })
+        }
+
         this._entityRoot.addChild(container)
       }
 
       const entry = this.npcGfx.get(npc.id)
       entry.container.position.set(npc.x, npc.y)
 
-      // Redraw body
-      entry.body.clear()
-      entry.body.circle(0, 0, r)
-      entry.body.fill({ color: 0x27ae60, alpha: 0.9 })
-      entry.body.circle(0, 0, r)
-      entry.body.stroke({ color: 0x2ecc71, width: 2 })
+      if (entry._isDirectional) {
+        const animCfg = DIRECTIONAL_NPC_ANIMATIONS[npc.id]
+        if (animCfg) {
+          const dir = _npcAngleToDir(npc.angle ?? Math.PI / 2)
+          const moved = entry._lastRenderX !== null &&
+            (Math.abs(npc.x - entry._lastRenderX) > 0.3 || Math.abs(npc.y - entry._lastRenderY) > 0.3)
+          const newState = moved ? 'walk' : 'idle'
+          if (newState !== entry._animState) {
+            entry._animState = newState
+            entry._animFrame = 0
+            entry._animTimer = 0
+          }
+          entry._lastRenderX = npc.x
+          entry._lastRenderY = npc.y
+          const cfg = animCfg[entry._animState] ?? animCfg.idle
+          entry._animTimer += dt
+          if (entry._animTimer >= 1 / cfg.fps) {
+            entry._animTimer -= 1 / cfg.fps
+            entry._animFrame  = (entry._animFrame + 1) % cfg.frames
+          }
+          if (dir !== entry._currentDir || entry._animFrame !== entry._lastAnimFrame) {
+            const key = `${npc.id}_${entry._animState}_${dir}_${entry._animFrame}`
+            const tex = Assets.get(key)
+            if (tex) {
+              entry.body.texture = tex
+            } else {
+              const fallback = Assets.get(`${npc.id}_${dir}`)
+              if (fallback) entry.body.texture = fallback
+            }
+            entry._currentDir    = dir
+            entry._lastAnimFrame = entry._animFrame
+          }
+        }
+      } else {
+        entry.body.clear()
+        entry.body.circle(0, 0, r)
+        entry.body.fill({ color: 0x27ae60, alpha: 0.9 })
+        entry.body.circle(0, 0, r)
+        entry.body.stroke({ color: 0x2ecc71, width: 2 })
+      }
 
       // HP bar fill
       const hpPct = npc.maxHp > 0 ? Math.max(0, npc.hp / npc.maxHp) : 0

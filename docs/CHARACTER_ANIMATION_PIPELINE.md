@@ -17,10 +17,38 @@ Reference for downloading and extracting PixelLab character animations into the 
 | `bloodProphet` | `dde73571-1b5f-4a04-9a6e-6745f699f8b4` | ✅ done (idle, walk) |
 | `coilskarSerpentGuard` | `af274f5c-2bbe-4030-b55b-f485fa69b31a` | ✅ done (idle, walk) |
 | `ritualChanneler` | `63b488b6-86a9-4388-b339-8acfbadd5395` | ✅ done (idle, walk) |
+| `flameOfAzzinoth` | `d0a0159f-619d-45a9-bdcb-38486caf3af4` | ✅ done (idle, walk) |
 
 Enemy sprites extract to: `public/assets/sprites/{typeKey}/{dir}.png` (static rotations)
 and `public/assets/sprites/{typeKey}/{idle|walk}/{dir}/{frame}.png` (animations).
 Asset key format: `enemy_{typeKey}_{dir}` / `enemy_{typeKey}_{anim}_{dir}_{frame}`.
+
+---
+
+## Boss Character ID Registry
+
+| Boss type key | PixelLab ID | Status |
+|---|---|---|
+| `illidan` | `c5e59f42-3c50-47d5-916c-3dc07ffb6c8c` | ✅ done (idle, walk) |
+| `illidan_demon` | `05406bcc-df66-49d5-a4d3-c81913d3ef0d` | ✅ done (idle, walk) |
+
+Boss sprites extract to: `public/assets/sprites/{typeKey}/{dir}.png` (static rotations)
+and `public/assets/sprites/{typeKey}/{idle|walk}/{dir}/{frame}.png` (animations).
+Asset key format: `{typeKey}_{dir}` / `{typeKey}_{anim}_{dir}_{frame}`.
+Registered in `DIRECTIONAL_BOSSES` and `DIRECTIONAL_BOSS_ANIMATIONS` in `HostGame.js`.
+
+---
+
+## NPC Character ID Registry
+
+| NPC id | PixelLab ID | Status |
+|---|---|---|
+| `akama` | `bac74a43-0e70-4b33-a81a-6a3ee954cd6d` | ✅ done (idle, walk) |
+
+NPC sprites extract to: `public/assets/sprites/{npcId}/{dir}.png` (static rotations)
+and `public/assets/sprites/{npcId}/{idle|walk}/{dir}/{frame}.png` (animations).
+Asset key format: `{npcId}_{dir}` / `{npcId}_{anim}_{dir}_{frame}`.
+Registered in `DIRECTIONAL_NPCS` and `DIRECTIONAL_NPC_ANIMATIONS` in `HostGame.js`.
 
 ---
 

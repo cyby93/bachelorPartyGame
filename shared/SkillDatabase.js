@@ -230,12 +230,13 @@ const SkillDatabase = {
       iconFile:  'inv_spear_07'
     },
     {
-      name:      'Call of the Wild',
-      type:      'SPAWN',
-      subtype:   'WILD_BEAST',  // randomly picks bear / hawk / panther at cast time
-      inputType: 'INSTANT',
-      cooldown:  2000,
-      duration:  20000,
+      name:        'Call of the Wild',
+      type:        'SPAWN',
+      subtype:     'WILD_BEAST',  // randomly picks bear / hawk / panther at cast time
+      inputType:   'INSTANT',
+      cooldown:    2000,
+      duration:    20000,
+      damageBonus: 0,             // added to all beast variants' damage at spawn time
       // Beast variants — server picks one at random each cast
       beastVariants: [
         {
@@ -300,8 +301,8 @@ const SkillDatabase = {
       subtype:      'BURST',
       inputType:    'AIMED',
       cooldown:     3000,
-      damage:       600,
-      healAmount:   15,
+      damage:       10,
+      healAmount:   12,
       speed:        600,
       radius:       10,
       range:        600,
@@ -320,8 +321,8 @@ const SkillDatabase = {
       autoRefire: true,
       cooldown:   1000,
       radius:     200,
-      damage:     400,
-      healAmount: 300,
+      damage:     4,
+      healAmount: 6,
       effectType: 'DUAL',
       icon:       '💚',
       iconFile:   'spell_holy_holynova'

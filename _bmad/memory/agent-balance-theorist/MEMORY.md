@@ -13,7 +13,12 @@ _Curated long-term knowledge. Distilled from sessions._
 RLEF is a difficulty-pressure dial, not a fight duration knob. Higher RLEF = more HP AND more effective DPS, they cancel. It controls how threatening content feels for a given player skill level. Easy=0.3, Normal=0.5, Hard=0.7.
 
 ### Roguelike Upgrade Intent
-Illidan is tuned for BASE DPS (no upgrades) = 8 min. Well-upgraded players (~1.5× DPS) clear in ~5.3 min. Unupgraded players risk hitting enrage at 12 min. Upgrades are the difference between clean kill and wipe — intentional design.
+Illidan is tuned for BASE DPS (no upgrades) = 8 min. Upgrade budget = 6 upgrades per player. Skill damage does NOT scale with R — flat values, intentional. With 6 upgrades:
+- Spread (2+2+1+1): avg ×1.42 → ~5.6 min fight
+- Focus (3+3+0+0 on top-2 damage skills): avg ×1.70 → ~4.7 min fight
+- Enrage at 12 min. No upgrades = comfortable buffer; focus upgrades = fast clear.
+
+These multipliers are calibrated and verified by `tools/dps-calculator-upgraded.js` (2026-04-21).
 
 ### Shadow Demon Phase 3 Mechanic
 Slow crawl (speed 0.6), tanky (hp 10×XR = 500 at defaults), instant kill on contact. Count: 2, cooldown: 12000. Mechanic: party must stop and focus it before it reaches its target. NOT a fast-moving threat.
@@ -49,24 +54,24 @@ Both calculators use a tick-based greedy simulation (50ms ticks, 5-min fight).
 
 **Multi-target mode:** `--targets=N` flag on both calculators. Scales DoTs, AOE, SPAWN/TOTEM, HoTs, and Chain Heal chains by N. Single-target abilities unchanged.
 
-## Class Balance Snapshot (R=10, fixed calculators, 2026-04-17)
+## Class Balance Snapshot (R=10, 2026-04-21 — current SkillDatabase)
 
-All classes are ~1.5–2.7× their role targets. RLEF=0.5 offsets this by design.
+SkillDatabase was reworked between 2026-04-17 and 2026-04-21 (values significantly reduced). These numbers supersede the 2026-04-17 snapshot.
 
-**Single-target DPS:**
+**Single-target DPS (base, no upgrades):**
 
 | Class | Role | DPS | vs target |
 |-------|------|-----|-----------|
-| Mage | ranged | 25.2 | ×2.5 |
-| Hunter | ranged | 20.2 | ×2.0 |
-| Rogue | ranged | 19.5 | ×1.9 |
-| Paladin | melee | 19.2 | **×2.7** ← outlier |
-| Warlock | ranged | 16.7 | ×1.7 |
+| Mage | ranged | 28.3 | ×2.8 |
+| Rogue | ranged | 25.5 | ×2.5 |
+| Hunter | ranged | 21.9 | ×2.2 |
+| Warrior | melee | 19.5 | ×2.8 |
+| Paladin | melee | 17.5 | ×2.5 |
+| Warlock | ranged | 17.4 | ×1.7 |
 | DeathKnight | melee | 14.7 | ×2.1 |
-| Warrior | melee | 13.0 | ×1.9 |
-| Shaman | healer | 9.6 | ×3.2 |
+| Shaman | healer | 8.6 | ×2.9 |
+| Priest | healer | 7.3 | ×2.4 |
 | Druid | healer | 7.3 | ×2.4 |
-| Priest | healer | 5.0 | ×1.7 |
 
 **Single-target HPS:** Priest 11.3, Shaman 10.0, Druid 9.7 — tightly balanced.
 **3-target HPS:** Shaman 30.0, Priest 17.3, Druid 16.7 — Shaman is the raid healer by design (Chain Heal hits all 3 chains).
@@ -75,8 +80,8 @@ All classes are ~1.5–2.7× their role targets. RLEF=0.5 offsets this by design
 
 ## Open Questions
 
-- **Paladin outlier (×2.7 DPS + 3.4 off-role HPS):** Not addressed. Explicitly deferred by Cyby — fine-tuning pass later.
-- **Hunter pet multi-target:** Does Call of the Wild split attacks across targets or focus one? If focus-one, 3-target DPS is inflated — 36.5 may be misleading.
+- **Hunter S2 (Call of the Wild) beast damage:** Solved. Added `damageBonus: 0` scalar to SkillDatabase; SkillSystem.js applies it at spawn (`chosen.damage + (config.damageBonus ?? 0)`). UpgradeConfig tiers: +1/+1/+2 = +4 at T3. Sim still shows ⚠ (WILD_BEAST not modelled), but in-game it works.
+- **Paladin outlier (×2.5 DPS):** Not addressed. Explicitly deferred by Cyby — fine-tuning pass later.
 - **Tranquility (Druid) multi-target:** Currently doesn't scale in HPS multi-target mode — CHANNEL heals excluded. Would need an AOE flag in SkillDatabase to get the multiplier.
 - **L5 Phase 1 warlock defenders:** Requires engine support for dual-phase spawning per level. Deferred.
 - **Draw Soul cooldown = 8000:** Set by Cyby. Verify it feels right in practice.

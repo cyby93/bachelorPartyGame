@@ -18,7 +18,8 @@
     "dps3": "node tools/dps-calculator.js --targets=3",
     "hps3": "node tools/hps-calculator.js --targets=3",
     "hps5": "node tools/hps-calculator.js --targets=5",
-    "dps5": "node tools/dps-calculator.js --targets=5"
+    "dps5": "node tools/dps-calculator.js --targets=5",
+    "dpsu": "node tools/dps-calculator-upgraded.js"
   },
   "dependencies": {
     "express": "^4.18.2",

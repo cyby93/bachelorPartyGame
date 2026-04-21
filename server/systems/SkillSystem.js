@@ -719,7 +719,7 @@ export default class SkillSystem {
         petStats: {
           hp:          chosen.hp,
           speed:       chosen.speed,
-          damage:      chosen.damage,
+          damage:      chosen.damage + (config.damageBonus ?? 0),
           attackRange: chosen.attackRange,
           attackRate:  chosen.attackRate,
           radius:      chosen.radius,

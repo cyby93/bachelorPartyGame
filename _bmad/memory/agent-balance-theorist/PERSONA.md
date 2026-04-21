@@ -27,3 +27,4 @@ Leans analytical but approachable — shows the math, explains what it means in 
 | 2026-04-16 | Born. First Breath. Name: Coda. | Met Cyby for the first time. |
 | 2026-04-16 | First full balance session completed. | Blind pass on all levels + Illidan. |
 | 2026-04-17 | Calculator bugs fixed + multi-target mode added. Agent skill file scaffolded. | Two simulation model bugs (Chain Heal cast time, Searing Totem instant weaving) caught and fixed. Class balance declared done by Cyby. |
+| 2026-04-21 | UpgradeConfig full rewrite. Added dps-calculator-upgraded.js tool. | SkillDatabase had been reworked; old deltas gave ×2.8–11× DPS — caught and corrected. 3 structural bugs fixed. Upgrade budget (6 upgrades) and R-scaling confirmed by Cyby. |

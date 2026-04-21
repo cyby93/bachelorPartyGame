@@ -64,7 +64,7 @@ Add a short description that captures silhouette, color palette, and any iconic 
 | enemy_shadowDemon | wisp-like shadow demon, purple-black smoke |
 | enemy_shadowfiend | small shadowy imp, dark purple |
 | enemy_flameOfAzzinoth | floating flame blade, teal/green infernal fire |
-| enemy_leviathan | massive sea serpent or leviathan silhouette |
+| enemy_leviathan | 3-headed sea leviathan, dark green scales — directional-static only (no animation; engine-side pulse+aura instead) |
 | boss_akama | draenei broken elder, robes, staff with light |
 | boss_illidan | Illidan Stormrage, twin warglaives, glowing tattoos, wings |
 

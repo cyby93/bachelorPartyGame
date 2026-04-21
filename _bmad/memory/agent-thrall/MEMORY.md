@@ -2,6 +2,15 @@
 
 _Curated long-term knowledge. Every token here loads every session — keep it tight._
 
+## Leviathan Visual System (2026-04-21)
+
+PixelLab animations fail for multi-headed characters — skeleton deformation collapses extra heads.
+Solution: `DIRECTIONAL_STATIC_ENEMIES` set in HostGame.js + `_isDirectionalStatic` flag in EnemySprite.
+Pattern: 8 direction sprites loaded as `enemy_{type}_{dir}`, texture-swapped on angle change, no frame animation.
+Engine effects compensate: scale pulse (`_bodyBaseScaleX/Y * (1 ± 0.05)`), two teal aura rings.
+Generation scaling: `displaySize * 0.75^generation` applied at construction time.
+Leviathan PixelLab ID: `a7aab6e3-b4d3-4d32-9fc4-b58acf24d572`.
+
 ## PixelLab Prompt Formula (ability sprites)
 
 `create_map_object`, `low top-down`, `48×48`, `medium shading`, `single color outline`  

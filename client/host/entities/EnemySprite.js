@@ -10,7 +10,7 @@
 import { Container, Graphics, Text, Sprite, Assets } from 'pixi.js'
 import { GAME_CONFIG }    from '../../../shared/GameConfig.js'
 import { ENEMY_TYPES }    from '../../../shared/EnemyTypeConfig.js'
-import { DIRECTIONAL_ENEMIES, DIRECTIONAL_ENEMY_ANIMATIONS } from '../HostGame.js'
+import { DIRECTIONAL_ENEMIES, DIRECTIONAL_ENEMY_ANIMATIONS, DIRECTIONAL_STATIC_ENEMIES } from '../HostGame.js'
 import OverheadDisplay     from '../systems/OverheadDisplay.js'
 
 const DEFAULT_R = GAME_CONFIG.ENEMY_RADIUS
@@ -42,12 +42,14 @@ export default class EnemySprite {
 
     const typeCfg     = ENEMY_TYPES[this.type] ?? ENEMY_TYPES.felGuard
     const R           = typeCfg.radius    ?? DEFAULT_R
-    const displaySize = typeCfg.spriteSize ?? R * 2
+    const genScale    = this.type === 'leviathan' ? Math.pow(0.75, data.generation ?? 0) : 1.0
+    const displaySize = (typeCfg.spriteSize ?? R * 2) * genScale
     const D           = displaySize / 2
     const color       = typeCfg.color ?? '#c0392b'
 
-    this._isDirectional = DIRECTIONAL_ENEMIES.has(this.type)
-    this._animCfg       = DIRECTIONAL_ENEMY_ANIMATIONS[this.type] ?? null
+    this._isDirectional       = DIRECTIONAL_ENEMIES.has(this.type)
+    this._isDirectionalStatic = DIRECTIONAL_STATIC_ENEMIES.has(this.type)
+    this._animCfg             = DIRECTIONAL_ENEMY_ANIMATIONS[this.type] ?? null
     this._animState     = 'idle'
     this._animFrame     = 0
     this._lastAnimFrame = -1
@@ -60,7 +62,7 @@ export default class EnemySprite {
 
     // Body sprite
     let initialTex
-    if (this._isDirectional) {
+    if (this._isDirectional || this._isDirectionalStatic) {
       initialTex = Assets.get(`enemy_${this.type}_south`) ?? Assets.get(STATIC_SPRITE_KEY[this.type] ?? `enemy_felguard_south`)
     } else {
       initialTex = Assets.get(STATIC_SPRITE_KEY[this.type] ?? `enemy_felguard_south`)
@@ -70,6 +72,25 @@ export default class EnemySprite {
     this._body.width  = displaySize
     this._body.height = displaySize
     this.container.addChild(this._body)
+
+    // Leviathan: persistent aura rings + pulse state
+    if (this.type === 'leviathan') {
+      this._leviathanPulseTime = 0
+      this._bodyBaseScaleX     = this._body.scale.x
+      this._bodyBaseScaleY     = this._body.scale.y
+
+      // Outer glow ring (deep teal, slow pulse)
+      this._leviathanAuraOuter = new Graphics()
+      this._leviathanAuraOuter.circle(0, 0, D + 20)
+      this._leviathanAuraOuter.stroke({ color: 0x1a9e8a, width: 3 })
+      this.container.addChildAt(this._leviathanAuraOuter, 0)
+
+      // Inner shimmer ring (bright teal, faster pulse)
+      this._leviathanAuraInner = new Graphics()
+      this._leviathanAuraInner.circle(0, 0, D + 8)
+      this._leviathanAuraInner.stroke({ color: 0x2dd4bf, width: 2 })
+      this.container.addChildAt(this._leviathanAuraInner, 0)
+    }
 
     // Shield arc (Serpent Guard) — hidden by default
     this._shieldGfx     = new Graphics()
@@ -210,6 +231,26 @@ export default class EnemySprite {
         this._currentDir    = dir
         this._lastAnimFrame = this._animFrame
       }
+    }
+
+    // Directional static facing (no animation frames) — Leviathan
+    if (this._isDirectionalStatic) {
+      const dir = angleToDir(state.angle ?? Math.PI / 2)
+      if (dir !== this._currentDir) {
+        const tex = Assets.get(`enemy_${this.type}_${dir}`)
+        if (tex) this._body.texture = tex
+        this._currentDir = dir
+      }
+    }
+
+    // Leviathan: breathing scale pulse + aura ring pulse
+    if (this.type === 'leviathan') {
+      this._leviathanPulseTime += dt
+      const t = this._leviathanPulseTime
+      const pulse = 1 + 0.05 * Math.sin(t * 1.8)
+      this._body.scale.set(this._bodyBaseScaleX * pulse, this._bodyBaseScaleY * pulse)
+      this._leviathanAuraOuter.alpha = 0.30 + 0.18 * Math.sin(t * 1.2)
+      this._leviathanAuraInner.alpha = 0.50 + 0.25 * Math.sin(t * 2.4 + 0.9)
     }
 
     // Shield arc (Serpent Guard)

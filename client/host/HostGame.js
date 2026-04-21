@@ -38,6 +38,9 @@ export const DIRECTIONAL_ENEMIES = new Set([
   'flameOfAzzinoth',
 ])
 
+/** Enemy types with 8 directional static sprites but no frame animation. Asset keys: enemy_{type}_{dir} */
+export const DIRECTIONAL_STATIC_ENEMIES = new Set(['leviathan'])
+
 export const DIRECTIONAL_ENEMY_ANIMATIONS = {
   felGuard:             { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
   bonechewerBrute:      { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
@@ -359,6 +362,13 @@ export default class HostGame {
             })
           }
         }
+      }
+    }
+
+    // Load directional static sprites (no animation, direction-only)
+    for (const type of DIRECTIONAL_STATIC_ENEMIES) {
+      for (const dir of DIRECTIONS) {
+        manifest.push({ alias: `enemy_${type}_${dir}`, src: `/assets/sprites/${type}/${dir}.png` })
       }
     }
 

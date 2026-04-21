@@ -8,6 +8,7 @@ Reference for downloading and extracting PixelLab character animations into the 
 
 | Enemy type key | PixelLab ID | Status |
 |---|---|---|
+| `leviathan` | `a7aab6e3-b4d3-4d32-9fc4-b58acf24d572` | ✅ done (static rotations only — directional-static mode, no animation by design) |
 | `felGuard` | `c8fd1b93-2e9f-4411-b089-46c5ea4a544c` | ✅ done (idle, walk) |
 | `bonechewerBrute` | `3ad55749-0601-4b9c-afbb-dc9fb9cda661` | ✅ done (idle, walk) |
 | `coilskarHarpooner` | `2e91f3bf-b45d-4c39-b6c9-d48f30fa02c6` | ✅ done (idle, walk) |

@@ -7,3 +7,6 @@ Level 3:
     - After the first gate is destroyed, i want the enemies spawned from the second gate's side. Right now they are spawning from the left right of the second room -> make them spawn at the right side of the second room.
 
 Level 5:
+
+Level 6:
+    - Shear abilit: It might be removed - will have to think about it

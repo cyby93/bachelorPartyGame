@@ -148,9 +148,9 @@ export const ENEMY_TYPES = {
   leviathan: {
     hp: Math.round(12.00 * X * R),
     speed: 1.0,
-    radius: 50,
+    radius: 60,
     contactDamage: Math.round(0.625 * Y * R),
-    spriteSize: 116,
+    spriteSize: 250,
     color: '#2E8B57',
     shape: 'circle',
     ai: 'leviathan',

@@ -187,8 +187,9 @@ export default class GameServer {
     socket.on(EVENTS.QUIT_CAMPAIGN, ()   => this._onRestartGame(socket))
     socket.on(EVENTS.HOST_ADVANCE,  ()   => this._onHostAdvance(socket))
     socket.on(EVENTS.SET_LEVEL,     data => this._onSetLevel(socket, data))
-    socket.on(EVENTS.BOT_ADD,       data => this._onBotAdd(socket, data))
-    socket.on(EVENTS.BOT_REMOVE,    ()   => this._onBotRemove(socket))
+    socket.on(EVENTS.BOT_ADD,              data => this._onBotAdd(socket, data))
+    socket.on(EVENTS.BOT_REMOVE,           ()   => this._onBotRemove(socket))
+    socket.on(EVENTS.DEBUG_SET_SKILL_TIER, data => this._onDebugSetSkillTier(socket, data))
     socket.on(EVENTS.QUIZ_ANSWER,  data => this._onQuizAnswer(socket, data))
     socket.on(EVENTS.QUIZ_UPGRADE, data => this._onQuizUpgrade(socket, data))
     socket.on('disconnect',         ()   => this._onDisconnect(socket))
@@ -310,6 +311,17 @@ export default class GameServer {
       if (entry.disconnected) continue   // real disconnected players — don't remove
       this._onDisconnect(entry.socket)
       this.bots.delete(id)
+    }
+  }
+
+  _onDebugSetSkillTier(socket, data) {
+    if (!this.players.get(socket.id)?.isHost) return
+    const { skillIndex, tier } = data ?? {}
+    if (typeof skillIndex !== 'number' || skillIndex < 0 || skillIndex > 3) return
+    if (typeof tier !== 'number' || tier < 0 || tier > 3) return
+    for (const player of this.players.values()) {
+      if (player.isHost) continue
+      player.skillUpgrades[skillIndex] = tier
     }
   }
 

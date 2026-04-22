@@ -19,6 +19,7 @@ export const EVENTS = {
   SET_LEVEL:     'host:setLevel',   // { levelIndex } — debug: pick starting level from lobby
   BOT_ADD:       'host:botAdd',     // { className? } — undefined = random class
   BOT_REMOVE:    'host:botRemove',  // remove all bots
+  DEBUG_SET_SKILL_TIER: 'host:debugSetSkillTier', // { skillIndex: 0-3, tier: 0-3 } — debug: set all players' upgrade tier
 
   // ── Server → All Clients ─────────────────────────────────────────────────
   INIT:          'game:init',       // full state snapshot sent on join

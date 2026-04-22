@@ -14,6 +14,8 @@
       border-right: 2px solid #1e3a4a;
       display: flex; flex-direction: column;
       padding: 20px 16px; gap: 16px;
+      overflow-x: hidden;
+      overflow-y: auto;
     }
     #sidebar h1 { font-size: 22px; color: #00d2ff; letter-spacing: 2px; text-align: center; }
     #sidebar h3 { font-size: 13px; color: #7fa8c0; text-transform: uppercase; letter-spacing: 1px; }
@@ -44,13 +46,41 @@
     }
     #start-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
-    #level-selector { display: flex; align-items: center; gap: 8px; justify-content: center; }
-    #level-selector button, #bot-panel button {
+    #level-selector { display: flex; align-items: center; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    #level-selector button, #bot-panel button, .debug-btn {
       padding: 6px 12px; border-radius: 6px; border: 1px solid #1e3a4a;
       background: #0f1923; color: #7fa8c0; cursor: pointer; font-size: 13px; font-weight: bold;
     }
-    #level-selector button:hover, #bot-panel button:hover { background: #1e3a4a; color: #fff; }
+    #level-selector button:hover, #bot-panel button:hover, .debug-btn:hover { background: #1e3a4a; color: #fff; }
     #selected-level-name { color: #00d2ff; font-size: 13px; min-width: 180px; text-align: center; }
+
+    #debug-toggle {
+      padding: 5px 10px; border-radius: 6px; border: 1px solid #2a3a4a;
+      background: #0f1923; color: #7fa8c0; cursor: pointer; font-size: 12px;
+      align-self: flex-end;
+    }
+    #debug-toggle:hover { background: #1e3a4a; color: #fff; }
+    #sidebar.debug-mode #debug-toggle { background: #1a2e1a; color: #5dbb5d; border-color: #2a4a2a; }
+
+    #panel-normal, #panel-debug { display:flex; flex-direction: column; gap: 16px; }
+    #panel-debug { display: none; }
+    #sidebar.debug-mode #panel-normal { display: none; }
+    #sidebar.debug-mode #panel-debug  { display: flex; }
+
+    #upgrade-debug-panel h3 { font-size: 13px; color: #7fa8c0; text-transform: uppercase; letter-spacing: 1px; }
+    .upgrade-row {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; color: #aad4e8;
+    }
+    .upgrade-row label { width: 48px; flex-shrink: 0; }
+    .upgrade-row input[type=range] { flex: 1; accent-color: #00d2ff; }
+    .upgrade-row .upg-val { width: 16px; text-align: right; color: #00d2ff; font-weight: bold; }
+    #upgrade-reset-btn {
+      margin-top: 4px; padding: 5px 10px; border-radius: 6px;
+      border: 1px solid #1e3a4a; background: #0f1923; color: #7fa8c0;
+      cursor: pointer; font-size: 12px; align-self: flex-start;
+    }
+    #upgrade-reset-btn:hover { background: #1e3a4a; color: #fff; }
 
     #fullscreen-btn {
       padding: 8px; border-radius: 6px; border: 1px solid #1e3a4a;
@@ -207,44 +237,75 @@
 <body>
   <div id="sidebar">
     <h1>RAID NIGHT</h1>
+    <button id="debug-toggle" title="Toggle debug panel">🛠 Debug</button>
 
-    <div id="server-info">
-      <h3>Join at</h3>
-      <div id="server-ip">connecting…</div>
+    <div id="panel-normal">
+      <div id="server-info">
+        <h3>Join at</h3>
+        <div id="server-ip">connecting…</div>
+      </div>
+
+      <div id="qr-wrap">
+        <div id="qr-code"></div>
+        <span id="qr-hint" class="qr-hint">Scan to open controller</span>
+      </div>
+
+      <div>
+        <h3>Players connected</h3>
+        <div id="player-list">
+          <p id="waiting-msg">Waiting for players…</p>
+        </div>
+      </div>
+
+      <button id="start-btn" disabled>START GAME</button>
+      <button id="quit-campaign-btn" style="display:none" title="Abort the current campaign and return to lobby">Quit Campaign</button>
+      <button id="fullscreen-btn" title="Toggle fullscreen">⛶ Fullscreen</button>
     </div>
 
-    <div id="qr-wrap">
-      <div id="qr-code"></div>
-      <span id="qr-hint" class="qr-hint">Scan to open controller</span>
-    </div>
+    <div id="panel-debug">
+      <div id="level-selector">
+        <button id="prev-level-btn">&#9664; Prev</button>
+        <button id="next-level-btn">Next &#9654;</button>
+        <span id="selected-level-name">Level 1: The Courtyard</span>
+        <label id="skip-dialog-label" style="font-size:12px;color:#aaa;cursor:pointer;margin-left:8px">
+          <input type="checkbox" id="skip-dialog-chk"> Skip dialog
+        </label>
+      </div>
 
-    <div>
-      <h3>Players connected</h3>
-      <div id="player-list">
-        <p id="waiting-msg">Waiting for players…</p>
+      <div id="bot-panel">
+        <h3>Bot Players</h3>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <button id="bot-add-btn">+ Add Bot</button>
+          <button id="bot-remove-btn">Remove All</button>
+          <span id="bot-count" style="font-size:12px;color:#7fa8c0">0 / 12 bots</span>
+        </div>
+      </div>
+
+      <div id="upgrade-debug-panel">
+        <h3>Upgrade Tiers [DEV]</h3>
+        <div class="upgrade-row">
+          <label>Skill 1</label>
+          <input type="range" min="0" max="3" value="0" data-slot="0" class="upgrade-slider">
+          <span class="upg-val">0</span>
+        </div>
+        <div class="upgrade-row">
+          <label>Skill 2</label>
+          <input type="range" min="0" max="3" value="0" data-slot="1" class="upgrade-slider">
+          <span class="upg-val">0</span>
+        </div>
+        <div class="upgrade-row">
+          <label>Skill 3</label>
+          <input type="range" min="0" max="3" value="0" data-slot="2" class="upgrade-slider">
+          <span class="upg-val">0</span>
+        </div>
+        <div class="upgrade-row">
+          <label>Skill 4</label>
+          <input type="range" min="0" max="3" value="0" data-slot="3" class="upgrade-slider">
+          <span class="upg-val">0</span>
+        </div>
+        <button id="upgrade-reset-btn">Reset All</button>
       </div>
     </div>
-
-    <div id="level-selector" style="display:none">
-      <button id="prev-level-btn">&#9664; Prev</button>
-      <span id="selected-level-name">Level 1: The Courtyard</span>
-      <button id="next-level-btn">Next &#9654;</button>
-      <label id="skip-dialog-label" style="font-size:12px;color:#aaa;cursor:pointer;margin-left:8px">
-        <input type="checkbox" id="skip-dialog-chk"> Skip dialog
-      </label>
-    </div>
-    <div id="bot-panel" style="display:none">
-      <h3>Bot Players</h3>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <button id="bot-add-btn">+ Add Bot</button>
-        <button id="bot-remove-btn">Remove All</button>
-        <span id="bot-count" style="font-size:12px;color:#7fa8c0">0 / 12 bots</span>
-      </div>
-    </div>
-
-    <button id="start-btn" disabled>START GAME</button>
-    <button id="quit-campaign-btn" style="display:none" title="Abort the current campaign and return to lobby">Quit Campaign</button>
-    <button id="fullscreen-btn" title="Toggle fullscreen">⛶ Fullscreen</button>
   </div>
 
   <div id="main-layout">

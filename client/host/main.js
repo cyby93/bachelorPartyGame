@@ -32,7 +32,6 @@ const playerListEl   = document.getElementById('player-list')
 const startBtn       = document.getElementById('start-btn')
 const qrWrap         = document.getElementById('qr-code')
 const fullscreenBtn  = document.getElementById('fullscreen-btn')
-const levelSelector  = document.getElementById('level-selector')
 const selectedLevelNameEl = document.getElementById('selected-level-name')
 const prevLevelBtn   = document.getElementById('prev-level-btn')
 const nextLevelBtn   = document.getElementById('next-level-btn')
@@ -41,10 +40,39 @@ const skipDialogChk  = document.getElementById('skip-dialog-chk')
 const botAddBtn      = document.getElementById('bot-add-btn')
 const botRemoveBtn   = document.getElementById('bot-remove-btn')
 const botCountEl     = document.getElementById('bot-count')
-const botPanel       = document.getElementById('bot-panel')
+const sidebar        = document.getElementById('sidebar')
+const debugToggleBtn = document.getElementById('debug-toggle')
+const upgradeSliders = document.querySelectorAll('.upgrade-slider')
+const upgradeResetBtn = document.getElementById('upgrade-reset-btn')
 
 botAddBtn?.addEventListener('click', () => socket.emit(EVENTS.BOT_ADD, {}))
 botRemoveBtn?.addEventListener('click', () => socket.emit(EVENTS.BOT_REMOVE))
+
+// ── Debug panel toggle ─────────────────────────────────────────────────────
+debugToggleBtn?.addEventListener('click', () => {
+  const isDebug = sidebar.classList.toggle('debug-mode')
+  debugToggleBtn.textContent = isDebug ? '🎮 Play' : '🛠 Debug'
+})
+
+// ── Upgrade debug sliders ──────────────────────────────────────────────────
+upgradeSliders.forEach(slider => {
+  const valEl = slider.nextElementSibling
+  slider.addEventListener('change', () => {
+    const skillIndex = parseInt(slider.dataset.slot, 10)
+    const tier = parseInt(slider.value, 10)
+    if (valEl) valEl.textContent = tier
+    socket.emit(EVENTS.DEBUG_SET_SKILL_TIER, { skillIndex, tier })
+  })
+})
+
+upgradeResetBtn?.addEventListener('click', () => {
+  upgradeSliders.forEach(slider => {
+    slider.value = 0
+    const valEl = slider.nextElementSibling
+    if (valEl) valEl.textContent = '0'
+    socket.emit(EVENTS.DEBUG_SET_SKILL_TIER, { skillIndex: parseInt(slider.dataset.slot, 10), tier: 0 })
+  })
+})
 const levelPanelEl   = document.getElementById('level-panel')
 const levelIndexEl   = document.getElementById('level-index')
 const currentLevelNameEl = document.getElementById('current-level-name')
@@ -214,7 +242,6 @@ function setSceneControls(scene) {
     startBtn.disabled    = Object.values(game.knownState.players).filter(p => !p.isHost).length === 0
     startBtn.style.display = ''
     startBtn.onclick     = () => socket.emit(EVENTS.START_GAME)
-    if (levelSelector) levelSelector.style.display = ''
     updateLevelDisplay()
   } else if (scene === 'levelComplete') {
     startBtn.textContent   = 'CONTINUE'
@@ -233,10 +260,6 @@ function setSceneControls(scene) {
     // In-game: hide the button
     startBtn.style.display = 'none'
   }
-
-  // Level selector and bot panel only visible in lobby
-  if (scene !== 'lobby' && levelSelector) levelSelector.style.display = 'none'
-  if (botPanel) botPanel.style.display = (scene === 'lobby') ? '' : 'none'
 
   // Quit Campaign button: visible during an active campaign run
   const campaignScenes = ['battle', 'bossFight', 'levelComplete', 'quiz']

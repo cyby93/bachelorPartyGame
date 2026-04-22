@@ -211,7 +211,7 @@ export const CAMPAIGN = [
   {
     id: 'level_4',
     name: 'Serpentshrine Cavern',
-    arena: { width: 1600, height: 1200 },
+    arena: { width: 1400, height: 1200 },
     objectives: [
       { type: 'killAll' },
     ],

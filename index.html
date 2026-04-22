@@ -6,32 +6,224 @@
   <title>RAID NIGHT — Host</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #0f1923; color: #fff; font-family: 'Segoe UI', Arial, sans-serif; height: 100vh; display: flex; overflow: hidden; }
+    body { background: #0f1923; color: #fff; font-family: 'Trebuchet MS', 'Segoe UI', Arial, sans-serif; height: 100vh; display: flex; overflow: hidden; }
 
     #sidebar {
       width: 260px; min-width: 260px;
-      background: #16202a;
-      border-right: 2px solid #1e3a4a;
+      background:
+        linear-gradient(180deg, rgba(34, 50, 68, 0.22) 0%, rgba(11, 18, 27, 0) 18%),
+        linear-gradient(180deg, #182430 0%, #121c26 36%, #0e151d 100%);
+      border-right: 1px solid #2a3c4d;
+      box-shadow: inset -1px 0 0 rgba(255, 216, 138, 0.06);
       display: flex; flex-direction: column;
       padding: 20px 16px; gap: 16px;
       overflow-x: hidden;
       overflow-y: auto;
+      position: relative;
     }
     #sidebar h1 { font-size: 22px; color: #00d2ff; letter-spacing: 2px; text-align: center; }
     #sidebar h3 { font-size: 13px; color: #7fa8c0; text-transform: uppercase; letter-spacing: 1px; }
 
+    .shell-panel { display: none; flex-direction: column; gap: 16px; min-height: 0; }
+    body[data-shell="menu"] #menu-panel,
+    body[data-shell="lobby"] #lobby-panel,
+    body[data-shell="gameplay"] #gameplay-panel { display: flex; }
+    body[data-shell="menu"] #main-layout { display: none; }
+    body[data-shell="menu"] #sidebar {
+      width: 100%;
+      min-width: 0;
+      border-right: none;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+       background:
+         radial-gradient(circle at 50% 18%, rgba(118, 168, 216, 0.18) 0%, rgba(118, 168, 216, 0) 24%),
+         radial-gradient(circle at 50% -8%, rgba(255, 211, 122, 0.12) 0%, rgba(255, 211, 122, 0) 30%),
+         linear-gradient(180deg, #182635 0%, #0f1923 52%, #081018 100%);
+    }
+    body[data-shell="menu"] #menu-panel {
+      width: min(620px, 100%);
+      flex: 0 1 auto;
+    }
+    body[data-shell="menu"] #host-actions {
+      width: min(620px, 100%);
+      margin-top: 0;
+    }
+    body[data-shell="menu"] #start-btn,
+    body[data-shell="menu"] #quit-campaign-btn {
+      display: none !important;
+    }
+
+    #menu-panel {
+      flex: 1;
+      justify-content: center;
+      align-items: stretch;
+      gap: 24px;
+    }
+    .menu-crest {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      text-align: center;
+      padding: 32px 28px 30px;
+      border-radius: 24px;
+      border: 1px solid rgba(131, 162, 188, 0.22);
+      background:
+        linear-gradient(180deg, rgba(255, 214, 143, 0.065) 0%, rgba(255, 214, 143, 0) 28%),
+        linear-gradient(180deg, rgba(18, 29, 40, 0.92) 0%, rgba(8, 15, 23, 0.94) 100%);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 232, 184, 0.06),
+        0 18px 48px rgba(0, 0, 0, 0.28);
+      overflow: hidden;
+    }
+    .menu-crest::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at top, rgba(255, 214, 143, 0.1) 0%, rgba(255, 214, 143, 0) 42%),
+        linear-gradient(90deg, rgba(255, 214, 143, 0.16), rgba(255, 214, 143, 0.02) 18%, rgba(255, 214, 143, 0.02) 82%, rgba(255, 214, 143, 0.16));
+      pointer-events: none;
+      opacity: 0.65;
+    }
+    .menu-frame {
+      position: absolute;
+      inset: 14px;
+      border: 1px solid rgba(255, 214, 143, 0.13);
+      border-radius: 18px;
+      pointer-events: none;
+    }
+    .menu-inner {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .menu-tag {
+      font-size: 12px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #9eb3c7;
+    }
+    .menu-title {
+      font-size: clamp(42px, 9vw, 84px);
+      line-height: 0.92;
+      letter-spacing: 4px;
+      color: #f5fbff;
+      text-shadow:
+        0 2px 0 rgba(255, 220, 150, 0.14),
+        0 16px 36px rgba(0, 0, 0, 0.34);
+    }
+    .menu-subtitle {
+      font-size: 16px;
+      letter-spacing: 0.6px;
+      color: #d3b57d;
+    }
+    .menu-copy {
+      max-width: 42ch;
+      margin: 0 auto;
+      font-size: 15px;
+      line-height: 1.6;
+      color: #aac0d4;
+    }
+    .menu-divider {
+      width: min(220px, 100%);
+      height: 1px;
+      margin: 2px auto 0;
+      background: linear-gradient(90deg, rgba(255, 214, 143, 0), rgba(255, 214, 143, 0.55), rgba(255, 214, 143, 0));
+    }
+    #menu-play-btn {
+      padding: 16px 18px;
+      border-radius: 14px;
+      border: 1px solid rgba(157, 208, 242, 0.2);
+      cursor: pointer;
+      font-size: 18px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 24%),
+        linear-gradient(135deg, #1e9ccd, #126b97 58%, #0f4f72 100%);
+      color: #fff;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        0 12px 24px rgba(4, 14, 24, 0.28);
+      transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+    }
+    #menu-play-btn:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.05);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        0 16px 28px rgba(4, 14, 24, 0.32);
+    }
+    #menu-play-btn:active {
+      transform: translateY(0);
+    }
+
     #server-info { background: #0f1923; border-radius: 8px; padding: 10px; text-align: center; }
     #server-ip   { font-size: 13px; color: #aad4e8; margin-top: 4px; word-break: break-all; }
 
+    .lobby-shell-head {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      text-align: center;
+      padding: 6px 4px 0;
+    }
+    .lobby-kicker {
+      font-size: 11px;
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+      color: #9eb3c7;
+    }
+    .lobby-copy {
+      font-size: 13px;
+      line-height: 1.45;
+      color: #8ea6bc;
+    }
+    .lobby-card {
+      position: relative;
+      background:
+        linear-gradient(180deg, rgba(255, 214, 143, 0.04) 0%, rgba(255, 214, 143, 0) 32%),
+        linear-gradient(180deg, rgba(20, 31, 43, 0.96) 0%, rgba(11, 17, 24, 0.96) 100%);
+      border: 1px solid rgba(83, 112, 138, 0.38);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 232, 184, 0.05),
+        0 10px 22px rgba(0, 0, 0, 0.16);
+    }
+    .lobby-card::before {
+      content: '';
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, rgba(255, 211, 122, 0.34), rgba(255, 211, 122, 0.03));
+      pointer-events: none;
+    }
+    .lobby-card h3 {
+      color: #c8a96a !important;
+      margin-bottom: 8px;
+    }
+
     #qr-wrap     { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-    #qr-code     { background: #fff; padding: 6px; border-radius: 6px; }
+    #qr-code     {
+      background: #fff;
+      padding: 8px;
+      border-radius: 10px;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+    }
     #qr-hint     { font-size: 11px; color: #7fa8c0; }
 
     #player-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
     .player-item {
-      background: #0f1923; border-radius: 6px; padding: 8px 10px;
+      background: rgba(255, 255, 255, 0.025); border-radius: 10px; padding: 10px 12px;
       border-left: 3px solid #00d2ff;
       display: flex; justify-content: space-between; align-items: center;
+      border: 1px solid rgba(120, 150, 176, 0.1);
     }
     .player-item .pname  { font-size: 14px; }
     .player-item .pclass { font-size: 12px; opacity: 0.7; }
@@ -62,10 +254,178 @@
     #debug-toggle:hover { background: #1e3a4a; color: #fff; }
     #sidebar.debug-mode #debug-toggle { background: #1a2e1a; color: #5dbb5d; border-color: #2a4a2a; }
 
+    #lobby-panel { flex: 1; }
     #panel-normal, #panel-debug { display:flex; flex-direction: column; gap: 16px; }
     #panel-debug { display: none; }
     #sidebar.debug-mode #panel-normal { display: none; }
     #sidebar.debug-mode #panel-debug  { display: flex; }
+
+    #gameplay-panel {
+      flex: 1;
+      min-height: 0;
+      gap: 12px;
+    }
+    .sidebar-card {
+      position: relative;
+      background:
+        linear-gradient(180deg, rgba(255, 214, 143, 0.045) 0%, rgba(255, 214, 143, 0) 38%),
+        linear-gradient(180deg, rgba(20, 31, 43, 0.96) 0%, rgba(11, 17, 24, 0.96) 100%);
+      border: 1px solid rgba(83, 112, 138, 0.42);
+      border-radius: 14px;
+      padding: 14px 14px 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 232, 184, 0.06),
+        0 10px 24px rgba(0, 0, 0, 0.18);
+      overflow: hidden;
+    }
+    .sidebar-card::before {
+      content: '';
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, rgba(255, 211, 122, 0.45), rgba(255, 211, 122, 0.04));
+      pointer-events: none;
+    }
+    .sidebar-card-header {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: #c8a96a;
+      text-shadow: 0 0 8px rgba(255, 210, 140, 0.08);
+    }
+    #gameplay-level-name {
+      font-size: 23px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.1;
+      text-wrap: balance;
+    }
+    #gameplay-level-index {
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #93a8bd;
+    }
+    #gameplay-objective-value,
+    #gameplay-shade-hp {
+      font-size: 22px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.1;
+    }
+    #gameplay-objective-label,
+    #gameplay-shade-text {
+      font-size: 13px;
+      color: #aac0d4;
+      line-height: 1.4;
+    }
+    #gameplay-shade-card[hidden] { display: none; }
+    #gameplay-shade-card {
+      border-color: rgba(137, 88, 188, 0.5);
+      background:
+        linear-gradient(180deg, rgba(190, 120, 255, 0.07) 0%, rgba(190, 120, 255, 0) 34%),
+        linear-gradient(180deg, rgba(26, 16, 39, 0.96) 0%, rgba(17, 12, 26, 0.96) 100%);
+    }
+    #gameplay-shade-card .sidebar-card-header {
+      color: #d7a8ff;
+    }
+    #gameplay-roster,
+    #damage-meter-list,
+    #healing-meter-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 0;
+    }
+    .roster-row,
+    .meter-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      font-size: 12px;
+      padding: 8px 9px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(120, 150, 176, 0.1);
+    }
+    .roster-main,
+    .meter-main {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+    .roster-name,
+    .meter-name {
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .roster-hpbar {
+      height: 7px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, #081018 0%, #121b24 100%);
+      overflow: hidden;
+      border: 1px solid rgba(72, 91, 109, 0.7);
+    }
+    .roster-hpfill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #2ecc71, #7bed9f);
+      box-shadow: 0 0 10px rgba(67, 214, 135, 0.2);
+    }
+    .roster-state,
+    .meter-value {
+      font-size: 11px;
+      color: #8ea6bc;
+      text-align: right;
+      white-space: nowrap;
+    }
+    .roster-row.dead .roster-name,
+    .roster-row.dead .roster-state {
+      color: #e57373;
+    }
+    .roster-row.dead .roster-hpfill {
+      background: linear-gradient(90deg, #e74c3c, #ff7675);
+      box-shadow: 0 0 10px rgba(231, 76, 60, 0.2);
+    }
+    .meter-columns {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    .empty-state {
+      font-size: 12px;
+      color: #8298ac;
+      padding: 2px 0;
+    }
+
+    #host-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: auto;
+    }
+
+    .gameplay-heading {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .gameplay-rule {
+      height: 1px;
+      width: 100%;
+      background: linear-gradient(90deg, rgba(255, 214, 143, 0.32), rgba(255, 214, 143, 0));
+    }
 
     #upgrade-debug-panel h3 { font-size: 13px; color: #7fa8c0; text-transform: uppercase; letter-spacing: 1px; }
     .upgrade-row {
@@ -99,96 +459,9 @@
       min-width: 0;
       display: flex;
       flex-direction: column;
-      background: #0a1018;
-    }
-
-    #level-panel {
-      min-height: 76px;
-      padding: 14px 18px;
-      border-bottom: 1px solid #1e2d3a;
-      background: linear-gradient(180deg, #101a25 0%, #0c141d 100%);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 18px;
-    }
-    #level-panel[hidden] { display: none; }
-
-    #level-meta {
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    #level-index {
-      font-size: 12px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: #7fa8c0;
-    }
-    #current-level-name {
-      font-size: 24px;
-      font-weight: 700;
-      color: #ffffff;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    #objective-card {
-      flex: 0 0 320px;
-      max-width: 40%;
-      padding: 12px 14px;
-      border: 1px solid #1e3a4a;
-      border-radius: 10px;
-      background: rgba(5, 11, 18, 0.7);
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    #objective-label {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: #00d2ff;
-    }
-    #objective-value {
-      font-size: 20px;
-      font-weight: 700;
-      color: #ffffff;
-    }
-
-    #shade-buff-card {
-      flex: 0 0 260px;
-      max-width: 35%;
-      padding: 12px 14px;
-      border: 1px solid #6600aa;
-      border-radius: 10px;
-      background: rgba(40, 0, 60, 0.7);
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    #shade-buff-card[hidden] { display: none; }
-    #shade-buff-label {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: #cc44ff;
-    }
-    #shade-hp-value {
-      font-size: 20px;
-      font-weight: 700;
-      color: #ffffff;
-    }
-    #shade-buff-text {
-      font-size: 13px;
-      color: #dd88ff;
-    }
-    @media (max-width: 960px) {
-      #shade-buff-card { max-width: none; flex-basis: auto; }
+      background:
+        radial-gradient(circle at top, rgba(44, 63, 82, 0.22) 0%, rgba(44, 63, 82, 0) 24%),
+        #091018;
     }
 
     #canvas-wrap {
@@ -209,128 +482,174 @@
       height: auto !important;
     }
 
-    @media (max-width: 960px) {
-      #level-panel {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      #objective-card {
-        max-width: none;
-        flex-basis: auto;
-      }
-
-      #current-level-name {
-        white-space: normal;
-      }
-    }
-
     /* Connection badge */
     #conn-badge {
-      position: absolute; top: 10px; right: 14px;
-      font-size: 12px; padding: 4px 10px; border-radius: 20px;
-      background: #e74c3c; color: #fff;
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      z-index: 20;
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(231, 76, 60, 0.95);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease;
     }
-    #conn-badge.connected { background: #2ecc71; }
+    #conn-badge.visible { opacity: 1; }
+    #conn-badge.connected { background: rgba(46, 204, 113, 0.95); }
+    #conn-badge.connecting { background: rgba(52, 152, 219, 0.95); }
   </style>
 </head>
-<body>
+<body data-shell="menu">
   <div id="sidebar">
-    <h1>RAID NIGHT</h1>
-    <button id="debug-toggle" title="Toggle debug panel">🛠 Debug</button>
+    <div id="conn-badge">Connecting…</div>
 
-    <div id="panel-normal">
-      <div id="server-info">
-        <h3>Join at</h3>
-        <div id="server-ip">connecting…</div>
-      </div>
-
-      <div id="qr-wrap">
-        <div id="qr-code"></div>
-        <span id="qr-hint" class="qr-hint">Scan to open controller</span>
-      </div>
-
-      <div>
-        <h3>Players connected</h3>
-        <div id="player-list">
-          <p id="waiting-msg">Waiting for players…</p>
+    <div id="menu-panel" class="shell-panel">
+      <div class="menu-crest">
+        <div class="menu-frame"></div>
+        <div class="menu-inner">
+          <div class="menu-tag">Bachelor Party Raid</div>
+          <h1 class="menu-title">RAID NIGHT</h1>
+          <div class="menu-subtitle">Clean controls. Fantasy energy. Local chaos.</div>
+          <div class="menu-divider"></div>
+          <p class="menu-copy">Gather the raid, hand out the phones, and bring everyone into the scene. When everyone is ready, step into the staging room and start the run.</p>
         </div>
       </div>
-
-      <button id="start-btn" disabled>START GAME</button>
-      <button id="quit-campaign-btn" style="display:none" title="Abort the current campaign and return to lobby">Quit Campaign</button>
-      <button id="fullscreen-btn" title="Toggle fullscreen">⛶ Fullscreen</button>
+      <button id="menu-play-btn">PLAY</button>
     </div>
 
-    <div id="panel-debug">
-      <div id="level-selector">
-        <button id="prev-level-btn">&#9664; Prev</button>
-        <button id="next-level-btn">Next &#9654;</button>
-        <span id="selected-level-name">Level 1: The Courtyard</span>
-        <label id="skip-dialog-label" style="font-size:12px;color:#aaa;cursor:pointer;margin-left:8px">
-          <input type="checkbox" id="skip-dialog-chk"> Skip dialog
-        </label>
+    <div id="lobby-panel" class="shell-panel">
+      <div class="lobby-shell-head">
+        <div class="lobby-kicker">Staging Area</div>
+        <h1>RAID NIGHT</h1>
+        <p class="lobby-copy">Invite the raid, let everyone settle in, and use the lobby scene to warm up before the run begins.</p>
+      </div>
+      <button id="debug-toggle" title="Toggle debug panel">🛠 Debug</button>
+
+      <div id="panel-normal">
+        <div id="server-info" class="lobby-card">
+          <h3>Join at</h3>
+          <div id="server-ip">connecting…</div>
+        </div>
+
+        <div class="lobby-card">
+          <div id="qr-wrap">
+            <div id="qr-code"></div>
+            <span id="qr-hint" class="qr-hint">Scan to open controller</span>
+          </div>
+        </div>
+
+        <div class="lobby-card">
+          <h3>Raid Members</h3>
+          <div id="player-list">
+            <p id="waiting-msg">Waiting for players…</p>
+          </div>
+        </div>
       </div>
 
-      <div id="bot-panel">
-        <h3>Bot Players</h3>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <button id="bot-add-btn">+ Add Bot</button>
-          <button id="bot-remove-btn">Remove All</button>
-          <span id="bot-count" style="font-size:12px;color:#7fa8c0">0 / 12 bots</span>
+      <div id="panel-debug">
+        <div id="level-selector">
+          <button id="prev-level-btn">&#9664; Prev</button>
+          <button id="next-level-btn">Next &#9654;</button>
+          <span id="selected-level-name">Level 1: The Courtyard</span>
+          <label id="skip-dialog-label" style="font-size:12px;color:#aaa;cursor:pointer;margin-left:8px">
+            <input type="checkbox" id="skip-dialog-chk"> Skip dialog
+          </label>
+        </div>
+
+        <div id="bot-panel">
+          <h3>Bot Players</h3>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <button id="bot-add-btn">+ Add Bot</button>
+            <button id="bot-remove-btn">Remove All</button>
+            <span id="bot-count" style="font-size:12px;color:#7fa8c0">0 / 12 bots</span>
+          </div>
+        </div>
+
+        <div id="upgrade-debug-panel">
+          <h3>Upgrade Tiers [DEV]</h3>
+          <div class="upgrade-row">
+            <label>Skill 1</label>
+            <input type="range" min="0" max="3" value="0" data-slot="0" class="upgrade-slider">
+            <span class="upg-val">0</span>
+          </div>
+          <div class="upgrade-row">
+            <label>Skill 2</label>
+            <input type="range" min="0" max="3" value="0" data-slot="1" class="upgrade-slider">
+            <span class="upg-val">0</span>
+          </div>
+          <div class="upgrade-row">
+            <label>Skill 3</label>
+            <input type="range" min="0" max="3" value="0" data-slot="2" class="upgrade-slider">
+            <span class="upg-val">0</span>
+          </div>
+          <div class="upgrade-row">
+            <label>Skill 4</label>
+            <input type="range" min="0" max="3" value="0" data-slot="3" class="upgrade-slider">
+            <span class="upg-val">0</span>
+          </div>
+          <button id="upgrade-reset-btn">Reset All</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="gameplay-panel" class="shell-panel">
+      <div class="sidebar-card">
+        <div class="gameplay-heading">
+          <div id="gameplay-level-index"></div>
+          <div id="gameplay-level-name">Current level</div>
+        </div>
+        <div class="gameplay-rule"></div>
+      </div>
+
+      <div class="sidebar-card">
+        <div class="sidebar-card-header">Objective</div>
+        <div id="gameplay-objective-value">In progress</div>
+        <div id="gameplay-objective-label"></div>
+      </div>
+
+      <div id="gameplay-shade-card" class="sidebar-card" hidden>
+        <div class="sidebar-card-header">Shade of Akama</div>
+        <div id="gameplay-shade-hp"></div>
+        <div id="gameplay-shade-text"></div>
+      </div>
+
+      <div class="sidebar-card">
+        <div class="sidebar-card-header">Raid Status</div>
+        <div id="gameplay-roster">
+          <div class="empty-state">Waiting for players…</div>
         </div>
       </div>
 
-      <div id="upgrade-debug-panel">
-        <h3>Upgrade Tiers [DEV]</h3>
-        <div class="upgrade-row">
-          <label>Skill 1</label>
-          <input type="range" min="0" max="3" value="0" data-slot="0" class="upgrade-slider">
-          <span class="upg-val">0</span>
+      <div class="sidebar-card meter-columns">
+        <div>
+          <div class="sidebar-card-header">Damage</div>
+          <div id="damage-meter-list">
+            <div class="empty-state">No damage yet.</div>
+          </div>
         </div>
-        <div class="upgrade-row">
-          <label>Skill 2</label>
-          <input type="range" min="0" max="3" value="0" data-slot="1" class="upgrade-slider">
-          <span class="upg-val">0</span>
+        <div>
+          <div class="sidebar-card-header">Healing</div>
+          <div id="healing-meter-list">
+            <div class="empty-state">No healing yet.</div>
+          </div>
         </div>
-        <div class="upgrade-row">
-          <label>Skill 3</label>
-          <input type="range" min="0" max="3" value="0" data-slot="2" class="upgrade-slider">
-          <span class="upg-val">0</span>
-        </div>
-        <div class="upgrade-row">
-          <label>Skill 4</label>
-          <input type="range" min="0" max="3" value="0" data-slot="3" class="upgrade-slider">
-          <span class="upg-val">0</span>
-        </div>
-        <button id="upgrade-reset-btn">Reset All</button>
       </div>
+    </div>
+
+    <div id="host-actions">
+      <button id="start-btn" disabled style="display:none">START GAME</button>
+      <button id="quit-campaign-btn" style="display:none" title="Abort the current campaign and return to lobby">Quit Campaign</button>
+      <button id="fullscreen-btn" title="Toggle fullscreen">⛶ Fullscreen</button>
     </div>
   </div>
 
   <div id="main-layout">
-    <div id="level-panel" hidden>
-      <div id="level-meta">
-        <div id="level-index"></div>
-        <div id="current-level-name"></div>
-      </div>
-
-      <div id="objective-card">
-        <div id="objective-label"></div>
-        <div id="objective-value"></div>
-      </div>
-
-      <div id="shade-buff-card" hidden>
-        <div id="shade-buff-label">SHADE OF AKAMA</div>
-        <div id="shade-hp-value"></div>
-        <div id="shade-buff-text"></div>
-      </div>
-    </div>
-
     <div id="canvas-wrap"></div>
   </div>
-
-  <div id="conn-badge">Connecting…</div>
 
   <!-- QR code library -->
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>

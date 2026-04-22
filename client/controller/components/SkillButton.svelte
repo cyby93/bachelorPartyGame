@@ -278,8 +278,11 @@
 
 <style>
   .skill-btn {
-    background: #16202a;
-    border: 2px solid transparent;
+    background:
+      linear-gradient(180deg, rgba(255, 214, 143, 0.045) 0%, rgba(255, 214, 143, 0) 28%),
+      linear-gradient(180deg, #1a2734 0%, #121b24 100%);
+    border: 1px solid rgba(120, 150, 176, 0.16);
+    border-radius: 18px;
     padding: 0;
     display: flex;
     flex-direction: column;
@@ -290,26 +293,98 @@
     user-select: none;
     position: relative;
     overflow: hidden;
-    transition: background 0.1s;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.04),
+      0 8px 18px rgba(0, 0, 0, 0.14);
+    transition: background 0.1s, border-color 0.1s, transform 0.08s;
     /* let parent grid size it */
   }
 
+  .skill-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, rgba(255, 214, 143, 0.26), rgba(255, 214, 143, 0.02));
+    pointer-events: none;
+  }
+
   .skill-btn:active {
-    background: #1e3a4a;
+    background:
+      linear-gradient(180deg, rgba(255, 214, 143, 0.06) 0%, rgba(255, 214, 143, 0) 28%),
+      linear-gradient(180deg, #203140 0%, #162330 100%);
+    transform: scale(0.992);
   }
 
   /* SUSTAINED — lit border while held */
   .skill-btn.held {
-    border: 2px solid #00d2ff;
+    border-color: #00d2ff;
+    box-shadow:
+      inset 0 0 0 1px rgba(0, 210, 255, 0.26),
+      0 0 16px rgba(0, 210, 255, 0.12);
   }
 
   /* INSTANT — brief green flash on fire */
   .skill-btn.fired {
-    background: #1a3a2a;
-    box-shadow: inset 0 0 12px rgba(0, 210, 100, 0.6);
+    background:
+      linear-gradient(180deg, rgba(113, 255, 172, 0.1) 0%, rgba(113, 255, 172, 0) 28%),
+      linear-gradient(180deg, #173226 0%, #11261d 100%);
+    box-shadow:
+      inset 0 0 18px rgba(0, 210, 100, 0.32),
+      0 0 16px rgba(0, 210, 100, 0.1);
   }
 
-  .skill-icon { font-size: 96px; line-height: 1; display: flex; align-items: center; justify-content: center; width: 96px; height: 96px; }
-  .skill-icon-img { width: 96px; height: 96px; object-fit: contain; display: block; }
-  .skill-name { font-size: 11px; color: #7fa8c0; text-align: center; padding: 0 4px; }
+  .skill-icon {
+    font-size: 96px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 96px;
+    height: 96px;
+    padding: 4px;
+    border-radius: 14px;
+    background: rgba(7, 13, 18, 0.24);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+  }
+
+  .skill-icon-img {
+    width: 96px;
+    height: 96px;
+    object-fit: contain;
+    display: block;
+  }
+
+  .skill-name {
+    font-size: 11px;
+    color: #8fa7bc;
+    text-align: center;
+    padding: 0 8px 2px;
+    letter-spacing: 0.2px;
+  }
+
+  @media (max-height: 430px) {
+    .skill-btn {
+      gap: 4px;
+      border-radius: 14px;
+    }
+
+    .skill-icon {
+      width: 68px;
+      height: 68px;
+      font-size: 68px;
+      border-radius: 10px;
+    }
+
+    .skill-icon-img {
+      width: 68px;
+      height: 68px;
+    }
+
+    .skill-name {
+      font-size: 10px;
+      padding: 0 6px 2px;
+    }
+  }
 </style>

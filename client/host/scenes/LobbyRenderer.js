@@ -32,8 +32,8 @@ export default class LobbyRenderer extends BaseRenderer {
     if (!this._countText) return
     const n = activePlayerIds.size
     this._countText.text = n === 0
-      ? 'Waiting for players to join…'
-      : `${n} player${n !== 1 ? 's' : ''} connected — waiting to start`
+      ? 'Waiting for the raid to assemble…'
+      : `${n} player${n !== 1 ? 's' : ''} in the staging room`
   }
 
   _resetUIRefs() {
@@ -46,13 +46,14 @@ export default class LobbyRenderer extends BaseRenderer {
     const { width: W, height: H } = this.game.getScreenSize()
 
     const title = new Text({
-      text:  'LOBBY  —  Practice your skills!',
+      text:  'STAGING ROOM',
       style: {
-        fontFamily: 'Arial',
-        fontSize:   26,
+        fontFamily: 'Trebuchet MS',
+        fontSize:   25,
         fontWeight: 'bold',
-        fill:       '#00d2ff',
+        fill:       '#d7b16f',
         align:      'center',
+        letterSpacing: 1,
       },
     })
     title.anchor.set(0.5, 0)
@@ -60,16 +61,16 @@ export default class LobbyRenderer extends BaseRenderer {
     this._uiRoot.addChild(title)
 
     this._countText = new Text({
-      text:  'Waiting for players to join…',
-      style: { fontFamily: 'Arial', fontSize: 15, fill: '#7fa8c0', align: 'center' },
+      text:  'Waiting for the raid to assemble…',
+      style: { fontFamily: 'Trebuchet MS', fontSize: 15, fill: '#90a7bb', align: 'center' },
     })
     this._countText.anchor.set(0.5, 0)
     this._countText.position.set(W / 2, 52)
     this._uiRoot.addChild(this._countText)
 
     const hint = new Text({
-      text:  'Move with the left joystick  ·  Aim skills with the right buttons',
-      style: { fontFamily: 'Arial', fontSize: 13, fill: '#334455', align: 'center' },
+      text:  'Warm up in the room while everyone joins.',
+      style: { fontFamily: 'Trebuchet MS', fontSize: 13, fill: '#5f7385', align: 'center' },
     })
     hint.anchor.set(0.5, 1)
     hint.position.set(W / 2, H - 14)

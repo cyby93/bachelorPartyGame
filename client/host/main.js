@@ -23,15 +23,16 @@ await game.init(document.getElementById('canvas-wrap'))
 // ── Socket ─────────────────────────────────────────────────────────────────
 const socket = io({ transports: ['websocket'] })
 game.setSocket(socket)
-console.log(socket);
 
 // ── DOM refs ───────────────────────────────────────────────────────────────
+const body           = document.body
 const badge          = document.getElementById('conn-badge')
 const serverIpEl     = document.getElementById('server-ip')
 const playerListEl   = document.getElementById('player-list')
 const startBtn       = document.getElementById('start-btn')
 const qrWrap         = document.getElementById('qr-code')
 const fullscreenBtn  = document.getElementById('fullscreen-btn')
+const menuPlayBtn    = document.getElementById('menu-play-btn')
 const selectedLevelNameEl = document.getElementById('selected-level-name')
 const prevLevelBtn   = document.getElementById('prev-level-btn')
 const nextLevelBtn   = document.getElementById('next-level-btn')
@@ -74,13 +75,57 @@ upgradeResetBtn?.addEventListener('click', () => {
   })
 })
 const levelPanelEl   = document.getElementById('level-panel')
-const levelIndexEl   = document.getElementById('level-index')
-const currentLevelNameEl = document.getElementById('current-level-name')
-const objectiveLabelEl = document.getElementById('objective-label')
-const objectiveValueEl = document.getElementById('objective-value')
-const shadeBuffCardEl  = document.getElementById('shade-buff-card')
-const shadeHpValueEl   = document.getElementById('shade-hp-value')
-const shadeBuffTextEl  = document.getElementById('shade-buff-text')
+const gameplayLevelIndexEl = document.getElementById('gameplay-level-index')
+const gameplayLevelNameEl = document.getElementById('gameplay-level-name')
+const objectiveLabelEl = document.getElementById('gameplay-objective-label')
+const objectiveValueEl = document.getElementById('gameplay-objective-value')
+const shadeBuffCardEl  = document.getElementById('gameplay-shade-card')
+const shadeHpValueEl   = document.getElementById('gameplay-shade-hp')
+const shadeBuffTextEl  = document.getElementById('gameplay-shade-text')
+const rosterEl         = document.getElementById('gameplay-roster')
+const damageMeterEl    = document.getElementById('damage-meter-list')
+const healingMeterEl   = document.getElementById('healing-meter-list')
+
+let connectionHideTimer = null
+let shellMode = 'menu'
+
+function setConnectionStatus(text, variant, autoHideMs = 0) {
+  if (!badge) return
+
+  if (connectionHideTimer) {
+    clearTimeout(connectionHideTimer)
+    connectionHideTimer = null
+  }
+
+  badge.textContent = text
+  badge.classList.remove('connected', 'connecting')
+  if (variant) badge.classList.add(variant)
+  badge.classList.add('visible')
+
+  if (autoHideMs > 0) {
+    connectionHideTimer = setTimeout(() => {
+      badge.classList.remove('visible')
+      connectionHideTimer = null
+    }, autoHideMs)
+  }
+}
+
+function setShellMode(mode) {
+  const previousMode = shellMode
+  shellMode = mode
+  body.dataset.shell = mode
+
+  if (previousMode === 'menu' && mode !== 'menu') {
+    requestAnimationFrame(() => game.resizeToContainer())
+  }
+}
+
+menuPlayBtn?.addEventListener('click', () => {
+  const serverScene = startBtn.dataset.scene ?? game.knownState.scene ?? 'lobby'
+  setShellMode(serverScene === 'battle' || serverScene === 'bossFight' ? 'gameplay' : 'lobby')
+})
+
+setConnectionStatus('Connecting...', 'connecting')
 
 // ── Quit Campaign ──────────────────────────────────────────────────────────
 quitCampaignBtn?.addEventListener('click', () => {
@@ -135,7 +180,7 @@ function renderDOMPlayerList() {
   const players = Object.values(game.knownState.players).filter(p => !p.isHost)
 
   if (players.length === 0) {
-    playerListEl.innerHTML = '<p id="waiting-msg">Waiting for players…</p>'
+    playerListEl.innerHTML = '<p id="waiting-msg">Waiting for raid members…</p>'
     if (startBtn.dataset.scene === 'lobby') startBtn.disabled = true
     return
   }
@@ -158,11 +203,79 @@ function renderDOMPlayerList() {
 
 function clearLevelPanel() {
   if (levelPanelEl) levelPanelEl.hidden = true
-  if (levelIndexEl) levelIndexEl.textContent = ''
-  if (currentLevelNameEl) currentLevelNameEl.textContent = ''
+  if (gameplayLevelIndexEl) gameplayLevelIndexEl.textContent = ''
+  if (gameplayLevelNameEl) gameplayLevelNameEl.textContent = 'Current level'
   if (objectiveLabelEl) objectiveLabelEl.textContent = ''
   if (objectiveValueEl) objectiveValueEl.textContent = ''
   if (shadeBuffCardEl) shadeBuffCardEl.hidden = true
+}
+
+function renderGameplayRoster() {
+  if (!rosterEl) return
+
+  const players = Object.values(game.knownState.players)
+    .filter(p => !p.isHost)
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  if (players.length === 0) {
+    rosterEl.innerHTML = '<div class="empty-state">Waiting for raid members…</div>'
+    return
+  }
+
+  rosterEl.innerHTML = players.map(player => {
+    const color = CLASSES[player.className]?.color ?? '#ffffff'
+    const maxHp = Math.max(1, player.maxHp ?? player.hp ?? 1)
+    const hp = Math.max(0, Math.ceil(player.hp ?? 0))
+    const hpPct = player.isDead ? 0 : Math.max(0, Math.min(1, hp / maxHp))
+    const state = player.isDead ? 'Dead' : `${hp} / ${Math.ceil(maxHp)} HP`
+
+    return `
+      <div class="roster-row${player.isDead ? ' dead' : ''}">
+        <div class="roster-main">
+          <div class="roster-name" style="color:${color}">${player.name}</div>
+          <div class="roster-hpbar"><div class="roster-hpfill" style="width:${hpPct * 100}%"></div></div>
+        </div>
+        <div class="roster-state">${state}</div>
+      </div>`
+  }).join('')
+}
+
+function renderMeterList(container, totals, rateSuffix, emptyText) {
+  if (!container) return
+
+  const players = Object.values(game.knownState.players).filter(p => !p.isHost)
+  const stats = game.knownState.stats
+  const elapsed = Math.max(1, (Date.now() - (stats?.startTime ?? Date.now())) / 1000)
+
+  const rows = players
+    .map(player => ({
+      player,
+      total: totals?.[player.id] ?? 0,
+      rate: Math.round((totals?.[player.id] ?? 0) / elapsed),
+    }))
+    .sort((a, b) => b.total - a.total)
+
+  if (rows.length === 0 || rows.every(row => row.total === 0)) {
+    container.innerHTML = `<div class="empty-state">${emptyText}</div>`
+    return
+  }
+
+  container.innerHTML = rows.map(({ player, total, rate }) => {
+    const color = CLASSES[player.className]?.color ?? '#ffffff'
+    return `
+      <div class="meter-row">
+        <div class="meter-main">
+          <div class="meter-name" style="color:${color}">${player.name}</div>
+        </div>
+        <div class="meter-value">${total.toLocaleString()} (${rate}/${rateSuffix})</div>
+      </div>`
+  }).join('')
+}
+
+function renderGameplaySidebar() {
+  renderGameplayRoster()
+  renderMeterList(damageMeterEl, game.knownState.stats?.damage, 's', 'No damage yet.')
+  renderMeterList(healingMeterEl, game.knownState.stats?.heal, 's', 'No healing yet.')
 }
 
 function formatObjective(objective, knownState) {
@@ -214,9 +327,9 @@ function renderLevelPanel(scene, meta, objectives = meta?.objectives) {
 
   const summary = formatObjective(objectives?.[0] ?? null, game.knownState)
   if (levelPanelEl) levelPanelEl.hidden = false
-  if (levelIndexEl) levelIndexEl.textContent = `Level ${(meta?.levelIndex ?? 0) + 1} / ${meta?.totalLevels ?? '?'}`
-  if (currentLevelNameEl) currentLevelNameEl.textContent = meta?.levelName ?? 'Current level'
-  if (objectiveLabelEl) objectiveLabelEl.textContent = summary.label || 'Objective'
+  if (gameplayLevelIndexEl) gameplayLevelIndexEl.textContent = `Level ${(meta?.levelIndex ?? 0) + 1} / ${meta?.totalLevels ?? '?'}`
+  if (gameplayLevelNameEl) gameplayLevelNameEl.textContent = meta?.levelName ?? 'Current level'
+  if (objectiveLabelEl) objectiveLabelEl.textContent = summary.label || 'Current objective'
   if (objectiveValueEl) objectiveValueEl.textContent = summary.value || 'In progress'
 
   // Shade of Akama buff card (Level 4 Phase 1 only)
@@ -236,6 +349,9 @@ function renderLevelPanel(scene, meta, objectives = meta?.objectives) {
 
 function setSceneControls(scene) {
   startBtn.dataset.scene = scene
+
+  if (scene === 'battle' || scene === 'bossFight') setShellMode('gameplay')
+  else if (shellMode !== 'menu') setShellMode('lobby')
 
   if (scene === 'lobby') {
     startBtn.textContent = 'START GAME'
@@ -271,10 +387,8 @@ function setSceneControls(scene) {
 // ── Socket events ──────────────────────────────────────────────────────────
 
 socket.on('connect', () => {
-  badge.textContent = 'Connected'
-  badge.classList.add('connected')
+  setConnectionStatus('Connected', 'connected', 2000)
   audio.init()   // safe to call here — connect fires after a user interaction (page load)
-    console.log('Connected')
 
   // Display the controller URL and generate QR code using the LAN IP
   fetch('/api/network-url')
@@ -303,13 +417,10 @@ socket.on('connect', () => {
 })
 
 socket.on('disconnect', () => {
-  badge.textContent = 'Disconnected'
-  badge.classList.remove('connected')
+  setConnectionStatus('Disconnected', '', 0)
 })
 
 socket.on(EVENTS.INIT, state => {
-    console.log('JSON.stringify(player)')
-
   game.receiveFullState(state)
   const scene = state.scene ?? 'lobby'
   const meta = {
@@ -327,17 +438,19 @@ socket.on(EVENTS.INIT, state => {
   setSceneControls(scene)
   renderLevelPanel(scene, meta)
   renderDOMPlayerList()
+  renderGameplaySidebar()
 })
 
 socket.on(EVENTS.PLAYER_JOINED, player => {
-  console.log(JSON.stringify(player))
   game.addPlayer(player)
   renderDOMPlayerList()
+  renderGameplaySidebar()
 })
 
 socket.on(EVENTS.PLAYER_LEFT, id => {
   game.removePlayer(id)
   renderDOMPlayerList()
+  renderGameplaySidebar()
 })
 
 socket.on(EVENTS.STATE_DELTA, delta => {
@@ -345,6 +458,7 @@ socket.on(EVENTS.STATE_DELTA, delta => {
   game.receiveState(delta)
   const after  = Object.keys(game.knownState.players).length
   if (after !== before) renderDOMPlayerList()
+  renderGameplaySidebar()
 
   // Update shade buff card live during Level 4 Phase 1
   if (shadeBuffCardEl && !shadeBuffCardEl.hidden) {
@@ -366,6 +480,7 @@ socket.on(EVENTS.SCENE_CHANGE, (data) => {
   currentLevelMeta = meta
   setSceneControls(scene)
   renderLevelPanel(scene, meta)
+  renderGameplaySidebar()
 
   if (scene === 'battle' || scene === 'bossFight') audio.playTransition()
   else if (scene === 'result')  audio.playVictory()

@@ -39,6 +39,9 @@
     width: 100%;
     height: 100%;
     position: relative;
-    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: inherit;
+    background:
+      radial-gradient(circle at 35% 65%, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0) 26%),
+      linear-gradient(180deg, rgba(255, 214, 143, 0.02) 0%, rgba(255, 214, 143, 0) 28%);
   }
 </style>

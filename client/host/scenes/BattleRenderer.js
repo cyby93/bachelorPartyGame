@@ -517,102 +517,7 @@ export default class BattleRenderer extends BaseRenderer {
 
   // ── UI update ──────────────────────────────────────────────────────────────
 
-  _updateUI(dt, activePlayerIds) {
-    const stats = this.game.knownState.stats
-    if (!stats || !this._dmgMeterRows) return
-
-    const elapsed = Math.max(1, (Date.now() - (stats.startTime ?? Date.now())) / 1000)
-    const players = [...activePlayerIds]
-      .map(id => this.game.knownState.players[id])
-      .filter(p => p && !p.isHost)
-
-    if (players.length !== this._meterPlayerCount) {
-      this._buildMeterRows(players)
-      return
-    }
-
-    const byDmg  = [...players].sort((a, b) => (stats.damage?.[b.id] ?? 0) - (stats.damage?.[a.id] ?? 0))
-    const byHeal = [...players].sort((a, b) => (stats.heal?.[b.id] ?? 0) - (stats.heal?.[a.id] ?? 0))
-
-    byDmg.forEach((p, i) => {
-      const row = this._dmgMeterRows[i]
-      if (!row) return
-      const total = stats.damage?.[p.id] ?? 0
-      const dps   = (total / elapsed).toFixed(0)
-      row.text = `${p.name}  ${total.toLocaleString()}  (${dps}/s)`
-    })
-
-    byHeal.forEach((p, i) => {
-      const row = this._healMeterRows[i]
-      if (!row) return
-      const total = stats.heal?.[p.id] ?? 0
-      const hps   = (total / elapsed).toFixed(0)
-      row.text = `${p.name}  ${total.toLocaleString()}  (${hps}/s)`
-    })
-  }
-
-  _buildMeterRows(players) {
-    // Remove old meter container if it exists
-    if (this._meterContainer) {
-      this._uiRoot.removeChild(this._meterContainer)
-    }
-
-    const { width: W } = this.game.getScreenSize()
-    const PANEL_W = 280
-    const ROW_H   = 18
-    const PAD     = 8
-    const HEADER_H = 20
-    const panelH  = HEADER_H + players.length * ROW_H + PAD * 2
-
-    this._meterContainer = new Container()
-    this._dmgMeterRows   = []
-    this._healMeterRows  = []
-    this._meterPlayerCount = players.length
-
-    const makePanel = (xOff, title, color) => {
-      const bg = new Graphics()
-      bg.rect(0, 0, PANEL_W, panelH)
-      bg.fill({ color: 0x000000, alpha: 0.65 })
-      bg.stroke({ color: 0x222233, width: 1 })
-      bg.position.set(xOff, 0)
-      this._meterContainer.addChild(bg)
-
-      const hdr = new Text({
-        text: title,
-        style: { fontFamily: 'Arial', fontSize: 11, fontWeight: 'bold', fill: color },
-      })
-      hdr.anchor.set(0.5, 0)
-      hdr.position.set(xOff + PANEL_W / 2, PAD)
-      this._meterContainer.addChild(hdr)
-    }
-
-    makePanel(0,          'DAMAGE',  '#ff6655')
-    makePanel(PANEL_W + 6, 'HEALING', '#44dd88')
-
-    players.forEach((p, i) => {
-      const classColor = CLASSES[p.className]?.color ?? '#ffffff'
-      const y = PAD + HEADER_H + i * ROW_H
-
-      const dmgRow = new Text({
-        text: `${p.name}  0  (0/s)`,
-        style: { fontFamily: 'Arial', fontSize: 12, fill: classColor },
-      })
-      dmgRow.position.set(PAD, y)
-      this._meterContainer.addChild(dmgRow)
-      this._dmgMeterRows.push(dmgRow)
-
-      const healRow = new Text({
-        text: `${p.name}  0  (0/s)`,
-        style: { fontFamily: 'Arial', fontSize: 12, fill: classColor },
-      })
-      healRow.position.set(PANEL_W + 6 + PAD, y)
-      this._meterContainer.addChild(healRow)
-      this._healMeterRows.push(healRow)
-    })
-
-    this._meterContainer.position.set(W - (PANEL_W * 2 + 6) - 10, 10)
-    this._uiRoot.addChild(this._meterContainer)
-  }
+  _updateUI() {}
 
   // ── Event handler override ─────────────────────────────────────────────────
 
@@ -628,10 +533,6 @@ export default class BattleRenderer extends BaseRenderer {
 
   _buildUI() {
     this._uiRoot.removeChildren()
-    this._meterContainer   = null
-    this._dmgMeterRows     = []
-    this._healMeterRows    = []
-    this._meterPlayerCount = 0
 
     // Dialog box (shown during cinematic and phase transitions)
     const w = this.game.app.renderer.width

@@ -7,8 +7,19 @@ Shared working instructions for AI coding assistants in this repository. This is
 - Keep repo-specific agent guidance here.
 - Keep deep system references in `docs/`.
 - Keep tool-specific config in tool-specific folders such as `.claude/`.
+- Keep canonical custom agent definitions in `skills/agent-*`; tool-specific wrappers in `.claude/skills/` and `.opencode/skills/` should stay thin and aligned to those shared agents.
 
 If guidance in another file conflicts with this one, update this file and then align the wrapper or tool-specific file.
+
+## Tooling Layout
+
+- `AGENTS.md` is the shared instruction source of truth for both Claude-style and Opencode-style tools.
+- `CLAUDE.md` is a compatibility wrapper for Claude Code only.
+- `_bmad/` contains shared BMAD config, manifests, and memory.
+- `skills/agent-*` contains the canonical custom specialist agents for this repo.
+- `.opencode/skills/` contains Opencode-discoverable wrappers and installed BMAD library skills.
+- `.claude/skills/` contains Claude compatibility wrappers and should avoid machine-specific paths when a `{project-root}` path works.
+- `.mcp.json` is the portable project MCP definition; secrets such as `PIXELLAB_API_KEY` should come from environment variables, not checked-in tool config.
 
 ## Commands
 

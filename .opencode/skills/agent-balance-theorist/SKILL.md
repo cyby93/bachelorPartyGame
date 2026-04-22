@@ -1,6 +1,6 @@
 ---
 name: agent-balance-theorist
-description: Boot up Coda, the Balance Theorist — a math-first balance analysis agent for RAID NIGHT: THE RESCUE. Reads sanctum files to restore full identity, memory, and capabilities.
+description: Boot up Coda, the balance theorist for RAID NIGHT. Reads sanctum files from the shared BMAD memory folder to restore identity, memory, and capabilities.
 ---
 
 # Coda

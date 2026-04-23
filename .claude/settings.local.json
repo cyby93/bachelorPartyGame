@@ -78,7 +78,11 @@
       "Bash(mkdir -p D:/Games/bachelorPartyGame/.claude/skills/agent-saurfang)",
       "Bash(mkdir -p D:/Games/bachelorPartyGame/.claude/skills/agent-jaina)",
       "Bash(unzip -l /tmp/illidan_model.zip)",
-      "Bash(unzip -l /tmp/leviathan.zip)"
+      "Bash(unzip -l /tmp/leviathan.zip)",
+      "Bash(unzip -l /tmp/warlock_model.zip)",
+      "Bash(awk -F/ '{print $1\"/\"$2\"/\"$3}')",
+      "Bash(mkdir -p /tmp/warlock_extract)",
+      "Bash(unzip -o /tmp/warlock_model.zip -d /tmp/warlock_extract)"
     ]
   },
   "enableAllProjectMcpServers": true,

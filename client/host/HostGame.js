@@ -78,16 +78,16 @@ export const DIRECTIONAL_NPC_ANIMATIONS = {
  * Update frame counts here once ZIPs are extracted.
  */
 export const DIRECTIONAL_ANIMATIONS = {
-  priest:  { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, ability: { frames: 4, fps: 12 }, cast: { frames: 6, fps: 8 } },
-  warrior: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
-  paladin: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
-  hunter:  { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
-  druid:   { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
-  mage:    { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
-  warlock:     { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
-  deathknight: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
-  shaman:      { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
-  rogue:       { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  priest:  { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, ability: { frames: 4, fps: 12 }, cast: { frames: 6, fps: 8 }, downed: { frames: 9, fps: 10 } },
+  warrior: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 } },
+  paladin: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 } },
+  hunter:  { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 } },
+  druid:   { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 } },
+  mage:    { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 } },
+  warlock:     { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 } },
+  deathknight: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 } },
+  shaman:      { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 } },
+  rogue:       { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 } },
 }
 
 export default class HostGame {

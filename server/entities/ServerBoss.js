@@ -39,7 +39,7 @@ export default class ServerBoss {
     this.isDead    = false
     this.isImmune  = false
     this.activeCast = null  // { attack, castTime, startedAt } for cast-based abilities
-    this.phase     = 1
+    this.phase     = cfg.phases?.[0]?.name ?? 1
     this.isPlayer  = false
     this.id        = 'boss'
 
@@ -84,7 +84,7 @@ export default class ServerBoss {
     const pct = this.hp / this.maxHp
     for (let i = this._phases.length - 1; i >= 0; i--) {
       if (pct <= this._phases[i].threshold) {
-        const newPhase = i + 1
+        const newPhase = this._phases[i].name ?? (i + 1)
         if (newPhase !== this.phase) {
           this.phase = newPhase
           this.speed = this._phases[i].speed
@@ -178,6 +178,12 @@ export default class ServerBoss {
         if (bestDist > activationRange) continue
       }
 
+      // meleeOnly abilities only cast when a player is within melee contact range
+      if (ability.meleeOnly) {
+        const meleeRange = this._config.attackRange ?? 80
+        if (bestDist > meleeRange) continue
+      }
+
       this._abilityCooldowns[ability.name] = now
 
       // Cast-based abilities: store the pending attack, show cast bar
@@ -191,7 +197,7 @@ export default class ServerBoss {
           castTime:  ability.castTime / castSpeedMult,
           startedAt: now,
         }
-        break  // only one ability at a time; cast is now pending
+        break
       }
 
       attacks.push({

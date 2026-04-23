@@ -153,17 +153,17 @@ export const CAMPAIGN = [
       ],
       passages: [
         // Passage in the middle of the wall, vertically centered in the 600px arena
-        { id: 'passage1', fromRoom: 'left', toRoom: 'right', x: 530, y: 250, width: 40, height: 100, blockedByGate: 'gate1' },
+        { id: 'passage1', fromRoom: 'left', toRoom: 'right', x: 530, y: 210, width: 40, height: 180, blockedByGate: 'gate1' },
       ],
     },
     objectives: [
       { type: 'destroyGates' },
     ],
     gates: [
-      // Gate1 blocks passage1 — x=550 is center of 40px gap (530+20), y=300 is center of passage (250..350)
-      { id: 'gate1', passageId: 'passage1', hp: Math.round(10 * X * R), position: { x: 550, y: 300 }, width: 40, height: 100 },
+      // Gate1 blocks passage1 — x=550 is center of 40px gap (530+20), y=300 is center of passage (210..390)
+      { id: 'gate1', passageId: 'passage1', hp: Math.round(10 * X * R), position: { x: 550, y: 300 }, width: 40, height: 180 },
       // Gate2 at the far right edge of the right room — x=1062 center, y=300 matches gate1
-      { id: 'gate2', passageId: null,       hp: Math.round(10 * X * R), position: { x: 1062, y: 300 }, width: 48, height: 100 },
+      { id: 'gate2', passageId: null,       hp: Math.round(10 * X * R), position: { x: 1062, y: 300 }, width: 48, height: 180 },
     ],
     spawning: {
       mode: 'continuous',
@@ -192,8 +192,8 @@ export const CAMPAIGN = [
         {
           phase: 2,
           spawnPoints: [
-            { x: 620, y: 30  },   // Room 2, top edge, left side (near where gate1 was)
-            { x: 620, y: 300 },   // Room 2, mid-height, left side
+            { x: 1060, y: 30  },   // Room 2, top edge, right side (near gate2)
+            { x: 1060, y: 570 },   // Room 2, bottom edge, right side (near gate2)
           ],
         },
       ],

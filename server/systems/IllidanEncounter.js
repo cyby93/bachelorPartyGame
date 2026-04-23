@@ -14,11 +14,11 @@
  *   enc.getFireballsDTO()             — for state serialization
  */
 
-import { EVENTS }          from '../../shared/protocol.js'
-import { GAME_CONFIG }     from '../../shared/GameConfig.js'
-import { ILLIDAN_CONFIG }  from '../../shared/IllidanConfig.js'
-import { ENEMY_TYPES }     from '../../shared/EnemyTypeConfig.js'
-import ServerEnemy         from '../entities/ServerEnemy.js'
+import { EVENTS }                         from '../../shared/protocol.js'
+import { GAME_CONFIG }                    from '../../shared/GameConfig.js'
+import { ILLIDAN_CONFIG, ILLIDAN_PHASE }  from '../../shared/IllidanConfig.js'
+import { ENEMY_TYPES }                    from '../../shared/EnemyTypeConfig.js'
+import ServerEnemy                        from '../entities/ServerEnemy.js'
 
 function playerHitsCircle(px, py, cx, cy, otherRadius) {
   const dx = px - cx
@@ -45,6 +45,7 @@ export default class IllidanEncounter {
       phase2AddsSpawned:    false,
       flameOfAzzinothIds:   new Set(),
       phase3Entered:        false,
+      phase4Entered:        false,
       auraDreadLastTick:    0,
       phase2TransitionDone: false,
     }
@@ -57,7 +58,7 @@ export default class IllidanEncounter {
     // Wire phase-change callback on the boss entity
     this.boss.onPhaseChange = (phase) => {
       this.io.emit(EVENTS.ILLIDAN_PHASE_TRANSITION, { phase })
-      if (phase === 2) this._onPhase2()
+      if (phase === ILLIDAN_PHASE.AZZINOTH) this._onPhase2()
     }
   }
 
@@ -121,8 +122,15 @@ export default class IllidanEncounter {
       }
     })
 
-    // Aura of Dread — Phase 3 passive
-    if (this.boss.phase === 3) {
+    // Phase 3 (hunt_2) → Phase 4 (demon_form) at 30% HP
+    if (this.boss.phase === ILLIDAN_PHASE.HUNT_2 && !this._state.phase4Entered) {
+      if (this.boss.hp / this.boss.maxHp <= 0.30) {
+        this._onPhase4()
+      }
+    }
+
+    // Aura of Dread — Phase 4 (demon_form) passive
+    if (this.boss.phase === ILLIDAN_PHASE.DEMON_FORM) {
       const aura = ILLIDAN_CONFIG.phase3Aura
       if (now - this._state.auraDreadLastTick >= aura.tickRate) {
         this._state.auraDreadLastTick = now
@@ -136,6 +144,15 @@ export default class IllidanEncounter {
         })
       }
     }
+
+    // Despawn shadowfiends whose source player is dead or disconnected
+    this.enemies.forEach((enemy, id) => {
+      if (enemy.type !== 'shadowfiend' || !enemy.sourcePlayerId) return
+      const src = this.players.get(enemy.sourcePlayerId)
+      if (!src || src.isDead) {
+        enemy.isDead = true
+      }
+    })
   }
 
   getEyeBeamsDTO() {
@@ -198,16 +215,31 @@ export default class IllidanEncounter {
     if (this._state.phase3Entered) return
     this._state.phase3Entered = true
 
-    console.log('[Illidan] Phase 3 — demon form')
+    console.log('[Illidan] Phase 3 — hunt_2 (sword form resumes)')
 
-    this.boss._phases  = []   // prevent _updatePhase() from resetting phase back to 2
-    this.boss.phase    = 3
+    this.boss._phases              = []   // prevent _updatePhase() from interfering
+    this.boss.phase                = ILLIDAN_PHASE.HUNT_2
+    this.boss.isImmune             = false
+    this.boss.speed                = ILLIDAN_CONFIG.phases[0].speed
+    this.boss._abilityCooldowns    = {}   // reset all cooldowns for the second sword phase
+    this.boss.x                    = this.arenaWidth  / 2
+    this.boss.y                    = this.arenaHeight / 2
+
+    this.io.emit(EVENTS.ILLIDAN_PHASE_TRANSITION, { phase: ILLIDAN_PHASE.HUNT_2 })
+  }
+
+  _onPhase4() {
+    if (this._state.phase4Entered) return
+    this._state.phase4Entered = true
+
+    console.log('[Illidan] Phase 4 — demon_form')
+
+    this.boss._phases  = []
+    this.boss.phase    = ILLIDAN_PHASE.DEMON_FORM
     this.boss.isImmune = false
     this.boss.speed    = 0
-    this.boss.x        = this.arenaWidth  / 2
-    this.boss.y        = this.arenaHeight / 2
 
-    this.io.emit(EVENTS.ILLIDAN_PHASE_TRANSITION, { phase: 3 })
+    this.io.emit(EVENTS.ILLIDAN_PHASE_TRANSITION, { phase: ILLIDAN_PHASE.DEMON_FORM })
   }
 
   // ── Ability handler ──────────────────────────────────────────────────────────
@@ -222,8 +254,8 @@ export default class IllidanEncounter {
     switch (attack.type) {
 
       case 'flameCrash': {
-        const crashX = attack.bossX
-        const crashY = attack.bossY
+        const crashX = (attack.target && !attack.target.isDead) ? attack.target.x : attack.bossX
+        const crashY = (attack.target && !attack.target.isDead) ? attack.target.y : attack.bossY
         this.players.forEach(p => {
           if (p.isHost || p.isDead) return
           if (playerHitsCircle(p.x, p.y, crashX, crashY, attack.radius)) {
@@ -497,7 +529,14 @@ export default class IllidanEncounter {
 
   _tickEffects(now) {
     this.players.forEach(p => {
-      if (p.isDead || !p.activeEffects?.length) return
+      // For dead players: expire the parasitic shadowfiend effect immediately so fiends don't spawn
+      if (p.isDead) {
+        if (p.activeEffects?.some(e => e.source === 'illidan:parasiticShadowfiend')) {
+          p.activeEffects = p.activeEffects.filter(e => e.source !== 'illidan:parasiticShadowfiend')
+        }
+        return
+      }
+      if (!p.activeEffects?.length) return
 
       const toSpawn = []
 

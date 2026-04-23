@@ -48,6 +48,13 @@ export default class PlayerSprite {
 
     // ── Containers ──────────────────────────────────────────────────────
     this.container = new Container()
+
+    // ── Agonizing Flame aura (drawn under everything) ─────────────────────
+    this._agonizingFlameGfx    = new Graphics()
+    this._agonizingFlameTimer  = 0
+    this._agonizingFlameRadius = 0
+    this.container.addChild(this._agonizingFlameGfx)
+
     this._body     = new Container()   // rotated child
     this.container.addChild(this._body)
 
@@ -368,6 +375,30 @@ export default class PlayerSprite {
     } else {
       this._aimPulse = 0
       this._aimArrow.alpha = 0
+    }
+
+    // Agonizing Flame aura circle
+    if (state.effects) {
+      const af = state.effects.find(e => e.src === 'illidan:agonizingFlames')
+      if (af) {
+        this._agonizingFlameRadius = af.params?.dotRadius ?? 100
+      } else {
+        this._agonizingFlameRadius = 0
+      }
+    }
+    if (this._agonizingFlameRadius > 0) {
+      this._agonizingFlameTimer += dt
+      const pulse = 0.5 + 0.5 * Math.sin(this._agonizingFlameTimer * Math.PI * 2 / 1.2)
+      const borderAlpha = 0.6 + 0.4 * pulse
+      const fillAlpha   = 0.10 + 0.08 * pulse
+      const r           = this._agonizingFlameRadius
+      this._agonizingFlameGfx.clear()
+      this._agonizingFlameGfx.circle(0, 0, r)
+      this._agonizingFlameGfx.fill({ color: 0x6600cc, alpha: fillAlpha })
+      this._agonizingFlameGfx.stroke({ color: 0x9933ff, width: 2, alpha: borderAlpha })
+    } else {
+      this._agonizingFlameTimer = 0
+      this._agonizingFlameGfx.clear()
     }
 
     // Update overhead display

@@ -31,7 +31,7 @@ Phase 1:
 - Eye Beams: Illidan will periodically cast two eye beams, which damage all targets in a line for massive impact damage and then leave behind a persistent blue flame, which deals around 30 damage per second to any player standing in the flame.
 
 Phase 3:
- - Agonizing Flames: It targets a random raid member and deals 100 damage to that player and anyone within 5 yards of the primary target. It also leaves a damage over time effect on the primary target, which deals 30 damage every 5 seconds to the player and anyone within 5 yards of them and lasts 20 seconds.
+- Agonizing Flames: It targets a random raid member and deals 100 damage to that player and anyone within 5 yards of the primary target. It also leaves a damage over time effect on the primary target, which deals 30 damage every 5 seconds to the player and anyone within 5 yards of them and lasts 20 seconds.
  - Aura of Dread: When Illidan transforms into a demon, he gains the Aura of Dread. This deals 10 damage every 3 seconds to all players within 15 yards of Illidan.
  - Shadow Blast: While Illidan is in demon form, he will continuously cast this ability to a random player. This deals 120 damage to the target and everyone within 10 yards of the target.
  - Summon Shadow Demons: While Illidan is in demon form, he will sometimes cast Summon Shadow Demons. This spawns 4 Shadow Demons at Illidan's feet. Each Shadow Demon chooses a random raider and projecting a purple beam towards that player. The demon will move towards the chosen player, and if the demon reaches the player, the player instantly dies, and the demon picks a new target.

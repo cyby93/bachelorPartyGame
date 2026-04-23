@@ -37,66 +37,82 @@ const R = BALANCE.RANGED_BASE_DPS
 const X = BALANCE.ENEMY_HP_MULT
 const Y = BALANCE.ENEMY_DAMAGE_MULT
 
+export const ILLIDAN_PHASE = Object.freeze({
+  HUNT:       'hunt',        // Phase 1 — sword form, full HP → 60%
+  AZZINOTH:   'azzinoth',    // Phase 2 — airborne, immune, Flames of Azzinoth active
+  HUNT_2:     'hunt_2',      // Phase 3 — sword form again, 60% → 30%
+  DEMON_FORM: 'demon_form',  // Phase 4 — demon form grounded, 30% → death
+})
+
+const _huntAbilities = [
+  {
+    name:       'Flame Crash',
+    cooldown:   6000,
+    type:       'flameCrash',
+    castTime:   1500,
+    meleeOnly:  true,
+    damage:     Math.round(2 * Y * R),       // 80 at defaults
+    radius:     120,
+    groundFire: { radius: 80, duration: 30000, tickDamage: Math.round(0.375 * Y * R), tickRate: 500 },
+  },
+  {
+    name:          'Draw Soul',
+    cooldown:      10000,
+    type:          'drawSoul',
+    damage:        Math.round(1.25 * Y * R),  // 50 at defaults
+    coneAngle:     90,   // degrees
+    coneRange:     200,
+    healPerTarget: Math.round(10 * R),         // 100 at defaults
+  },
+  {
+    name:           'Shear',
+    cooldown:       8000,
+    type:           'shear',
+    maxHpReduction: 0.2,  // reduces effective max HP by 20%
+    duration:       3000,
+  },
+  {
+    name:          'Parasitic Shadowfiend',
+    cooldown:      14000,
+    type:          'parasiticShadowfiend',
+    dotDamage:     Math.round(0.125 * Y * R),   // 5 at defaults
+    dotInterval:   1000,
+    dotDuration:   8000,
+    spawnCount:    2,
+    shadowfiendHp: Math.round(2 * X * R),      // 100 at defaults
+  },
+]
+
 export const ILLIDAN_CONFIG = {
   ...BASE_BOSS_DEFAULTS,
   name:           'Illidan Stormrage',
   maxHp:          Math.round(2116 * R * BALANCE.RLEF),
-  speed:          0.7,
-  meleeDamage:    Math.round(2 * Y * R),      // 80 at defaults
-  attackCooldown: 3000,
+  speed:          1,
+  meleeDamage:    Math.round(1 * Y * R),      // 40 at defaults
+  attackCooldown: 2000,
   attackRange:    80,
 
   spriteType:  'illidan',
-  phaseModels: { 1: 'illidan', 2: 'illidan', 3: 'illidan_demon' },
+  phaseModels: {
+    [ILLIDAN_PHASE.HUNT]:       'illidan',
+    [ILLIDAN_PHASE.AZZINOTH]:   'illidan',
+    [ILLIDAN_PHASE.HUNT_2]:     'illidan',
+    [ILLIDAN_PHASE.DEMON_FORM]: 'illidan_demon',
+  },
 
   /**
    * Phase-keyed ability sets.
    * ServerBoss uses phaseAbilities[this.phase] instead of the flat abilities[].
    */
   phaseAbilities: {
-    // ── Phase 1: sword form — full HP down to 60% ────────────────────────
-    1: [
-      {
-        name:       'Flame Crash',
-        cooldown:   6000,
-        type:       'flameCrash',
-        castTime:   1500,
-        damage:     Math.round(2 * Y * R),       // 80 at defaults
-        radius:     120,
-        groundFire: { radius: 80, duration: 30000, tickDamage: Math.round(0.375 * Y * R), tickRate: 500 },
-      },
-      {
-        name:          'Draw Soul',
-        cooldown:      8000,
-        type:          'drawSoul',
-        damage:        Math.round(1.25 * Y * R),  // 50 at defaults
-        coneAngle:     90,   // degrees
-        coneRange:     200,
-        healPerTarget: Math.round(10 * R),         // 100 at defaults
-      },
-      {
-        name:           'Shear',
-        cooldown:       8000,
-        type:           'shear',
-        maxHpReduction: 0.6,  // reduces effective max HP by 60%
-        duration:       3000,
-      },
-      {
-        name:          'Parasitic Shadowfiend',
-        cooldown:      12000,
-        type:          'parasiticShadowfiend',
-        dotDamage:     Math.round(0.125 * Y * R),   // 5 at defaults
-        dotInterval:   1000,
-        dotDuration:   8000,
-        spawnCount:    2,
-        shadowfiendHp: Math.round(2 * X * R),      // 100 at defaults
-      },
-    ],
+    // ── Phase 1 & 3: sword form ───────────────────────────────────────────
+    [ILLIDAN_PHASE.HUNT]:   _huntAbilities,
+    [ILLIDAN_PHASE.HUNT_2]: _huntAbilities,
 
     // ── Phase 2: demon form airborne — immune, outside map ───────────────
     // Illidan hovers above the arena and bombards it until both
     // Flames of Azzinoth are destroyed.
-    2: [
+    [ILLIDAN_PHASE.AZZINOTH]: [
       {
         name:         'Fireball',
         cooldown:     4000,
@@ -123,9 +139,9 @@ export const ILLIDAN_CONFIG = {
       },
     ],
 
-    // ── Phase 3: demon form grounded — activated when both adds die ──────
-    // Illidan is stationary. He stands and casts — speed is set to 0 by GameServer.
-    3: [
+    // ── Phase 4: demon form grounded — activated when both adds die and HP ≤ 30% ──
+    // Illidan is stationary. He stands and casts — speed is set to 0.
+    [ILLIDAN_PHASE.DEMON_FORM]: [
       {
         name:         'Agonizing Flames',
         cooldown:     12000,
@@ -139,7 +155,7 @@ export const ILLIDAN_CONFIG = {
       },
       {
         name:         'Shadow Blast',
-        cooldown:     10000,
+        cooldown:     1000,
         type:         'shadowBlast',
         castTime:     2500,
         damage:       Math.round(2 * Y * R),        // 80 at defaults
@@ -172,12 +188,13 @@ export const ILLIDAN_CONFIG = {
   enrageCastSpeedMult:   BALANCE.ILLIDAN_ENRAGE_CAST_MULT,
 
   /**
-   * Phase thresholds. HP-based phases (1→2). Phase 2→3 is triggered externally
-   * when both Flame of Azzinoth adds die.
+   * HP-based phase thresholds (P1 → P2 only).
+   * P3 (hunt_2) is triggered externally when both Flames of Azzinoth die.
+   * P4 (demon_form) is triggered by IllidanEncounter when HP ≤ 30% in P3.
    */
   phases: [
-    { threshold: 1.0,  speed: 1.5 },  // Phase 1: full HP → 60%
-    { threshold: 0.60, speed: 0   },  // Phase 2: immune, teleports above the arena
+    { threshold: 1.0,  speed: 1.5, name: ILLIDAN_PHASE.HUNT },
+    { threshold: 0.60, speed: 0,   name: ILLIDAN_PHASE.AZZINOTH },
   ],
 
   /** Where Illidan teleports during Phase 2 — above the top edge. */

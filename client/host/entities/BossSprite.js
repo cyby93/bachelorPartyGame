@@ -40,6 +40,7 @@ export default class BossSprite {
     this._currentDir    = null
     this._lastRenderX   = null
     this._lastRenderY   = null
+    this._walkLinger    = 0    // seconds remaining before falling back to idle
 
     if (this._bossName === 'Shade of Akama') {
       this._buildShadeOfAkama()
@@ -155,14 +156,17 @@ export default class BossSprite {
     const moved = this._lastRenderX !== null &&
       (Math.abs(state.x - this._lastRenderX) > 0.3 ||
        Math.abs(state.y - this._lastRenderY) > 0.3)
-    const newState = moved ? 'walk' : 'idle'
+    if (moved) this._walkLinger = 0.15  // hold walk state for 150ms after last server-tick move
+    else        this._walkLinger = Math.max(0, this._walkLinger - dt)
+    this._lastRenderX = state.x
+    this._lastRenderY = state.y
+
+    const newState = this._walkLinger > 0 ? 'walk' : 'idle'
     if (newState !== this._animState) {
       this._animState = newState
       this._animFrame = 0
       this._animTimer = 0
     }
-    this._lastRenderX = state.x
-    this._lastRenderY = state.y
 
     const cfg = animCfg[this._animState] ?? animCfg.idle
     this._animTimer += dt

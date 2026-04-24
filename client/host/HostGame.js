@@ -58,6 +58,7 @@ export const DIRECTIONAL_ENEMY_ANIMATIONS = {
 export const DIRECTIONAL_BOSSES = new Set(['illidan', 'illidan_demon'])
 
 export const DIRECTIONAL_BOSS_ANIMATIONS = {
+  // transition: one-shot played during phase freeze window. Add once sprites are generated.
   illidan:       { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
   illidan_demon: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
   // Shade of Akama reuses NPC akama sprites — already loaded by DIRECTIONAL_NPC_ANIMATIONS
@@ -73,21 +74,77 @@ export const DIRECTIONAL_NPC_ANIMATIONS = {
 
 /**
  * Animation config per directional class.
- * Frames are stored at: /public/assets/sprites/{class}/{anim}/{dir}/{frameIndex}.png
- * fps controls playback speed; frames is the number of frames in the cycle.
- * Update frame counts here once ZIPs are extracted.
+ *
+ * Top-level keys (idle, walk, cast, downed) are looping or state-driven animations.
+ *   Path: /public/assets/sprites/{class}/{anim}/{dir}/{frameIndex}.png
+ *   Asset key: player_{class}_{anim}_{dir}_{frame}
+ *
+ * skills: map of per-ability fire animations (one-shot, triggered by SKILL_FIRED).
+ *   Path: /public/assets/sprites/{class}/{skillName}/{dir}/{frameIndex}.png
+ *   Asset key: player_{class}_{skillName}_{dir}_{frame}
+ *   'ability' is the generic fallback used when no skill-specific strip exists.
+ *
+ * cast: class-level looping channel animation (all casting skills share it for now).
  */
 export const DIRECTIONAL_ANIMATIONS = {
-  priest:  { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, ability: { frames: 4, fps: 12 }, cast: { frames: 6, fps: 8 }, downed: { frames: 9, fps: 10 } },
-  warrior: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 } },
-  paladin: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 } },
-  hunter:  { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 } },
-  druid:   { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 } },
-  mage:    { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 } },
-  warlock:     { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 } },
-  deathknight: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 } },
-  shaman:      { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 } },
-  rogue:       { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 } },
+  priest: {
+    idle:   { frames: 4, fps: 7  },
+    walk:   { frames: 6, fps: 10 },
+    cast:   { frames: 6, fps: 8  },
+    downed: { frames: 9, fps: 10 },
+    skills: {
+      ability: { frames: 4, fps: 12 },  // generic fallback (existing priest strip)
+      // Add skill-specific entries as sprites become available, e.g.:
+      // penance:  { frames: 4, fps: 12 },
+      // holyNova: { frames: 4, fps: 12 },
+    },
+  },
+  warrior: {
+    idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 },
+    skills: {
+      // cleave:       { frames: 5, fps: 14 },
+      // thunderstomp: { frames: 6, fps: 12 },
+    },
+  },
+  paladin: {
+    idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 },
+    skills: {},
+  },
+  hunter: {
+    idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 },
+    skills: {
+      // shootBow: { frames: 4, fps: 14 },
+    },
+  },
+  druid: {
+    idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 },
+    skills: {},
+  },
+  mage: {
+    idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 },
+    skills: {
+      // frostNova: { frames: 4, fps: 12 },
+      // fireball:  { frames: 4, fps: 12 },
+    },
+  },
+  warlock: {
+    idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 },
+    skills: {},
+  },
+  deathknight: {
+    idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 },
+    skills: {},
+  },
+  shaman: {
+    idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 },
+    skills: {
+      // totem: { frames: 5, fps: 10 },
+    },
+  },
+  rogue: {
+    idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 },
+    skills: {},
+  },
 }
 
 export default class HostGame {
@@ -354,12 +411,26 @@ export default class HostGame {
     // Load animation frames: player_{cls}_{anim}_{dir}_{frameIndex}
     for (const [cls, anims] of Object.entries(DIRECTIONAL_ANIMATIONS)) {
       for (const [animName, cfg] of Object.entries(anims)) {
+        if (animName === 'skills') continue   // handled separately below
         for (const dir of DIRECTIONS) {
           for (let i = 0; i < cfg.frames; i++) {
             manifest.push({
               alias: `player_${cls}_${animName}_${dir}_${i}`,
               src:   `/assets/sprites/${cls}/${animName}/${dir}/${i}.png`,
             })
+          }
+        }
+      }
+      // Load per-skill fire animations: player_{cls}_{skillName}_{dir}_{frameIndex}
+      if (anims.skills) {
+        for (const [skillName, cfg] of Object.entries(anims.skills)) {
+          for (const dir of DIRECTIONS) {
+            for (let i = 0; i < cfg.frames; i++) {
+              manifest.push({
+                alias: `player_${cls}_${skillName}_${dir}_${i}`,
+                src:   `/assets/sprites/${cls}/${skillName}/${dir}/${i}.png`,
+              })
+            }
           }
         }
       }

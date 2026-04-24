@@ -50,13 +50,15 @@ export default class EnemySprite {
     this._isDirectional       = DIRECTIONAL_ENEMIES.has(this.type)
     this._isDirectionalStatic = DIRECTIONAL_STATIC_ENEMIES.has(this.type)
     this._animCfg             = DIRECTIONAL_ENEMY_ANIMATIONS[this.type] ?? null
-    this._animState     = 'idle'
-    this._animFrame     = 0
-    this._lastAnimFrame = -1
-    this._animTimer     = 0
-    this._currentDir    = null
-    this._lastRenderX   = null
-    this._lastRenderY   = null
+    this._animState          = 'idle'
+    this._animFrame          = 0
+    this._lastAnimFrame      = -1
+    this._animTimer          = 0
+    this._currentDir         = null
+    this._lastRenderX        = null
+    this._lastRenderY        = null
+    this._attackTimer        = 0        // seconds remaining in one-shot attack animation
+    this._currentAttackAbility = null   // ability key being played in 'attack' state
 
     this.container = new Container()
 
@@ -197,21 +199,46 @@ export default class EnemySprite {
     if (this._isDirectional && this._animCfg) {
       const dir = angleToDir(state.angle ?? Math.PI / 2)
 
-      // Resolve animation state from position delta
+      // Trigger one-shot attack animation (one-tick signal from server)
+      if (state.attackingAbility) {
+        const cfg = this._animCfg.skills?.[state.attackingAbility] ?? this._animCfg.skills?.attack
+        if (cfg) {
+          this._currentAttackAbility = state.attackingAbility
+          this._animState  = 'attack'
+          this._animFrame  = 0
+          this._animTimer  = 0
+          this._attackTimer = cfg.frames / cfg.fps
+        }
+      }
+
+      // Resolve animation state from position delta (attack state is non-interruptible by movement)
       const moved = this._lastRenderX !== null &&
         (Math.abs(state.x - this._lastRenderX) > 0.3 ||
          Math.abs(state.y - this._lastRenderY) > 0.3)
-      const newState = moved ? 'walk' : 'idle'
-      if (newState !== this._animState) {
-        this._animState = newState
-        this._animFrame = 0
-        this._animTimer = 0
-      }
       this._lastRenderX = state.x
       this._lastRenderY = state.y
 
-      // Advance frame timer
-      const cfg = this._animCfg[this._animState] ?? this._animCfg.idle
+      if (this._animState === 'attack') {
+        this._attackTimer -= dt
+        if (this._attackTimer <= 0) {
+          this._attackTimer = 0
+          this._animState   = moved ? 'walk' : 'idle'
+          this._animFrame   = 0
+          this._animTimer   = 0
+        }
+      } else {
+        const newState = moved ? 'walk' : 'idle'
+        if (newState !== this._animState) {
+          this._animState = newState
+          this._animFrame = 0
+          this._animTimer = 0
+        }
+      }
+
+      // Advance frame timer — attack cfg lives in skills sub-map
+      const cfg = this._animState === 'attack'
+        ? (this._animCfg.skills?.[this._currentAttackAbility] ?? this._animCfg.skills?.attack ?? this._animCfg.idle)
+        : (this._animCfg[this._animState] ?? this._animCfg.idle)
       this._animTimer += dt
       if (this._animTimer >= 1 / cfg.fps) {
         this._animTimer -= 1 / cfg.fps
@@ -220,7 +247,10 @@ export default class EnemySprite {
 
       // Swap texture on direction or frame change
       if (dir !== this._currentDir || this._animFrame !== this._lastAnimFrame) {
-        const key = `enemy_${this.type}_${this._animState}_${dir}_${this._animFrame}`
+        const animNameForKey = this._animState === 'attack'
+          ? (this._currentAttackAbility ?? 'attack')
+          : this._animState
+        const key = `enemy_${this.type}_${animNameForKey}_${dir}_${this._animFrame}`
         const tex = Assets.get(key)
         if (tex) {
           this._body.texture = tex

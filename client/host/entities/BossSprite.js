@@ -32,15 +32,16 @@ export default class BossSprite {
     this._radius   = bossConfig.radius
 
     // Directional animation state
-    this._bossType      = bossConfig.spriteType ?? 'illidan'
-    this._animState     = 'idle'
-    this._animFrame     = 0
-    this._lastAnimFrame = -1
-    this._animTimer     = 0
-    this._currentDir    = null
-    this._lastRenderX   = null
-    this._lastRenderY   = null
-    this._walkLinger    = 0    // seconds remaining before falling back to idle
+    this._bossType        = bossConfig.spriteType ?? 'illidan'
+    this._animState       = 'idle'
+    this._animFrame       = 0
+    this._lastAnimFrame   = -1
+    this._animTimer       = 0
+    this._currentDir      = null
+    this._lastRenderX     = null
+    this._lastRenderY     = null
+    this._walkLinger      = 0    // seconds remaining before falling back to idle
+    this._transitionTimer = 0    // seconds remaining in one-shot phase transition animation
 
     if (this._bossName === 'Shade of Akama') {
       this._buildShadeOfAkama()
@@ -124,6 +125,22 @@ export default class BossSprite {
     }
   }
 
+  /**
+   * Trigger a one-shot phase transition animation for `freezeDuration` seconds.
+   * The boss will stay locked in the 'transition' state for that window.
+   * No-op if the current boss type has no 'transition' animation config.
+   * @param {number} freezeDuration  milliseconds (from ILLIDAN_PHASE_TRANSITION payload)
+   */
+  triggerPhaseTransition(freezeDuration) {
+    const animCfg = DIRECTIONAL_BOSS_ANIMATIONS[this._bossType]
+    if (!animCfg?.transition) return
+    this._transitionTimer = (freezeDuration ?? 3000) / 1000
+    this._animState  = 'transition'
+    this._animFrame  = 0
+    this._animTimer  = 0
+    this._currentDir = null
+  }
+
   update(state, dt = 0) {
     this.container.position.set(state.x, state.y)
 
@@ -141,7 +158,7 @@ export default class BossSprite {
       const modelForPhase = phaseModels[state.phase]
       if (modelForPhase && modelForPhase !== this._bossType) {
         this._bossType   = modelForPhase
-        this._animState  = 'idle'
+        // Don't reset animState here — triggerPhaseTransition() may have already set it
         this._animFrame  = 0
         this._animTimer  = 0
         this._currentDir = null
@@ -153,26 +170,42 @@ export default class BossSprite {
 
     const dir = angleToDir(state.angle ?? Math.PI / 2)
 
-    const moved = this._lastRenderX !== null &&
-      (Math.abs(state.x - this._lastRenderX) > 0.3 ||
-       Math.abs(state.y - this._lastRenderY) > 0.3)
-    if (moved) this._walkLinger = 0.15  // hold walk state for 150ms after last server-tick move
-    else        this._walkLinger = Math.max(0, this._walkLinger - dt)
+    // Tick transition timer — locks all other animation during phase freeze window
+    if (this._transitionTimer > 0) {
+      this._transitionTimer = Math.max(0, this._transitionTimer - dt)
+      if (this._transitionTimer === 0) {
+        this._animState  = 'idle'
+        this._animFrame  = 0
+        this._animTimer  = 0
+      }
+    }
+
+    if (this._animState !== 'transition') {
+      const moved = this._lastRenderX !== null &&
+        (Math.abs(state.x - this._lastRenderX) > 0.3 ||
+         Math.abs(state.y - this._lastRenderY) > 0.3)
+      if (moved) this._walkLinger = 0.15
+      else        this._walkLinger = Math.max(0, this._walkLinger - dt)
+
+      const newState = this._walkLinger > 0 ? 'walk' : 'idle'
+      if (newState !== this._animState) {
+        this._animState = newState
+        this._animFrame = 0
+        this._animTimer = 0
+      }
+    }
     this._lastRenderX = state.x
     this._lastRenderY = state.y
-
-    const newState = this._walkLinger > 0 ? 'walk' : 'idle'
-    if (newState !== this._animState) {
-      this._animState = newState
-      this._animFrame = 0
-      this._animTimer = 0
-    }
 
     const cfg = animCfg[this._animState] ?? animCfg.idle
     this._animTimer += dt
     if (this._animTimer >= 1 / cfg.fps) {
       this._animTimer -= 1 / cfg.fps
-      this._animFrame  = (this._animFrame + 1) % cfg.frames
+      if (this._animState === 'transition') {
+        this._animFrame = Math.min(this._animFrame + 1, cfg.frames - 1)
+      } else {
+        this._animFrame = (this._animFrame + 1) % cfg.frames
+      }
     }
 
     if (dir !== this._currentDir || this._animFrame !== this._lastAnimFrame) {

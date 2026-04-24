@@ -570,10 +570,11 @@ export default class BaseRenderer {
   onSkillFired(data) {
     this.vfx?.triggerSkillVFX(data)
 
-    // Trigger one-shot ability sprite animation on the caster
+    // Trigger one-shot ability sprite animation on the caster (skip pure cast types — cast
+    // animation is driven by castProgress in STATE_DELTA, not by SKILL_FIRED)
     if (data.type !== 'CAST') {
       const sprite = this.playerSprites?.get(data.playerId)
-      sprite?.triggerAbilityAnim()
+      sprite?.triggerAbilityAnim(data.skillName)
     }
   }
 

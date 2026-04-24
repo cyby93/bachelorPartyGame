@@ -230,6 +230,7 @@ export default class ServerPlayer {
     if (this.activeCast) {
       const elapsed = Date.now() - this.activeCast.startedAt
       delta.castProgress   = Math.min(1, elapsed / (this.activeCast.config.castTime ?? 1000))
+      delta.castSkill      = this.activeCast.config.name ?? null
       delta.isChanneling   = this.activeCast.config.type === 'CHANNEL'
       // Beam target for VFX
       if (this.activeCast.beamTargetId != null) {
@@ -237,6 +238,7 @@ export default class ServerPlayer {
       }
     } else if (this._prev._wasCasting) {
       delta.castProgress = null   // explicitly clear — tells client to hide cast bar
+      delta.castSkill    = null
       delta.isChanneling = false
       delta.beamTargetId = null   // clear beam
     }

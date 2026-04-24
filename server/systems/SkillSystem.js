@@ -1487,6 +1487,22 @@ export default class SkillSystem {
         // Non-channeled: fire when castTime expires
         if (elapsed >= (cast.effectiveCastTime ?? cast.config.castTime)) {
           this._executeCastPayload(gs, p, cast.config.payload, cast.vector)
+          // Emit SKILL_FIRED here (deferred from GameServer) so VFX fires on completion
+          if (gs.io) {
+            const color = CLASSES[p.className]?.color ?? '#ffffff'
+            gs.io.emit('skill:fired', {
+              playerId:  p.id,
+              skillName: cast.config.name,
+              type:      cast.config.type,
+              subtype:   cast.config.subtype ?? null,
+              x:         Math.round(p.x),
+              y:         Math.round(p.y),
+              angle:     Math.atan2(cast.vector.y, cast.vector.x),
+              radius:    cast.config.payload?.radius ?? cast.config.radius ?? 0,
+              range:     cast.config.range ?? 0,
+              color,
+            })
+          }
           p.activeCast = null
         }
       }

@@ -1095,6 +1095,11 @@ export default class GameServer {
     const gs = this._gs()
     this.skillSystem.execute(gs, player, config, index, vector ?? { x: 1, y: 0 }, action)
 
+    // Non-directional CAST abilities (e.g. Mass Resurrection) set activeCast here but don't
+    // fire their payload until the cast bar completes. SKILL_FIRED is deferred to _tickCasts()
+    // so VFX and sprite animations align with the actual payload execution.
+    if (config.type === 'CAST' && config.inputType !== 'DIRECTIONAL') return
+
     // Emit skill fired event for VFX
     const classColor = CLASSES[player.className]?.color ?? '#ffffff'
     const v = vector ?? { x: 1, y: 0 }

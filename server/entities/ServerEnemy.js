@@ -50,9 +50,10 @@ export default class ServerEnemy {
     this.ai = base.ai ?? 'chase'
 
     // Ranged AI
-    this._lastAttack    = 0
-    this._attackRange    = base.attackRange    ?? 300
-    this._attackCooldown = base.attackCooldown ?? 2500
+    this._lastAttack          = 0
+    this._attackRange         = base.attackRange    ?? 300
+    this._attackCooldown      = base.attackCooldown ?? 2500
+    this._pendingAttackAbility = null   // set for one tick when attack fires; drives client anim
     this._projSpeed      = base.projectileSpeed  ?? 160
     this._projDamage     = base.projectileDamage  ?? 12
 
@@ -254,6 +255,7 @@ export default class ServerEnemy {
     const now = ctx?.now ?? Date.now()
     if (dist <= this._attackRange && now - this._lastAttack >= this._attackCooldown) {
       this._lastAttack = now
+      this._pendingAttackAbility = ENEMY_TYPES[this.type]?.attackAnimKey ?? 'attack'
       const norm = Math.hypot(dx, dy) || 1
       return {
         action: 'shoot',
@@ -454,6 +456,7 @@ export default class ServerEnemy {
     const actions = []
     if (this._rangedTargets.length > 0 && now - this._lastAttack >= this._attackCooldown) {
       this._lastAttack = now
+      this._pendingAttackAbility = ENEMY_TYPES[this.type]?.attackAnimKey ?? 'attack'
       for (const target of this._rangedTargets) {
         const dx = target.x - this.x
         const dy = target.y - this.y
@@ -762,6 +765,10 @@ export default class ServerEnemy {
     if (this._berserkState === 'berserk') dto.isBerserking = true
     if (this.isFeared)                     dto.isFeared     = true
     dto.angle = this._facingAngle
+    if (this._pendingAttackAbility) {
+      dto.attackingAbility           = this._pendingAttackAbility
+      this._pendingAttackAbility     = null   // consumed — one tick only
+    }
     return dto
   }
 }

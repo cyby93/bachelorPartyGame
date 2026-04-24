@@ -79,13 +79,15 @@ export default class PlayerSprite {
     this._body.addChild(this._shapeSprite)
 
     // ── Animation state (directional classes only) ────────────────────────────
-    this._animCfg       = DIRECTIONAL_ANIMATIONS[className] ?? null
-    this._animState     = 'idle'   // 'idle' | 'walk' | 'ability' | 'cast'
-    this._animFrame     = 0
-    this._lastAnimFrame = -1       // force first-frame texture load
-    this._animTimer     = 0
-    this._lastRenderPos = null     // set on first update; used for movement detection
-    this._abilityTimer  = 0        // seconds remaining in one-shot ability animation
+    this._animCfg            = DIRECTIONAL_ANIMATIONS[className] ?? null
+    this._animState          = 'idle'   // 'idle' | 'walk' | 'ability' | 'cast' | 'downed'
+    this._animFrame          = 0
+    this._lastAnimFrame      = -1       // force first-frame texture load
+    this._animTimer          = 0
+    this._lastRenderPos      = null     // set on first update; used for movement detection
+    this._abilityTimer       = 0        // seconds remaining in one-shot ability animation
+    this._currentAbilitySkill = null    // skillName being played in 'ability' state
+    this._castSkill          = null     // skillName of the active cast (from STATE_DELTA.castSkill)
     this._wasDead       = false    // previous isDead — detects death/resurrection transitions
 
     // ── Name label ───────────────────────────────────────────────────────
@@ -222,12 +224,15 @@ export default class PlayerSprite {
   // ── Ability animation trigger ─────────────────────────────────────────────
 
   /**
-   * Play the one-shot 'ability' animation once, then return to idle/walk.
-   * No-op if the class has no 'ability' animation config.
+   * Play the one-shot fire animation for the given skill, then return to idle/walk.
+   * Resolves: skills[skillName] → skills.ability → no-op.
+   * @param {string} [skillName]
    */
-  triggerAbilityAnim() {
-    const cfg = this._animCfg?.ability
+  triggerAbilityAnim(skillName) {
+    const skills = this._animCfg?.skills
+    const cfg = skills?.[skillName] ?? skills?.ability
     if (!cfg) return
+    this._currentAbilitySkill = skillName ?? 'ability'
     this._animState    = 'ability'
     this._animFrame    = 0
     this._animTimer    = 0
@@ -267,6 +272,7 @@ export default class PlayerSprite {
            Math.abs(renderPos.y - this._lastRenderPos.y) > 0.3)
 
         const isCasting = state.castProgress != null
+        if (isCasting) this._castSkill = state.castSkill ?? null
         if (this._animState === 'downed') {
           // locked — no other state may interrupt a downed animation
         } else if (isCasting && this._animCfg?.cast) {
@@ -294,7 +300,10 @@ export default class PlayerSprite {
         }
 
         // 2. Advance frame timer
-        const cfg = this._animCfg[this._animState] ?? this._animCfg.idle
+        // For 'ability' state, cfg lives in the skills sub-map rather than at the top level.
+        const cfg = this._animState === 'ability'
+          ? (this._animCfg.skills?.[this._currentAbilitySkill] ?? this._animCfg.skills?.ability ?? this._animCfg.idle)
+          : (this._animCfg[this._animState] ?? this._animCfg.idle)
         this._animTimer += dt
         const frameDuration = 1 / cfg.fps
         if (this._animTimer >= frameDuration) {
@@ -308,12 +317,25 @@ export default class PlayerSprite {
 
         // 3. Swap texture when direction or frame changes
         if (dir !== this._currentDir || this._animFrame !== this._lastAnimFrame) {
-          const key = `player_${this._className}_${this._animState}_${dir}_${this._animFrame}`
+          // For 'ability', use the skill name as the animation folder; fall back to 'ability'.
+          const animNameForKey = this._animState === 'ability'
+            ? (this._currentAbilitySkill ?? 'ability')
+            : this._animState
+          const key = `player_${this._className}_${animNameForKey}_${dir}_${this._animFrame}`
           const tex = Assets.get(key)
           if (tex) {
             this._shapeSprite.texture = tex
+          } else if (this._animState === 'ability' && animNameForKey !== 'ability') {
+            // Skill-specific strip missing — try generic 'ability' fallback before static
+            const genericKey = `player_${this._className}_ability_${dir}_${this._animFrame}`
+            const genericTex = Assets.get(genericKey)
+            if (genericTex) {
+              this._shapeSprite.texture = genericTex
+            } else {
+              const staticTex = Assets.get(`player_${this._className}_${dir}`)
+              if (staticTex) this._shapeSprite.texture = staticTex
+            }
           } else {
-            // Animation not loaded yet — fall back to static directional sprite
             const fallback = Assets.get(`player_${this._className}_${dir}`)
             if (fallback) this._shapeSprite.texture = fallback
           }

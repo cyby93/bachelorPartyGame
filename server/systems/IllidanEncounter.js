@@ -225,7 +225,7 @@ export default class IllidanEncounter {
     this.boss.x                    = this.arenaWidth  / 2
     this.boss.y                    = this.arenaHeight / 2
 
-    this.io.emit(EVENTS.ILLIDAN_PHASE_TRANSITION, { phase: ILLIDAN_PHASE.HUNT_2 })
+    this.io.emit(EVENTS.ILLIDAN_PHASE_TRANSITION, { phase: ILLIDAN_PHASE.HUNT_2, freeze: true, freezeDuration: 2500 })
   }
 
   _onPhase4() {
@@ -239,7 +239,7 @@ export default class IllidanEncounter {
     this.boss.isImmune = false
     this.boss.speed    = 0
 
-    this.io.emit(EVENTS.ILLIDAN_PHASE_TRANSITION, { phase: ILLIDAN_PHASE.DEMON_FORM })
+    this.io.emit(EVENTS.ILLIDAN_PHASE_TRANSITION, { phase: ILLIDAN_PHASE.DEMON_FORM, freeze: true, freezeDuration: 3500 })
   }
 
   // ── Ability handler ──────────────────────────────────────────────────────────

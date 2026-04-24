@@ -1,6 +1,75 @@
 # Character Animation Pipeline
 
-Reference for downloading and extracting PixelLab character animations into the game.
+Reference for downloading, extracting, and registering PixelLab character animations into the game.
+
+---
+
+## Animation System Overview
+
+The game supports four animation categories:
+
+| Category | State name | Trigger | Config location |
+|---|---|---|---|
+| Idle | `idle` | default / standing still | top-level in `DIRECTIONAL_ANIMATIONS[class]` |
+| Walk | `walk` | position delta > 0.3px | top-level |
+| Cast | `cast` | `state.castProgress != null` (STATE_DELTA) | top-level |
+| Downed | `downed` | `state.isDead == true` | top-level |
+| Skill fire | `ability` | `SKILL_FIRED` event | `DIRECTIONAL_ANIMATIONS[class].skills[skillName]` |
+
+### Per-skill fire animations
+
+Each ability that has a distinct animation gets its own entry in the `skills` sub-map.
+Fallback chain (highest to lowest priority):
+1. `skills[skillName]` — skill-specific strip (e.g. `warrior.skills.cleave`)
+2. `skills.ability` — generic class fallback strip (folder: `ability/`)
+3. Skip animation (hold last frame) — no crash
+
+**Texture key:** `player_{class}_{skillName}_{dir}_{frame}`
+**Folder path:** `public/assets/sprites/{class}/{skillName}/{dir}/{frame}.png`
+
+`skillName` must match exactly what the server sends in `SKILL_FIRED.skillName`.
+
+Example entries to add in `DIRECTIONAL_ANIMATIONS` (`HostGame.js`):
+```js
+warrior: {
+  ...,
+  skills: {
+    cleave:       { frames: 5, fps: 14 },
+    thunderstomp: { frames: 6, fps: 12 },
+  },
+},
+priest: {
+  ...,
+  skills: {
+    ability:  { frames: 4, fps: 12 },  // generic fallback (existing strip)
+    penance:  { frames: 4, fps: 12 },
+    holyNova: { frames: 4, fps: 12 },
+  },
+},
+```
+
+### Enemy attack animations
+
+When an enemy attacks, the server sets `attackingAbility` for one tick in `STATE_DELTA`.
+The enemy's attack animation key lives in `DIRECTIONAL_ENEMY_ANIMATIONS[type].skills[abilityName]`,
+with `skills.attack` as the generic fallback.
+
+To add an attack animation for an enemy type:
+1. Add `attackAnimKey: '<name>'` to the type entry in `shared/EnemyTypeConfig.js` (defaults to `'attack'`).
+2. Add `skills: { '<name>': { frames, fps } }` to `DIRECTIONAL_ENEMY_ANIMATIONS[type]` in `HostGame.js`.
+3. Extract sprites to `public/assets/sprites/{type}/<name>/{dir}/{frame}.png`.
+
+### Boss phase transition animations
+
+When a boss transitions to a new phase with `freeze: true` in the `ILLIDAN_PHASE_TRANSITION` event,
+`BossSprite.triggerPhaseTransition(freezeDuration)` plays a one-shot `transition` animation.
+
+Texture key: `{bossType}_transition_{dir}_{frame}`
+Folder path: `public/assets/sprites/{bossType}/transition/{dir}/{frame}.png`
+Config: add `transition: { frames, fps }` to the boss entry in `DIRECTIONAL_BOSS_ANIMATIONS` (`HostGame.js`).
+
+The `freezeDuration` (ms) set in `IllidanEncounter.js` controls how long both the server immunity
+and the client animation last. Currently: HUNT_2 = 2500 ms, DEMON_FORM = 3500 ms.
 
 ---
 
@@ -34,7 +103,7 @@ Asset key format: `enemy_{typeKey}_{dir}` / `enemy_{typeKey}_{anim}_{dir}_{frame
 | `illidan_demon` | `05406bcc-df66-49d5-a4d3-c81913d3ef0d` | ✅ done (idle, walk) |
 
 Boss sprites extract to: `public/assets/sprites/{typeKey}/{dir}.png` (static rotations)
-and `public/assets/sprites/{typeKey}/{idle|walk}/{dir}/{frame}.png` (animations).
+and `public/assets/sprites/{typeKey}/{idle|walk|transition}/{dir}/{frame}.png` (animations).
 Asset key format: `{typeKey}_{dir}` / `{typeKey}_{anim}_{dir}_{frame}`.
 Registered in `DIRECTIONAL_BOSSES` and `DIRECTIONAL_BOSS_ANIMATIONS` in `HostGame.js`.
 
@@ -57,16 +126,16 @@ Registered in `DIRECTIONAL_NPCS` and `DIRECTIONAL_NPC_ANIMATIONS` in `HostGame.j
 
 | Class | PixelLab ID | Status |
 |---|---|---|
-| `priest` | `59c665b2-8bf0-4937-873e-eadea392643d` | ✅ done (idle, walk, ability_neutral, cast) |
-| `warrior` | `f7dd4422-52ad-47aa-b2fe-3f23452c3170` | ✅ done |
-| `paladin` | `d631692d-4b5f-43a7-973d-8868d7d9c590` | ✅ done |
-| `druid` | `407467d9-5767-4fe5-ba61-e8a57e2d9b6b` | ✅ done |
-| `hunter` | `0a18a9d1-6ead-4eeb-b8ca-8fa2ea0f6dd0` | ✅ done |
-| `mage` | `a6258f38-f4d3-4299-872e-20c3b47060b8` | ✅ done |
-| `warlock` | `5f01a06f-ea17-40a6-8438-85a3c5062cce` | ✅ done |
-| `deathknight` | `7de980a5-af87-4144-82fe-3e6a8753a105` | ✅ done |
+| `priest` | `59c665b2-8bf0-4937-873e-eadea392643d` | ✅ done (idle, walk, ability, cast) |
+| `warrior` | `f7dd4422-52ad-47aa-b2fe-3f23452c3170` | ✅ done (idle, walk) |
+| `paladin` | `d631692d-4b5f-43a7-973d-8868d7d9c590` | ✅ done (idle, walk) |
+| `druid` | `407467d9-5767-4fe5-ba61-e8a57e2d9b6b` | ✅ done (idle, walk) |
+| `hunter` | `0a18a9d1-6ead-4eeb-b8ca-8fa2ea0f6dd0` | ✅ done (idle, walk) |
+| `mage` | `a6258f38-f4d3-4299-872e-20c3b47060b8` | ✅ done (idle, walk) |
+| `warlock` | `5f01a06f-ea17-40a6-8438-85a3c5062cce` | ✅ done (idle, walk) |
+| `deathknight` | `7de980a5-af87-4144-82fe-3e6a8753a105` | ✅ done (idle, walk) |
 | `rogue` | `c8bdf5d0-f824-4444-aa25-8de0a276c3f0` | pending |
-| `shaman` | `b3e0d661-03e0-49d9-8604-a1ff4e1ca55e` | ✅ done |
+| `shaman` | `b3e0d661-03e0-49d9-8604-a1ff4e1ca55e` | ✅ done (idle, walk) |
 
 > Ignore: `player_priest` (3bab55e7), T6 variants, and other unnamed alternates.
 
@@ -76,26 +145,58 @@ Registered in `DIRECTIONAL_NPCS` and `DIRECTIONAL_NPC_ANIMATIONS` in `HostGame.j
 
 ```
 public/assets/sprites/{class}/
-├── {dir}.png               ← static rotation sprite (8 files)
-├── idle/
-│   └── {dir}/
-│       ├── 0.png … 3.png   ← 4 frames, 0-indexed
-├── walk/
-│   └── {dir}/
-│       ├── 0.png … 5.png   ← 6 frames, 0-indexed
-├── ability_neutral/        ← one-shot burst for instant abilities (priest only so far)
-│   └── {dir}/
-│       ├── 0.png … 3.png   ← 4 frames, 0-indexed
-└── cast/                   ← looping channel animation (priest only so far)
-    └── {dir}/
-        ├── 0.png … 5.png   ← 6 frames, 0-indexed
+├── {dir}.png                  ← static rotation sprite (8 files)
+├── idle/{dir}/0.png … 3.png   ← 4 frames, 0-indexed
+├── walk/{dir}/0.png … 5.png   ← 6 frames, 0-indexed
+├── cast/{dir}/0.png … 5.png   ← looping cast channel animation (priest only so far)
+├── downed/{dir}/0.png … 8.png ← death/downed animation
+├── ability/{dir}/0.png … N.png ← generic skill fire fallback (priest has this)
+└── {skillName}/{dir}/0.png … N.png  ← per-skill fire animation (one folder per skill)
 ```
 
 Directions: `south`, `south-east`, `east`, `north-east`, `north`, `north-west`, `west`, `south-west`
 
 ---
 
-## Step-by-Step Process
+## Adding a New Skill Fire Animation
+
+1. **Generate** the animation in PixelLab for the character. Confirm it has 8 directional strips.
+
+2. **Download and identify** the animation folder in the ZIP (same process as idle/walk).
+
+3. **Extract** to the correct path:
+```bash
+SKILL="<skillName>"   # must match SKILL_FIRED.skillName from the server exactly
+CLASS="<className>"
+ANIM_FOLDER="<folder-name-from-zip>"
+SPRITE_DIR="public/assets/sprites/$CLASS"
+DIRS="south south-east east north-east north north-west west south-west"
+
+for dir in $DIRS; do
+  mkdir -p "$SPRITE_DIR/$SKILL/$dir"
+  i=0; for f in "$SRC/animations/$ANIM_FOLDER/$dir/frame_"*.png; do
+    cp "$f" "$SPRITE_DIR/$SKILL/$dir/$i.png"; i=$((i+1))
+  done
+done
+```
+
+4. **Register** in `DIRECTIONAL_ANIMATIONS` in `client/host/HostGame.js`:
+```js
+warrior: {
+  idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 },
+  skills: {
+    cleave: { frames: 5, fps: 14 },   // ← add here
+  },
+},
+```
+
+5. **Verify** frame counts match the config entry.
+
+6. **Update** the registry table in this file.
+
+---
+
+## Adding Idle/Walk Animations (standard process)
 
 ### 1. Verify animations are ready
 
@@ -188,15 +289,20 @@ Add to `DIRECTIONAL_CLASSES` and `DIRECTIONAL_ANIMATIONS` in `client/host/HostGa
 ```js
 export const DIRECTIONAL_CLASSES = new Set(['priest', '<class>'])
 
-const DIRECTIONAL_ANIMATIONS = {
-  priest: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
-  <class>: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
-}
+// In DIRECTIONAL_ANIMATIONS, all classes follow this shape:
+<class>: {
+  idle:   { frames: 4, fps: 7  },
+  walk:   { frames: 6, fps: 10 },
+  downed: { frames: 9, fps: 10 },
+  skills: {
+    // Add per-skill fire animations here as they are generated
+  },
+},
 ```
 
 ---
 
-## Checklist (per character)
+## Checklist (per character — idle/walk)
 
 - [ ] `get_character` — confirm 16 animations (8 idle + 8 walk), all complete
 - [ ] `curl` download
@@ -205,3 +311,12 @@ const DIRECTIONAL_ANIMATIONS = {
 - [ ] Verify: idle=4, walk=6 per direction × 8 dirs
 - [ ] Update `DIRECTIONAL_CLASSES` and `DIRECTIONAL_ANIMATIONS` in `HostGame.js`
 - [ ] Update status in this file's registry table
+
+## Checklist (per skill fire animation)
+
+- [ ] Generate animation in PixelLab — confirm 8 directional strips
+- [ ] Download ZIP, identify animation folder
+- [ ] Extract to `public/assets/sprites/{class}/{skillName}/{dir}/{frame}.png`
+- [ ] Add `skills.{skillName}: { frames, fps }` to `DIRECTIONAL_ANIMATIONS[class]` in `HostGame.js`
+- [ ] Verify frame counts match config
+- [ ] Update registry table status

@@ -31,6 +31,7 @@ export const EVENTS = {
   OBJECTIVE_UPDATE:  'objective:update',  // { objectives: [{ type, current, target }] }
   COOLDOWN:            'skill:cooldown',       // { playerId, skillIndex, durationMs }
   SKILL_FIRED:         'skill:fired',          // { playerId, skillName, type, subtype, x, y, angle, radius, range, color }
+  SKILL_INTERRUPTED:   'skill:interrupted',    // { playerId } — cast/channel cancelled; client should abort cast animation immediately
   EFFECT_DAMAGE:       'effect:damage',        // { targetId, amount, type: 'damage'|'heal', sourceSkill }
   CHANNEL_INTERRUPTED: 'channel:interrupted',  // { playerId }
   TARGETED_HIT:        'targeted:hit',         // { casterX, casterY, targetX, targetY, effectType, color }
@@ -48,7 +49,7 @@ export const EVENTS = {
 
   // ── Illidan encounter (Level 5) ─────────────────────────────────────────
   ILLIDAN_DIALOG_LINE:      'illidan:dialog_line',      // S→All: { speaker, text }
-  ILLIDAN_PHASE_TRANSITION: 'illidan:phase_transition', // S→All: { phase }
+  ILLIDAN_PHASE_TRANSITION: 'illidan:phase_transition', // S→All: { phase, freeze?: bool, freezeDuration?: ms }
   ILLIDAN_AURA_PULSE:       'illidan:aura_pulse',       // S→All: { x, y, radius, color }
 
   // ── Level 2: Portal Beam Mechanic ───────────────────────────────────────

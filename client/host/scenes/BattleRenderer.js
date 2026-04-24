@@ -18,8 +18,8 @@ import { CLASSES }      from '../../../shared/ClassConfig.js'
 import BossSprite       from '../entities/BossSprite.js'
 import BaseRenderer     from './BaseRenderer.js'
 import { DIRECTIONAL_NPCS, DIRECTIONAL_NPC_ANIMATIONS } from '../HostGame.js'
-import { ILLIDAN_CONFIG }        from '../../../shared/IllidanConfig.js'
-import { SHADE_OF_AKAMA_CONFIG } from '../../../shared/ShadeOfAkamaConfig.js'
+import { ILLIDAN_CONFIG, ILLIDAN_PHASE } from '../../../shared/IllidanConfig.js'
+import { SHADE_OF_AKAMA_CONFIG }         from '../../../shared/ShadeOfAkamaConfig.js'
 
 const BOSS_CONFIG_BY_NAME = {
   [ILLIDAN_CONFIG.name]:        ILLIDAN_CONFIG,
@@ -601,13 +601,18 @@ export default class BattleRenderer extends BaseRenderer {
     }, 8000)
   }
 
-  /** Flash overlay and show phase label on Illidan phase transitions. */
-  onIllidanPhaseTransition({ phase }) {
+  /** Flash overlay, phase label, and boss transition animation on Illidan phase transitions. */
+  onIllidanPhaseTransition({ phase, freeze, freezeDuration }) {
+    // Trigger boss sprite transition animation if freeze window is provided
+    if (freeze && freezeDuration && this.bossSprite) {
+      this.bossSprite.triggerPhaseTransition(freezeDuration)
+    }
+
     if (!this._phaseFlashGfx || !this._phaseFlashText) return
 
     const labels = {
-      2: 'ILLIDAN TRANSFORMS',
-      3: 'DEMON FORM',
+      [ILLIDAN_PHASE.AZZINOTH]:   'ILLIDAN TRANSFORMS',
+      [ILLIDAN_PHASE.DEMON_FORM]: 'DEMON FORM',
     }
     const label = labels[phase]
     if (!label) return

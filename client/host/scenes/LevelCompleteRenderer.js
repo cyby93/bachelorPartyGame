@@ -59,11 +59,12 @@ export default class LevelCompleteRenderer {
     this._uiRoot.addChild(overlay)
 
     // Level complete title
-    const levelNum = (this._meta?.levelIndex ?? 0) + 1
+    const levelNum = this._meta?.levelNumber ?? ((this._meta?.levelIndex ?? 0) + 1)
     const totalLevels = this._meta?.totalLevels ?? '?'
+    const isDebugSandbox = this._meta?.debugSandbox === true
 
     const title = new Text({
-      text:  `LEVEL ${levelNum} COMPLETE!`,
+      text:  isDebugSandbox ? 'SANDBOX COMPLETE!' : `LEVEL ${levelNum} COMPLETE!`,
       style: { fontFamily: 'Arial', fontSize: 56, fontWeight: 'bold', fill: '#f1c40f', align: 'center' },
     })
     title.anchor.set(0.5)
@@ -84,7 +85,7 @@ export default class LevelCompleteRenderer {
 
     // Progress indicator
     const progress = new Text({
-      text:  `${levelNum} / ${totalLevels} levels completed`,
+      text:  isDebugSandbox ? 'Debug encounter finished' : `${levelNum} / ${totalLevels} levels completed`,
       style: { fontFamily: 'Arial', fontSize: 16, fill: '#556677', align: 'center' },
     })
     progress.anchor.set(0.5)

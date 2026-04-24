@@ -338,3 +338,21 @@ export const CAMPAIGN = [
 
   },
 ]
+
+export const DEBUG_TEST_LEVEL = {
+  id: 'debug_test_level',
+  name: 'Enemy Sandbox',
+  debugSandbox: true,
+  arena: { width: 1400, height: 900 },
+  objectives: [],
+  spawning: null,
+  difficulty: {
+    hpMult:     { base: 1.0, perPlayer: 0.05 },
+    damageMult: { base: 1.0, perPlayer: 0.05 },
+    spawnMult:  { base: 1.0, perPlayer: 0.0 },
+    countMult:  { base: 1.0, perPlayer: 0.0 },
+  },
+  boss: null,
+}
+
+export const LEVEL_SELECT_OPTIONS = [...CAMPAIGN, DEBUG_TEST_LEVEL]

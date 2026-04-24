@@ -76,13 +76,16 @@ export function buildFullState(gs) {
     // Scene and level identity
     scene:       gs.scene,
     levelIndex:  gs.currentLevelIndex,
-    totalLevels: CAMPAIGN.length,
+    levelNumber: gs.currentLevelIndex >= 0 ? gs.currentLevelIndex + 1 : null,
+    totalLevels: gs.currentLevel?.debugSandbox ? 1 : CAMPAIGN.length,
     levelName:   gs.currentLevel?.name ?? null,
+    debugSandbox: !!gs.currentLevel?.debugSandbox,
     arenaWidth:  gs.arenaWidth,
     arenaHeight: gs.arenaHeight,
     rooms:       gs.currentLevel?.arena?.rooms ?? [],
     passages:    gs.currentLevel?.arena?.passages ?? [],
     objectives:  gs.objectiveProgress,
+    mirrors:     gs.currentLevel?.mirrors ?? [],
 
     // Player and entity state
     tick:      gs.tick,

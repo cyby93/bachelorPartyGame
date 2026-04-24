@@ -134,6 +134,12 @@ Notes:
 - `host:start`
 - `host:restart`
 - `host:advance`
+- `host:setLevel`
+- `host:botAdd`
+- `host:botRemove`
+- `host:debugSetSkillTier`
+- `host:debugSpawnEnemy`
+- `host:debugClearEnemies`
 
 Producer:
 
@@ -146,6 +152,7 @@ Consumer:
 Notes:
 
 - host-only permissions are enforced on the server
+- sandbox enemy commands are accepted only while the debug sandbox level is active
 
 ---
 
@@ -165,6 +172,7 @@ Primary consumers:
 Contract notes:
 
 - the host uses `scene`, `players`, and level metadata from this payload to initialize UI and render state
+- level metadata includes `levelIndex`, `levelNumber`, `totalLevels`, `levelName`, `debugSandbox`, `rooms`, `passages`, and `mirrors`
 
 ### `state:delta`
 
@@ -190,7 +198,13 @@ Known fields currently used by the host:
   tombstones,
   stats,
   aoeZones,
-  minions
+  minions,
+  gates,
+  buildings,
+  npcs,
+  waveInfo,
+  eyeBeams,
+  illidanFireballs
 }
 ```
 
@@ -233,9 +247,12 @@ Payload:
 {
   scene,
   levelIndex,
+  levelNumber,
   totalLevels,
   levelName,
-  objectives
+  objectives,
+  debugSandbox,
+  mirrors
 }
 ```
 

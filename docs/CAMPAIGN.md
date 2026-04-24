@@ -32,6 +32,7 @@ Current implementation details:
 - progression is coordinated in `server/GameServer.js`
 - host scene changes are driven by `scene:change`
 - controller screens are also driven by `scene:change`
+- the debug-only `Enemy Sandbox` level is selectable from the host debug panel but is not part of sequential campaign progression
 
 ---
 
@@ -77,6 +78,7 @@ Current campaign entries look like:
 | `dialog` | Illidan entrance cinematic lines `[{ speaker, text, delayAfter }]` (Level 5 only) |
 | `mirrors` | Fixed waypoint positions the beam system can route through. Optional on any level. Shape: `[{ id, position: { x, y } }]` |
 | `beams` | Active beam definitions. Optional on any level. Shape: `[{ id, source: buildingId, target: buildingId, waypoints?: [mirrorId] }]` |
+| `debugSandbox` | Marks a level as debug-only and excluded from normal campaign progression |
 
 ---
 

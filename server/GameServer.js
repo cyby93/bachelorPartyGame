@@ -1,6 +1,6 @@
 import { EVENTS }          from '../shared/protocol.js'
 import { GAME_CONFIG }     from '../shared/GameConfig.js'
-import { CAMPAIGN }        from '../shared/LevelConfig.js'
+import { CAMPAIGN, DEBUG_TEST_LEVEL, LEVEL_SELECT_OPTIONS } from '../shared/LevelConfig.js'
 import { ILLIDAN_CONFIG }        from '../shared/IllidanConfig.js'
 import { SHADE_OF_AKAMA_CONFIG } from '../shared/ShadeOfAkamaConfig.js'
 import DialogSystem        from './systems/DialogSystem.js'
@@ -190,6 +190,8 @@ export default class GameServer {
     socket.on(EVENTS.BOT_ADD,              data => this._onBotAdd(socket, data))
     socket.on(EVENTS.BOT_REMOVE,           ()   => this._onBotRemove(socket))
     socket.on(EVENTS.DEBUG_SET_SKILL_TIER, data => this._onDebugSetSkillTier(socket, data))
+    socket.on(EVENTS.DEBUG_SPAWN_ENEMY,    data => this._onDebugSpawnEnemy(socket, data))
+    socket.on(EVENTS.DEBUG_CLEAR_ENEMIES,  ()   => this._onDebugClearEnemies(socket))
     socket.on(EVENTS.QUIZ_ANSWER,  data => this._onQuizAnswer(socket, data))
     socket.on(EVENTS.QUIZ_UPGRADE, data => this._onQuizUpgrade(socket, data))
     socket.on('disconnect',         ()   => this._onDisconnect(socket))
@@ -325,6 +327,58 @@ export default class GameServer {
     }
   }
 
+  _isDebugSandboxLevel(level = this.currentLevel) {
+    return level?.id === DEBUG_TEST_LEVEL.id
+  }
+
+  _emitDebugResult(message, isError = false) {
+    this.io.emit(EVENTS.DEBUG_ACTION_RESULT, { message, isError })
+  }
+
+  _getLevelBySelectionIndex(index) {
+    return LEVEL_SELECT_OPTIONS[index] ?? CAMPAIGN[0]
+  }
+
+  _onDebugSpawnEnemy(socket, data) {
+    if (!this.players.get(socket.id)?.isHost) return
+    if (!this._isDebugSandboxLevel() || (this.scene !== 'battle' && this.scene !== 'bossFight')) return
+
+    const enemyType = data?.enemyType
+    if (!ENEMY_TYPES[enemyType]) {
+      this._emitDebugResult(`Unknown enemy type: ${enemyType ?? 'none'}`, true)
+      return
+    }
+
+    const playerCount = Math.max(1, [...this.players.values()].filter(p => !p.isHost).length)
+    const sandboxSpawner = new SpawnSystem({
+      arena: this.currentLevel?.arena,
+      difficulty: this.currentLevel?.difficulty ?? {},
+      spawning: { enemyTypes: [{ type: enemyType, weight: 1 }] },
+    }, playerCount)
+    const pos = this._randomPointNearCenter(480, 320)
+    const enemy = sandboxSpawner.createEnemy(this._enemyIdSeq, enemyType, pos.x, pos.y)
+    if (!enemy) {
+      this._emitDebugResult(`Failed to spawn ${enemyType}`, true)
+      return
+    }
+
+    this.enemies.set(enemy.id, enemy)
+    this._emitDebugResult(`Spawned ${enemyType}`)
+  }
+
+  _onDebugClearEnemies(socket) {
+    if (!this.players.get(socket.id)?.isHost) return
+    if (!this._isDebugSandboxLevel() || (this.scene !== 'battle' && this.scene !== 'bossFight')) return
+
+    let removed = 0
+    this.enemies.forEach(enemy => {
+      if (enemy.isDead) return
+      enemy.isDead = true
+      removed++
+    })
+    this._emitDebugResult(removed > 0 ? `Removed ${removed} enemies` : 'No enemies to remove')
+  }
+
   _tickBotAI() {
     this._botController.update()
   }
@@ -334,10 +388,11 @@ export default class GameServer {
   _onSetLevel(socket, { levelIndex, skipDialog }) {
     if (!this.players.get(socket.id)?.isHost) return
     if (this.scene !== 'lobby') return
-    const idx = Math.max(0, Math.min(levelIndex ?? 0, CAMPAIGN.length - 1))
+    const idx = Math.max(0, Math.min(levelIndex ?? 0, LEVEL_SELECT_OPTIONS.length - 1))
+    const level = this._getLevelBySelectionIndex(idx)
     this.startingLevelIndex = idx
     if (skipDialog !== undefined) this.skipDialog = !!skipDialog
-    this.io.emit(EVENTS.SET_LEVEL, { levelIndex: idx, levelName: CAMPAIGN[idx].name, skipDialog: this.skipDialog })
+    this.io.emit(EVENTS.SET_LEVEL, { levelIndex: idx, levelName: level.name, skipDialog: this.skipDialog })
   }
 
   _onStartGame(socket) {
@@ -374,7 +429,7 @@ export default class GameServer {
     this._clearCombatState()
     this._usedQuestionIds.clear()
     this._changeScene('lobby')
-    this.io.emit(EVENTS.SET_LEVEL, { levelIndex: 0, levelName: CAMPAIGN[0].name, skipDialog: false })
+    this.io.emit(EVENTS.SET_LEVEL, { levelIndex: 0, levelName: LEVEL_SELECT_OPTIONS[0].name, skipDialog: false })
   }
 
   _onHostAdvance(socket) {
@@ -402,14 +457,23 @@ export default class GameServer {
     this.stats     = { damage: {}, heal: {}, deaths: {}, resurrections: {}, quiz: {}, kills: 0, startTime: Date.now() }
     this.levelStats = { damage: {}, heal: {}, resurrections: {}, kills: 0, startTime: Date.now() }
     this._clearCombatState()
+    const selected = this._getLevelBySelectionIndex(this.startingLevelIndex ?? 0)
+    if (selected.id === DEBUG_TEST_LEVEL.id) {
+      this._startLevel(selected)
+      return
+    }
     this._startLevel(this.startingLevelIndex ?? 0)
   }
 
-  _startLevel(index) {
-    const level = CAMPAIGN[index]
+  _startLevel(indexOrLevel) {
+    const level = typeof indexOrLevel === 'number' ? CAMPAIGN[indexOrLevel] : indexOrLevel
     if (!level) return
 
-    this.currentLevelIndex = index
+    const campaignIndex = typeof indexOrLevel === 'number' ? indexOrLevel : -1
+    const totalLevels = campaignIndex >= 0 ? CAMPAIGN.length : 1
+    const levelNumber = campaignIndex >= 0 ? campaignIndex + 1 : null
+
+    this.currentLevelIndex = campaignIndex
     this.currentLevel      = level
     this.levelStats = { damage: {}, heal: {}, resurrections: {}, kills: 0, startTime: Date.now() }
     this._setArenaSize(level.arena?.width ?? GAME_CONFIG.CANVAS_WIDTH, level.arena?.height ?? GAME_CONFIG.CANVAS_HEIGHT)
@@ -525,6 +589,8 @@ export default class GameServer {
           x: wx,
           y: wy,
           type: 'warlock',
+          renderType: 'ritualChanneler',
+          forcedAnimation: 'channel',
           hp: Math.round(base.hp * hpMult),
           maxHp: Math.round(base.hp * hpMult),
           speed: base.speed,
@@ -618,13 +684,14 @@ export default class GameServer {
     this._levelStartTime = Date.now()
     this._initObjectiveProgress()
 
-    console.log(`[~] Level ${index + 1}/${CAMPAIGN.length}: ${level.name}`)
+    console.log(`[~] ${level.debugSandbox ? 'Debug Sandbox' : `Level ${campaignIndex + 1}/${CAMPAIGN.length}`}: ${level.name}`)
 
     // Determine scene type for the renderer
     const scene = level.boss ? 'bossFight' : 'battle'
     this._changeScene(scene, {
-      levelIndex:  index,
-      totalLevels: CAMPAIGN.length,
+      levelIndex:  campaignIndex,
+      levelNumber,
+      totalLevels,
       levelName:   level.name,
       arenaWidth:  this.arenaWidth,
       arenaHeight: this.arenaHeight,
@@ -635,6 +702,7 @@ export default class GameServer {
       rooms:       level.arena?.rooms ?? [],
       passages:    level.arena?.passages ?? [],
       mirrors:     level.mirrors ?? [],
+      debugSandbox: !!level.debugSandbox,
     })
   }
 
@@ -1628,6 +1696,7 @@ export default class GameServer {
 
   _updateObjectives(now) {
     if (!this.currentLevel) return
+    if (this.currentLevel.debugSandbox || this.objectiveProgress.length === 0) return
 
     let allComplete = true
     let npcDied = false
@@ -1727,6 +1796,11 @@ export default class GameServer {
 
   _onLevelComplete() {
     const levelIndex = this.currentLevelIndex
+    if (this.currentLevel?.debugSandbox) {
+      this._showLevelComplete()
+      return
+    }
+
     const isLastLevel = levelIndex >= CAMPAIGN.length - 1
 
     console.log(`[~] Level ${levelIndex + 1} complete! ${isLastLevel ? '(final)' : ''}`)
@@ -1746,9 +1820,11 @@ export default class GameServer {
   _showLevelComplete() {
     this._changeScene('levelComplete', {
       levelIndex: this.currentLevelIndex,
+      levelNumber: this.currentLevelIndex >= 0 ? this.currentLevelIndex + 1 : null,
       levelName: this.currentLevel?.name ?? '',
-      totalLevels: CAMPAIGN.length,
+      totalLevels: this.currentLevel?.debugSandbox ? 1 : CAMPAIGN.length,
       stats: { ...this.levelStats },
+      debugSandbox: !!this.currentLevel?.debugSandbox,
     })
   }
 
@@ -1772,11 +1848,12 @@ export default class GameServer {
     this._quizUpgradesDone.clear()
     this._quizPhase = 'answering'
 
-    this._changeScene('quiz', {
-      levelIndex: this.currentLevelIndex,
-      levelName: this.currentLevel?.name ?? '',
-      totalLevels: CAMPAIGN.length,
-    })
+      this._changeScene('quiz', {
+        levelIndex: this.currentLevelIndex,
+        levelNumber: this.currentLevelIndex + 1,
+        levelName: this.currentLevel?.name ?? '',
+        totalLevels: CAMPAIGN.length,
+      })
 
     // Send question to all (without correctIndex)
     this.io.emit(EVENTS.QUIZ_QUESTION, {

@@ -298,6 +298,8 @@ export default class SpawnSystem {
       x,
       y,
       type:          typeName,
+      renderType:    overrides.renderType ?? null,
+      forcedAnimation: overrides.forcedAnimation ?? null,
       hp,
       maxHp:         hp,
       speed,

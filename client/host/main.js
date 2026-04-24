@@ -11,7 +11,7 @@
 import { io }         from 'socket.io-client'
 import { EVENTS }     from '../../shared/protocol.js'
 import { CLASSES }    from '../../shared/ClassConfig.js'
-import { CAMPAIGN }   from '../../shared/LevelConfig.js'
+import { LEVEL_SELECT_OPTIONS } from '../../shared/LevelConfig.js'
 import HostGame       from './HostGame.js'
 import AudioSystem    from './systems/AudioSystem.js'
 
@@ -45,6 +45,16 @@ const sidebar        = document.getElementById('sidebar')
 const debugToggleBtn = document.getElementById('debug-toggle')
 const upgradeSliders = document.querySelectorAll('.upgrade-slider')
 const upgradeResetBtn = document.getElementById('upgrade-reset-btn')
+const sandboxOverlayEl = document.getElementById('sandbox-overlay')
+const sandboxActionsEl = document.getElementById('sandbox-overlay-actions')
+const sandboxStatusEl = document.getElementById('sandbox-overlay-status')
+
+const SANDBOX_ENEMY_ACTIONS = [
+  { label: 'Add Felguard', enemyType: 'felGuard' },
+  { label: 'Add Harpooner', enemyType: 'coilskarHarpooner' },
+  { label: 'Add Brute', enemyType: 'bonechewerBrute' },
+  { label: 'Add Mystic', enemyType: 'ashtonghueMystic' },
+]
 
 botAddBtn?.addEventListener('click', () => socket.emit(EVENTS.BOT_ADD, {}))
 botRemoveBtn?.addEventListener('click', () => socket.emit(EVENTS.BOT_REMOVE))
@@ -152,8 +162,44 @@ document.addEventListener('fullscreenchange', () => {
 let selectedLevel = 0
 let currentLevelMeta = null
 
+function isSandboxSelection(index = selectedLevel) {
+  return LEVEL_SELECT_OPTIONS[index]?.debugSandbox === true
+}
+
+function renderSandboxPanel() {
+  if (!sandboxOverlayEl || !sandboxActionsEl) return
+
+  const scene = startBtn.dataset.scene ?? game.knownState.scene ?? 'lobby'
+  const activeSandbox = currentLevelMeta?.debugSandbox === true && (scene === 'battle' || scene === 'bossFight')
+
+  sandboxOverlayEl.hidden = !activeSandbox
+  if (!activeSandbox) return
+
+  sandboxActionsEl.innerHTML = SANDBOX_ENEMY_ACTIONS.map(action => (
+    `<button class="debug-btn" data-enemy-type="${action.enemyType}">${action.label}</button>`
+  )).join('')
+
+  sandboxActionsEl.querySelectorAll('[data-enemy-type]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      socket.emit(EVENTS.DEBUG_SPAWN_ENEMY, { enemyType: btn.dataset.enemyType })
+    })
+  })
+
+  const clearBtn = document.getElementById('sandbox-overlay-clear-btn')
+  if (clearBtn) clearBtn.disabled = false
+
+  if (sandboxStatusEl && !sandboxStatusEl.textContent) {
+    sandboxStatusEl.textContent = 'Sandbox controls ready.'
+    sandboxStatusEl.dataset.error = 'false'
+  }
+}
+
 function updateLevelDisplay() {
-  if (selectedLevelNameEl) selectedLevelNameEl.textContent = `Level ${selectedLevel + 1}: ${CAMPAIGN[selectedLevel]?.name ?? '?'}`
+  const label = isSandboxSelection()
+    ? `Debug: ${LEVEL_SELECT_OPTIONS[selectedLevel]?.name ?? '?'}`
+    : `Level ${selectedLevel + 1}: ${LEVEL_SELECT_OPTIONS[selectedLevel]?.name ?? '?'}`
+  if (selectedLevelNameEl) selectedLevelNameEl.textContent = label
+  renderSandboxPanel()
 }
 
 function emitSetLevel() {
@@ -166,12 +212,16 @@ prevLevelBtn?.addEventListener('click', () => {
   emitSetLevel()
 })
 nextLevelBtn?.addEventListener('click', () => {
-  selectedLevel = Math.min(CAMPAIGN.length - 1, selectedLevel + 1)
+  selectedLevel = Math.min(LEVEL_SELECT_OPTIONS.length - 1, selectedLevel + 1)
   updateLevelDisplay()
   emitSetLevel()
 })
 skipDialogChk?.addEventListener('change', () => {
   emitSetLevel()
+})
+
+document.getElementById('sandbox-overlay-clear-btn')?.addEventListener('click', () => {
+  socket.emit(EVENTS.DEBUG_CLEAR_ENEMIES)
 })
 
 // ── DOM helpers ────────────────────────────────────────────────────────────
@@ -322,12 +372,17 @@ function renderLevelPanel(scene, meta, objectives = meta?.objectives) {
   const isCombatScene = scene === 'battle' || scene === 'bossFight'
   if (!isCombatScene) {
     clearLevelPanel()
+    renderSandboxPanel()
     return
   }
 
   const summary = formatObjective(objectives?.[0] ?? null, game.knownState)
   if (levelPanelEl) levelPanelEl.hidden = false
-  if (gameplayLevelIndexEl) gameplayLevelIndexEl.textContent = `Level ${(meta?.levelIndex ?? 0) + 1} / ${meta?.totalLevels ?? '?'}`
+  if (gameplayLevelIndexEl) {
+    gameplayLevelIndexEl.textContent = meta?.debugSandbox
+      ? 'Debug Sandbox'
+      : `Level ${meta?.levelNumber ?? ((meta?.levelIndex ?? 0) + 1)} / ${meta?.totalLevels ?? '?'}`
+  }
   if (gameplayLevelNameEl) gameplayLevelNameEl.textContent = meta?.levelName ?? 'Current level'
   if (objectiveLabelEl) objectiveLabelEl.textContent = summary.label || 'Current objective'
   if (objectiveValueEl) objectiveValueEl.textContent = summary.value || 'In progress'
@@ -345,6 +400,8 @@ function renderLevelPanel(scene, meta, objectives = meta?.objectives) {
       shadeBuffCardEl.hidden = true
     }
   }
+
+  renderSandboxPanel()
 }
 
 function setSceneControls(scene) {
@@ -423,22 +480,26 @@ socket.on('disconnect', () => {
 socket.on(EVENTS.INIT, state => {
   game.receiveFullState(state)
   const scene = state.scene ?? 'lobby'
-  const meta = {
-    levelIndex: state.levelIndex,
-    totalLevels: state.totalLevels,
-    levelName: state.levelName,
-    objectives: state.objectives,
-    arenaWidth: state.arenaWidth,
-    arenaHeight: state.arenaHeight,
-    rooms: state.rooms,
-    passages: state.passages,
-  }
+    const meta = {
+      levelIndex: state.levelIndex,
+      levelNumber: state.levelNumber,
+      totalLevels: state.totalLevels,
+      levelName: state.levelName,
+      debugSandbox: state.debugSandbox,
+      objectives: state.objectives,
+      arenaWidth: state.arenaWidth,
+      arenaHeight: state.arenaHeight,
+      rooms: state.rooms,
+      passages: state.passages,
+      mirrors: state.mirrors,
+    }
   game.switchScene(scene, meta)
   currentLevelMeta = meta
   setSceneControls(scene)
   renderLevelPanel(scene, meta)
   renderDOMPlayerList()
   renderGameplaySidebar()
+  renderSandboxPanel()
 })
 
 socket.on(EVENTS.PLAYER_JOINED, player => {
@@ -459,6 +520,7 @@ socket.on(EVENTS.STATE_DELTA, delta => {
   const after  = Object.keys(game.knownState.players).length
   if (after !== before) renderDOMPlayerList()
   renderGameplaySidebar()
+  renderSandboxPanel()
 
   // Update shade buff card live during Level 4 Phase 1
   if (shadeBuffCardEl && !shadeBuffCardEl.hidden) {
@@ -481,6 +543,7 @@ socket.on(EVENTS.SCENE_CHANGE, (data) => {
   setSceneControls(scene)
   renderLevelPanel(scene, meta)
   renderGameplaySidebar()
+  renderSandboxPanel()
 
   if (scene === 'battle' || scene === 'bossFight') audio.playTransition()
   else if (scene === 'result')  audio.playVictory()
@@ -496,6 +559,12 @@ socket.on(EVENTS.SET_LEVEL, ({ levelIndex, levelName, skipDialog }) => {
   selectedLevel = levelIndex
   updateLevelDisplay()
   if (skipDialogChk && skipDialog !== undefined) skipDialogChk.checked = skipDialog
+})
+
+socket.on(EVENTS.DEBUG_ACTION_RESULT, ({ message, isError }) => {
+  if (!sandboxStatusEl) return
+  sandboxStatusEl.textContent = message ?? ''
+  sandboxStatusEl.dataset.error = isError ? 'true' : 'false'
 })
 
 // ── VFX events ───────────────────────────────────────────────────────────

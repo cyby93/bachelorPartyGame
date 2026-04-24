@@ -105,7 +105,7 @@
 
     socket.on(EVENTS.SCENE_CHANGE, data => {
       if (!validate(EVENTS.SCENE_CHANGE, data, ['scene'])) return
-      const { scene, levelName, levelIndex, totalLevels } = data
+      const { scene, levelName, levelIndex, levelNumber, totalLevels, debugSandbox } = data
       if (scene === 'battle' || scene === 'bossFight') {
         screen = 'game'
         overlayScreen = null
@@ -121,7 +121,7 @@
         overlayData = null
       } else if (scene === 'levelComplete') {
         screen = 'levelComplete'
-        endMessage = `Level ${(levelIndex ?? 0) + 1} complete!`
+        endMessage = debugSandbox ? 'Debug sandbox complete!' : `Level ${levelNumber ?? ((levelIndex ?? 0) + 1)} complete!`
         overlayScreen = null
         overlayData = null
       } else if (scene === 'result') {

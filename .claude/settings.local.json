@@ -84,7 +84,8 @@
       "Bash(mkdir -p /tmp/warlock_extract)",
       "Bash(unzip -o /tmp/warlock_model.zip -d /tmp/warlock_extract)",
       "Bash(unzip -l /tmp/illidan_demon_model.zip)",
-      "Bash(awk -F/ '{print $2\"/\"$3}')"
+      "Bash(awk -F/ '{print $2\"/\"$3}')",
+      "Bash(unzip -l /tmp/ritualChanneler_model.zip)"
     ]
   },
   "enableAllProjectMcpServers": true,

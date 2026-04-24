@@ -11,13 +11,15 @@ import { GAME_CONFIG }   from '../../shared/GameConfig.js'
 import { ENEMY_TYPES }   from '../../shared/EnemyTypeConfig.js'
 
 export default class ServerEnemy {
-  constructor({ id, x, y, type = 'felGuard', hp, maxHp, speed, radius, contactDamage, generation }) {
+  constructor({ id, x, y, type = 'felGuard', hp, maxHp, speed, radius, contactDamage, generation, renderType = null, forcedAnimation = null }) {
     const base = ENEMY_TYPES[type] ?? ENEMY_TYPES.felGuard
 
     this.id            = id
     this.x             = x
     this.y             = y
     this.type          = type
+    this.renderType    = renderType
+    this.forcedAnimation = forcedAnimation
     this.hp            = hp    ?? base.hp
     this.maxHp         = maxHp ?? base.hp
     this.radius        = radius ?? base.radius
@@ -759,6 +761,8 @@ export default class ServerEnemy {
       maxHp: this.maxHp,
       type:  this.type,
     }
+    if (this.renderType) dto.renderType = this.renderType
+    if (this.forcedAnimation) dto.forcedAnimation = this.forcedAnimation
     if (this.generation > 0)        dto.generation   = this.generation
     if (this._isRepairing)          dto.isRepairing  = true
     if (this._shieldActive)         dto.shieldAngle  = this._shieldAngle

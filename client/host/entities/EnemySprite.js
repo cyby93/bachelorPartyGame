@@ -39,6 +39,7 @@ export default class EnemySprite {
   constructor(data) {
     this.id   = data.id
     this.type = data.type ?? 'felGuard'
+    this.renderType = data.renderType ?? this.type
 
     const typeCfg     = ENEMY_TYPES[this.type] ?? ENEMY_TYPES.felGuard
     const R           = typeCfg.radius    ?? DEFAULT_R
@@ -47,9 +48,9 @@ export default class EnemySprite {
     const D           = displaySize / 2
     const color       = typeCfg.color ?? '#c0392b'
 
-    this._isDirectional       = DIRECTIONAL_ENEMIES.has(this.type)
-    this._isDirectionalStatic = DIRECTIONAL_STATIC_ENEMIES.has(this.type)
-    this._animCfg             = DIRECTIONAL_ENEMY_ANIMATIONS[this.type] ?? null
+    this._isDirectional       = DIRECTIONAL_ENEMIES.has(this.renderType)
+    this._isDirectionalStatic = DIRECTIONAL_STATIC_ENEMIES.has(this.renderType)
+    this._animCfg             = DIRECTIONAL_ENEMY_ANIMATIONS[this.renderType] ?? null
     this._animState          = 'idle'
     this._animFrame          = 0
     this._lastAnimFrame      = -1
@@ -59,15 +60,16 @@ export default class EnemySprite {
     this._lastRenderY        = null
     this._attackTimer        = 0        // seconds remaining in one-shot attack animation
     this._currentAttackAbility = null   // ability key being played in 'attack' state
+    this._forcedAnimation    = data.forcedAnimation ?? null
 
     this.container = new Container()
 
     // Body sprite
     let initialTex
     if (this._isDirectional || this._isDirectionalStatic) {
-      initialTex = Assets.get(`enemy_${this.type}_south`) ?? Assets.get(STATIC_SPRITE_KEY[this.type] ?? `enemy_felguard_south`)
+      initialTex = Assets.get(`enemy_${this.renderType}_south`) ?? Assets.get(STATIC_SPRITE_KEY[this.renderType] ?? `enemy_felguard_south`)
     } else {
-      initialTex = Assets.get(STATIC_SPRITE_KEY[this.type] ?? `enemy_felguard_south`)
+      initialTex = Assets.get(STATIC_SPRITE_KEY[this.renderType] ?? `enemy_felguard_south`)
     }
     this._body = new Sprite(initialTex)
     this._body.anchor.set(0.5)
@@ -144,10 +146,10 @@ export default class EnemySprite {
 
     if (GAME_CONFIG.DEBUG_HITBOXES) {
       const hb = new Graphics()
-      if (typeCfg.hitboxShape === 'oval') {
-        hb.ellipse(0, 0, R / 2, R)
-      } else {
+      if (typeCfg.hitboxShape === 'circle') {
         hb.circle(0, 0, R)
+      } else {
+        hb.ellipse(0, 0, R / 2, R)
       }
       hb.stroke({ color: 0xff00ff, width: 1.5, alpha: 0.9 })
       this.container.addChild(hb)
@@ -194,6 +196,7 @@ export default class EnemySprite {
   update(state, dt = 0) {
     this.container.position.set(state.x, state.y)
     if (state.hp != null) this._updateHpBar(state.hp)
+    this._forcedAnimation = state.forcedAnimation ?? this._forcedAnimation
 
     // Directional + animated sprites
     if (this._isDirectional && this._animCfg) {
@@ -218,7 +221,13 @@ export default class EnemySprite {
       this._lastRenderX = state.x
       this._lastRenderY = state.y
 
-      if (this._animState === 'attack') {
+      if (this._forcedAnimation && this._animCfg[this._forcedAnimation]) {
+        if (this._animState !== this._forcedAnimation) {
+          this._animState = this._forcedAnimation
+          this._animFrame = 0
+          this._animTimer = 0
+        }
+      } else if (this._animState === 'attack') {
         this._attackTimer -= dt
         if (this._attackTimer <= 0) {
           this._attackTimer = 0
@@ -250,12 +259,12 @@ export default class EnemySprite {
         const animNameForKey = this._animState === 'attack'
           ? (this._currentAttackAbility ?? 'attack')
           : this._animState
-        const key = `enemy_${this.type}_${animNameForKey}_${dir}_${this._animFrame}`
+        const key = `enemy_${this.renderType}_${animNameForKey}_${dir}_${this._animFrame}`
         const tex = Assets.get(key)
         if (tex) {
           this._body.texture = tex
         } else {
-          const fallback = Assets.get(`enemy_${this.type}_${dir}`)
+          const fallback = Assets.get(`enemy_${this.renderType}_${dir}`)
           if (fallback) this._body.texture = fallback
         }
         this._currentDir    = dir
@@ -267,7 +276,7 @@ export default class EnemySprite {
     if (this._isDirectionalStatic) {
       const dir = angleToDir(state.angle ?? Math.PI / 2)
       if (dir !== this._currentDir) {
-        const tex = Assets.get(`enemy_${this.type}_${dir}`)
+        const tex = Assets.get(`enemy_${this.renderType}_${dir}`)
         if (tex) this._body.texture = tex
         this._currentDir = dir
       }

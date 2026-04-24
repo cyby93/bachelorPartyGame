@@ -4,18 +4,17 @@
  *
  * Every cycleMs:
  *  - Two random alive buildings are selected as beam endpoints.
- *  - A random mirror is chosen as the relay point.
+ *  - Two random mirrors are chosen as relay points.
  *  - A warningMs-long warning phase emits PORTAL_BEAM_WARNING to clients.
  *  - A damageMs-long damage phase emits PORTAL_BEAM_DAMAGE and hurts players
- *    inside either beam rectangle (building1→mirror, mirror→building2).
+ *    inside any beam rectangle along the routed path.
  *
  * Emit contract (for Thrall's renderer):
- *   PORTAL_BEAM_WARNING  { beamId, seg1: {x1,y1,x2,y2}, seg2: {x1,y1,x2,y2}, warningMs }
- *   PORTAL_BEAM_DAMAGE   { beamId, seg1: {x1,y1,x2,y2}, seg2: {x1,y1,x2,y2}, damageMs }
+ *   PORTAL_BEAM_WARNING  { beamId, points: [{x,y}], warningMs }
+ *   PORTAL_BEAM_DAMAGE   { beamId, points: [{x,y}], damageMs }
  *   PORTAL_BEAM_END      { beamId }
  */
 
-import { GAME_CONFIG } from '../../shared/GameConfig.js'
 import { EVENTS }      from '../../shared/protocol.js'
 
 export default class PortalBeamSystem {
@@ -40,7 +39,7 @@ export default class PortalBeamSystem {
     this._lastCycleStart = Date.now()
     this._phase     = 'idle'   // 'idle' | 'warning' | 'active'
     this._beamSeq   = 0
-    this._activeBeam = null    // { beamId, seg1, seg2, phaseStarted }
+    this._activeBeam = null    // { beamId, points, segments, phaseStarted }
     this._lastDamageTick = 0
   }
 
@@ -96,7 +95,7 @@ export default class PortalBeamSystem {
     // Collect alive buildings
     const alive = []
     buildings.forEach(b => { if (!b.isDead) alive.push(b) })
-    if (alive.length < 2 || this.mirrors.length === 0) {
+    if (alive.length < 2 || this.mirrors.length < 2) {
       // Not enough targets — reset timer and skip
       this._lastCycleStart = now
       return
@@ -111,10 +110,14 @@ export default class PortalBeamSystem {
     const b1 = shuffle[0]
     const b2 = shuffle[1]
 
-    // Pick a random mirror
-    const mirror = this.mirrors[Math.floor(Math.random() * this.mirrors.length)]
-    const mx = mirror.position.x
-    const my = mirror.position.y
+    // Pick two distinct random mirrors
+    const mirrorPool = [...this.mirrors]
+    for (let i = mirrorPool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[mirrorPool[i], mirrorPool[j]] = [mirrorPool[j], mirrorPool[i]]
+    }
+    const mirrorA = mirrorPool[0]
+    const mirrorB = mirrorPool[1]
 
     // Building center positions
     const b1cx = b1.x + (b1.width  ?? 60) / 2
@@ -123,13 +126,26 @@ export default class PortalBeamSystem {
     const b2cy = b2.y + (b2.height ?? 60) / 2
 
     const beamId = ++this._beamSeq
-    const seg1 = { x1: b1cx, y1: b1cy, x2: mx, y2: my }
-    const seg2 = { x1: mx,   y1: my,   x2: b2cx, y2: b2cy }
+    const points = [
+      { x: b1cx, y: b1cy },
+      { x: mirrorA.position.x, y: mirrorA.position.y },
+      { x: mirrorB.position.x, y: mirrorB.position.y },
+      { x: b2cx, y: b2cy },
+    ]
+    const segments = []
+    for (let i = 0; i < points.length - 1; i++) {
+      segments.push({
+        x1: points[i].x,
+        y1: points[i].y,
+        x2: points[i + 1].x,
+        y2: points[i + 1].y,
+      })
+    }
 
-    this._activeBeam = { beamId, seg1, seg2, phaseStarted: now }
+    this._activeBeam = { beamId, points, segments, phaseStarted: now }
     this._phase = 'warning'
 
-    emitFn(EVENTS.PORTAL_BEAM_WARNING, { beamId, seg1, seg2, warningMs: this._warningMs })
+    emitFn(EVENTS.PORTAL_BEAM_WARNING, { beamId, points, warningMs: this._warningMs })
   }
 
   _startDamage(now, emitFn) {
@@ -139,21 +155,19 @@ export default class PortalBeamSystem {
 
     emitFn(EVENTS.PORTAL_BEAM_DAMAGE, {
       beamId:   this._activeBeam.beamId,
-      seg1:     this._activeBeam.seg1,
-      seg2:     this._activeBeam.seg2,
+      points:   this._activeBeam.points,
       damageMs: this._damageMs,
     })
   }
 
   _hitPlayers(players, dmg, dealDmgFn) {
     if (!this._activeBeam) return
-    const { seg1, seg2 } = this._activeBeam
+    const { segments } = this._activeBeam
     const hw = this._beamWidth / 2
 
     players.forEach(p => {
       if (p.isDead || p.isHost) return
-      if (this._pointNearSegment(p.x, p.y, seg1.x1, seg1.y1, seg1.x2, seg1.y2, hw) ||
-          this._pointNearSegment(p.x, p.y, seg2.x1, seg2.y1, seg2.x2, seg2.y2, hw)) {
+      if (segments.some(seg => this._pointNearSegment(p.x, p.y, seg.x1, seg.y1, seg.x2, seg.y2, hw))) {
         dealDmgFn(p, dmg)
       }
     })

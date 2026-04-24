@@ -5,12 +5,16 @@
  *
  * Structure:
  *   container  (positioned at player world coords, NOT rotated)
- *   ├── body       (child Container — rotated for non-directional classes only)
- *   │   └── shapeSprite  (class sprite; texture swapped per direction for directional classes)
- *   ├── aimArrow   (child Graphics — rotated to player.aimAngle)
- *   ├── nameText   (above shape, always upright)
- *   ├── hpBarBg    (background bar, drawn once)
- *   └── hpBarFill  (filled portion, redrawn on HP change)
+ *   ├── body           (child Container — rotated for non-directional classes only)
+ *   │   ├── shapeSprite  (class sprite; texture swapped per direction for directional classes)
+ *   │   └── flashGfx
+ *   ├── shieldGfx
+ *   ├── aimArrow       (child Graphics — rotated to player.aimAngle)
+ *   └── statusEffects  (child Container — move this to reposition all overhead UI together)
+ *       ├── nameText   (above shape, always upright)
+ *       ├── hpBarBg    (background bar, drawn once)
+ *       ├── hpBarFill  (filled portion, redrawn on HP change)
+ *       └── [OverheadDisplay._container]  (cast bar, status icons, combo pips)
  */
 
 import { Container, Graphics, Text, Sprite, Assets } from 'pixi.js'
@@ -58,6 +62,9 @@ export default class PlayerSprite {
     this._body     = new Container()   // rotated child
     this.container.addChild(this._body)
 
+    this._statusEffects = new Container()
+    this.container.addChild(this._statusEffects)
+
     // ── Shape sprite ─────────────────────────────────────────────────────────
     const className = (data.className ?? 'Warrior').toLowerCase()
     this._isDirectional = DIRECTIONAL_CLASSES.has(className)
@@ -96,8 +103,8 @@ export default class PlayerSprite {
       style: { fontFamily: 'Arial', fontSize: 12, fontWeight: 'bold', fill: '#ffffff', align: 'center' },
     })
     this._nameText.anchor.set(0.5, 1)
-    this._nameText.position.set(0, -SPRITE_H - 5)
-    this.container.addChild(this._nameText)
+    this._nameText.position.set(0, -SPRITE_H + 15)
+    this._statusEffects.addChild(this._nameText)
 
     // ── HP bar ────────────────────────────────────────────────────────────
     this._hpBg   = new Graphics()
@@ -107,12 +114,12 @@ export default class PlayerSprite {
     this._hpBg.rect(-BAR_W / 2, 0, BAR_W, BAR_H)
     this._hpBg.fill('#1a1a1a')
     this._hpBg.stroke({ color: '#ffffff', width: 0.5, alpha: 0.25 })
-    this._hpBg.position.set(0, -SPRITE_H - 18)
+    this._hpBg.position.set(0, -SPRITE_H - 12)
 
-    this._hpFill.position.set(0, -SPRITE_H - 18)
+    this._hpFill.position.set(0, -SPRITE_H - 12)
 
-    this.container.addChild(this._hpBg)
-    this.container.addChild(this._hpFill)
+    this._statusEffects.addChild(this._hpBg)
+    this._statusEffects.addChild(this._hpFill)
 
     this._maxHp        = data.maxHp ?? this._classData.hp
     this._lastHp       = -1   // force first draw
@@ -141,8 +148,8 @@ export default class PlayerSprite {
     this._aimPulse = 0
 
     // ── Overhead display (cast bar + status icons + combo pips for Rogue) ─────
-    this.overhead = new OverheadDisplay(this.container, {
-      yOffset: -SPRITE_H - 18,
+    this.overhead = new OverheadDisplay(this._statusEffects, {
+      yOffset: -SPRITE_H - 16,
       showCastBar: true,
       showStatusIcons: true,
       showComboPips: className === 'rogue',

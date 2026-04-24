@@ -20,6 +20,8 @@ export const EVENTS = {
   BOT_ADD:       'host:botAdd',     // { className? } — undefined = random class
   BOT_REMOVE:    'host:botRemove',  // remove all bots
   DEBUG_SET_SKILL_TIER: 'host:debugSetSkillTier', // { skillIndex: 0-3, tier: 0-3 } — debug: set all players' upgrade tier
+  DEBUG_SPAWN_ENEMY: 'host:debugSpawnEnemy', // { enemyType } — sandbox-only: spawn one enemy archetype
+  DEBUG_CLEAR_ENEMIES: 'host:debugClearEnemies', // {} — sandbox-only: remove all active enemies
 
   // ── Server → All Clients ─────────────────────────────────────────────────
   INIT:          'game:init',       // full state snapshot sent on join
@@ -56,4 +58,6 @@ export const EVENTS = {
   PORTAL_BEAM_WARNING: 'portal:beam_warning', // S→All: { beamId, points: [{x,y}] } — 3s warning phase
   PORTAL_BEAM_DAMAGE:  'portal:beam_damage',  // S→All: { beamId, points: [{x,y}] } — active damage phase
   PORTAL_BEAM_END:     'portal:beam_end',     // S→All: { beamId }
+
+  DEBUG_ACTION_RESULT: 'debug:action_result', // S→Host: { message, isError? }
 }

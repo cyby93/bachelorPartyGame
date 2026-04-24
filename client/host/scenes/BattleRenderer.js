@@ -650,31 +650,20 @@ export default class BattleRenderer extends BaseRenderer {
 
   // ── Portal Beam rendering (Level 2) ──────────────────────────────────────
 
-  /** Convert seg1/seg2 payload into the {x,y}[] polyline used by the renderer. */
-  _beamSegToPoints(seg1, seg2) {
-    return [
-      { x: seg1.x1, y: seg1.y1 },  // building1
-      { x: seg1.x2, y: seg1.y2 },  // mirror  (= seg2.x1, seg2.y1)
-      { x: seg2.x2, y: seg2.y2 },  // building2
-    ]
-  }
-
   /** Incoming event: beam is entering 3s warning phase. */
-  onPortalBeamWarning({ beamId, seg1, seg2 }) {
-    const points = this._beamSegToPoints(seg1, seg2)
+  onPortalBeamWarning({ beamId, points }) {
     this._portalBeams.set(beamId, { points, phase: 'warning', time: 0 })
     this._renderMirrors()
   }
 
   /** Incoming event: beam transitions to active damage phase. */
-  onPortalBeamDamage({ beamId, seg1, seg2 }) {
+  onPortalBeamDamage({ beamId, points }) {
     const beam = this._portalBeams.get(beamId)
     if (beam) {
-      beam.points = this._beamSegToPoints(seg1, seg2)
+      beam.points = points
       beam.phase  = 'damage'
       beam.time   = 0
     } else {
-      const points = this._beamSegToPoints(seg1, seg2)
       this._portalBeams.set(beamId, { points, phase: 'damage', time: 0 })
     }
   }
@@ -705,7 +694,7 @@ export default class BattleRenderer extends BaseRenderer {
         x - R, y,
         x - R * 0.7, y - R * 0.7,
       ])
-      this._mirrorGfx.fill({ color: 0x00eeff, alpha: 0.85 })
+      this._mirrorGfx.fill({ color: 0x7a5cff, alpha: 0.9 })
       this._mirrorGfx.poly([
         x,     y - R,
         x + R * 0.7, y - R * 0.7,
@@ -735,54 +724,59 @@ export default class BattleRenderer extends BaseRenderer {
         // Pulsing semi-transparent line — 3s warning
         const pulse = 0.3 + 0.25 * Math.sin(beam.time * Math.PI * 2 / 0.6)
 
-        // Outer glow
-        for (let i = 0; i < pts.length - 1; i++) {
-          this._portalBeamGfx.moveTo(pts[i].x, pts[i].y)
-          this._portalBeamGfx.lineTo(pts[i + 1].x, pts[i + 1].y)
-          this._portalBeamGfx.stroke({ color: 0xff8800, width: 14, alpha: pulse * 0.25 })
-        }
-        // Core warning line
-        for (let i = 0; i < pts.length - 1; i++) {
-          this._portalBeamGfx.moveTo(pts[i].x, pts[i].y)
-          this._portalBeamGfx.lineTo(pts[i + 1].x, pts[i + 1].y)
-          this._portalBeamGfx.stroke({ color: 0xffcc00, width: 3, alpha: pulse })
-        }
-        // Warning dots at each waypoint
-        for (const pt of pts) {
-          this._portalBeamGfx.circle(pt.x, pt.y, 5)
-          this._portalBeamGfx.fill({ color: 0xffcc00, alpha: pulse + 0.2 })
-        }
+         // Outer glow
+         for (let i = 0; i < pts.length - 1; i++) {
+           this._portalBeamGfx.moveTo(pts[i].x, pts[i].y)
+           this._portalBeamGfx.lineTo(pts[i + 1].x, pts[i + 1].y)
+           this._portalBeamGfx.stroke({ color: 0x5f4bff, width: 14, alpha: pulse * 0.28 })
+         }
+         // Core warning line
+         for (let i = 0; i < pts.length - 1; i++) {
+           this._portalBeamGfx.moveTo(pts[i].x, pts[i].y)
+           this._portalBeamGfx.lineTo(pts[i + 1].x, pts[i + 1].y)
+           this._portalBeamGfx.stroke({ color: 0xb494ff, width: 3, alpha: pulse })
+         }
+         // Warning dots at each waypoint
+         for (const pt of pts) {
+           this._portalBeamGfx.circle(pt.x, pt.y, 5)
+           this._portalBeamGfx.fill({ color: 0xc9b6ff, alpha: pulse + 0.2 })
+         }
 
-      } else {
+       } else {
         // Solid bright beam — active damage phase
         const flicker = 0.8 + 0.2 * Math.sin(beam.time * Math.PI * 2 / 0.1)
 
         // Wide outer glow
-        for (let i = 0; i < pts.length - 1; i++) {
-          this._portalBeamGfx.moveTo(pts[i].x, pts[i].y)
-          this._portalBeamGfx.lineTo(pts[i + 1].x, pts[i + 1].y)
-          this._portalBeamGfx.stroke({ color: 0xff4400, width: 20, alpha: 0.25 })
-        }
-        // Mid glow
-        for (let i = 0; i < pts.length - 1; i++) {
-          this._portalBeamGfx.moveTo(pts[i].x, pts[i].y)
-          this._portalBeamGfx.lineTo(pts[i + 1].x, pts[i + 1].y)
-          this._portalBeamGfx.stroke({ color: 0xff6600, width: 8, alpha: 0.6 * flicker })
-        }
-        // Bright core
-        for (let i = 0; i < pts.length - 1; i++) {
-          this._portalBeamGfx.moveTo(pts[i].x, pts[i].y)
-          this._portalBeamGfx.lineTo(pts[i + 1].x, pts[i + 1].y)
-          this._portalBeamGfx.stroke({ color: 0xffffff, width: 2, alpha: flicker })
-        }
-        // Impact circles at endpoints
-        this._portalBeamGfx.circle(pts[0].x, pts[0].y, 8)
-        this._portalBeamGfx.fill({ color: 0xff6600, alpha: 0.8 })
-        this._portalBeamGfx.circle(pts[pts.length - 1].x, pts[pts.length - 1].y, 8)
-        this._portalBeamGfx.fill({ color: 0xff6600, alpha: 0.8 })
-      }
-    }
-  }
+         for (let i = 0; i < pts.length - 1; i++) {
+           this._portalBeamGfx.moveTo(pts[i].x, pts[i].y)
+           this._portalBeamGfx.lineTo(pts[i + 1].x, pts[i + 1].y)
+           this._portalBeamGfx.stroke({ color: 0x5139ff, width: 20, alpha: 0.28 })
+         }
+         // Mid glow
+         for (let i = 0; i < pts.length - 1; i++) {
+           this._portalBeamGfx.moveTo(pts[i].x, pts[i].y)
+           this._portalBeamGfx.lineTo(pts[i + 1].x, pts[i + 1].y)
+           this._portalBeamGfx.stroke({ color: 0x8e6dff, width: 8, alpha: 0.6 * flicker })
+         }
+         // Bright core
+         for (let i = 0; i < pts.length - 1; i++) {
+           this._portalBeamGfx.moveTo(pts[i].x, pts[i].y)
+           this._portalBeamGfx.lineTo(pts[i + 1].x, pts[i + 1].y)
+           this._portalBeamGfx.stroke({ color: 0xe8e0ff, width: 2, alpha: flicker })
+         }
+         // Impact circles at endpoints
+         this._portalBeamGfx.circle(pts[0].x, pts[0].y, 8)
+         this._portalBeamGfx.fill({ color: 0x8e6dff, alpha: 0.85 })
+         this._portalBeamGfx.circle(pts[pts.length - 1].x, pts[pts.length - 1].y, 8)
+         this._portalBeamGfx.fill({ color: 0x8e6dff, alpha: 0.85 })
+
+         for (let i = 1; i < pts.length - 1; i++) {
+           this._portalBeamGfx.circle(pts[i].x, pts[i].y, 9)
+           this._portalBeamGfx.fill({ color: 0xc9b6ff, alpha: 0.55 * flicker })
+         }
+       }
+     }
+   }
 
   // ── Eye Beam rendering (Illidan Phase 2) ──────────────────────────────────
 

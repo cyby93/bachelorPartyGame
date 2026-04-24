@@ -50,7 +50,7 @@ export const DIRECTIONAL_ENEMY_ANIMATIONS = {
   ashtonghueMystic:     { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
   bloodProphet:         { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
   coilskarSerpentGuard: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
-  ritualChanneler:      { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  ritualChanneler:      { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, channel: { frames: 9, fps: 10 } },
   flameOfAzzinoth:      { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
 }
 

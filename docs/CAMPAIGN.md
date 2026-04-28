@@ -75,7 +75,7 @@ Current campaign entries look like:
 | `warlocks` | warlock channeler spawn config (Level 4) |
 | `initialEnemies` | pre-placed enemies at level start (Level 3) |
 | `bossSpawnPosition` | custom boss spawn position override |
-| `dialog` | Illidan entrance cinematic lines `[{ speaker, text, delayAfter }]` (Level 5 only) |
+| `dialog` | Boss cinematic lines `[{ speaker, text, delayAfter, voiceKey? }]` (currently Levels 5 and 6) |
 | `mirrors` | Fixed waypoint positions the beam system can route through. Optional on any level. Shape: `[{ id, position: { x, y } }]` |
 | `beams` | Active beam definitions. Optional on any level. Shape: `[{ id, source: buildingId, target: buildingId, waypoints?: [mirrorId] }]` |
 | `debugSandbox` | Marks a level as debug-only and excluded from normal campaign progression |
@@ -229,9 +229,13 @@ Config lives in `shared/IllidanConfig.js` (not `BossConfig.js`). All Illidan-spe
 
 ### Entrance Cinematic
 
-When Level 5 starts, boss is set to immune and `DialogSystem` plays the `dialog` lines from `LevelConfig`. Boss immunity is released after the last line.
+When a boss level with `dialog` starts, boss is set to immune and `DialogSystem` plays the configured lines from `LevelConfig`. Boss immunity is released according to the encounter rules after the last line.
 
-Socket events: `illidan:dialog_line { speaker, text }` → `BattleRenderer.onIllidanDialogLine()`
+Socket events: `boss:dialog_line { speaker, text, voiceKey? }` → `BattleRenderer.onIllidanDialogLine()`
+
+### Audio Routing
+
+Level-specific music should route by `levelId`, not by `name` or display order. The current host audio contract uses `levelId` from `game:init` and `scene:change` to select the loop for each level.
 
 ### Phase 1 (100% → 60% HP)
 
@@ -276,7 +280,7 @@ Illidan teleports back to arena centre, becomes vulnerable, speed 2.0. Demon for
 ### Key Contracts
 
 - `ILLIDAN_CONFIG` in `shared/IllidanConfig.js` is the single source of truth for all numeric values
-- `ILLIDAN_DIALOG_LINE` / `ILLIDAN_PHASE_TRANSITION` are the socket events — see `shared/protocol.js`
+- `BOSS_DIALOG_LINE` / `ILLIDAN_PHASE_TRANSITION` are the socket events — see `shared/protocol.js`
 - Phase 2 → 3 is NOT HP-based; it fires when `_illidanState.flameOfAzzinothIds` empties
 - `_tickIllidanEffects()` handles all Illidan DoTs independently from `SkillSystem._tickEffects()`
 

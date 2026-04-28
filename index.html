@@ -414,6 +414,48 @@
       gap: 8px;
       margin-top: auto;
     }
+    .audio-panel {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(83, 112, 138, 0.32);
+      background: rgba(255, 255, 255, 0.025);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .audio-panel-title {
+      font-size: 11px;
+      letter-spacing: 1.1px;
+      text-transform: uppercase;
+      color: #c8a96a;
+      font-weight: 700;
+    }
+    .audio-row {
+      display: grid;
+      grid-template-columns: 48px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      font-size: 12px;
+      color: #aac0d4;
+    }
+    .audio-row input[type=range] {
+      width: 100%;
+      accent-color: #00d2ff;
+    }
+    .audio-row output {
+      width: 32px;
+      text-align: right;
+      color: #7fa8c0;
+      font-variant-numeric: tabular-nums;
+    }
+    .audio-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #aac0d4;
+      cursor: pointer;
+    }
 
     .gameplay-heading {
       display: flex;
@@ -701,6 +743,33 @@
     </div>
 
     <div id="host-actions">
+      <div class="audio-panel">
+        <div class="audio-panel-title">Audio Mix</div>
+        <label class="audio-row">
+          <span>Master</span>
+          <input id="audio-master" type="range" min="0" max="100" value="85">
+          <output for="audio-master">%</output>
+        </label>
+        <label class="audio-row">
+          <span>Music</span>
+          <input id="audio-music" type="range" min="0" max="100" value="65">
+          <output for="audio-music">%</output>
+        </label>
+        <label class="audio-row">
+          <span>SFX</span>
+          <input id="audio-sfx" type="range" min="0" max="100" value="85">
+          <output for="audio-sfx">%</output>
+        </label>
+        <label class="audio-row">
+          <span>Voice</span>
+          <input id="audio-voice" type="range" min="0" max="100" value="90">
+          <output for="audio-voice">%</output>
+        </label>
+        <label class="audio-toggle">
+          <input id="audio-muted" type="checkbox">
+          <span>Mute all audio</span>
+        </label>
+      </div>
       <button id="start-btn" disabled style="display:none">START GAME</button>
       <button id="quit-campaign-btn" style="display:none" title="Abort the current campaign and return to lobby">Quit Campaign</button>
       <button id="fullscreen-btn" title="Toggle fullscreen">⛶ Fullscreen</button>

@@ -36,6 +36,9 @@ export const CAMPAIGN = [
   {
     id: 'level_1',
     name: 'The Courtyard',
+    audio: {
+      music: 'music_level_1_courtyard',
+    },
     arena: { width: 1024, height: 768 },
     objectives: [
       { type: 'surviveWaves' },
@@ -73,6 +76,9 @@ export const CAMPAIGN = [
   {
     id: 'level_2',
     name: 'The Siege',
+    audio: {
+      music: 'music_level_2_siege',
+    },
     arena: { width: 1200, height: 1200 },
     objectives: [
       { type: 'destroyBuildings' },
@@ -142,6 +148,9 @@ export const CAMPAIGN = [
   {
     id: 'level_3',
     name: 'The Black Temple Gates',
+    audio: {
+      music: 'music_level_3_gates',
+    },
     arena: {
       width: 1100,
       height: 600,
@@ -211,6 +220,9 @@ export const CAMPAIGN = [
   {
     id: 'level_4',
     name: 'Serpentshrine Cavern',
+    audio: {
+      music: 'music_level_4_cavern',
+    },
     arena: { width: 1400, height: 1200 },
     objectives: [
       { type: 'killAll' },
@@ -249,6 +261,9 @@ export const CAMPAIGN = [
   {
     id: 'level_5',
     name: 'The Refectory',
+    audio: {
+      music: 'music_level_5_shade',
+    },
     arena: { width: 1400, height: 900 },
     objectives: [
       { type: 'killBossProtectNPC', npcId: 'akama', bossId: 'shade' },
@@ -301,9 +316,9 @@ export const CAMPAIGN = [
     // delayAfter: ms to wait after this line before showing the next.
     // TODO(Cyby): Replace [PLACEHOLDER] lines with final text.
     dialog: [
-      { speaker: 'akama', text: '[PLACEHOLDER] Brothers, today we take back what was stolen from us.',     delayAfter: 3500 },
-      // { speaker: 'akama', text: '[PLACEHOLDER] The Shade has drained this place long enough. Fight with me!', delayAfter: 3500 },
-      // { speaker: 'shade', text: '[PLACEHOLDER] You cannot kill what has already been consumed.',            delayAfter: 3000 },
+      { speaker: 'akama', text: '[PLACEHOLDER] Brothers, today we take back what was stolen from us.', voiceKey: 'voice_akama_shade_intro_01', delayAfter: 3500 },
+      // { speaker: 'akama', text: '[PLACEHOLDER] The Shade has drained this place long enough. Fight with me!', voiceKey: 'voice_akama_shade_intro_02', delayAfter: 3500 },
+      // { speaker: 'shade', text: '[PLACEHOLDER] You cannot kill what has already been consumed.', voiceKey: 'voice_shade_intro_01', delayAfter: 3000 },
     ],
   },
 
@@ -311,6 +326,9 @@ export const CAMPAIGN = [
   {
     id: 'level_6',
     name: "Illidan's Sanctum",
+    audio: {
+      music: 'music_level_6_illidan',
+    },
     arena: { width: 1440, height: 900 },
     objectives: [
       { type: 'killBoss' },
@@ -331,9 +349,9 @@ export const CAMPAIGN = [
     // After dialog completes, boss becomes vulnerable.
     // TODO(Cyby): Replace [PLACEHOLDER] lines with final Illidan text.
     dialog: [
-      { speaker: 'illidan', text: '[PLACEHOLDER] You are not prepared!', delayAfter: 3500 },
-      // { speaker: 'illidan', text: '[PLACEHOLDER] I have waited ten thousand years for this.',  delayAfter: 3500 },
-      // { speaker: 'akama',   text: '[PLACEHOLDER] I have watched you waste away, Illidan.',     delayAfter: 3000 },
+      { speaker: 'illidan', text: '[PLACEHOLDER] You are not prepared!', voiceKey: 'voice_illidan_intro_01', delayAfter: 3500 },
+      // { speaker: 'illidan', text: '[PLACEHOLDER] I have waited ten thousand years for this.', voiceKey: 'voice_illidan_intro_02', delayAfter: 3500 },
+      // { speaker: 'akama', text: '[PLACEHOLDER] I have watched you waste away, Illidan.', voiceKey: 'voice_akama_illidan_intro_01', delayAfter: 3000 },
     ],
 
   },
@@ -343,6 +361,9 @@ export const DEBUG_TEST_LEVEL = {
   id: 'debug_test_level',
   name: 'Enemy Sandbox',
   debugSandbox: true,
+  audio: {
+    music: 'music_debug_sandbox',
+  },
   arena: { width: 1400, height: 900 },
   objectives: [],
   spawning: null,

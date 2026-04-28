@@ -9,6 +9,7 @@
   import QuizAnswerScreen  from './screens/QuizAnswerScreen.svelte'
   import QuizResultScreen  from './screens/QuizResultScreen.svelte'
   import UpgradeSelectScreen from './screens/UpgradeSelectScreen.svelte'
+  import ControllerAudio from './ControllerAudio.js'
 
   // ── Screens: 'name' | 'classSelect' | 'lobby' | 'game' | 'levelComplete' | 'end'
   let screen = $state('name')
@@ -34,6 +35,7 @@
 
   // ── Socket (plain let — must NOT be Proxy-wrapped)
   let socket
+  const controllerAudio = new ControllerAudio()
 
   // ── Socket event validation — lightweight guard, no external deps
   // Returns false and logs a warning if any required field is missing.
@@ -138,7 +140,9 @@
       if (!myId) return
       const me = delta.players?.[myId]
       if (!me) return
+      const wasDead = isDead
       if (me.isDead != null) isDead = me.isDead
+      if (!wasDead && isDead) controllerAudio.handlePlayerDown()
     })
 
     socket.on(EVENTS.COOLDOWN, data => {
@@ -192,6 +196,7 @@
 
   function handleClassReady(cls) {
     className = cls
+    controllerAudio.handleJoin()
     socket.emit(EVENTS.JOIN, { name: playerName, className: cls, isHost: false, sessionToken })
     screen = 'lobby'
   }

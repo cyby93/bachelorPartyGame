@@ -105,6 +105,8 @@ All sprites live in `client/host/entities/`.
 
 `VFXManager` is a facade over 5 subsystems. Created in `enter()`, destroyed in `exit()`.
 
+Audio is intentionally separate from renderer logic. Host scene files should not instantiate playback directly; `client/host/main.js` forwards runtime events to `client/host/systems/AudioManager.js`, which owns music, SFX, and voice routing.
+
 | Method | Effect |
 |---|---|
 | `vfx.triggerSkillVFX(data)` | Dispatches to correct subsystem based on skill type |

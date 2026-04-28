@@ -75,6 +75,7 @@ export function buildFullState(gs) {
   return {
     // Scene and level identity
     scene:       gs.scene,
+    levelId:     gs.currentLevel?.id ?? null,
     levelIndex:  gs.currentLevelIndex,
     levelNumber: gs.currentLevelIndex >= 0 ? gs.currentLevelIndex + 1 : null,
     totalLevels: gs.currentLevel?.debugSandbox ? 1 : CAMPAIGN.length,

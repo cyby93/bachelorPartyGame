@@ -49,8 +49,8 @@ export const EVENTS = {
   QUIZ_UPGRADE_CHOSEN:  'quiz:upgradeChosen',   // S→All: { playerId, skillIndex, skillName }
   QUIZ_DONE:            'quiz:done',            // S→All: quiz resolved, host can continue
 
-  // ── Illidan encounter (Level 5) ─────────────────────────────────────────
-  ILLIDAN_DIALOG_LINE:      'illidan:dialog_line',      // S→All: { speaker, text }
+  // ── Boss dialog / Illidan encounter ─────────────────────────────────────
+  BOSS_DIALOG_LINE:         'boss:dialog_line',         // S→All: { speaker, text, voiceKey?, durationMs? }
   ILLIDAN_PHASE_TRANSITION: 'illidan:phase_transition', // S→All: { phase, freeze?: bool, freezeDuration?: ms }
   ILLIDAN_AURA_PULSE:       'illidan:aura_pulse',       // S→All: { x, y, radius, color }
 

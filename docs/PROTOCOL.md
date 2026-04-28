@@ -172,7 +172,7 @@ Primary consumers:
 Contract notes:
 
 - the host uses `scene`, `players`, and level metadata from this payload to initialize UI and render state
-- level metadata includes `levelIndex`, `levelNumber`, `totalLevels`, `levelName`, `debugSandbox`, `rooms`, `passages`, and `mirrors`
+- level metadata includes `levelId`, `levelIndex`, `levelNumber`, `totalLevels`, `levelName`, `debugSandbox`, `rooms`, `passages`, and `mirrors`
 
 ### `state:delta`
 
@@ -246,6 +246,7 @@ Payload:
 ```js
 {
   scene,
+  levelId,
   levelIndex,
   levelNumber,
   totalLevels,
@@ -267,6 +268,7 @@ Contract notes:
 - scene names must match the Scene Names table above
 - controller maps `lobby` to a local two-step flow: briefing screen first, then active controls after player acknowledgment
 - `battle` and `bossFight` map to active gameplay immediately
+- `levelId` is the stable content identifier for level-specific routing such as music selection
 
 ### `level:complete`
 
@@ -332,6 +334,26 @@ Payload:
 Primary consumers:
 
 - host floating text and hit feedback
+
+### `boss:dialog_line`
+
+Payload:
+
+```js
+{ speaker, text, voiceKey, durationMs }
+```
+
+Primary consumers:
+
+- `client/host/main.js`
+- host battle renderer dialog overlay
+- host audio manager voice routing
+
+Contract notes:
+
+- this event is generic boss dialog, not Illidan-specific
+- `voiceKey` is optional but should be authored for boss-dialog levels so voice assets can be dropped in without code edits
+- subtitle text remains the authoritative visible line
 
 ### `channel:interrupted`
 

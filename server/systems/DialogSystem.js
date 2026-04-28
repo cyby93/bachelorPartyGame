@@ -12,7 +12,7 @@
 export default class DialogSystem {
   /**
    * @param {object}   opts
-   * @param {Array}    opts.lines      — [{ speaker, text, delayAfter }]
+   * @param {Array}    opts.lines      — [{ speaker, text, delayAfter, voiceKey?, durationMs? }]
    * @param {Function} opts.onComplete — called after the last line finishes
    */
   constructor({ lines, onComplete }) {
@@ -55,7 +55,12 @@ export default class DialogSystem {
     }
 
     const line = this._lines[this._index++]
-    this._emitFn('illidan:dialog_line', { speaker: line.speaker, text: line.text })
+    this._emitFn('boss:dialog_line', {
+      speaker: line.speaker,
+      text: line.text,
+      voiceKey: line.voiceKey ?? null,
+      durationMs: line.durationMs ?? null,
+    })
 
     const delay = line.delayAfter ?? 2500
     this._timer = setTimeout(() => this._playNext(), delay)

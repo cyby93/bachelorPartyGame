@@ -82,6 +82,7 @@ In development, Vite proxies `/socket.io` and `/api` to the Express server on po
 - `docs/SKILLS.md`: skill schema, valid type/subtype combinations, VFX expectations, design rules
 - `docs/RENDERERS.md`: host renderer lifecycle and extension points
 - `docs/SPRITES.md`: sprite pipeline — generator script, canvas-size rule, key naming, adding new sprites
+- `docs/AUDIO.md`: audio architecture, mixer rules, asset naming, and playback ownership
 
 When changing skill behavior, keep `shared/SkillDatabase.js`, `shared/SkillValidator.js`, and `docs/SKILLS.md` aligned.
 
@@ -101,6 +102,7 @@ Scene transitions are server-driven through the shared protocol.
 - Update nearby docs when changing behavior that other agents or contributors rely on.
 - Treat `docs/SKILLS.md` as required maintenance when skill schema, types, subtypes, or VFX routing change.
 - Treat `docs/RENDERERS.md` as required maintenance when renderer lifecycle or hooks change.
+- Treat `docs/AUDIO.md` as required maintenance when audio routing, mixer behavior, asset conventions, or playback ownership changes.
 
 ## Practical Guidance
 

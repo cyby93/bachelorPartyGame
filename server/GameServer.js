@@ -688,7 +688,8 @@ export default class GameServer {
 
     // Determine scene type for the renderer
     const scene = level.boss ? 'bossFight' : 'battle'
-    this._changeScene(scene, {
+      this._changeScene(scene, {
+      levelId:     level.id,
       levelIndex:  campaignIndex,
       levelNumber,
       totalLevels,
@@ -833,6 +834,7 @@ export default class GameServer {
     console.log(`[~] scene → ${name}`)
     this.io.emit(EVENTS.SCENE_CHANGE, {
       scene: name,
+      levelId: this.currentLevel?.id ?? null,
       arenaWidth: this.arenaWidth,
       arenaHeight: this.arenaHeight,
       ...extra,

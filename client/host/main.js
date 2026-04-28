@@ -13,11 +13,11 @@ import { EVENTS }     from '../../shared/protocol.js'
 import { CLASSES }    from '../../shared/ClassConfig.js'
 import { LEVEL_SELECT_OPTIONS } from '../../shared/LevelConfig.js'
 import HostGame       from './HostGame.js'
-import AudioSystem    from './systems/AudioSystem.js'
+import AudioManager   from './systems/AudioManager.js'
 
 // ── PixiJS game init (top-level await — supported in Vite ESM) ─────────────
 const game  = new HostGame()
-const audio = new AudioSystem()
+const audio = new AudioManager()
 await game.init(document.getElementById('canvas-wrap'))
 
 // ── Socket ─────────────────────────────────────────────────────────────────
@@ -48,6 +48,11 @@ const upgradeResetBtn = document.getElementById('upgrade-reset-btn')
 const sandboxOverlayEl = document.getElementById('sandbox-overlay')
 const sandboxActionsEl = document.getElementById('sandbox-overlay-actions')
 const sandboxStatusEl = document.getElementById('sandbox-overlay-status')
+const audioMasterEl = document.getElementById('audio-master')
+const audioMusicEl  = document.getElementById('audio-music')
+const audioSfxEl    = document.getElementById('audio-sfx')
+const audioVoiceEl  = document.getElementById('audio-voice')
+const audioMuteEl   = document.getElementById('audio-muted')
 
 const SANDBOX_ENEMY_ACTIONS = [
   { label: 'Add Felguard', enemyType: 'felGuard' },
@@ -99,6 +104,44 @@ const healingMeterEl   = document.getElementById('healing-meter-list')
 let connectionHideTimer = null
 let shellMode = 'menu'
 
+function syncAudioControls() {
+  const settings = audio.getSettings()
+  if (audioMasterEl) audioMasterEl.value = String(Math.round(settings.master * 100))
+  if (audioMusicEl) audioMusicEl.value = String(Math.round(settings.music * 100))
+  if (audioSfxEl) audioSfxEl.value = String(Math.round(settings.sfx * 100))
+  if (audioVoiceEl) audioVoiceEl.value = String(Math.round(settings.voice * 100))
+  if (audioMuteEl) audioMuteEl.checked = !!settings.muted
+
+  updateAudioOutputLabels()
+}
+
+function updateAudioOutputLabels() {
+  ;[audioMasterEl, audioMusicEl, audioSfxEl, audioVoiceEl].forEach(el => {
+    const output = el?.parentElement?.querySelector('output')
+    if (output && el) output.textContent = `${el.value}%`
+  })
+}
+
+function bindAudioControls() {
+  const update = () => {
+    audio.applySettings({
+      master: (Number(audioMasterEl?.value ?? 85) || 0) / 100,
+      music: (Number(audioMusicEl?.value ?? 65) || 0) / 100,
+      sfx: (Number(audioSfxEl?.value ?? 85) || 0) / 100,
+      voice: (Number(audioVoiceEl?.value ?? 90) || 0) / 100,
+      muted: !!audioMuteEl?.checked,
+    })
+    updateAudioOutputLabels()
+  }
+
+  ;[audioMasterEl, audioMusicEl, audioSfxEl, audioVoiceEl].forEach(el => {
+    el?.addEventListener('input', update)
+    el?.addEventListener('change', update)
+  })
+  audioMuteEl?.addEventListener('change', update)
+  syncAudioControls()
+}
+
 function setConnectionStatus(text, variant, autoHideMs = 0) {
   if (!badge) return
 
@@ -131,9 +174,12 @@ function setShellMode(mode) {
 }
 
 menuPlayBtn?.addEventListener('click', () => {
+  audio.init()
   const serverScene = startBtn.dataset.scene ?? game.knownState.scene ?? 'lobby'
   setShellMode(serverScene === 'battle' || serverScene === 'bossFight' ? 'gameplay' : 'lobby')
 })
+
+bindAudioControls()
 
 setConnectionStatus('Connecting...', 'connecting')
 
@@ -445,7 +491,7 @@ function setSceneControls(scene) {
 
 socket.on('connect', () => {
   setConnectionStatus('Connected', 'connected', 2000)
-  audio.init()   // safe to call here — connect fires after a user interaction (page load)
+  audio.init()
 
   // Display the controller URL and generate QR code using the LAN IP
   fetch('/api/network-url')
@@ -481,6 +527,7 @@ socket.on(EVENTS.INIT, state => {
   game.receiveFullState(state)
   const scene = state.scene ?? 'lobby'
     const meta = {
+      levelId: state.levelId,
       levelIndex: state.levelIndex,
       levelNumber: state.levelNumber,
       totalLevels: state.totalLevels,
@@ -495,15 +542,18 @@ socket.on(EVENTS.INIT, state => {
     }
   game.switchScene(scene, meta)
   currentLevelMeta = meta
+  audio.setScene(scene, meta)
   setSceneControls(scene)
   renderLevelPanel(scene, meta)
   renderDOMPlayerList()
   renderGameplaySidebar()
   renderSandboxPanel()
+  audio.syncPlayerState(game.knownState.players)
 })
 
 socket.on(EVENTS.PLAYER_JOINED, player => {
   game.addPlayer(player)
+  if (!player?.isHost) audio.handlePlayerJoined()
   renderDOMPlayerList()
   renderGameplaySidebar()
 })
@@ -521,6 +571,7 @@ socket.on(EVENTS.STATE_DELTA, delta => {
   if (after !== before) renderDOMPlayerList()
   renderGameplaySidebar()
   renderSandboxPanel()
+  audio.syncPlayerState(game.knownState.players)
 
   // Update shade buff card live during Level 4 Phase 1
   if (shadeBuffCardEl && !shadeBuffCardEl.hidden) {
@@ -540,14 +591,11 @@ socket.on(EVENTS.SCENE_CHANGE, (data) => {
   const { scene, ...meta } = data
   game.switchScene(scene, meta)
   currentLevelMeta = meta
+  audio.setScene(scene, meta)
   setSceneControls(scene)
   renderLevelPanel(scene, meta)
   renderGameplaySidebar()
   renderSandboxPanel()
-
-  if (scene === 'battle' || scene === 'bossFight') audio.playTransition()
-  else if (scene === 'result')  audio.playVictory()
-  else if (scene === 'gameover') audio.playDefeat()
 })
 
 socket.on(EVENTS.OBJECTIVE_UPDATE, ({ objectives }) => {
@@ -570,14 +618,17 @@ socket.on(EVENTS.DEBUG_ACTION_RESULT, ({ message, isError }) => {
 // ── VFX events ───────────────────────────────────────────────────────────
 
 socket.on(EVENTS.SKILL_FIRED, data => {
+  audio.handleSkillFired(data)
   game.activeRenderer?.onSkillFired?.(data)
 })
 
 socket.on(EVENTS.EFFECT_DAMAGE, data => {
+  audio.handleEffectDamage(data)
   game.activeRenderer?.onEffectDamage?.(data)
 })
 
 socket.on(EVENTS.TARGETED_HIT, data => {
+  audio.handleTargetedHit(data)
   game.activeRenderer?.onTargetedHit?.(data)
 })
 
@@ -587,29 +638,35 @@ socket.on(EVENTS.CHANNEL_INTERRUPTED, data => {
 
 // ── Illidan encounter events ──────────────────────────────────────────────
 
-socket.on(EVENTS.ILLIDAN_DIALOG_LINE, data => {
+socket.on(EVENTS.BOSS_DIALOG_LINE, data => {
+  audio.handleDialogLine(data)
   game.activeRenderer?.onIllidanDialogLine?.(data)
 })
 
 socket.on(EVENTS.ILLIDAN_PHASE_TRANSITION, data => {
+  audio.handlePhaseTransition(data)
   game.activeRenderer?.onIllidanPhaseTransition?.(data)
 })
 
 socket.on(EVENTS.ILLIDAN_AURA_PULSE, data => {
+  audio.handleAuraPulse(data)
   game.activeRenderer?.onIllidanAuraPulse?.(data)
 })
 
 // ── Level 2: Portal Beam events ──────────────────────────────────────────
 
 socket.on(EVENTS.PORTAL_BEAM_WARNING, data => {
+  audio.handlePortalBeamWarning(data)
   game.activeRenderer?.onPortalBeamWarning?.(data)
 })
 
 socket.on(EVENTS.PORTAL_BEAM_DAMAGE, data => {
+  audio.handlePortalBeamDamage(data)
   game.activeRenderer?.onPortalBeamDamage?.(data)
 })
 
 socket.on(EVENTS.PORTAL_BEAM_END, data => {
+  audio.handlePortalBeamEnd(data)
   game.activeRenderer?.onPortalBeamEnd?.(data)
 })
 

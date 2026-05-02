@@ -350,21 +350,21 @@
     justify-content: center;
     text-align: center;
     padding: 24px;
-    color: #7fa8c0;
+    color: var(--rn-text-dim);
     font-size: 18px;
     gap: 8px;
   }
 
   .sublabel {
     font-size: 14px;
-    color: #556677;
+    color: var(--rn-text-dimmer);
   }
 
   .rotate-overlay {
     position: fixed;
     inset: 0;
     z-index: 9999;
-    background: #0f1923;
+    background: var(--rn-bg-deep);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -383,22 +383,22 @@
 
   .rotate-overlay p {
     font-size: 18px;
-    color: #aad4e8;
+    color: var(--rn-text-body);
   }
 
   .rotate-overlay button {
     padding: 12px 24px;
     border-radius: 8px;
-    border: 1px solid #1e3a4a;
-    background: #16202a;
-    color: #00d2ff;
+    border: 1px solid var(--rn-border-btn);
+    background: var(--rn-bg-surface);
+    color: var(--rn-accent);
     font-size: 15px;
     cursor: pointer;
   }
 
   .ios-hint {
     font-size: 14px;
-    color: #aad4e8;
+    color: var(--rn-text-body);
     max-width: 260px;
     text-align: center;
     line-height: 1.5;
@@ -414,9 +414,9 @@
     height: 32px;
     padding: 0;
     border-radius: 6px;
-    border: 1px solid #1e3a4a;
-    background: rgba(22, 32, 42, 0.75);
-    color: #00d2ff;
+    border: 1px solid var(--rn-border-btn);
+    background: rgba(20, 12, 4, 0.75);
+    color: var(--rn-accent);
     font-size: 16px;
     cursor: pointer;
     display: flex;

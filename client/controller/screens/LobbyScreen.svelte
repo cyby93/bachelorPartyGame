@@ -111,8 +111,8 @@
     min-height: 0;
     overflow: hidden;
     background:
-      radial-gradient(circle at top, color-mix(in srgb, var(--class-color, #00d2ff) 16%, transparent) 0%, transparent 28%),
-      linear-gradient(180deg, #172330 0%, #101924 100%);
+      radial-gradient(circle at top, color-mix(in srgb, var(--class-color, var(--rn-accent)) 16%, transparent) 0%, transparent 28%),
+      var(--rn-gradient-bg);
   }
 
   .briefing-head {
@@ -125,7 +125,7 @@
     border: 1px solid color-mix(in srgb, var(--class-color) 30%, rgba(104, 130, 153, 0.24));
     background:
       linear-gradient(180deg, color-mix(in srgb, var(--class-color) 12%, rgba(255, 214, 143, 0.03)) 0%, rgba(255, 214, 143, 0) 34%),
-      linear-gradient(180deg, #1a2734 0%, #121b24 100%);
+      var(--rn-gradient-surface);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.04),
       0 10px 22px rgba(0, 0, 0, 0.16);
@@ -143,20 +143,20 @@
     font-size: 10px;
     letter-spacing: 1.7px;
     text-transform: uppercase;
-    color: #8ea6bc;
+    color: var(--rn-text-label);
   }
 
   h1 {
     font-size: 24px;
     line-height: 1;
-    color: #f5fbff;
+    color: var(--rn-text-bright);
   }
 
   .head-copy p,
   .ready-text {
     font-size: 12px;
     line-height: 1.45;
-    color: #99b1c4;
+    color: var(--rn-text-secondary);
   }
 
   .hero-chip {
@@ -192,7 +192,7 @@
 
   .class-tag  {
     font-size: 11px;
-    color: #7fa8c0;
+    color: var(--rn-text-dim);
     white-space: nowrap;
   }
 
@@ -202,7 +202,7 @@
     align-items: flex-end;
     gap: 4px;
     font-size: 12px;
-    color: #d5dde3;
+    color: var(--rn-text-body);
     flex-shrink: 0;
   }
 
@@ -221,11 +221,11 @@
     gap: 8px;
     background:
       linear-gradient(180deg, color-mix(in srgb, var(--class-color) 10%, rgba(255, 214, 143, 0.03)) 0%, rgba(255, 214, 143, 0) 34%),
-      linear-gradient(180deg, #1a2734 0%, #121b24 100%);
+      var(--rn-gradient-surface);
     border-radius: 14px;
     padding: 10px;
     min-width: 0;
-    border: 1px solid rgba(120, 150, 176, 0.14);
+    border: 1px solid var(--rn-border-subtle);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
   }
 
@@ -275,7 +275,7 @@
 
   .skill-meta  {
     font-size: 11px;
-    color: #8ea6bc;
+    color: var(--rn-text-label);
   }
 
   .skill-guidance {
@@ -294,7 +294,7 @@
   .skill-hint {
     font-size: 11px;
     line-height: 1.4;
-    color: #a9bfd1;
+    color: var(--rn-text-body);
   }
 
   .ready-wrap {
@@ -305,7 +305,7 @@
     padding: 12px 14px;
     border-radius: 16px;
     background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(120, 150, 176, 0.12);
+    border: 1px solid var(--rn-border-subtle);
     flex-shrink: 0;
   }
 
@@ -325,8 +325,8 @@
     font-size: 15px;
     font-weight: bold;
     letter-spacing: 2px;
-    background: linear-gradient(135deg, #1ea6d7, #0f6994);
-    color: #fff;
+    background: var(--rn-gradient-cta);
+    color: var(--rn-gold);
     cursor: pointer;
     flex-shrink: 0;
   }

@@ -1,0 +1,194 @@
+/* ──────────────────────────────────────────────────────────────
+   controls.css — Host action bar: audio, fullscreen, quit,
+   sandbox dev overlay, connection badge
+   Low Warcraft upgrade priority — these are operator tools.
+   ────────────────────────────────────────────────────────────── */
+
+/* ── Host action bar ─────────────────────────────────────────── */
+
+#host-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+}
+
+/* ── Audio panel ──────────────────────────────────────────────── */
+
+.audio-panel {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(100, 72, 20, 0.35);
+  background: rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.audio-panel-title {
+  font-size: 11px;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: var(--rn-gold);
+  font-weight: 700;
+}
+
+.audio-row {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--rn-text-body);
+}
+
+.audio-row input[type=range] {
+  width: 100%;
+  accent-color: var(--rn-accent);
+}
+
+.audio-row output {
+  width: 32px;
+  text-align: right;
+  color: var(--rn-text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.audio-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--rn-text-body);
+  cursor: pointer;
+}
+
+/* ── Action buttons ───────────────────────────────────────────── */
+
+#fullscreen-btn {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--rn-border-btn);
+  background: linear-gradient(180deg, #2A1808 0%, #1C1004 100%);
+  color: var(--rn-text-dim);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+#fullscreen-btn:hover {
+  background: linear-gradient(180deg, #3A2210 0%, #281606 100%);
+  border-color: rgba(160, 112, 30, 0.60);
+  color: var(--rn-gold);
+}
+
+/* Destructive action — keep as danger red, not tokenized further */
+#quit-campaign-btn {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #5a1a1a;
+  background: #2a0a0a;
+  color: #e05050;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+#quit-campaign-btn:hover {
+  background: #3d0f0f;
+  color: #ff7070;
+  border-color: #e05050;
+}
+
+/* ── Connection badge ─────────────────────────────────────────── */
+
+#conn-badge {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 20;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(231, 76, 60, 0.95);  /* default: error/disconnected */
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+
+#conn-badge.visible    { opacity: 1; }
+#conn-badge.connected  { background: rgba(46, 204, 113, 0.95); }
+#conn-badge.connecting { background: rgba(52, 152, 219, 0.95); }
+
+/* ── Enemy sandbox overlay (dev tool) ────────────────────────── */
+
+#sandbox-overlay {
+  position: absolute;
+  top: 22px;
+  left: 22px;
+  z-index: 15;
+  width: min(340px, calc(100% - 44px));
+  padding: 14px 14px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 106, 32, 0.45);
+  background:
+    linear-gradient(180deg, rgba(200, 148, 40, 0.08) 0%, rgba(200, 148, 40, 0) 30%),
+    rgba(14, 8, 4, 0.90);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 210, 80, 0.06),
+    0 14px 32px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+}
+
+#sandbox-overlay[hidden] { display: none; }
+
+#sandbox-overlay-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  color: var(--rn-accent);
+  margin-bottom: 10px;
+}
+
+#sandbox-overlay-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+#sandbox-overlay-actions button:disabled,
+#sandbox-overlay-clear-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+#sandbox-overlay-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+#sandbox-overlay-status {
+  font-size: 12px;
+  color: var(--rn-text-dim);
+  min-height: 16px;
+  flex: 1;
+}
+
+#sandbox-overlay-status[data-error="true"] { color: #ff8080; }
+
+#sandbox-overlay-clear-btn {
+  border-color: #5a1a1a;
+  background: #2a0a0a;
+  color: #e05050;
+  flex-shrink: 0;
+}
+
+#sandbox-overlay-clear-btn:hover:not(:disabled) {
+  background: #3d0f0f;
+  color: #ff7070;
+}

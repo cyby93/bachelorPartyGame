@@ -28,6 +28,6 @@ export const GAME_CONFIG = {
   QUIZ_BETWEEN_LEVELS: true,
 
   // Debug flags — set to true locally to aid development, never commit as true
-  DEBUG_HITBOXES: true,
+  DEBUG_HITBOXES: false,
   DEV_DISABLE_AUDIO: false,
 }

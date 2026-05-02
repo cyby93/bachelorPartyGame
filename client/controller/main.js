@@ -3,6 +3,7 @@
  * Phase 3 — Svelte entry point. Mounts App.svelte into #app.
  */
 
+import './styles/tokens.css'
 import { mount } from 'svelte'
 import App from './App.svelte'
 

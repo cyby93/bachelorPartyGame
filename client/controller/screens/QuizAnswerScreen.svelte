@@ -71,13 +71,13 @@
   .title {
     font-size: 20px;
     font-weight: bold;
-    color: #f39c12;
+    color: var(--rn-warning);
     margin: 0;
   }
 
   .countdown {
     font-size: 14px;
-    color: #7fa8c0;
+    color: var(--rn-text-dim);
     margin: 0;
   }
 
@@ -95,9 +95,9 @@
     gap: 12px;
     padding: 12px 16px;
     border-radius: 10px;
-    border: 2px solid #2c3e50;
-    background: #1a2533;
-    color: #ecf0f1;
+    border: 2px solid var(--rn-bg-surface);
+    background: var(--rn-bg-surface);
+    color: var(--rn-text-bright);
     font-size: 16px;
     cursor: pointer;
     text-align: left;
@@ -110,12 +110,12 @@
   }
 
   .option-btn.selected {
-    border-color: #3498db;
-    background: #1a3550;
+    border-color: var(--rn-info);
+    background: rgba(106, 56, 16, 0.35);
   }
 
   .option-btn:not(:disabled):active {
-    background: #2c3e50;
+    background: var(--rn-bg-surface);
   }
 
   .label {
@@ -125,15 +125,15 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: #2c3e50;
-    color: #3498db;
+    background: var(--rn-bg-surface);
+    color: var(--rn-info);
     font-weight: bold;
     font-size: 15px;
     flex-shrink: 0;
   }
 
   .option-btn.selected .label {
-    background: #3498db;
+    background: var(--rn-info);
     color: #fff;
   }
 
@@ -147,7 +147,7 @@
     border: none;
     font-size: 16px;
     font-weight: bold;
-    background: linear-gradient(135deg, #27ae60, #1e8449);
+    background: var(--rn-gradient-confirm);
     color: #fff;
     cursor: pointer;
     transition: opacity 0.15s;
@@ -162,12 +162,12 @@
 
   .waiting {
     font-size: 20px;
-    color: #2ecc71;
+    color: var(--rn-success);
     font-weight: bold;
   }
 
   .sublabel {
     font-size: 14px;
-    color: #556677;
+    color: var(--rn-text-dimmer);
   }
 </style>

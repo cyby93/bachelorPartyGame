@@ -15,5 +15,8 @@
       "mcp__pixellab__create_character",
       "mcp__pixellab__get_character"
     ]
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true
   }
 }

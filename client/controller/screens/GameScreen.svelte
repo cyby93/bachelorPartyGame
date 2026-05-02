@@ -72,15 +72,15 @@
     flex-direction: column;
     position: relative;
     background:
-      radial-gradient(circle at top, color-mix(in srgb, var(--class-color, #00d2ff) 14%, transparent) 0%, transparent 20%),
-      linear-gradient(180deg, #162330 0%, #0e1822 100%);
+      radial-gradient(circle at top, color-mix(in srgb, var(--class-color, var(--rn-accent)) 14%, transparent) 0%, transparent 20%),
+      linear-gradient(180deg, #1C1008 0%, #0D0802 100%);
   }
 
   .hud {
     min-height: 42px;
     background:
       linear-gradient(180deg, rgba(255, 214, 143, 0.05) 0%, rgba(255, 214, 143, 0) 28%),
-      rgba(10, 16, 24, 0.74);
+      rgba(14, 8, 4, 0.74);
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
     display: flex;
@@ -120,7 +120,7 @@
     font-size: 10px;
     letter-spacing: 1px;
     text-transform: uppercase;
-    color: #8da5bb;
+    color: var(--rn-text-label);
     white-space: nowrap;
   }
 
@@ -140,8 +140,8 @@
   }
 
   .pip.active {
-    background: #ffcc00;
-    box-shadow: 0 0 4px #ffcc00;
+    background: var(--rn-combo);
+    box-shadow: 0 0 4px var(--rn-combo);
   }
 
   .controls {
@@ -160,8 +160,8 @@
     overflow: hidden;
     background:
       linear-gradient(180deg, rgba(255, 214, 143, 0.025) 0%, rgba(255, 214, 143, 0) 30%),
-      linear-gradient(180deg, #16232f 0%, #101923 100%);
-    border: 1px solid rgba(120, 150, 176, 0.12);
+      linear-gradient(180deg, #1C1208 0%, #120A04 100%);
+    border: 1px solid var(--rn-border-subtle);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
   }
 
@@ -204,14 +204,14 @@
   }
 
   .dead-overlay h2 {
-    color: #f08080;
+    color: var(--rn-danger-dim);
     font-size: 28px;
     letter-spacing: 1px;
     text-transform: uppercase;
   }
 
   .dead-overlay p  {
-    color: #b0bcc7;
+    color: var(--rn-text-body);
     font-size: 14px;
     line-height: 1.4;
     max-width: 22ch;

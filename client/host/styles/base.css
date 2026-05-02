@@ -1,0 +1,21 @@
+/* ──────────────────────────────────────────────────────────────
+   base.css — Reset, body, typography foundation
+   WARCRAFT UPGRADE: font-family is the first thing to swap.
+   Replace 'Trebuchet MS' with a gothic/display font (e.g.
+   LifeCraft, Cinzel, or a WoW-style webfont) when ready.
+   ────────────────────────────────────────────────────────────── */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--rn-bg-deep);
+  color: #fff;
+  font-family: 'Trebuchet MS', 'Segoe UI', Arial, sans-serif;
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+}

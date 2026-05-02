@@ -4,6 +4,7 @@
 
 | Code | Name | Description | Source |
 |------|------|-------------|--------|
+| [design-system] | Design System | CSS custom property tokens, visual rules, and enforcement guide for all RAID NIGHT UI | `./references/design-system.md` |
 | [ability-ui] | Ability UI | Implement cooldown displays, ability icons, and player action feedback on the controller | `./references/ability-ui.md` |
 | [hud-forge] | HUD Forge | Implement health bars, resource bars, and in-game overlays on the host display | `./references/hud-forge.md` |
 | [menu-systems] | Menu Systems | Implement menus, screens, transitions, and flow on both host and controller | `./references/menu-systems.md` |

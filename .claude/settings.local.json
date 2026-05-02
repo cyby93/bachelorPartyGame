@@ -85,7 +85,9 @@
       "Bash(unzip -o /tmp/warlock_model.zip -d /tmp/warlock_extract)",
       "Bash(unzip -l /tmp/illidan_demon_model.zip)",
       "Bash(awk -F/ '{print $2\"/\"$3}')",
-      "Bash(unzip -l /tmp/ritualChanneler_model.zip)"
+      "Bash(unzip -l /tmp/ritualChanneler_model.zip)",
+      "WebFetch(domain:www.reddit.com)",
+      "WebFetch(domain:i.redd.it)"
     ]
   },
   "enableAllProjectMcpServers": true,

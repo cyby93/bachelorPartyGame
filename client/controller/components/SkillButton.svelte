@@ -280,8 +280,8 @@
   .skill-btn {
     background:
       linear-gradient(180deg, rgba(255, 214, 143, 0.045) 0%, rgba(255, 214, 143, 0) 28%),
-      linear-gradient(180deg, #1a2734 0%, #121b24 100%);
-    border: 1px solid rgba(120, 150, 176, 0.16);
+      var(--rn-gradient-surface);
+    border: 1px solid var(--rn-border-subtle);
     border-radius: 18px;
     padding: 0;
     display: flex;
@@ -313,16 +313,16 @@
   .skill-btn:active {
     background:
       linear-gradient(180deg, rgba(255, 214, 143, 0.06) 0%, rgba(255, 214, 143, 0) 28%),
-      linear-gradient(180deg, #203140 0%, #162330 100%);
+      linear-gradient(180deg, #2A1808 0%, #1C1004 100%);
     transform: scale(0.992);
   }
 
   /* SUSTAINED — lit border while held */
   .skill-btn.held {
-    border-color: #00d2ff;
+    border-color: var(--rn-accent);
     box-shadow:
-      inset 0 0 0 1px rgba(0, 210, 255, 0.26),
-      0 0 16px rgba(0, 210, 255, 0.12);
+      inset 0 0 0 1px rgba(105, 204, 240, 0.26),
+      0 0 16px rgba(105, 204, 240, 0.12);
   }
 
   /* INSTANT — brief green flash on fire */
@@ -358,7 +358,7 @@
 
   .skill-name {
     font-size: 11px;
-    color: #8fa7bc;
+    color: var(--rn-text-label);
     text-align: center;
     padding: 0 8px 2px;
     letter-spacing: 0.2px;

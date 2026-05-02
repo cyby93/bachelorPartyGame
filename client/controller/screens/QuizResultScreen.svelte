@@ -31,16 +31,16 @@
     margin: 0;
   }
 
-  .correct { color: #2ecc71; }
-  .wrong   { color: #e74c3c; }
+  .correct { color: var(--rn-success); }
+  .wrong   { color: var(--rn-danger); }
 
   .answer {
     font-size: 16px;
-    color: #bdc3c7;
+    color: var(--rn-text-body);
   }
 
   .sublabel {
     font-size: 14px;
-    color: #556677;
+    color: var(--rn-text-dimmer);
   }
 </style>

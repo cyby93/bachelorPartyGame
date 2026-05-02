@@ -113,7 +113,7 @@
   .title {
     font-size: 18px;
     font-weight: bold;
-    color: #3498db;
+    color: var(--rn-info);
     margin: 0 0 4px;
   }
 
@@ -131,9 +131,9 @@
     gap: 4px;
     padding: 8px 10px;
     border-radius: 8px;
-    border: 2px solid #2c3e50;
-    background: #1a2533;
-    color: #ecf0f1;
+    border: 2px solid var(--rn-bg-surface);
+    background: var(--rn-bg-surface);
+    color: var(--rn-text-bright);
     font-size: 13px;
     cursor: pointer;
     text-align: left;
@@ -141,7 +141,7 @@
   }
 
   .skill-card:active:not(.maxed) {
-    border-color: #3498db;
+    border-color: var(--rn-info);
   }
 
   .skill-card.maxed {
@@ -157,7 +157,7 @@
 
   .icon { font-size: 18px; }
   .name { font-weight: bold; flex: 1; }
-  .tier { font-size: 11px; color: #7f8c8d; }
+  .tier { font-size: 11px; color: var(--rn-text-dim); }
 
   .changes {
     display: flex;
@@ -166,23 +166,23 @@
     font-size: 11px;
   }
 
-  .change.positive { color: #2ecc71; }
-  .change.negative { color: #e74c3c; }
+  .change.positive { color: var(--rn-success); }
+  .change.negative { color: var(--rn-danger); }
 
   .maxed-label {
-    color: #7f8c8d;
+    color: var(--rn-text-dim);
     font-weight: bold;
     font-size: 12px;
   }
 
   .done {
     font-size: 22px;
-    color: #2ecc71;
+    color: var(--rn-success);
     font-weight: bold;
   }
 
   .sublabel {
     font-size: 14px;
-    color: #556677;
+    color: var(--rn-text-dimmer);
   }
 </style>

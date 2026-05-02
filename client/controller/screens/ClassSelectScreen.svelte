@@ -83,8 +83,8 @@
     min-height: 0;
     overflow: hidden;
     background:
-      radial-gradient(circle at top, rgba(104, 149, 194, 0.18) 0%, rgba(104, 149, 194, 0) 26%),
-      linear-gradient(180deg, #172330 0%, #101924 100%);
+      radial-gradient(circle at top, rgba(200, 148, 40, 0.14) 0%, rgba(200, 148, 40, 0) 26%),
+      var(--rn-gradient-bg);
   }
 
   .screen-head {
@@ -99,19 +99,19 @@
     font-size: 11px;
     letter-spacing: 2px;
     text-transform: uppercase;
-    color: #8fa6bb;
+    color: var(--rn-text-label);
   }
 
   h1 {
     font-size: 28px;
     line-height: 1;
-    color: #f4fbff;
+    color: var(--rn-text-bright);
   }
 
   p {
     font-size: 13px;
     line-height: 1.45;
-    color: #99b1c4;
+    color: var(--rn-text-secondary);
   }
 
   .class-grid {
@@ -127,8 +127,8 @@
     position: relative;
     background:
       linear-gradient(180deg, rgba(255, 214, 143, 0.035) 0%, rgba(255, 214, 143, 0) 30%),
-      linear-gradient(180deg, #1a2734 0%, #121b24 100%);
-    border: 1px solid rgba(104, 130, 153, 0.28);
+      var(--rn-gradient-surface);
+    border: 1px solid var(--rn-border);
     border-radius: 14px;
     display: flex;
     flex-direction: column;
@@ -146,7 +146,7 @@
     border-color: var(--class-color);
     background:
       linear-gradient(180deg, color-mix(in srgb, var(--class-color) 18%, rgba(255, 214, 143, 0.04)) 0%, rgba(255, 214, 143, 0) 30%),
-      color-mix(in srgb, var(--class-color) 16%, #121b24);
+      color-mix(in srgb, var(--class-color) 16%, var(--rn-bg-surface-dark));
     box-shadow:
       0 0 0 1px color-mix(in srgb, var(--class-color) 28%, transparent),
       0 10px 18px rgba(0, 0, 0, 0.2);
@@ -169,7 +169,7 @@
 
   .class-card .role {
     font-size: 10px;
-    color: #8ca4b9;
+    color: var(--rn-text-label);
     text-align: center;
     line-height: 1.3;
   }
@@ -184,7 +184,7 @@
     border: 1px solid color-mix(in srgb, var(--class-color) 42%, rgba(104, 130, 153, 0.18));
     background:
       linear-gradient(180deg, color-mix(in srgb, var(--class-color) 14%, rgba(255, 214, 143, 0.03)) 0%, rgba(255, 214, 143, 0) 34%),
-      linear-gradient(180deg, #18222d 0%, #101822 100%);
+      linear-gradient(180deg, #1E1208 0%, #140C06 100%);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
 
@@ -200,7 +200,7 @@
     font-size: 10px;
     letter-spacing: 1.6px;
     text-transform: uppercase;
-    color: #8ea6bc;
+    color: var(--rn-text-label);
   }
 
   .selection-name {
@@ -211,7 +211,7 @@
 
   .selection-role {
     font-size: 12px;
-    color: #c4d2dd;
+    color: var(--rn-text-body);
   }
 
   .ready-btn {
@@ -221,8 +221,8 @@
     border: none;
     font-size: 15px;
     font-weight: bold;
-    background: linear-gradient(135deg, #1ea6d7, #0f6994);
-    color: #fff;
+    background: var(--rn-gradient-cta);
+    color: var(--rn-gold);
     cursor: pointer;
     letter-spacing: 2px;
   }

@@ -1,0 +1,120 @@
+/* ──────────────────────────────────────────────────────────────
+   layout.css — Sidebar, shell panel visibility, main canvas area
+   This file controls structural layout only — no decorative styles.
+   The sidebar's visual appearance by shell mode lives here too
+   since it changes the sidebar's entire shape and position.
+   ────────────────────────────────────────────────────────────── */
+
+/* ── Sidebar ─────────────────────────────────────────────────── */
+
+#sidebar {
+  width: 260px;
+  min-width: 260px;
+  background:
+    linear-gradient(180deg, rgba(80, 50, 10, 0.20) 0%, rgba(0, 0, 0, 0) 18%),
+    linear-gradient(180deg, #1E1208 0%, #160C05 36%, #0E0804 100%);
+  border-right: 1px solid rgba(120, 84, 28, 0.50);
+  box-shadow: inset -1px 0 0 rgba(255, 210, 80, 0.06);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 16px;
+  gap: 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  position: relative;
+}
+
+#sidebar h1 {
+  font-size: 22px;
+  color: var(--rn-gold);
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+#sidebar h3 {
+  font-size: 13px;
+  color: var(--rn-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ── Shell panel visibility ───────────────────────────────────── */
+
+.shell-panel {
+  display: none;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+}
+
+body[data-shell="menu"]     #menu-panel,
+body[data-shell="lobby"]    #lobby-panel,
+body[data-shell="gameplay"] #gameplay-panel {
+  display: flex;
+}
+
+/* ── Menu shell overrides ─────────────────────────────────────── */
+/* In menu mode the sidebar expands full-width and centers content */
+
+body[data-shell="menu"] #main-layout {
+  display: none;
+}
+
+body[data-shell="menu"] #sidebar {
+  width: 100%;
+  min-width: 0;
+  border-right: none;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(200, 148, 40, 0.14) 0%, rgba(200, 148, 40, 0) 24%),
+    radial-gradient(circle at 50% -8%, rgba(255, 200, 80, 0.08) 0%, rgba(255, 200, 80, 0) 30%),
+    linear-gradient(180deg, #1E1208 0%, #120A04 52%, #080402 100%);
+}
+
+body[data-shell="menu"] #menu-panel {
+  width: min(620px, 100%);
+  flex: 0 1 auto;
+}
+
+body[data-shell="menu"] #host-actions {
+  width: min(620px, 100%);
+  margin-top: 0;
+}
+
+body[data-shell="menu"] #start-btn,
+body[data-shell="menu"] #quit-campaign-btn {
+  display: none !important;
+}
+
+/* ── Main canvas area ─────────────────────────────────────────── */
+
+#main-layout {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(circle at top, rgba(80, 50, 10, 0.18) 0%, rgba(80, 50, 10, 0) 24%),
+    var(--rn-bg-void);
+}
+
+#canvas-wrap {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 12px;
+}
+
+canvas {
+  display: block;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  width: auto !important;
+  height: auto !important;
+}

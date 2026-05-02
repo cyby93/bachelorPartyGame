@@ -1,0 +1,269 @@
+/* ──────────────────────────────────────────────────────────────
+   lobby.css — Lobby screen: staging area, QR, player list, debug
+   WARCRAFT UPGRADE: .lobby-card → parchment/scroll texture,
+   .lobby-kicker → rune label. Secondary target after menu.css.
+   ────────────────────────────────────────────────────────────── */
+
+/* ── Head section ────────────────────────────────────────────── */
+
+.lobby-shell-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: center;
+  padding: 6px 4px 0;
+}
+
+.lobby-kicker {
+  font-size: 11px;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--rn-text-secondary);
+}
+
+.lobby-copy {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--rn-text-label);
+}
+
+/* ── Cards ───────────────────────────────────────────────────── */
+
+.lobby-card {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(200, 148, 40, 0.05) 0%, rgba(200, 148, 40, 0) 32%),
+    linear-gradient(180deg, #1E1208 0%, #140C06 100%);
+  border: 1px solid rgba(148, 106, 32, 0.42);
+  border-radius: 10px;
+  padding: 14px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 210, 80, 0.07),
+    0 10px 22px rgba(0, 0, 0, 0.30);
+}
+
+/* Top-edge gold line */
+.lobby-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(200, 148, 40, 0.50), rgba(200, 148, 40, 0.04));
+  pointer-events: none;
+}
+
+.lobby-card h3 {
+  color: var(--rn-gold) !important;
+  margin-bottom: 8px;
+}
+
+/* ── Server info ──────────────────────────────────────────────── */
+
+#server-info {
+  background: var(--rn-bg-void);
+  border: 1px solid rgba(100, 72, 20, 0.30);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+}
+
+#server-ip {
+  font-size: 13px;
+  color: var(--rn-text-body);
+  margin-top: 4px;
+  word-break: break-all;
+}
+
+/* ── QR code ──────────────────────────────────────────────────── */
+
+#qr-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+#qr-code {
+  background: #fff;
+  padding: 8px;
+  border-radius: 10px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.30);
+}
+
+#qr-hint {
+  font-size: 11px;
+  color: var(--rn-text-dim);
+}
+
+/* ── Player list ──────────────────────────────────────────────── */
+
+#player-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.player-item {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid rgba(100, 72, 20, 0.22);
+}
+
+.player-item .pname  { font-size: 14px; color: var(--rn-accent); }
+.player-item .pclass { font-size: 12px; opacity: 0.7; }
+
+#waiting-msg {
+  color: var(--rn-text-dim);
+  font-size: 13px;
+  text-align: center;
+  margin-top: 8px;
+}
+
+/* ── Start button ─────────────────────────────────────────────── */
+
+#start-btn {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(180, 124, 32, 0.55);
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0) 22%),
+    linear-gradient(180deg, #6A3810 0%, #4A2408 100%);
+  color: var(--rn-gold);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 210, 80, 0.15),
+    0 4px 12px rgba(0, 0, 0, 0.40);
+  transition: opacity 0.2s;
+}
+
+#start-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ── Level selector + debug buttons ──────────────────────────── */
+
+#level-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+#level-selector button,
+#bot-panel button,
+.debug-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--rn-border-btn);
+  background: var(--rn-bg-void);
+  color: var(--rn-text-dim);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+#level-selector button:hover,
+#bot-panel button:hover,
+.debug-btn:hover {
+  background: rgba(90, 56, 16, 0.50);
+  color: var(--rn-gold);
+  border-color: rgba(160, 112, 30, 0.60);
+}
+
+#selected-level-name {
+  color: var(--rn-accent);
+  font-size: 13px;
+  min-width: 180px;
+  text-align: center;
+}
+
+/* ── Debug toggle ─────────────────────────────────────────────── */
+
+#debug-toggle {
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(80, 52, 12, 0.60);
+  background: var(--rn-bg-void);
+  color: var(--rn-text-dim);
+  cursor: pointer;
+  font-size: 12px;
+  align-self: flex-end;
+}
+
+#debug-toggle:hover {
+  background: rgba(90, 56, 16, 0.50);
+  color: var(--rn-gold);
+}
+
+#sidebar.debug-mode #debug-toggle {
+  background: #1a2e1a;
+  color: #5dbb5d;
+  border-color: #2a4a2a;
+}
+
+/* ── Panel switching ──────────────────────────────────────────── */
+
+#lobby-panel { flex: 1; }
+
+#panel-normal,
+#panel-debug {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+#panel-debug { display: none; }
+
+#sidebar.debug-mode #panel-normal { display: none; }
+#sidebar.debug-mode #panel-debug  { display: flex; }
+
+/* ── Upgrade debug panel ──────────────────────────────────────── */
+
+#upgrade-debug-panel h3 {
+  font-size: 13px;
+  color: var(--rn-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.upgrade-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--rn-text-body);
+}
+
+.upgrade-row label          { width: 48px; flex-shrink: 0; }
+.upgrade-row input[type=range] { flex: 1; accent-color: var(--rn-accent); }
+.upgrade-row .upg-val       { width: 16px; text-align: right; color: var(--rn-accent); font-weight: bold; }
+
+#upgrade-reset-btn {
+  margin-top: 4px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--rn-border-btn);
+  background: var(--rn-bg-void);
+  color: var(--rn-text-dim);
+  cursor: pointer;
+  font-size: 12px;
+  align-self: flex-start;
+}
+
+#upgrade-reset-btn:hover {
+  background: rgba(90, 56, 16, 0.50);
+  color: var(--rn-gold);
+  border-color: rgba(160, 112, 30, 0.60);
+}

@@ -1219,7 +1219,8 @@ export default class SkillSystem {
           } else {
             const amount = proj.damage ?? 0
             if (amount > 0) {
-              const dealt = p.takeDamage(amount)
+              const minHp = gs.scene === 'lobby' ? 1 : 0
+              const dealt = p.takeDamage(amount, minHp)
               if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount: dealt, type: 'damage', sourceSkill: null })
             }
           }

@@ -15,7 +15,7 @@ export const GAME_CONFIG = {
   PLAYER_RADIUS:   20,   // legacy circle radius — used for wall push and spawn padding
   PLAYER_RADIUS_X: 15,   // oval hitbox horizontal semi-axis (wider — screen left/right)
   PLAYER_RADIUS_Y: 30,   // oval hitbox vertical semi-axis   (narrower — foreshortened depth)
-  ENEMY_RADIUS:    15,
+  ENEMY_RADIUS:    30,
 
   // Revive mechanic
   REVIVE_DISTANCE: 80,    // px — how close a reviver must stand

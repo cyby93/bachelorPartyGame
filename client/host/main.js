@@ -69,10 +69,21 @@ const audioVoiceEl  = document.getElementById('audio-voice')
 const audioMuteEl   = document.getElementById('audio-muted')
 
 const SANDBOX_ENEMY_ACTIONS = [
-  { label: 'Add Felguard', enemyType: 'felGuard' },
-  { label: 'Add Harpooner', enemyType: 'coilskarHarpooner' },
-  { label: 'Add Brute', enemyType: 'bonechewerBrute' },
-  { label: 'Add Mystic', enemyType: 'ashtonghueMystic' },
+  { label: 'Felguard',       enemyType: 'felGuard' },
+  { label: 'Harpooner',      enemyType: 'coilskarHarpooner' },
+  { label: 'Brute',          enemyType: 'bonechewerBrute' },
+  { label: 'Blade Fury',     enemyType: 'bonechewerBladeFury' },
+  { label: 'Centurion',      enemyType: 'illidariCenturion' },
+  { label: 'Mystic',         enemyType: 'ashtonghueMystic' },
+  { label: 'Blood Prophet',  enemyType: 'bloodProphet' },
+  { label: 'Serpent Guard',  enemyType: 'coilskarSerpentGuard' },
+  { label: 'Ritual Channeler', enemyType: 'ritualChanneler' },
+  { label: 'Gate Repairer',  enemyType: 'gateRepairer' },
+  { label: 'Warlock',        enemyType: 'warlock' },
+  { label: 'Leviathan',      enemyType: 'leviathan' },
+  { label: 'Shadowfiend',    enemyType: 'shadowfiend' },
+  { label: 'Shadow Demon',   enemyType: 'shadowDemon' },
+  { label: 'Flame of Azzinoth', enemyType: 'flameOfAzzinoth' },
 ]
 
 botAddBtn?.addEventListener('click', () => socket.emit(EVENTS.BOT_ADD, {}))
@@ -233,24 +244,30 @@ function renderSandboxPanel() {
   const activeSandbox = currentLevelMeta?.debugSandbox === true && (scene === 'battle' || scene === 'bossFight')
 
   sandboxOverlayEl.hidden = !activeSandbox
-  if (!activeSandbox) return
+  if (!activeSandbox) {
+    sandboxActionsEl.innerHTML = ''
+    return
+  }
 
-  sandboxActionsEl.innerHTML = SANDBOX_ENEMY_ACTIONS.map(action => (
-    `<button class="debug-btn" data-enemy-type="${action.enemyType}">${action.label}</button>`
-  )).join('')
+  // Build buttons once — rebuilding on every tick destroys them mid-click
+  if (sandboxActionsEl.childElementCount === 0) {
+    sandboxActionsEl.innerHTML = SANDBOX_ENEMY_ACTIONS.map(action => (
+      `<button class="debug-btn" data-enemy-type="${action.enemyType}">${action.label}</button>`
+    )).join('')
 
-  sandboxActionsEl.querySelectorAll('[data-enemy-type]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      socket.emit(EVENTS.DEBUG_SPAWN_ENEMY, { enemyType: btn.dataset.enemyType })
+    sandboxActionsEl.querySelectorAll('[data-enemy-type]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        socket.emit(EVENTS.DEBUG_SPAWN_ENEMY, { enemyType: btn.dataset.enemyType })
+      })
     })
-  })
 
-  const clearBtn = document.getElementById('sandbox-overlay-clear-btn')
-  if (clearBtn) clearBtn.disabled = false
+    const clearBtn = document.getElementById('sandbox-overlay-clear-btn')
+    if (clearBtn) clearBtn.disabled = false
 
-  if (sandboxStatusEl && !sandboxStatusEl.textContent) {
-    sandboxStatusEl.textContent = 'Sandbox controls ready.'
-    sandboxStatusEl.dataset.error = 'false'
+    if (sandboxStatusEl) {
+      sandboxStatusEl.textContent = 'Sandbox controls ready.'
+      sandboxStatusEl.dataset.error = 'false'
+    }
   }
 }
 
@@ -584,7 +601,6 @@ socket.on(EVENTS.STATE_DELTA, delta => {
   const after  = Object.keys(game.knownState.players).length
   if (after !== before) renderDOMPlayerList()
   renderGameplaySidebar()
-  renderSandboxPanel()
   audio.syncPlayerState(game.knownState.players)
 
   // Update shade buff card live during Level 4 Phase 1

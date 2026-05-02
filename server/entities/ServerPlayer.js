@@ -62,6 +62,8 @@ export default class ServerPlayer {
 
     // Skill upgrade tiers (incremented by quiz system)
     this.skillUpgrades   = [0, 0, 0, 0]
+    // HP upgrade count (incremented once per correct quiz answer)
+    this.hpUpgrades      = 0
 
     // Shadow values for delta detection
     this._prev = this._snapshot()
@@ -176,6 +178,18 @@ export default class ServerPlayer {
     rebuildStats(this)
   }
 
+  /**
+   * Apply one HP upgrade tier: raises baseMaxHp and maxHp by 10% of the class
+   * default HP, then heals the player by the same amount.
+   */
+  applyHpUpgrade() {
+    const bonus = Math.round(CLASSES[this.className].hp * 0.1)
+    this.baseMaxHp += bonus
+    this.maxHp     += bonus
+    this.heal(bonus)
+    this.hpUpgrades++
+  }
+
   // ── Serialisation ─────────────────────────────────────────────────────
 
   /** Full DTO — sent once on join. */
@@ -211,6 +225,7 @@ export default class ServerPlayer {
     if (cur.angle  !== prev.angle)  delta.angle  = cur.angle
     if (cur.aimAngle !== prev.aimAngle) delta.aimAngle = cur.aimAngle
     if (cur.hp           !== prev.hp)           delta.hp           = cur.hp
+    if (cur.maxHp        !== prev.maxHp)        delta.maxHp        = cur.maxHp
     if (cur.shieldAbsorb !== prev.shieldAbsorb) delta.shieldAbsorb = cur.shieldAbsorb
 
     // Visibility state change
@@ -263,6 +278,7 @@ export default class ServerPlayer {
       angle:       +this.angle.toFixed(3),
       aimAngle:    +this.aimAngle.toFixed(3),
       hp:          Math.ceil(this.hp),
+      maxHp:       this.maxHp,
       isDead:      this.isDead,
       isInvisible:  this.isInvisible,
       comboPoints:  this.comboPoints,

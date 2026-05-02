@@ -43,7 +43,7 @@ export default class EnemySprite {
 
     const typeCfg     = ENEMY_TYPES[this.type] ?? ENEMY_TYPES.felGuard
     const R           = typeCfg.radius    ?? DEFAULT_R
-    const genScale    = this.type === 'leviathan' ? Math.pow(0.75, data.generation ?? 0) : 1.0
+    const genScale    = this.type === 'leviathan' ? Math.pow(0.75, data.generation ?? 0) : 1.5
     const displaySize = (typeCfg.spriteSize ?? R * 2) * genScale
     const D           = displaySize / 2
     const color       = typeCfg.color ?? '#c0392b'

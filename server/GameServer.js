@@ -341,7 +341,14 @@ export default class GameServer {
 
   _onDebugSpawnEnemy(socket, data) {
     if (!this.players.get(socket.id)?.isHost) return
-    if (!this._isDebugSandboxLevel() || (this.scene !== 'battle' && this.scene !== 'bossFight')) return
+    if (!this._isDebugSandboxLevel()) {
+      this._emitDebugResult('Not in sandbox level', true)
+      return
+    }
+    if (this.scene !== 'battle' && this.scene !== 'bossFight') {
+      this._emitDebugResult(`Game not active (scene: ${this.scene})`, true)
+      return
+    }
 
     const enemyType = data?.enemyType
     if (!ENEMY_TYPES[enemyType]) {
@@ -368,7 +375,10 @@ export default class GameServer {
 
   _onDebugClearEnemies(socket) {
     if (!this.players.get(socket.id)?.isHost) return
-    if (!this._isDebugSandboxLevel() || (this.scene !== 'battle' && this.scene !== 'bossFight')) return
+    if (!this._isDebugSandboxLevel() || (this.scene !== 'battle' && this.scene !== 'bossFight')) {
+      this._emitDebugResult('Not in sandbox or game not active', true)
+      return
+    }
 
     let removed = 0
     this.enemies.forEach(enemy => {
@@ -904,6 +914,7 @@ export default class GameServer {
 
   _gs() {
     return {
+      scene:        this.scene,
       arenaWidth:   this.arenaWidth,
       arenaHeight:  this.arenaHeight,
       players:      this.players,
@@ -1940,9 +1951,11 @@ export default class GameServer {
       wrongCount,
     })
 
-    // Mark wrong players as upgrade-done immediately
+    // Apply HP upgrade to all correct players, mark wrong players as upgrade-done
     for (const p of participants) {
-      if (!this._quizResults.get(p.id)) {
+      if (this._quizResults.get(p.id)) {
+        p.applyHpUpgrade()
+      } else {
         this._quizUpgradesDone.add(p.id)
       }
     }
@@ -2025,6 +2038,7 @@ export default class GameServer {
   // ── Win / lose conditions ───────────────────────────────────────────────────
 
   _checkAllDead() {
+    if (this.currentLevel?.debugSandbox) return
     let livingCount = 0
     this.players.forEach(p => {
       if (!p.isHost && !p.isBot && !p.isDead) livingCount++

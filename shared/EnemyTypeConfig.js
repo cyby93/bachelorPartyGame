@@ -34,9 +34,8 @@ export const ENEMY_TYPES = {
   felGuard: {
     hp: Math.round(0.70 * X * R), 
     speed: 1.3, 
-    radius: 15,
+    radius: 38,
     contactDamage: Math.round(0.45 * Y * R),
-    spriteSize: 76,
     color: '#1a7a1a',
     ai: 'chase',
   },
@@ -44,15 +43,17 @@ export const ENEMY_TYPES = {
   // ── Bonechewer Brute — slow tanky fel orc ───────────────────────────────
   bonechewerBrute: {
     hp: Math.round(2.00 * X * R), speed: 0.8, radius: 24, contactDamage: Math.round(0.875 * Y * R),
-    spriteSize: 116,
+    radius: 45,
     color: '#8B0000',
     ai: 'chase',
   },
 
   // ── Coilskar Harpooner — ranged naga ────────────────────────────────────
   coilskarHarpooner: {
-    hp: Math.round(0.50 * X * R), speed: 1.0, radius: 13, contactDamage: Math.round(0.125 * Y * R),
-    spriteSize: 76,
+    hp: Math.round(0.50 * X * R), 
+    speed: 1.0, 
+    radius: 30, 
+    contactDamage: Math.round(0.125 * Y * R),
     color: '#1a5f7a',
     ai: 'ranged',
     projectileSpeed: 280,
@@ -63,8 +64,10 @@ export const ENEMY_TYPES = {
 
   // ── Illidari Centurion — charging demon elite ────────────────────────────
   illidariCenturion: {
-    hp: Math.round(1.40 * X * R), speed: 1.4, radius: 20, contactDamage: Math.round(1.25 * Y * R),
-    spriteSize: 116,
+    hp: Math.round(1.40 * X * R), 
+    speed: 1.4, 
+    radius: 34, 
+    contactDamage: Math.round(1.25 * Y * R),
     color: '#2d6b2d',
     ai: 'charger',
     chargeSpeed: 5.5,
@@ -76,8 +79,9 @@ export const ENEMY_TYPES = {
 
   // ── Bonechewer Blade Fury — berserking whirlwind orc ────────────────────
   bonechewerBladeFury: {
-    hp: Math.round(1.20 * X * R), speed: 1.3, radius: 18, contactDamage: Math.round(0.55 * Y * R),
-    spriteSize: 96,
+    hp: Math.round(1.20 * X * R), 
+    speed: 1.3, 
+    contactDamage: Math.round(0.55 * Y * R),
     color: '#cc2200',
     ai: 'berserk',
     berserkSpeed:    1.9,
@@ -90,8 +94,9 @@ export const ENEMY_TYPES = {
 
   // ── Ashtongue Mystic — broken draenei healer ────────────────────────────
   ashtonghueMystic: {
-    hp: Math.round(0.90 * X * R), speed: 1.0, radius: 14, contactDamage: Math.round(0.125 * Y * R),
-    spriteSize: 76,
+    hp: Math.round(0.90 * X * R), speed: 1.0, 
+    radius: 30, 
+    contactDamage: Math.round(0.125 * Y * R),
     color: '#7b4f9e',
     ai: 'healer',
     healAmount: Math.round(0.24 * X * R),
@@ -102,8 +107,8 @@ export const ENEMY_TYPES = {
 
   // ── Bonechewer Blood Prophet — stationary fel orc damage buffer ──────────
   bloodProphet: {
-    hp: Math.round(1.40 * X * R), speed: 0, radius: 15, contactDamage: 0,
-    spriteSize: 96,
+    hp: Math.round(1.40 * X * R), speed: 0, 
+    radius: 30, contactDamage: 0,
     color: '#8B0000',
     ai: 'channeler',
     channelTarget: null,
@@ -113,8 +118,8 @@ export const ENEMY_TYPES = {
 
   // ── Coilskar Serpent Guard — shield-bearing naga tank ───────────────────
   coilskarSerpentGuard: {
-    hp: Math.round(1.70 * X * R), speed: 1.0, radius: 21, contactDamage: Math.round(0.70 * Y * R),
-    spriteSize: 116,
+    hp: Math.round(1.70 * X * R), speed: 1.0, 
+    radius: 38, contactDamage: Math.round(0.70 * Y * R),
     color: '#0d4f6b',
     ai: 'shielded',
     shieldArc: 2.094,  // 120° in radians (Math.PI * 2/3)
@@ -122,8 +127,8 @@ export const ENEMY_TYPES = {
 
   // ── Ashtongue Ritual Channeler — repairs ritual objectives ──────────────
   ritualChanneler: {
-    hp: Math.round(0.80 * X * R), speed: 1.1, radius: 13, contactDamage: Math.round(0.125 * Y * R),
-    spriteSize: 64,
+    hp: Math.round(0.80 * X * R), speed: 1.1, 
+    radius: 26, contactDamage: Math.round(0.125 * Y * R),
     color: '#6a3d9a',
     ai: 'gateRepairer',
     repairAmount: 8,
@@ -134,9 +139,8 @@ export const ENEMY_TYPES = {
   gateRepairer: {
     hp: Math.round(0.70 * X * R),
     speed: 1.1,
-    radius: 13,
+    radius: 26,
     contactDamage: Math.round(0.125 * Y * R),
-    spriteSize: 76,
     color: '#8B4513',
     shape: 'square',
     ai: 'gateRepairer',
@@ -170,9 +174,8 @@ export const ENEMY_TYPES = {
   warlock: {
     hp: Math.round(1.20 * X * R),
     speed: 0,
-    radius: 14,
+    radius: 26,
     contactDamage: 0,
-    spriteSize: 80,
     color: '#6A0DAD',
     shape: 'diamond',
     ai: 'channeler',
@@ -206,9 +209,8 @@ export const ENEMY_TYPES = {
   shadowDemon: {
     hp: Math.round(10 * X * R),   // 500 at defaults — tanky enough to require focused fire
     speed: 0.6,                    // slow crawl — gives the party time to react
-    radius: 18,
+    radius: 24,
     contactDamage: 0,              // dealt as instant kill logic in GameServer
-    spriteSize: 80,
     color: '#7700cc',
     shape: 'diamond',
     ai: 'shadowDemon',
@@ -219,9 +221,8 @@ export const ENEMY_TYPES = {
   shadowfiend: {
     hp: Math.round(1.20 * X * R),
     speed: 1,
-    radius: 16,
+    radius: 24,
     contactDamage: 0,     // infection applied by GameServer, not contact damage
-    spriteSize: 76,
     color: '#440088',
     shape: 'triangle',
     ai: 'shadowfiend',

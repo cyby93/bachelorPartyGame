@@ -193,6 +193,7 @@ export default class ServerBoss {
             ...ability,
             damage: Math.round((ability.damage ?? 0) * this._damageMult),
             bossX: this.x, bossY: this.y, target: nearest,
+            castTargetX: nearest.x, castTargetY: nearest.y,
           },
           castTime:  ability.castTime / castSpeedMult,
           startedAt: now,

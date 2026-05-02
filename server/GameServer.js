@@ -583,6 +583,7 @@ export default class GameServer {
         const wx = this.boss.x + Math.cos(angle) * circleR
         const wy = this.boss.y + Math.sin(angle) * circleR
         const base = ENEMY_TYPES.warlock
+        const warlockHp = wCfg.hp != null ? Math.round(wCfg.hp * hpMult) : Math.round(base.hp * hpMult)
         const id = ++this._enemyIdSeq.value
         const warlock = new ServerEnemy({
           id,
@@ -591,8 +592,8 @@ export default class GameServer {
           type: 'warlock',
           renderType: 'ritualChanneler',
           forcedAnimation: 'channel',
-          hp: Math.round(base.hp * hpMult),
-          maxHp: Math.round(base.hp * hpMult),
+          hp: warlockHp,
+          maxHp: warlockHp,
           speed: base.speed,
           radius: base.radius,
           contactDamage: base.contactDamage,
@@ -981,19 +982,23 @@ export default class GameServer {
 
       // Spawn enemies from SpawnSystem
       if (this.spawnSystem) {
-        // For gate-based spawning, offset spawn point to the left of the gate
-        // (players advance from the left, enemies defend the gate from the player side)
-        let spawnPos = null
-        if (this.currentLevel?.spawning?.spawnNearActiveGate) {
-          const gate = this._getActiveGate()
-          if (gate) {
-            const offsetX = gate.passageId ? -((gate.width ?? 40) / 2 + 60) : 0
-            spawnPos = { x: gate.x + offsetX, y: gate.y }
+        // Level 4: pause ambient spawning while any Leviathan is alive
+        const leviathanAlive = [...this.enemies.values()].some(e => !e.isDead && e.type === 'leviathan')
+        if (!leviathanAlive) {
+          // For gate-based spawning, offset spawn point to the left of the gate
+          // (players advance from the left, enemies defend the gate from the player side)
+          let spawnPos = null
+          if (this.currentLevel?.spawning?.spawnNearActiveGate) {
+            const gate = this._getActiveGate()
+            if (gate) {
+              const offsetX = gate.passageId ? -((gate.width ?? 40) / 2 + 60) : 0
+              spawnPos = { x: gate.x + offsetX, y: gate.y }
+            }
           }
-        }
-        const spawned = this.spawnSystem.tick(now, this.enemies, this._enemyIdSeq, spawnPos)
-        for (const e of spawned) {
-          this.enemies.set(e.id, e)
+          const spawned = this.spawnSystem.tick(now, this.enemies, this._enemyIdSeq, spawnPos)
+          for (const e of spawned) {
+            this.enemies.set(e.id, e)
+          }
         }
       }
 
@@ -1407,6 +1412,8 @@ export default class GameServer {
         isEnemyProj: true,
         ownerId: enemyId,
         hit: hitSet,
+        homingTargetId: action.homingTargetId ?? null,
+        homingSpeed:    action.speed ?? null,
       })
     } else if (action.action === 'repair') {
       // Gate repairer heals the active gate
@@ -1573,7 +1580,11 @@ export default class GameServer {
     const dy   = npc.y - this.boss.y
     const dist = Math.hypot(dx, dy)
 
-    if (dist > 5) {
+    const attackRange = bossConfig.attackRange ?? 60
+    // Stop when NPC is within natural melee reach; prevents Shade/Akama from overlapping
+    const stopDist = this.boss.radius + npc.radius
+
+    if (dist > stopDist) {
       const pps = this.boss.speed * 60
       this.boss.x += (dx / dist) * pps * dt
       this.boss.y += (dy / dist) * pps * dt
@@ -1583,7 +1594,6 @@ export default class GameServer {
     }
 
     // Melee attack NPC when in range
-    const attackRange = bossConfig.attackRange ?? 60
     if (dist <= attackRange + npc.radius) {
       if (!this.boss._lastNpcAttack) this.boss._lastNpcAttack = 0
       const attackCD = bossConfig.attackCooldown ?? 2000

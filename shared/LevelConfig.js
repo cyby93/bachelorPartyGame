@@ -170,9 +170,9 @@ export const CAMPAIGN = [
     ],
     gates: [
       // Gate1 blocks passage1 — x=550 is center of 40px gap (530+20), y=300 is center of passage (210..390)
-      { id: 'gate1', passageId: 'passage1', hp: Math.round(10 * X * R), position: { x: 550, y: 300 }, width: 40, height: 180 },
+      { id: 'gate1', passageId: 'passage1', hp: Math.round(25 * X * R), position: { x: 550, y: 300 }, width: 40, height: 180 },
       // Gate2 at the far right edge of the right room — x=1062 center, y=300 matches gate1
-      { id: 'gate2', passageId: null,       hp: Math.round(10 * X * R), position: { x: 1062, y: 300 }, width: 48, height: 180 },
+      { id: 'gate2', passageId: null,       hp: Math.round(35 * X * R), position: { x: 1062, y: 300 }, width: 48, height: 180 },
     ],
     spawning: {
       mode: 'continuous',
@@ -289,6 +289,7 @@ export const CAMPAIGN = [
       count: 6,
       circleRadius: 120,
       centerEntityId: 'shade',
+      hp: Math.round(1.20 * X * R),   // tunable per-level warlock HP (falls back to EnemyTypeConfig if omitted)
     },
     // Ambient spawning throughout the encounter — active from phase 1
     spawning: {

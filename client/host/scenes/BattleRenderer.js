@@ -373,8 +373,9 @@ export default class BattleRenderer extends BaseRenderer {
       gfx.rect(tomb.x - 10, tomb.y - 14, 20, 6)
       gfx.fill({ color: 0x888888, alpha: 0.8 })
       if (tomb.progress > 0) {
+        gfx.moveTo(tomb.x, tomb.y)
         gfx.arc(tomb.x, tomb.y + 14, 14, -Math.PI / 2, -Math.PI / 2 + tomb.progress * Math.PI * 2)
-        gfx.stroke({ color: 0x00ff88, width: 3 })
+        gfx.stroke({ color: 0x00ff88, width: 5 })
       }
     }
 

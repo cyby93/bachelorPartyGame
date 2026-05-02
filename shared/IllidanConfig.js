@@ -51,7 +51,7 @@ const _huntAbilities = [
     type:       'flameCrash',
     castTime:   1500,
     meleeOnly:  true,
-    damage:     Math.round(2 * Y * R),       // 80 at defaults
+    damage:     Math.round(0.25 * Y * R),       // 10 at defaults
     radius:     120,
     groundFire: { radius: 80, duration: 30000, tickDamage: Math.round(0.375 * Y * R), tickRate: 500 },
   },
@@ -59,18 +59,18 @@ const _huntAbilities = [
     name:          'Draw Soul',
     cooldown:      10000,
     type:          'drawSoul',
-    damage:        Math.round(1.25 * Y * R),  // 50 at defaults
+    damage:        Math.round(0.5 * Y * R),  // 20 at defaults
     coneAngle:     90,   // degrees
     coneRange:     200,
-    healPerTarget: Math.round(10 * R),         // 100 at defaults
+    healPerTarget: Math.round(7 * R),         // 70 at defaults
   },
-  {
-    name:           'Shear',
-    cooldown:       8000,
-    type:           'shear',
-    maxHpReduction: 0.2,  // reduces effective max HP by 20%
-    duration:       3000,
-  },
+  // {
+  //   name:           'Shear',
+  //   cooldown:       8000,
+  //   type:           'shear',
+  //   maxHpReduction: 0.2,  // reduces effective max HP by 20%
+  //   duration:       3000,
+  // },
   {
     name:          'Parasitic Shadowfiend',
     cooldown:      14000,
@@ -79,16 +79,18 @@ const _huntAbilities = [
     dotInterval:   1000,
     dotDuration:   8000,
     spawnCount:    2,
-    shadowfiendHp: Math.round(2 * X * R),      // 100 at defaults
+    shadowfiendHp: Math.round(1.5 * X * R),      // 60 at defaults
   },
 ]
 
 export const ILLIDAN_CONFIG = {
   ...BASE_BOSS_DEFAULTS,
   name:           'Illidan Stormrage',
-  maxHp:          Math.round(2116 * R * BALANCE.RLEF),
+  // maxHp:          Math.round(2116 * R * BALANCE.RLEF),
+  maxHp:          Math.round(1200 * R * BALANCE.RLEF),
   speed:          1,
-  meleeDamage:    Math.round(1 * Y * R),      // 40 at defaults
+  // meleeDamage:    Math.round(0.5 * Y * R),      // 20 at defaults
+  meleeDamage:    1,
   attackCooldown: 2000,
   attackRange:    80,
 
@@ -117,14 +119,14 @@ export const ILLIDAN_CONFIG = {
         name:         'Fireball',
         cooldown:     4000,
         type:         'fireball',
-        damage:       Math.round(2.5 * Y * R),     // 100 at defaults
-        splashRadius: 80,
+        damage:       Math.round(1.25 * Y * R),     // 50 at defaults
+        splashRadius: 60,
       },
       {
         name:        'Dark Barrage',
         cooldown:    8000,
         type:        'darkBarrage',
-        dotDamage:   Math.round(0.5 * Y * R),      // 20 at defaults
+        dotDamage:   Math.round(0.25 * Y * R),      // 10 at defaults
         dotInterval: 1000,
         dotDuration: 6000,
       },
@@ -146,7 +148,7 @@ export const ILLIDAN_CONFIG = {
         name:         'Agonizing Flames',
         cooldown:     12000,
         type:         'agonizingFlames',
-        damage:       Math.round(2.5 * Y * R),     // 100 at defaults
+        damage:       Math.round(1.5 * Y * R),     // 60 at defaults
         splashRadius: 100,
         dotDamage:    Math.round(0.25 * Y * R),    // 10 at defaults
         dotInterval:  1000,
@@ -158,7 +160,7 @@ export const ILLIDAN_CONFIG = {
         cooldown:     1000,
         type:         'shadowBlast',
         castTime:     2500,
-        damage:       Math.round(2 * Y * R),        // 80 at defaults
+        damage:       Math.round(1.5 * Y * R),        // 60 at defaults
         splashRadius: 80,
       },
       {

@@ -146,7 +146,7 @@ export const ENEMY_TYPES = {
 
   // ── Leviathan (Level 3) ─────────────────────────────────────────────────
   leviathan: {
-    hp: Math.round(12.00 * X * R),
+    hp: Math.round(26.00 * X * R),
     speed: 1.0,
     radius: 60,
     contactDamage: Math.round(0.625 * Y * R),
@@ -218,7 +218,7 @@ export const ENEMY_TYPES = {
   // infects the next player it touches
   shadowfiend: {
     hp: Math.round(1.20 * X * R),
-    speed: 2.0,
+    speed: 1,
     radius: 16,
     contactDamage: 0,     // infection applied by GameServer, not contact damage
     spriteSize: 76,

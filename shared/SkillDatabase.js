@@ -52,7 +52,7 @@ const SkillDatabase = {
       inputType: 'INSTANT',
       cooldown:  12000,
       damage:    6,             // damage per tick — tune via BalanceConfig
-      radius:    100,           // slightly larger than Cleave range
+      radius:    80,           // slightly larger than Cleave range
       duration:  4000,          // 4 seconds of spinning
       tickRate:  300,           // hits every 300 ms
       effectType: 'DAMAGE',

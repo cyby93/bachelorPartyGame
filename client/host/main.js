@@ -18,7 +18,21 @@ import AudioManager   from './systems/AudioManager.js'
 // ── PixiJS game init (top-level await — supported in Vite ESM) ─────────────
 const game  = new HostGame()
 const audio = new AudioManager()
-await game.init(document.getElementById('canvas-wrap'))
+
+// Show loading progress in the badge before the sprite-load blocks the thread
+const _loadBadge = document.getElementById('conn-badge')
+if (_loadBadge) {
+  _loadBadge.textContent = 'Loading assets… 0%'
+  _loadBadge.classList.add('visible', 'connecting')
+}
+
+await game.init(document.getElementById('canvas-wrap'), (progress) => {
+  if (_loadBadge) _loadBadge.textContent = `Loading assets… ${Math.round(progress * 100)}%`
+})
+
+if (_loadBadge) {
+  _loadBadge.textContent = 'Connecting…'
+}
 
 // ── Socket ─────────────────────────────────────────────────────────────────
 const socket = io({ transports: ['websocket'] })

@@ -45,6 +45,7 @@ export default class ServerNPC {
     this.isIdle        = true
 
     this._lastAttack   = 0
+    this._facingAngle  = Math.PI / 2   // default facing south
   }
 
   setArenaSize(width, height) {
@@ -92,6 +93,7 @@ export default class ServerNPC {
       const step = Math.min(pps * dt, dist - stopDist)
       this.x += (dx / dist) * step
       this.y += (dy / dist) * step
+      this._facingAngle = Math.atan2(dy, dx)
       this._clampToArena()
     }
 
@@ -126,6 +128,7 @@ export default class ServerNPC {
       radius: this.radius,
       isDead: this.isDead,
       isNPC:  true,
+      angle:  this._facingAngle,
     }
   }
 }

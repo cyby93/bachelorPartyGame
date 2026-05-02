@@ -1,3 +1,4 @@
+import { GAME_CONFIG } from '../../../shared/GameConfig.js'
 import {
   AUDIO_STORAGE_KEYS,
   AUDIO_STINGERS,
@@ -11,6 +12,9 @@ import {
   getSkillAudio,
   withResolvedAudioPaths,
 } from '../../../shared/AudioConfig.js'
+
+// Skills whose EFFECT_DAMAGE events (DOT ticks) should play no impact sound
+const DOT_SILENT_SKILLS = new Set(['Corruption', 'Moonfire'])
 
 function clamp01(value) {
   return Math.max(0, Math.min(1, Number(value) || 0))
@@ -48,6 +52,7 @@ export default class AudioManager {
   }
 
   init() {
+    if (GAME_CONFIG.DEV_DISABLE_AUDIO) { this._enabled = false; return }
     if (this._ctx || !this._enabled) return
 
     try {
@@ -115,6 +120,7 @@ export default class AudioManager {
 
   handleEffectDamage(data) {
     if (!data) return
+    if (DOT_SILENT_SKILLS.has(data.sourceSkill)) return
     const t = nowMs()
     if (t - this._lastDamageAt < this._throttle.hit) return
     this._lastDamageAt = t
@@ -180,13 +186,14 @@ export default class AudioManager {
       const castProgress = player.castProgress
       const isChanneling = !!player.isChanneling
 
-      if (castSkill && castProgress != null && castProgress > 0 && previous.castSkill !== castSkill) {
+      if (castSkill && castProgress != null && previous.castSkill !== castSkill) {
         const skillAudio = getSkillAudio(castSkill)
         if (isChanneling) {
           if (skillAudio.cast) this._playNamedSfx(skillAudio.cast, { family: skillAudio.family, variation: player.id })
           if (skillAudio.channel) this._startLoopingSfx(player.id, skillAudio.channel, { volumeScale: 0.85 })
-        } else if (skillAudio.precast) {
-          this._playNamedSfx(skillAudio.precast, { family: skillAudio.family, variation: player.id })
+        } else {
+          const startCue = skillAudio.precast ?? skillAudio.cast
+          if (startCue) this._playNamedSfx(startCue, { family: skillAudio.family, variation: player.id })
         }
       }
 

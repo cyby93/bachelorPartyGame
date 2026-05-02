@@ -254,8 +254,8 @@ export default class IllidanEncounter {
     switch (attack.type) {
 
       case 'flameCrash': {
-        const crashX = (attack.target && !attack.target.isDead) ? attack.target.x : attack.bossX
-        const crashY = (attack.target && !attack.target.isDead) ? attack.target.y : attack.bossY
+        const crashX = attack.castTargetX ?? ((attack.target && !attack.target.isDead) ? attack.target.x : attack.bossX)
+        const crashY = attack.castTargetY ?? ((attack.target && !attack.target.isDead) ? attack.target.y : attack.bossY)
         this.players.forEach(p => {
           if (p.isHost || p.isDead) return
           if (playerHitsCircle(p.x, p.y, crashX, crashY, attack.radius)) {

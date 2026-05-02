@@ -417,7 +417,8 @@ export default class ServerEnemy {
 
     // Determine how many ranged targets this generation supports
     // Gen 0 = maxRangedTargets, Gen 1 = max-1, Gen 2+ = 0 (melee only)
-    const rangedSlots = Math.max(0, this._maxRangedTargets - this.generation)
+    // const rangedSlots = Math.max(0, this._maxRangedTargets - this.generation)
+    const rangedSlots = this._maxRangedTargets
 
     // If no ranged slots, behave as chase AI
     if (rangedSlots === 0) {
@@ -438,8 +439,13 @@ export default class ServerEnemy {
     // Melee target: nearest player
     this._meleeTarget = candidates[0].player
 
-    // Ranged targets: next N players (excluding melee target)
-    this._rangedTargets = candidates.slice(1, 1 + rangedSlots).map(c => c.player)
+    // Ranged targets: random selection from remaining players
+    const remaining = candidates.slice(1).map(c => c.player)
+    for (let i = remaining.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [remaining[i], remaining[j]] = [remaining[j], remaining[i]]
+    }
+    this._rangedTargets = remaining.slice(0, rangedSlots)
 
     // Chase melee target
     const mx = this._meleeTarget.x - this.x
@@ -475,6 +481,7 @@ export default class ServerEnemy {
           spriteKey: 'projectile_ichor',
           // Exclude melee target from projectile hits
           excludeTargetId: this._meleeTarget.id,
+          homingTargetId: target.id,
         })
       }
     }

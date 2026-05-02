@@ -124,7 +124,8 @@ export function hitsWall(x, y, radius, segments, isGateDead) {
   if (!segments || segments.length === 0) return false
 
   for (const seg of segments) {
-    if (seg.gateId && isGateDead(seg.gateId)) continue
+    // Gate-blocked passages let projectiles through — the gate's hitbox handles collision
+    if (seg.gateId) continue
 
     const cx = Math.max(seg.x, Math.min(x, seg.x + seg.width))
     const cy = Math.max(seg.y, Math.min(y, seg.y + seg.height))

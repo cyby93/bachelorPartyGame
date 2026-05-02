@@ -95,20 +95,11 @@ export default class PortalBeamSystem {
     // Collect alive buildings
     const alive = []
     buildings.forEach(b => { if (!b.isDead) alive.push(b) })
-    if (alive.length < 2 || this.mirrors.length < 2) {
+    if (alive.length === 0 || this.mirrors.length < 2) {
       // Not enough targets — reset timer and skip
       this._lastCycleStart = now
       return
     }
-
-    // Pick two distinct random buildings
-    const shuffle = [...alive]
-    for (let i = shuffle.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffle[i], shuffle[j]] = [shuffle[j], shuffle[i]]
-    }
-    const b1 = shuffle[0]
-    const b2 = shuffle[1]
 
     // Pick two distinct random mirrors
     const mirrorPool = [...this.mirrors]
@@ -119,18 +110,31 @@ export default class PortalBeamSystem {
     const mirrorA = mirrorPool[0]
     const mirrorB = mirrorPool[1]
 
-    // Building center positions
-    const b1cx = b1.x + (b1.width  ?? 60) / 2
-    const b1cy = b1.y + (b1.height ?? 60) / 2
-    const b2cx = b2.x + (b2.width  ?? 60) / 2
-    const b2cy = b2.y + (b2.height ?? 60) / 2
+    // Determine anchor endpoints: two buildings when available, else building + mirror
+    let anchor1, anchor2
+    if (alive.length >= 2) {
+      const shuffle = [...alive]
+      for (let i = shuffle.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffle[i], shuffle[j]] = [shuffle[j], shuffle[i]]
+      }
+      const b1 = shuffle[0]
+      const b2 = shuffle[1]
+      anchor1 = { x: b1.x + (b1.width ?? 60) / 2, y: b1.y + (b1.height ?? 60) / 2 }
+      anchor2 = { x: b2.x + (b2.width ?? 60) / 2, y: b2.y + (b2.height ?? 60) / 2 }
+    } else {
+      // Only 1 building left — use the remaining mirror (mirrorPool[2]) as second anchor
+      const b1 = alive[0]
+      anchor1 = { x: b1.x + (b1.width ?? 60) / 2, y: b1.y + (b1.height ?? 60) / 2 }
+      anchor2 = { x: mirrorPool[2]?.position.x ?? mirrorA.position.x, y: mirrorPool[2]?.position.y ?? mirrorA.position.y }
+    }
 
     const beamId = ++this._beamSeq
     const points = [
-      { x: b1cx, y: b1cy },
+      anchor1,
       { x: mirrorA.position.x, y: mirrorA.position.y },
       { x: mirrorB.position.x, y: mirrorB.position.y },
-      { x: b2cx, y: b2cy },
+      anchor2,
     ]
     const segments = []
     for (let i = 0; i < points.length - 1; i++) {

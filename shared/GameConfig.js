@@ -29,4 +29,5 @@ export const GAME_CONFIG = {
 
   // Debug flags — set to true locally to aid development, never commit as true
   DEBUG_HITBOXES: true,
+  DEV_DISABLE_AUDIO: false,
 }

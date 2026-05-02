@@ -169,7 +169,7 @@ export default class HostGame {
 
   // ── Initialisation ────────────────────────────────────────────────────────
 
-  async init(containerEl) {
+  async init(containerEl, onProgress = null) {
     this.containerEl = containerEl
     this.app = new Application()
     await this.app.init({
@@ -198,7 +198,7 @@ export default class HostGame {
     this._rebuildBackground()
 
     // ── Sprite assets ─────────────────────────────────────────────────────
-    await this._loadSprites()
+    await this._loadSprites(onProgress)
 
     // ── Scene renderers ───────────────────────────────────────────────────
     this.renderers = {
@@ -380,7 +380,7 @@ export default class HostGame {
     return GAME_CONFIG.PLAYER_RADIUS
   }
 
-  async _loadSprites() {
+  async _loadSprites(onProgress = null) {
     // Convention: all flat sprites under /assets/sprites/{key}.png — alias === filename without extension.
     // Projectile sprites must follow the projectile_* naming convention so ProjectileSprite.js
     // can look them up by spriteKey directly (e.g. 'projectile_fireball' → projectile_fireball.png).
@@ -496,7 +496,7 @@ export default class HostGame {
       }
     }
 
-    await Assets.load(manifest)
+    await Assets.load(manifest, onProgress ?? undefined)
   }
 
   /** Draw a single wall segment with stone-like visual. */

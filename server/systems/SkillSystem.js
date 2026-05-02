@@ -1018,6 +1018,21 @@ export default class SkillSystem {
       const prevX = proj.x
       const prevY = proj.y
 
+      // Homing: redirect velocity toward target's current position each tick
+      if (proj.homingTargetId) {
+        const htarget = gs.players.get(proj.homingTargetId)
+        if (htarget && !htarget.isDead) {
+          const hdx = htarget.x - proj.x
+          const hdy = htarget.y - proj.y
+          const hdist = Math.hypot(hdx, hdy)
+          if (hdist > 0) {
+            const spd = proj.homingSpeed ?? Math.hypot(proj.vx, proj.vy)
+            proj.vx = (hdx / hdist) * spd
+            proj.vy = (hdy / hdist) * spd
+          }
+        }
+      }
+
       proj.x += proj.vx * dt
       proj.y += proj.vy * dt
 
@@ -1083,8 +1098,8 @@ export default class SkillSystem {
         return
       }
 
-      // Collision check vs enemies
-      gs.enemies.forEach(e => {
+      // Collision check vs enemies — enemy projectiles skip this; they only hit players (below)
+      if (!proj.isEnemyProj) gs.enemies.forEach(e => {
         if (!proj.isAlive || e.isDead) return
         if (proj.hit.has(e.id)) return
         const projCircle = { x: proj.x, y: proj.y, radius: proj.radius }
@@ -1092,7 +1107,8 @@ export default class SkillSystem {
         if (this._collision.circlesOverlap(projCircle, enemyCircle)) {
           // Shield check — shielded enemies block projectiles from the protected arc
           if (e._shieldActive && e._shieldAngle != null) {
-            let diff = Math.atan2(proj.vy, proj.vx) - e._shieldAngle
+            // Use incoming direction (reversed) so it aligns with _shieldAngle (toward player)
+            let diff = Math.atan2(-proj.vy, -proj.vx) - e._shieldAngle
             // Normalise to [-π, π]
             while (diff >  Math.PI) diff -= Math.PI * 2
             while (diff < -Math.PI) diff += Math.PI * 2
@@ -1109,7 +1125,7 @@ export default class SkillSystem {
       })
 
       // Collision check vs boss
-      if (proj.isAlive && gs.boss && !gs.boss.isDead && !gs.boss.isImmune) {
+      if (proj.isAlive && !proj.isEnemyProj && gs.boss && !gs.boss.isDead && !gs.boss.isImmune) {
         if (!proj.hit.has('boss')) {
           const projCircle = { x: proj.x, y: proj.y, radius: proj.radius }
           const bossCircle = { x: gs.boss.x, y: gs.boss.y, radius: gs.boss.radius }
@@ -1203,7 +1219,7 @@ export default class SkillSystem {
           } else {
             const amount = proj.damage ?? 0
             if (amount > 0) {
-              const dealt = p.takeDamage(amount, 1)   // minHp=1: never kill players via enemy proj
+              const dealt = p.takeDamage(amount)
               if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount: dealt, type: 'damage', sourceSkill: null })
             }
           }

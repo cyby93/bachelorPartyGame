@@ -157,15 +157,15 @@ function deriveSkillFamily(skill) {
   return 'sfx_family_generic'
 }
 
-function createSkillAudio(className, family, cast, impact, travel = null) {
-  return { className, family, cast, impact, travel }
+function createSkillAudio(className, family, cast, impact, travel = null, precast = null, channel = null) {
+  return { className, family, cast, impact, travel, precast, channel }
 }
 
 function buildExplicitSkillAudioMap() {
   return {
     Cleave: createSkillAudio('Warrior', 'sfx_family_melee_heavy', 'sfx_skill_cleave_cast', 'sfx_skill_cleave_impact'),
     'Thunder Clap': createSkillAudio('Warrior', 'sfx_family_aoe_shockwave', 'sfx_skill_thunder_clap_cast', 'sfx_skill_thunder_clap_impact'),
-    Bladestorm: createSkillAudio('Warrior', 'sfx_family_bladestorm', 'sfx_skill_bladestorm_cast', 'sfx_skill_bladestorm_impact'),
+    Bladestorm: createSkillAudio('Warrior', 'sfx_family_bladestorm', 'sfx_skill_bladestorm_cast', 'sfx_skill_bladestorm_impact', null, null, 'sfx_skill_bladestorm_channel'),
     'Shield Wall': createSkillAudio('Warrior', 'sfx_family_shield_guard', 'sfx_skill_shield_wall_cast', 'sfx_skill_shield_wall_impact'),
 
     'Hammer Swing': createSkillAudio('Paladin', 'sfx_family_melee_holy', 'sfx_skill_hammer_swing_cast', 'sfx_skill_hammer_swing_impact'),
@@ -173,44 +173,44 @@ function buildExplicitSkillAudioMap() {
     'Divine Shield': createSkillAudio('Paladin', 'sfx_family_holy_barrier', 'sfx_skill_divine_shield_cast', 'sfx_skill_divine_shield_impact'),
     Consecration: createSkillAudio('Paladin', 'sfx_family_holy_ground', 'sfx_skill_consecration_cast', 'sfx_skill_consecration_impact'),
 
-    'Lightning Bolt': createSkillAudio('Shaman', 'sfx_family_lightning_cast', 'sfx_skill_lightning_bolt_cast', 'sfx_skill_lightning_bolt_impact', 'sfx_skill_lightning_bolt_travel'),
-    'Chain Heal': createSkillAudio('Shaman', 'sfx_family_heal_chain', 'sfx_skill_chain_heal_cast', 'sfx_skill_chain_heal_impact', 'sfx_skill_chain_heal_travel'),
+    'Lightning Bolt': createSkillAudio('Shaman', 'sfx_family_lightning_cast', 'sfx_skill_lightning_bolt_cast', 'sfx_skill_lightning_bolt_impact', 'sfx_skill_lightning_bolt_travel', 'sfx_skill_lightning_bolt_precast'),
+    'Chain Heal': createSkillAudio('Shaman', 'sfx_family_heal_chain', 'sfx_skill_chain_heal_cast', 'sfx_skill_chain_heal_impact', 'sfx_skill_chain_heal_travel', 'sfx_skill_chain_heal_precast'),
     'Searing Totem': createSkillAudio('Shaman', 'sfx_family_totem_fire', 'sfx_skill_searing_totem_cast', 'sfx_skill_searing_totem_impact'),
     Bloodlust: createSkillAudio('Shaman', 'sfx_family_bloodlust', 'sfx_skill_bloodlust_cast', 'sfx_skill_bloodlust_impact'),
 
-    'Shoot Bow': createSkillAudio('Hunter', 'sfx_family_arrow', 'sfx_skill_shoot_bow_cast', 'sfx_skill_shoot_bow_impact', 'sfx_skill_shoot_bow_travel'),
-    'Aimed Shot': createSkillAudio('Hunter', 'sfx_family_arrow_heavy', 'sfx_skill_aimed_shot_cast', 'sfx_skill_aimed_shot_impact', 'sfx_skill_aimed_shot_travel'),
+    'Shoot Bow': createSkillAudio('Hunter', 'sfx_family_arrow', 'sfx_skill_shoot_bow_cast', 'sfx_skill_shoot_bow_impact', 'sfx_skill_shoot_bow_travel', 'sfx_skill_shoot_bow_precast'),
+    'Aimed Shot': createSkillAudio('Hunter', 'sfx_family_arrow_heavy', 'sfx_skill_aimed_shot_cast', 'sfx_skill_aimed_shot_impact', 'sfx_skill_aimed_shot_travel', 'sfx_skill_aimed_shot_precast'),
     'Call of the Wild': createSkillAudio('Hunter', 'sfx_family_beast_summon', 'sfx_skill_call_of_the_wild_cast', 'sfx_skill_call_of_the_wild_impact'),
     'Explosive Trap': createSkillAudio('Hunter', 'sfx_family_trap_explosive', 'sfx_skill_explosive_trap_cast', 'sfx_skill_explosive_trap_impact'),
 
     Penance: createSkillAudio('Priest', 'sfx_family_holy_burst', 'sfx_skill_penance_cast', 'sfx_skill_penance_impact', 'sfx_skill_penance_travel'),
     'Holy Nova': createSkillAudio('Priest', 'sfx_family_holy_nova', 'sfx_skill_holy_nova_cast', 'sfx_skill_holy_nova_impact'),
     'Power Word: Shield': createSkillAudio('Priest', 'sfx_family_holy_barrier', 'sfx_skill_power_word_shield_cast', 'sfx_skill_power_word_shield_impact'),
-    'Mass Resurrection': createSkillAudio('Priest', 'sfx_family_resurrection', 'sfx_skill_mass_resurrection_cast', 'sfx_skill_mass_resurrection_impact'),
+    'Mass Resurrection': createSkillAudio('Priest', 'sfx_family_resurrection', 'sfx_skill_mass_resurrection_cast', 'sfx_skill_mass_resurrection_impact', null, 'sfx_skill_mass_resurrection_precast', 'sfx_skill_mass_resurrection_channel'),
 
-    Fireball: createSkillAudio('Mage', 'sfx_family_fire_projectile', 'sfx_skill_fireball_cast', 'sfx_skill_fireball_impact', 'sfx_skill_fireball_travel'),
+    Fireball: createSkillAudio('Mage', 'sfx_family_fire_projectile', 'sfx_skill_fireball_cast', 'sfx_skill_fireball_impact', 'sfx_skill_fireball_travel', 'sfx_skill_fireball_precast'),
     'Frost Nova': createSkillAudio('Mage', 'sfx_family_frost_nova', 'sfx_skill_frost_nova_cast', 'sfx_skill_frost_nova_impact'),
     Blink: createSkillAudio('Mage', 'sfx_family_teleport_arcane', 'sfx_skill_blink_cast', 'sfx_skill_blink_impact'),
-    Pyroblast: createSkillAudio('Mage', 'sfx_family_fire_projectile_heavy', 'sfx_skill_pyroblast_cast', 'sfx_skill_pyroblast_impact', 'sfx_skill_pyroblast_travel'),
+    Pyroblast: createSkillAudio('Mage', 'sfx_family_fire_projectile_heavy', 'sfx_skill_pyroblast_cast', 'sfx_skill_pyroblast_impact', 'sfx_skill_pyroblast_travel', 'sfx_skill_pyroblast_precast'),
 
-    Wrath: createSkillAudio('Druid', 'sfx_family_nature_projectile', 'sfx_skill_wrath_cast', 'sfx_skill_wrath_impact', 'sfx_skill_wrath_travel'),
+    Wrath: createSkillAudio('Druid', 'sfx_family_nature_projectile', 'sfx_skill_wrath_cast', 'sfx_skill_wrath_impact', 'sfx_skill_wrath_travel', 'sfx_skill_wrath_precast'),
     Moonfire: createSkillAudio('Druid', 'sfx_family_moonfire', 'sfx_skill_moonfire_cast', 'sfx_skill_moonfire_impact'),
-    Regrowth: createSkillAudio('Druid', 'sfx_family_regrowth', 'sfx_skill_regrowth_cast', 'sfx_skill_regrowth_impact'),
-    Tranquility: createSkillAudio('Druid', 'sfx_family_tranquility', 'sfx_skill_tranquility_cast', 'sfx_skill_tranquility_impact'),
+    Regrowth: createSkillAudio('Druid', 'sfx_family_regrowth', 'sfx_skill_regrowth_cast', 'sfx_skill_regrowth_impact', null, 'sfx_skill_regrowth_precast'),
+    Tranquility: createSkillAudio('Druid', 'sfx_family_tranquility', 'sfx_skill_tranquility_cast', 'sfx_skill_tranquility_impact', null, null, 'sfx_skill_tranquility_channel'),
 
     'Sinister Strike': createSkillAudio('Rogue', 'sfx_family_melee_quick', 'sfx_skill_sinister_strike_cast', 'sfx_skill_sinister_strike_impact'),
     Vanish: createSkillAudio('Rogue', 'sfx_family_stealth', 'sfx_skill_vanish_cast', 'sfx_skill_vanish_impact'),
     Sprint: createSkillAudio('Rogue', 'sfx_family_sprint', 'sfx_skill_sprint_cast', 'sfx_skill_sprint_impact'),
     Ambush: createSkillAudio('Rogue', 'sfx_family_teleport_assassinate', 'sfx_skill_ambush_cast', 'sfx_skill_ambush_impact'),
 
-    'Shadow Bolt': createSkillAudio('Warlock', 'sfx_family_shadow_projectile', 'sfx_skill_shadow_bolt_cast', 'sfx_skill_shadow_bolt_impact', 'sfx_skill_shadow_bolt_travel'),
+    'Shadow Bolt': createSkillAudio('Warlock', 'sfx_family_shadow_projectile', 'sfx_skill_shadow_bolt_cast', 'sfx_skill_shadow_bolt_impact', 'sfx_skill_shadow_bolt_travel', 'sfx_skill_shadow_bolt_precast'),
     Corruption: createSkillAudio('Warlock', 'sfx_family_shadow_dot', 'sfx_skill_corruption_cast', 'sfx_skill_corruption_impact'),
-    'Drain Life': createSkillAudio('Warlock', 'sfx_family_drain_beam', 'sfx_skill_drain_life_cast', 'sfx_skill_drain_life_impact'),
-    Fear: createSkillAudio('Warlock', 'sfx_family_fear', 'sfx_skill_fear_cast', 'sfx_skill_fear_impact'),
+    'Drain Life': createSkillAudio('Warlock', 'sfx_family_drain_beam', 'sfx_skill_drain_life_cast', 'sfx_skill_drain_life_impact', null, null, 'sfx_skill_drain_life_channel'),
+    Fear: createSkillAudio('Warlock', 'sfx_family_fear', 'sfx_skill_fear_cast', 'sfx_skill_fear_impact', null, 'sfx_skill_fear_precast'),
 
     Obliterate: createSkillAudio('DeathKnight', 'sfx_family_frost_melee', 'sfx_skill_obliterate_cast', 'sfx_skill_obliterate_impact'),
     'Death Grip': createSkillAudio('DeathKnight', 'sfx_family_grip', 'sfx_skill_death_grip_cast', 'sfx_skill_death_grip_impact'),
-    'Death and Decay': createSkillAudio('DeathKnight', 'sfx_family_death_decay', 'sfx_skill_death_and_decay_cast', 'sfx_skill_death_and_decay_impact'),
+    'Death and Decay': createSkillAudio('DeathKnight', 'sfx_family_death_decay', 'sfx_skill_death_and_decay_cast', 'sfx_skill_death_and_decay_impact', null, null, 'sfx_skill_death_and_decay_channel'),
     'Anti-Magic Shell': createSkillAudio('DeathKnight', 'sfx_family_anti_magic_shell', 'sfx_skill_anti_magic_shell_cast', 'sfx_skill_anti_magic_shell_impact'),
   }
 }
@@ -228,6 +228,8 @@ function buildSkillAudioMap() {
         cast: skill.audio?.cast ?? `sfx_skill_${skillKey}_cast`,
         impact: skill.audio?.impact ?? `sfx_skill_${skillKey}_impact`,
         travel: skill.audio?.travel ?? null,
+        precast: skill.audio?.precast ?? null,
+        channel: skill.audio?.channel ?? null,
       }
     }
   }
@@ -236,6 +238,96 @@ function buildSkillAudioMap() {
 }
 
 export const SKILL_AUDIO = buildSkillAudioMap()
+
+export const SKILL_AUDIO_ONE_SHOTS = {
+  sfx_skill_cleave_cast: { key: 'sfx_skill_cleave_cast', src: '/assets/sounds/sfx_skill_cleave_cast.ogg' },
+  sfx_skill_cleave_impact: { key: 'sfx_skill_cleave_impact', src: '/assets/sounds/sfx_skill_cleave_impact.ogg' },
+  sfx_skill_thunder_clap_cast: { key: 'sfx_skill_thunder_clap_cast', src: '/assets/sounds/sfx_skill_thunder_clap_cast.ogg' },
+  sfx_skill_thunder_clap_impact: { key: 'sfx_skill_thunder_clap_impact', src: '/assets/sounds/sfx_skill_thunder_clap_impact.ogg' },
+  sfx_skill_bladestorm_cast: { key: 'sfx_skill_bladestorm_cast', src: '/assets/sounds/sfx_skill_bladestorm_cast.ogg' },
+  sfx_skill_bladestorm_impact: { key: 'sfx_skill_bladestorm_impact', src: '/assets/sounds/sfx_skill_bladestorm_impact.ogg' },
+  sfx_skill_bladestorm_channel: { key: 'sfx_skill_bladestorm_channel', src: '/assets/sounds/sfx_skill_bladestorm_channel.ogg' },
+  sfx_skill_shield_wall_cast: { key: 'sfx_skill_shield_wall_cast', src: '/assets/sounds/sfx_skill_shield_wall_cast.ogg' },
+  sfx_skill_hammer_swing_cast: { key: 'sfx_skill_hammer_swing_cast', src: '/assets/sounds/sfx_skill_hammer_swing_cast.ogg' },
+  sfx_skill_hammer_swing_impact: { key: 'sfx_skill_hammer_swing_impact', src: '/assets/sounds/sfx_skill_hammer_swing_impact.ogg' },
+  sfx_skill_avengers_shield_cast: { key: 'sfx_skill_avengers_shield_cast', src: '/assets/sounds/sfx_skill_avengers_shield_cast.ogg' },
+  sfx_skill_avengers_shield_impact: { key: 'sfx_skill_avengers_shield_impact', src: '/assets/sounds/sfx_skill_avengers_shield_impact.ogg' },
+  sfx_skill_divine_shield_cast: { key: 'sfx_skill_divine_shield_cast', src: '/assets/sounds/sfx_skill_divine_shield_cast.ogg' },
+  sfx_skill_divine_shield_impact: { key: 'sfx_skill_divine_shield_impact', src: '/assets/sounds/sfx_skill_divine_shield_impact.ogg' },
+  sfx_skill_consecration_cast: { key: 'sfx_skill_consecration_cast', src: '/assets/sounds/sfx_skill_consecration_cast.ogg' },
+  sfx_skill_consecration_impact: { key: 'sfx_skill_consecration_impact', src: '/assets/sounds/sfx_skill_consecration_impact.ogg' },
+  sfx_skill_lightning_bolt_precast: { key: 'sfx_skill_lightning_bolt_precast', src: '/assets/sounds/sfx_skill_lightning_bolt_precast.ogg' },
+  sfx_skill_lightning_bolt_cast: { key: 'sfx_skill_lightning_bolt_cast', src: '/assets/sounds/sfx_skill_lightning_bolt_cast.ogg' },
+  sfx_skill_lightning_bolt_impact: { key: 'sfx_skill_lightning_bolt_impact', src: '/assets/sounds/sfx_skill_lightning_bolt_impact.ogg' },
+  sfx_skill_chain_heal_precast: { key: 'sfx_skill_chain_heal_precast', src: '/assets/sounds/sfx_skill_chain_heal_precast.ogg' },
+  sfx_skill_chain_heal_cast: { key: 'sfx_skill_chain_heal_cast', src: '/assets/sounds/sfx_skill_chain_heal_cast.ogg' },
+  sfx_skill_chain_heal_impact: { key: 'sfx_skill_chain_heal_impact', src: '/assets/sounds/sfx_skill_chain_heal_impact.ogg' },
+  sfx_skill_searing_totem_cast: { key: 'sfx_skill_searing_totem_cast', src: '/assets/sounds/sfx_skill_searing_totem_cast.ogg' },
+  sfx_skill_bloodlust_cast: { key: 'sfx_skill_bloodlust_cast', src: '/assets/sounds/sfx_skill_bloodlust_cast.ogg' },
+  sfx_skill_shoot_bow_precast: { key: 'sfx_skill_shoot_bow_precast', src: '/assets/sounds/sfx_skill_shoot_bow_precast.ogg' },
+  sfx_skill_shoot_bow_cast: { key: 'sfx_skill_shoot_bow_cast', src: '/assets/sounds/sfx_skill_shoot_bow_cast.ogg' },
+  sfx_skill_shoot_bow_impact: { key: 'sfx_skill_shoot_bow_impact', src: '/assets/sounds/sfx_skill_shoot_bow_impact.ogg' },
+  sfx_skill_aimed_shot_precast: { key: 'sfx_skill_aimed_shot_precast', src: '/assets/sounds/sfx_skill_aimed_shot_precast.ogg' },
+  sfx_skill_aimed_shot_cast: { key: 'sfx_skill_aimed_shot_cast', src: '/assets/sounds/sfx_skill_aimed_shot_cast.ogg' },
+  sfx_skill_aimed_shot_impact: { key: 'sfx_skill_aimed_shot_impact', src: '/assets/sounds/sfx_skill_aimed_shot_impact.ogg' },
+  sfx_skill_call_of_the_wild_cast: { key: 'sfx_skill_call_of_the_wild_cast', src: '/assets/sounds/sfx_skill_call_of_the_wild_cast.ogg' },
+  sfx_skill_explosive_trap_cast: { key: 'sfx_skill_explosive_trap_cast', src: '/assets/sounds/sfx_skill_explosive_trap_cast.ogg' },
+  sfx_skill_explosive_trap_impact: { key: 'sfx_skill_explosive_trap_impact', src: '/assets/sounds/sfx_skill_explosive_trap_impact.ogg' },
+  sfx_skill_penance_cast: { key: 'sfx_skill_penance_cast', src: '/assets/sounds/sfx_skill_penance_cast.ogg' },
+  sfx_skill_penance_impact: { key: 'sfx_skill_penance_impact', src: '/assets/sounds/sfx_skill_penance_impact.ogg' },
+  sfx_skill_holy_nova_cast: { key: 'sfx_skill_holy_nova_cast', src: '/assets/sounds/sfx_skill_holy_nova_cast.ogg' },
+  sfx_skill_holy_nova_impact: { key: 'sfx_skill_holy_nova_impact', src: '/assets/sounds/sfx_skill_holy_nova_impact.ogg' },
+  sfx_skill_power_word_shield_cast: { key: 'sfx_skill_power_word_shield_cast', src: '/assets/sounds/sfx_skill_power_word_shield_cast.ogg' },
+  sfx_skill_power_word_shield_impact: { key: 'sfx_skill_power_word_shield_impact', src: '/assets/sounds/sfx_skill_power_word_shield_impact.ogg' },
+  sfx_skill_mass_resurrection_precast: { key: 'sfx_skill_mass_resurrection_precast', src: '/assets/sounds/sfx_skill_mass_resurrection_precast.ogg' },
+  sfx_skill_mass_resurrection_cast: { key: 'sfx_skill_mass_resurrection_cast', src: '/assets/sounds/sfx_skill_mass_resurrection_cast.ogg' },
+  sfx_skill_mass_resurrection_impact: { key: 'sfx_skill_mass_resurrection_impact', src: '/assets/sounds/sfx_skill_mass_resurrection_impact.ogg' },
+  sfx_skill_mass_resurrection_channel: { key: 'sfx_skill_mass_resurrection_channel', src: '/assets/sounds/sfx_skill_mass_resurrection_channel.ogg' },
+  sfx_skill_fireball_precast: { key: 'sfx_skill_fireball_precast', src: '/assets/sounds/sfx_skill_fireball_precast.ogg' },
+  sfx_skill_fireball_cast: { key: 'sfx_skill_fireball_cast', src: '/assets/sounds/sfx_skill_fireball_cast.ogg' },
+  sfx_skill_fireball_impact: { key: 'sfx_skill_fireball_impact', src: '/assets/sounds/sfx_skill_fireball_impact.ogg' },
+  sfx_skill_frost_nova_cast: { key: 'sfx_skill_frost_nova_cast', src: '/assets/sounds/sfx_skill_frost_nova_cast.ogg' },
+  sfx_skill_frost_nova_impact: { key: 'sfx_skill_frost_nova_impact', src: '/assets/sounds/sfx_skill_frost_nova_impact.ogg' },
+  sfx_skill_blink_cast: { key: 'sfx_skill_blink_cast', src: '/assets/sounds/sfx_skill_blink_cast.ogg' },
+  sfx_skill_blink_impact: { key: 'sfx_skill_blink_impact', src: '/assets/sounds/sfx_skill_blink_impact.ogg' },
+  sfx_skill_pyroblast_precast: { key: 'sfx_skill_pyroblast_precast', src: '/assets/sounds/sfx_skill_pyroblast_precast.ogg' },
+  sfx_skill_pyroblast_cast: { key: 'sfx_skill_pyroblast_cast', src: '/assets/sounds/sfx_skill_pyroblast_cast.ogg' },
+  sfx_skill_pyroblast_impact: { key: 'sfx_skill_pyroblast_impact', src: '/assets/sounds/sfx_skill_pyroblast_impact.ogg' },
+  sfx_skill_wrath_precast: { key: 'sfx_skill_wrath_precast', src: '/assets/sounds/sfx_skill_wrath_precast.ogg' },
+  sfx_skill_wrath_cast: { key: 'sfx_skill_wrath_cast', src: '/assets/sounds/sfx_skill_wrath_cast.ogg' },
+  sfx_skill_wrath_impact: { key: 'sfx_skill_wrath_impact', src: '/assets/sounds/sfx_skill_wrath_impact.ogg' },
+  sfx_skill_moonfire_cast: { key: 'sfx_skill_moonfire_cast', src: '/assets/sounds/sfx_skill_moonfire_cast.ogg' },
+  sfx_skill_moonfire_impact: { key: 'sfx_skill_moonfire_impact', src: '/assets/sounds/sfx_skill_moonfire_impact.ogg' },
+  sfx_skill_regrowth_precast: { key: 'sfx_skill_regrowth_precast', src: '/assets/sounds/sfx_skill_regrowth_precast.ogg' },
+  sfx_skill_regrowth_cast: { key: 'sfx_skill_regrowth_cast', src: '/assets/sounds/sfx_skill_regrowth_cast.ogg' },
+  sfx_skill_regrowth_impact: { key: 'sfx_skill_regrowth_impact', src: '/assets/sounds/sfx_skill_regrowth_impact.ogg' },
+  sfx_skill_tranquility_cast: { key: 'sfx_skill_tranquility_cast', src: '/assets/sounds/sfx_skill_tranquility_cast.ogg' },
+  sfx_skill_tranquility_channel: { key: 'sfx_skill_tranquility_channel', src: '/assets/sounds/sfx_skill_tranquility_channel.ogg' },
+  sfx_skill_sinister_strike_cast: { key: 'sfx_skill_sinister_strike_cast', src: '/assets/sounds/sfx_skill_sinister_strike_cast.ogg' },
+  sfx_skill_sinister_strike_impact: { key: 'sfx_skill_sinister_strike_impact', src: '/assets/sounds/sfx_skill_sinister_strike_impact.ogg' },
+  sfx_skill_vanish_cast: { key: 'sfx_skill_vanish_cast', src: '/assets/sounds/sfx_skill_vanish_cast.ogg' },
+  sfx_skill_sprint_cast: { key: 'sfx_skill_sprint_cast', src: '/assets/sounds/sfx_skill_sprint_cast.ogg' },
+  sfx_skill_ambush_cast: { key: 'sfx_skill_ambush_cast', src: '/assets/sounds/sfx_skill_ambush_cast.ogg' },
+  sfx_skill_ambush_impact: { key: 'sfx_skill_ambush_impact', src: '/assets/sounds/sfx_skill_ambush_impact.ogg' },
+  sfx_skill_shadow_bolt_precast: { key: 'sfx_skill_shadow_bolt_precast', src: '/assets/sounds/sfx_skill_shadow_bolt_precast.ogg' },
+  sfx_skill_shadow_bolt_cast: { key: 'sfx_skill_shadow_bolt_cast', src: '/assets/sounds/sfx_skill_shadow_bolt_cast.ogg' },
+  sfx_skill_shadow_bolt_impact: { key: 'sfx_skill_shadow_bolt_impact', src: '/assets/sounds/sfx_skill_shadow_bolt_impact.ogg' },
+  sfx_skill_corruption_cast: { key: 'sfx_skill_corruption_cast', src: '/assets/sounds/sfx_skill_corruption_cast.ogg' },
+  sfx_skill_corruption_impact: { key: 'sfx_skill_corruption_impact', src: '/assets/sounds/sfx_skill_corruption_impact.ogg' },
+  sfx_skill_drain_life_cast: { key: 'sfx_skill_drain_life_cast', src: '/assets/sounds/sfx_skill_drain_life_cast.ogg' },
+  sfx_skill_drain_life_channel: { key: 'sfx_skill_drain_life_channel', src: '/assets/sounds/sfx_skill_drain_life_channel.ogg' },
+  sfx_skill_fear_precast: { key: 'sfx_skill_fear_precast', src: '/assets/sounds/sfx_skill_fear_precast.ogg' },
+  sfx_skill_fear_cast: { key: 'sfx_skill_fear_cast', src: '/assets/sounds/sfx_skill_fear_cast.ogg' },
+  sfx_skill_obliterate_cast: { key: 'sfx_skill_obliterate_cast', src: '/assets/sounds/sfx_skill_obliterate_cast.ogg' },
+  sfx_skill_obliterate_impact: { key: 'sfx_skill_obliterate_impact', src: '/assets/sounds/sfx_skill_obliterate_impact.ogg' },
+  sfx_skill_death_grip_cast: { key: 'sfx_skill_death_grip_cast', src: '/assets/sounds/sfx_skill_death_grip_cast.ogg' },
+  sfx_skill_death_grip_impact: { key: 'sfx_skill_death_grip_impact', src: '/assets/sounds/sfx_skill_death_grip_impact.ogg' },
+  sfx_skill_death_and_decay_cast: { key: 'sfx_skill_death_and_decay_cast', src: '/assets/sounds/sfx_skill_death_and_decay_cast.ogg' },
+  sfx_skill_death_and_decay_impact: { key: 'sfx_skill_death_and_decay_impact', src: '/assets/sounds/sfx_skill_death_and_decay_impact.ogg' },
+  sfx_skill_death_and_decay_channel: { key: 'sfx_skill_death_and_decay_channel', src: '/assets/sounds/sfx_skill_death_and_decay_channel.ogg' },
+  sfx_skill_anti_magic_shell_cast: { key: 'sfx_skill_anti_magic_shell_cast', src: '/assets/sounds/sfx_skill_anti_magic_shell_cast.ogg' },
+  sfx_skill_anti_magic_shell_impact: { key: 'sfx_skill_anti_magic_shell_impact', src: '/assets/sounds/sfx_skill_anti_magic_shell_impact.ogg' },
+}
 
 export const ENCOUNTER_AUDIO = {
   SHADE_OF_AKAMA: {
@@ -349,7 +441,7 @@ export function getEnemyAudio(enemyType) {
 }
 
 export function getOneShotAudio(key) {
-  return AUDIO_ONE_SHOTS[key] ?? null
+  return SKILL_AUDIO_ONE_SHOTS[key] ?? AUDIO_ONE_SHOTS[key] ?? null
 }
 
 export function withResolvedAudioPaths(definition, kind = 'sfx') {

@@ -65,6 +65,7 @@ Shared repo-level assistant guidance lives in `AGENTS.md`.
 - `public/assets/audio/music/`
 - `public/assets/audio/sfx/`
 - `public/assets/audio/voice/`
+- `public/assets/sounds/` for sourced player skill imports kept as raw Wowhead `.ogg`
 
 Until real files exist, missing files are allowed. The runtime will fall back gracefully.
 
@@ -73,6 +74,11 @@ Runtime expectation once files are gathered:
 - music: `/assets/audio/music/<key>.mp3`
 - sfx: `/assets/audio/sfx/<key>.mp3`
 - voice: `/assets/audio/voice/<voiceKey>.mp3`
+
+Current exception for sourced player skill imports:
+
+- skill one-shots may point directly to `/assets/sounds/<key>.ogg`
+- this repo currently keeps sourced Wowhead files as-is instead of transcoding them into the main `/assets/audio/sfx/` pipeline
 
 ---
 
@@ -260,11 +266,91 @@ Examples:
 
 Every player skill now has an explicit logical mapping in `shared/AudioConfig.js`.
 
+Selection rules for sourced class audio:
+
+- casted abilities may use up to three states: `precast`, `cast`, `impact`
+- when Wowhead exposes multiple alternates for the same state, pick exactly one file at random
+- instant abilities use one fired-state sound only
+- channeled abilities use one start sound plus one looping channel sound when available
+- if a spell page does not expose a clean sound for a desired state, use the closest available match or reuse a related state deliberately
+
 Common pattern:
 
 - cast: `public/assets/audio/sfx/sfx_skill_<skill_name>_cast.mp3`
 - impact: `public/assets/audio/sfx/sfx_skill_<skill_name>_impact.mp3`
 - optional travel: `public/assets/audio/sfx/sfx_skill_<skill_name>_travel.mp3`
+
+Current Warlock import pass uses direct file paths under `public/assets/sounds/` and keeps Wowhead-source `.ogg` files as-is.
+
+Warlock mapping in this pass:
+
+- `Shadow Bolt`: `precast`, `cast`, `impact`
+- `Corruption`: `cast`, `impact`
+- `Drain Life`: `cast`, looping `channel`
+- `Fear`: `precast`, `cast`
+
+Mage mapping in this pass:
+
+- `Fireball`: `precast`, `cast`, `impact`
+- `Frost Nova`: `cast`, `impact`
+- `Blink`: `cast`, `impact`
+- `Pyroblast`: `precast`, `cast`, `impact`
+
+Shaman mapping in this pass:
+
+- `Lightning Bolt`: `precast`, `cast`, `impact`
+- `Chain Heal`: `precast`, `cast`, `impact`
+- `Searing Totem`: `cast`
+- `Bloodlust`: `cast`
+
+Warrior mapping in this pass:
+
+- `Cleave`: `cast`, `impact`
+- `Thunder Clap`: single sourced impact file reused for both `cast` and `impact`
+- `Bladestorm`: loop-style sourced file reused for `cast` and `channel`, plus sourced `impact`
+- `Shield Wall`: sourced `cast` reused for `impact`
+
+Paladin mapping in this pass:
+
+- `Hammer Swing`: sourced proxy `cast`, sourced proxy `impact`
+- `Avenger's Shield`: `cast`, `impact`
+- `Divine Shield`: `cast`, `impact`
+- `Consecration`: sourced `cast` plus sourced impact proxy
+
+Hunter mapping in this pass:
+
+- `Shoot Bow`: sourced `precast`, sourced `cast`, `cast` reused as `impact`
+- `Aimed Shot`: sourced `precast`, `cast`, `impact`
+- `Call of the Wild`: temporary proxy reused from an existing sourced summon-style class clip
+- `Explosive Trap`: temporary proxy pair reused from existing sourced ground-effect clips
+
+Priest mapping in this pass:
+
+- `Penance`: temporary proxy pair reused from sourced holy cast and impact clips
+- `Holy Nova`: `cast`, impact proxy
+- `Power Word: Shield`: `cast`, `impact`
+- `Mass Resurrection`: `precast`, `channel`, `cast`, `cast` reused as `impact`
+
+Druid mapping in this pass:
+
+- `Wrath`: `precast`, `cast`, `impact`
+- `Moonfire`: `cast`, `impact`
+- `Regrowth`: `precast`, `cast`, `impact`
+- `Tranquility`: `cast`, `channel`
+
+Rogue mapping in this pass:
+
+- `Sinister Strike`: sourced cast proxy reused for `impact`
+- `Vanish`: sourced cast proxy
+- `Sprint`: sourced cast proxy
+- `Ambush`: `cast`, impact proxy
+
+Death Knight mapping in this pass:
+
+- `Obliterate`: sourced cast file reused for `impact`
+- `Death Grip`: sourced impact proxy reused for `cast`
+- `Death and Decay`: `cast`, `impact`, `channel`
+- `Anti-Magic Shell`: cast proxy plus sourced shell impact
 
 Examples:
 
@@ -312,7 +398,7 @@ Special encounter utility examples:
 Rules:
 
 - keep filenames exactly aligned with the configured key
-- prefer `.mp3` consistently unless we decide to switch the whole pipeline
+- prefer `.mp3` consistently for the main authored pipeline unless a config entry intentionally points at sourced `.ogg`
 - do not rename keys casually after files exist; keys are integration contracts
 
 If a file is missing, the runtime falls back to synth/no-op behavior instead of crashing.

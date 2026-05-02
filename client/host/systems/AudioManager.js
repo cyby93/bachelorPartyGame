@@ -2,6 +2,7 @@ import {
   AUDIO_STORAGE_KEYS,
   AUDIO_STINGERS,
   AUDIO_DUCKING,
+  SKILL_AUDIO_ONE_SHOTS,
   createDefaultAudioSettings,
   getDialogAudio,
   getLevelAudio,
@@ -41,6 +42,9 @@ export default class AudioManager {
       downed: 800,
     }
     this._lastDownedAt = 0
+    this._channelPlayers = new Map()
+    this._loopingSfx = new Map()
+    this._sfxCache = new Map()
   }
 
   init() {
@@ -55,6 +59,7 @@ export default class AudioManager {
       this._buses = this._createBusGraph(this._ctx)
       this._loadSettings()
       this._applySettings()
+      this._primeSfxCache()
       this._resume()
     } catch {
       this._enabled = false
@@ -98,13 +103,23 @@ export default class AudioManager {
     this._playNamedSfx(audio.cast, { family: audio.family, variation: data?.playerId })
   }
 
+  handleSkillInterrupted(data) {
+    if (!data?.playerId) return
+    this._stopPlayerChannelAudio(data.playerId)
+  }
+
+  handleChannelInterrupted(data) {
+    if (!data?.playerId) return
+    this._stopPlayerChannelAudio(data.playerId)
+  }
+
   handleEffectDamage(data) {
     if (!data) return
     const t = nowMs()
     if (t - this._lastDamageAt < this._throttle.hit) return
     this._lastDamageAt = t
 
-    const sourceAudio = getSourceSkillAudio(data.sourceSkill)
+    const sourceAudio = getSourceSkillAudio(data.sourceSkill) ?? getSkillAudio(data.sourceSkill)
     const key = data.type === 'heal'
       ? (sourceAudio?.impact ?? AUDIO_STINGERS.hitHeal.key)
       : (sourceAudio?.impact ?? AUDIO_STINGERS.hitDamage.key)
@@ -113,7 +128,9 @@ export default class AudioManager {
 
   handleTargetedHit(data) {
     if (!data) return
-    this._playNamedSfx('combat_targeted_hit', { family: data.effectType ?? 'targeted' })
+    const sourceAudio = getSourceSkillAudio(data.sourceSkill) ?? getSkillAudio(data.sourceSkill)
+    const key = sourceAudio?.impact ?? 'combat_targeted_hit'
+    this._playNamedSfx(key, { family: sourceAudio?.family ?? data.effectType ?? 'targeted' })
   }
 
   handleDialogLine(data) {
@@ -152,8 +169,33 @@ export default class AudioManager {
   }
 
   syncPlayerState(players = {}) {
+    const activePlayerIds = new Set()
     const deadNow = new Set()
     for (const player of Object.values(players)) {
+      if (!player?.id) continue
+      activePlayerIds.add(player.id)
+
+      const previous = this._channelPlayers.get(player.id) ?? { castSkill: null, isChanneling: false }
+      const castSkill = player.castSkill ?? null
+      const castProgress = player.castProgress
+      const isChanneling = !!player.isChanneling
+
+      if (castSkill && castProgress != null && castProgress > 0 && previous.castSkill !== castSkill) {
+        const skillAudio = getSkillAudio(castSkill)
+        if (isChanneling) {
+          if (skillAudio.cast) this._playNamedSfx(skillAudio.cast, { family: skillAudio.family, variation: player.id })
+          if (skillAudio.channel) this._startLoopingSfx(player.id, skillAudio.channel, { volumeScale: 0.85 })
+        } else if (skillAudio.precast) {
+          this._playNamedSfx(skillAudio.precast, { family: skillAudio.family, variation: player.id })
+        }
+      }
+
+      if ((!isChanneling || !castSkill || castProgress == null) && previous.isChanneling) {
+        this._stopPlayerChannelAudio(player.id)
+      }
+
+      this._channelPlayers.set(player.id, { castSkill, isChanneling })
+
       if (!player || player.isHost || !player.isDead) continue
       deadNow.add(player.id)
       if (!this._lastDownedPlayers.has(player.id)) {
@@ -164,6 +206,11 @@ export default class AudioManager {
         }
       }
     }
+
+    for (const playerId of Array.from(this._channelPlayers.keys())) {
+      if (!activePlayerIds.has(playerId)) this._stopPlayerChannelAudio(playerId)
+    }
+
     this._lastDownedPlayers = deadNow
   }
 
@@ -221,6 +268,12 @@ export default class AudioManager {
     if (this._musicEl) {
       this._musicEl.muted = muted
       this._musicEl.volume = clamp01(this._settings.music) * clamp01(this._settings.master) * this._musicDuck
+    }
+
+    for (const entry of this._loopingSfx.values()) {
+      const busVolume = clamp01(this._settings[entry.busName] ?? this._settings.sfx)
+      entry.el.muted = muted
+      entry.el.volume = clamp01(this._settings.master) * busVolume * clamp01(entry.volumeScale)
     }
   }
 
@@ -285,7 +338,8 @@ export default class AudioManager {
   }
 
   _playHtmlOneShot(src, busName, volumeScale = 1) {
-    const el = new Audio(src)
+    const base = this._getCachedSfx(src)
+    const el = base ? base.cloneNode() : new Audio(src)
     const busVolume = clamp01(this._settings[busName] ?? this._settings.sfx)
     el.volume = clamp01(this._settings.master) * busVolume * clamp01(volumeScale)
     el.muted = !!this._settings.muted
@@ -295,6 +349,56 @@ export default class AudioManager {
       const fallbackPitch = busName === 'voice' ? 0.85 : undefined
       this._tone(220 * (fallbackPitch ?? this._pitchFromFamily(family)), 'square', 0.08 * volumeScale, 0, 0.05, 0.09, 18, busName)
     })
+  }
+
+  _startLoopingSfx(loopId, key, options = {}) {
+    this._stopLoopingSfx(loopId)
+
+    const asset = withResolvedAudioPaths(getOneShotAudio(key), options.bus === 'voice' ? 'voice' : 'sfx')
+    if (!asset?.src) return
+
+    const el = new Audio(asset.src)
+    const busName = options.bus ?? 'sfx'
+    const busVolume = clamp01(this._settings[busName] ?? this._settings.sfx)
+    el.loop = true
+    el.volume = clamp01(this._settings.master) * busVolume * clamp01(options.volumeScale ?? 1)
+    el.muted = !!this._settings.muted
+    el.preload = 'auto'
+    el.play().catch(() => {})
+    this._loopingSfx.set(loopId, { el, busName, volumeScale: options.volumeScale ?? 1 })
+  }
+
+  _stopLoopingSfx(loopId) {
+    const entry = this._loopingSfx.get(loopId)
+    if (!entry) return
+    entry.el.pause()
+    entry.el.src = ''
+    this._loopingSfx.delete(loopId)
+  }
+
+  _stopPlayerChannelAudio(playerId) {
+    this._stopLoopingSfx(playerId)
+    this._channelPlayers.delete(playerId)
+  }
+
+  _primeSfxCache() {
+    for (const assetDef of Object.values(SKILL_AUDIO_ONE_SHOTS)) {
+      const asset = withResolvedAudioPaths(assetDef, 'sfx')
+      if (!asset?.src) continue
+      this._getCachedSfx(asset.src)
+    }
+  }
+
+  _getCachedSfx(src) {
+    if (!src) return null
+    let audio = this._sfxCache.get(src)
+    if (audio) return audio
+
+    audio = new Audio(src)
+    audio.preload = 'auto'
+    audio.load()
+    this._sfxCache.set(src, audio)
+    return audio
   }
 
   _pitchFromFamily(family) {

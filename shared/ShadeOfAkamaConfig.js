@@ -13,7 +13,7 @@ const R = BALANCE.RANGED_BASE_DPS
 export const SHADE_OF_AKAMA_CONFIG = {
   ...BASE_BOSS_DEFAULTS,
   name:           'Shade of Akama',
-  maxHp:          Math.round(80 * X * R),   // 4000 at defaults
+  maxHp:          Math.round(60 * X * R),   // 4000 at defaults
   speed:          0.6,
   radius:         55,
   meleeDamage:    Math.round(Y * R),         // 40 at defaults

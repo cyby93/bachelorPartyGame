@@ -633,7 +633,12 @@ socket.on(EVENTS.TARGETED_HIT, data => {
 })
 
 socket.on(EVENTS.CHANNEL_INTERRUPTED, data => {
+  audio.handleChannelInterrupted(data)
   game.activeRenderer?.onChannelInterrupted?.(data)
+})
+
+socket.on(EVENTS.SKILL_INTERRUPTED, data => {
+  audio.handleSkillInterrupted(data)
 })
 
 // ── Illidan encounter events ──────────────────────────────────────────────

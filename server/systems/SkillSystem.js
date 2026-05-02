@@ -190,7 +190,7 @@ export default class SkillSystem {
     gs.enemies.forEach(e => {
       if (e.isDead) return
       if (this._collision.inCone({ x: player.x, y: player.y }, v, halfAngle, config.range, { x: e.x, y: e.y })) {
-        const dealt = this._dealDamage(gs, player, e, config.damage ?? 0)
+        const dealt = this._dealDamage(gs, player, e, config.damage ?? 0, config.name)
         totalDamageDealt += dealt
         hitCount++
         // Apply debuff if effectParams present (e.g. Obliterate slow)
@@ -212,7 +212,7 @@ export default class SkillSystem {
     // Hit boss
     if (gs.boss && !gs.boss.isDead && !gs.boss.isImmune) {
       if (this._collision.inCone({ x: player.x, y: player.y }, v, halfAngle, config.range, { x: gs.boss.x, y: gs.boss.y })) {
-        const dealt = this._dealDamage(gs, player, gs.boss, config.damage ?? 0)
+        const dealt = this._dealDamage(gs, player, gs.boss, config.damage ?? 0, config.name)
         totalDamageDealt += dealt
         hitCount++
       }
@@ -312,6 +312,7 @@ export default class SkillSystem {
         damage: config.damage ?? 0,
         healAmount: config.healAmount ?? 0,
         effectType: config.effectType ?? 'DAMAGE',
+        sourceSkill: config.name ?? null,
         pierce: false,
         hit: new Set(),
         color,
@@ -562,6 +563,7 @@ export default class SkillSystem {
             casterX: Math.round(prevX),     casterY: Math.round(prevY),
             targetX: Math.round(current.x), targetY: Math.round(current.y),
             effectType: 'heal', color,
+            sourceSkill: config.name,
           })
         }
 
@@ -621,6 +623,7 @@ export default class SkillSystem {
           casterX: Math.round(player.x), casterY: Math.round(player.y),
           targetX: Math.round(target.x), targetY: Math.round(target.y),
           effectType: 'damage', color,
+          sourceSkill: config.name,
         })
       }
       return true
@@ -662,6 +665,7 @@ export default class SkillSystem {
           casterX: Math.round(fromX), casterY: Math.round(fromY),
           targetX: Math.round(target.x), targetY: Math.round(target.y),
           effectType: 'damage', color,
+          sourceSkill: config.name,
         })
       }
       return true
@@ -686,6 +690,7 @@ export default class SkillSystem {
           casterX: Math.round(player.x), casterY: Math.round(player.y),
           targetX: Math.round(target.x), targetY: Math.round(target.y),
           effectType: 'damage', color,
+          sourceSkill: config.name,
         })
       }
       return true
@@ -872,7 +877,7 @@ export default class SkillSystem {
     gs.enemies.forEach(e => {
       if (e.isDead) return
       if (this._collision.distance({ x: cx, y: cy }, { x: e.x, y: e.y }) <= radius + e.radius) {
-        this._dealDamage(gs, player, e, config.damage ?? 0)
+        this._dealDamage(gs, player, e, config.damage ?? 0, config.name)
         // Apply debuff if effectParams present
         if (config.effectParams) {
           const ep = config.effectParams
@@ -892,7 +897,7 @@ export default class SkillSystem {
     // Damage boss
     if (gs.boss && !gs.boss.isDead && !gs.boss.isImmune) {
       if (this._collision.distance({ x: cx, y: cy }, { x: gs.boss.x, y: gs.boss.y }) <= radius + gs.boss.radius) {
-        this._dealDamage(gs, player, gs.boss, config.damage ?? 0)
+        this._dealDamage(gs, player, gs.boss, config.damage ?? 0, config.name)
       }
     }
 
@@ -1256,7 +1261,7 @@ export default class SkillSystem {
       }
     } else {
       const owner = gs.players.get(proj.ownerId)
-      this._dealDamage(gs, owner, target, proj.damage ?? 0)
+      this._dealDamage(gs, owner, target, proj.damage ?? 0, proj.sourceSkill)
 
       // Apply DoT if configured
       if (proj.dot && !target.isPlayer) {
@@ -1320,6 +1325,7 @@ export default class SkillSystem {
             damage:       proj.damage,
             healAmount:   proj.healAmount ?? 0,
             effectType:   proj.effectType,
+            sourceSkill:  proj.sourceSkill ?? null,
             pierce:       false,
             hit:          new Set(proj.hit),   // copy — excludes already-hit targets
             color:        proj.color,
@@ -1825,6 +1831,7 @@ export default class SkillSystem {
       damage:      config.damage    ?? 0,
       healAmount:  config.healAmount ?? 0,
       effectType:  config.effectType ?? 'DAMAGE',
+      sourceSkill: config.name      ?? null,
       pierce:      config.pierce    ?? false,
       hit:         new Set(),
       color:       overrides.color  ?? '#ffffff',

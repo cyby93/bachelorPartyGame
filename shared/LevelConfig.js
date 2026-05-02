@@ -101,7 +101,7 @@ export const CAMPAIGN = [
     beamMechanic: {
       cycleMs:         10000,  // full cycle length (warning + damage combined)
       warningMs:       3000,   // warning phase duration before damage starts
-      damageMs:        2000,   // how long the damage phase lasts
+      damageMs:        5000,   // how long the damage phase lasts
       damagePerSecond: 40,     // DPS to players caught in the beam rectangle
       beamWidth:       60,     // half-width of each beam rectangle
     },
@@ -113,13 +113,13 @@ export const CAMPAIGN = [
       spawnRadius: 80,             // spawn distance from building center
       enemyTypes: [
         { type: 'felGuard',   weight: 4 },
-        // { type: 'bonechewerBrute',   weight: 2 },
-        // { type: 'coilskarHarpooner',  weight: 3 },
-        // { type: 'illidariCenturion', weight: 2 },
-        // { type: 'bonechewerBladeFury', weight: 2 },
-        // { type: 'ashtonghueMystic', weight: 2 },
-        // { type: 'bloodProphet', weight: 2 },
-        // { type: 'coilskarSerpentGuard', weight: 1 },
+        { type: 'bonechewerBrute',   weight: 2 },
+        { type: 'coilskarHarpooner',  weight: 3 },
+        { type: 'illidariCenturion', weight: 2 },
+        { type: 'bonechewerBladeFury', weight: 2 },
+        { type: 'ashtonghueMystic', weight: 2 },
+        { type: 'bloodProphet', weight: 2 },
+        { type: 'coilskarSerpentGuard', weight: 1 },
       ],
     },
     // Reinforcements pour in from all 4 edges — distinct from building-local

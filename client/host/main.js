@@ -68,6 +68,14 @@ const audioSfxEl    = document.getElementById('audio-sfx')
 const audioVoiceEl  = document.getElementById('audio-voice')
 const audioMuteEl   = document.getElementById('audio-muted')
 
+const menuAudioMasterEl = document.getElementById('menu-audio-master')
+const menuAudioMusicEl  = document.getElementById('menu-audio-music')
+const menuAudioSfxEl    = document.getElementById('menu-audio-sfx')
+const menuAudioVoiceEl  = document.getElementById('menu-audio-voice')
+const menuAudioMuteEl   = document.getElementById('menu-audio-muted')
+const menuAudioBtn      = document.getElementById('menu-audio-btn')
+const menuAudioPanel    = document.getElementById('menu-audio-panel')
+
 const SANDBOX_ENEMY_ACTIONS = [
   { label: 'Felguard',       enemyType: 'felGuard' },
   { label: 'Harpooner',      enemyType: 'coilskarHarpooner' },
@@ -137,6 +145,12 @@ function syncAudioControls() {
   if (audioVoiceEl) audioVoiceEl.value = String(Math.round(settings.voice * 100))
   if (audioMuteEl) audioMuteEl.checked = !!settings.muted
 
+  if (menuAudioMasterEl) menuAudioMasterEl.value = String(Math.round(settings.master * 100))
+  if (menuAudioMusicEl)  menuAudioMusicEl.value  = String(Math.round(settings.music  * 100))
+  if (menuAudioSfxEl)    menuAudioSfxEl.value    = String(Math.round(settings.sfx    * 100))
+  if (menuAudioVoiceEl)  menuAudioVoiceEl.value  = String(Math.round(settings.voice  * 100))
+  if (menuAudioMuteEl)   menuAudioMuteEl.checked = !!settings.muted
+
   updateAudioOutputLabels()
 }
 
@@ -165,6 +179,35 @@ function bindAudioControls() {
   })
   audioMuteEl?.addEventListener('change', update)
   syncAudioControls()
+}
+
+function bindMenuAudioControls() {
+  const apply = () => {
+    audio.applySettings({
+      master: (Number(menuAudioMasterEl?.value ?? 85) || 0) / 100,
+      music:  (Number(menuAudioMusicEl?.value  ?? 65) || 0) / 100,
+      sfx:    (Number(menuAudioSfxEl?.value    ?? 85) || 0) / 100,
+      voice:  (Number(menuAudioVoiceEl?.value  ?? 90) || 0) / 100,
+      muted:  !!menuAudioMuteEl?.checked,
+    })
+    // mirror values back to the debug panel sliders
+    if (audioMasterEl) audioMasterEl.value = menuAudioMasterEl?.value ?? audioMasterEl.value
+    if (audioMusicEl)  audioMusicEl.value  = menuAudioMusicEl?.value  ?? audioMusicEl.value
+    if (audioSfxEl)    audioSfxEl.value    = menuAudioSfxEl?.value    ?? audioSfxEl.value
+    if (audioVoiceEl)  audioVoiceEl.value  = menuAudioVoiceEl?.value  ?? audioVoiceEl.value
+    if (audioMuteEl)   audioMuteEl.checked = !!menuAudioMuteEl?.checked
+    updateAudioOutputLabels()
+  }
+  ;[menuAudioMasterEl, menuAudioMusicEl, menuAudioSfxEl, menuAudioVoiceEl].forEach(el => {
+    el?.addEventListener('input', apply)
+    el?.addEventListener('change', apply)
+  })
+  menuAudioMuteEl?.addEventListener('change', apply)
+
+  menuAudioBtn?.addEventListener('click', () => {
+    const open = menuAudioPanel?.classList.toggle('open')
+    if (menuAudioBtn) menuAudioBtn.classList.toggle('active', open)
+  })
 }
 
 function setConnectionStatus(text, variant, autoHideMs = 0) {
@@ -205,6 +248,7 @@ menuPlayBtn?.addEventListener('click', () => {
 })
 
 bindAudioControls()
+bindMenuAudioControls()
 
 setConnectionStatus('Connecting...', 'connecting')
 

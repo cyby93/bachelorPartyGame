@@ -94,7 +94,7 @@
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
-    border-radius: 10px;
+    border-radius: var(--rn-radius-md);
     border: 2px solid var(--rn-bg-surface);
     background: var(--rn-bg-surface);
     color: var(--rn-text-bright);
@@ -143,7 +143,7 @@
     width: 100%;
     max-width: 400px;
     padding: 14px;
-    border-radius: 10px;
+    border-radius: var(--rn-radius-md);
     border: none;
     font-size: 16px;
     font-weight: bold;

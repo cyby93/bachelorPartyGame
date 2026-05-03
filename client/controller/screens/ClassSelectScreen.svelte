@@ -125,11 +125,9 @@
 
   .class-card {
     position: relative;
-    background:
-      linear-gradient(180deg, rgba(255, 214, 143, 0.035) 0%, rgba(255, 214, 143, 0) 30%),
-      var(--rn-gradient-surface);
+    background: var(--rn-gradient-surface);
     border: 1px solid var(--rn-border);
-    border-radius: 14px;
+    border-radius: var(--rn-radius-lg);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -180,11 +178,9 @@
     gap: 12px;
     flex-wrap: wrap;
     padding: 12px 14px;
-    border-radius: 16px;
+    border-radius: var(--rn-radius-lg);
     border: 1px solid color-mix(in srgb, var(--class-color) 42%, rgba(104, 130, 153, 0.18));
-    background:
-      linear-gradient(180deg, color-mix(in srgb, var(--class-color) 14%, rgba(255, 214, 143, 0.03)) 0%, rgba(255, 214, 143, 0) 34%),
-      linear-gradient(180deg, #1E1208 0%, #140C06 100%);
+    background: linear-gradient(180deg, #1E1208 0%, #140C06 100%);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
 
@@ -217,7 +213,7 @@
   .ready-btn {
     min-width: 148px;
     padding: 14px 18px;
-    border-radius: 12px;
+    border-radius: var(--rn-radius-md);
     border: none;
     font-size: 15px;
     font-weight: bold;
@@ -258,7 +254,7 @@
     .class-card {
       gap: 4px;
       padding: 6px 4px;
-      border-radius: 12px;
+      border-radius: var(--rn-radius-md);
     }
 
     .class-card .class-icon {
@@ -278,7 +274,7 @@
     .selection-bar {
       gap: 8px;
       padding: 9px 10px;
-      border-radius: 12px;
+      border-radius: var(--rn-radius-md);
     }
 
     .selection-label {
@@ -296,7 +292,7 @@
     .ready-btn {
       min-width: 120px;
       padding: 11px 14px;
-      border-radius: 10px;
+      border-radius: var(--rn-radius-md);
       font-size: 13px;
       letter-spacing: 1.5px;
     }

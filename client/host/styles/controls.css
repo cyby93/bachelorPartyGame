@@ -17,7 +17,7 @@
 
 .audio-panel {
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--rn-radius-md);
   border: 1px solid rgba(100, 72, 20, 0.35);
   background: rgba(0, 0, 0, 0.15);
   display: flex;
@@ -44,7 +44,7 @@
 
 .audio-row input[type=range] {
   width: 100%;
-  accent-color: var(--rn-accent);
+  accent-color: var(--rn-gold);
 }
 
 .audio-row output {
@@ -67,7 +67,7 @@
 
 #fullscreen-btn {
   padding: 8px;
-  border-radius: 6px;
+  border-radius: var(--rn-radius-sm);
   border: 1px solid var(--rn-border-btn);
   background: linear-gradient(180deg, #2A1808 0%, #1C1004 100%);
   color: var(--rn-text-dim);
@@ -84,7 +84,7 @@
 /* Destructive action — keep as danger red, not tokenized further */
 #quit-campaign-btn {
   padding: 8px;
-  border-radius: 6px;
+  border-radius: var(--rn-radius-sm);
   border: 1px solid #5a1a1a;
   background: #2a0a0a;
   color: #e05050;
@@ -108,7 +108,7 @@
   z-index: 20;
   font-size: 11px;
   padding: 3px 8px;
-  border-radius: 999px;
+  border-radius: var(--rn-radius-pill);
   background: rgba(231, 76, 60, 0.95);  /* default: error/disconnected */
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -130,7 +130,7 @@
   z-index: 15;
   width: min(340px, calc(100% - 44px));
   padding: 14px 14px 12px;
-  border-radius: 10px;
+  border-radius: var(--rn-radius-md);
   border: 1px solid rgba(148, 106, 32, 0.45);
   background:
     linear-gradient(180deg, rgba(200, 148, 40, 0.08) 0%, rgba(200, 148, 40, 0) 30%),

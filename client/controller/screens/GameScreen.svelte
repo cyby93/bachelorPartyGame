@@ -78,9 +78,7 @@
 
   .hud {
     min-height: 42px;
-    background:
-      linear-gradient(180deg, rgba(255, 214, 143, 0.05) 0%, rgba(255, 214, 143, 0) 28%),
-      rgba(14, 8, 4, 0.74);
+    background: rgba(14, 8, 4, 0.74);
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
     display: flex;
@@ -156,11 +154,9 @@
     flex: 1;
     min-width: 0;
     position: relative;
-    border-radius: 18px;
+    border-radius: var(--rn-radius-xl);
     overflow: hidden;
-    background:
-      linear-gradient(180deg, rgba(255, 214, 143, 0.025) 0%, rgba(255, 214, 143, 0) 30%),
-      linear-gradient(180deg, #1C1208 0%, #120A04 100%);
+    background: linear-gradient(180deg, #1C1208 0%, #120A04 100%);
     border: 1px solid var(--rn-border-subtle);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
   }
@@ -238,7 +234,7 @@
     }
 
     .move-area {
-      border-radius: 14px;
+      border-radius: var(--rn-radius-lg);
     }
 
     .control-label {

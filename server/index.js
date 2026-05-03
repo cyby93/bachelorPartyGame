@@ -17,7 +17,7 @@ const PORT  = process.env.PORT || 3100
 
 const io = new Server(server, {
   cors: isDev
-    ? { origin: 'http://localhost:5173', methods: ['GET', 'POST'] }
+    ? { origin: true, methods: ['GET', 'POST'] }  // allow any LAN origin in dev
     : false
 })
 

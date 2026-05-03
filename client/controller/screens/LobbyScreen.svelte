@@ -1,6 +1,9 @@
 <script>
   import { CLASSES } from '../../../shared/ClassConfig.js'
 
+  // Must match GameScreen.svelte GRID_ORDER so the briefing positions match combat
+  const GRID_ORDER = [1, 3, 0, 2]
+
   let { playerName = '', className = '', onready } = $props()
 
   const CLASS_ICONS = {
@@ -48,12 +51,13 @@
 <div class="lobby" style="--class-color: {classColor}">
   <div class="briefing-head" style="--class-color: {classColor}">
     <div class="head-copy">
-      <span class="kicker">Class Briefing</span>
-      <h1>{cls?.name ?? className}</h1>
-      <p>Learn the layout now, then keep your eyes on the TV.</p>
+      <img class="top-class-icon" src="/icons/classes/{CLASS_ICONS[className] ?? 'classicon_warrior'}.jpg" alt={className} />
+      <div>
+        <h1>{cls?.name ?? className}</h1>
+        <p>Learn the layout now, then keep your eyes on the TV.</p>
+      </div>
     </div>
     <div class="hero-chip">
-      <img class="top-class-icon" src="/icons/classes/{CLASS_ICONS[className] ?? 'classicon_warrior'}.jpg" alt={className} />
       <div class="hero-info">
         <span class="hero-name" style="color: {classColor}">{playerName}</span>
         <span class="class-tag">{cls?.name ?? className} · {ROLES[className]}</span>
@@ -63,41 +67,30 @@
       <span>❤️ {cls?.hp ?? '—'} HP</span>
       <span>⚡ {cls?.speed ?? '—'}x Spd</span>
     </div>
-  </div>
-
-  <div class="skills-grid">
-    {#each skills as skill}
-      <div class="skill-card" style="--class-color: {classColor}">
-        <div class="skill-card-top">
-          <span class="skill-icon">
-            {#if skill.iconFile}
-              <img src="/icons/abilities/{skill.iconFile}.jpg" alt={skill.name} class="skill-icon-img" />
-            {:else}
-              {skill.icon}
-            {/if}
-          </span>
-          <div class="skill-info">
-            <span class="skill-name">{skill.name}</span>
-            <span class="skill-meta">{(skill.cooldown / 1000).toFixed(1)}s cooldown</span>
-          </div>
-        </div>
-
-        <div class="skill-guidance">
-          <span class="skill-input-type">{INPUT_LABELS[skill.inputType] ?? skill.inputType}</span>
-          <span class="skill-hint">{INPUT_HINTS[skill.inputType] ?? 'Use this skill from the right-side grid.'}</span>
-        </div>
-      </div>
-    {/each}
-  </div>
-
-  <div class="ready-wrap">
-    <div class="ready-copy">
-      <span class="ready-kicker">Ready Check</span>
-      <span class="ready-text">Button positions stay fixed in combat.</span>
-    </div>
     <button type="button" class="ready-btn" onclick={() => onready?.()}>
       I GOT IT
     </button>
+  </div>
+
+  <div class="skills-grid">
+    {#each GRID_ORDER as skillIdx}
+      {@const skill = skills[skillIdx]}
+      <div class="skill-card" style="--class-color: {classColor}">
+        <span class="skill-icon">
+          {#if skill.iconFile}
+            <img src="/icons/abilities/{skill.iconFile}.jpg" alt={skill.name} class="skill-icon-img" />
+          {:else}
+            {skill.icon}
+          {/if}
+        </span>
+        <div class="skill-details">
+            <span class="skill-name">{skill.name}</span>
+            <span class="skill-meta">{(skill.cooldown / 1000).toFixed(1)}s cooldown</span>
+            <span class="skill-input-type">{INPUT_LABELS[skill.inputType] ?? skill.inputType}</span>
+            <span class="skill-hint">{INPUT_HINTS[skill.inputType] ?? 'Use this skill from the right-side grid.'}</span>
+        </div>
+      </div>
+    {/each}
   </div>
 </div>
 
@@ -117,11 +110,11 @@
 
   .briefing-head {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: 2fr 1fr 1fr 2fr;
     gap: 10px;
     align-items: center;
     padding: 14px;
-    border-radius: 16px;
+    border-radius: var(--rn-radius-lg);
     border: 1px solid color-mix(in srgb, var(--class-color) 30%, rgba(104, 130, 153, 0.24));
     background:
       linear-gradient(180deg, color-mix(in srgb, var(--class-color) 12%, rgba(255, 214, 143, 0.03)) 0%, rgba(255, 214, 143, 0) 34%),
@@ -133,17 +126,8 @@
 
   .head-copy {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-  }
-
-  .kicker,
-  .ready-kicker {
-    font-size: 10px;
-    letter-spacing: 1.7px;
-    text-transform: uppercase;
-    color: var(--rn-text-label);
+    align-items: center;
+    gap: 8px;
   }
 
   h1 {
@@ -152,8 +136,7 @@
     color: var(--rn-text-bright);
   }
 
-  .head-copy p,
-  .ready-text {
+  .head-copy p {
     font-size: 12px;
     line-height: 1.45;
     color: var(--rn-text-secondary);
@@ -217,52 +200,43 @@
 
   .skill-card {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
     background:
       linear-gradient(180deg, color-mix(in srgb, var(--class-color) 10%, rgba(255, 214, 143, 0.03)) 0%, rgba(255, 214, 143, 0) 34%),
       var(--rn-gradient-surface);
-    border-radius: 14px;
+    border-radius: var(--rn-radius-lg);
     padding: 10px;
     min-width: 0;
     border: 1px solid var(--rn-border-subtle);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
   }
 
-  .skill-card-top {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-  }
-
   .skill-icon  {
-    font-size: 88px;
+    font-size: 52px;
     line-height: 1;
     flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 88px;
-    height: 88px;
-    padding: 4px;
-    border-radius: 12px;
+    padding: 3px;
+    border-radius: var(--rn-radius-md);
     background: rgba(7, 13, 18, 0.38);
     border: 1px solid rgba(255, 255, 255, 0.04);
   }
 
   .skill-icon-img {
-    width: 88px;
-    height: 88px;
     object-fit: contain;
     display: block;
   }
 
-  .skill-info  {
+  .skill-details {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 4px 8px;
     min-width: 0;
+    flex: 1;
   }
 
   .skill-name  {
@@ -278,13 +252,6 @@
     color: var(--rn-text-label);
   }
 
-  .skill-guidance {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    min-width: 0;
-  }
-
   .skill-input-type {
     font-size: 12px;
     font-weight: 700;
@@ -297,38 +264,19 @@
     color: var(--rn-text-body);
   }
 
-  .ready-wrap {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    padding: 12px 14px;
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid var(--rn-border-subtle);
-    flex-shrink: 0;
-  }
-
-  .ready-copy {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    flex: 1;
-  }
-
   .ready-btn {
-    min-width: 140px;
-    padding: 14px 16px;
-    border-radius: 12px;
+    min-width: 100px;
+    padding: 12px 14px;
+    border-radius: var(--rn-radius-md);
     border: none;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: bold;
     letter-spacing: 2px;
     background: var(--rn-gradient-cta);
     color: var(--rn-gold);
     cursor: pointer;
     flex-shrink: 0;
+    align-self: stretch;
   }
 
   .ready-btn:active { opacity: 0.9; }
@@ -340,35 +288,21 @@
     }
 
     .briefing-head {
-      grid-template-columns: minmax(0, 1fr) auto;
       gap: 8px;
       padding: 10px;
-      border-radius: 12px;
+      border-radius: var(--rn-radius-md);
     }
 
     .stats {
-      grid-column: 2;
-      grid-row: 1 / span 2;
       font-size: 11px;
       gap: 2px;
-    }
-
-    .head-copy {
-      gap: 2px;
-    }
-
-    .kicker,
-    .ready-kicker {
-      font-size: 9px;
-      letter-spacing: 1.4px;
     }
 
     h1 {
       font-size: 19px;
     }
 
-    .head-copy p,
-    .ready-text {
+    .head-copy p {
       font-size: 10px;
       line-height: 1.25;
     }
@@ -394,28 +328,6 @@
       gap: 6px;
     }
 
-    .skill-card {
-      gap: 5px;
-      padding: 8px;
-      border-radius: 12px;
-    }
-
-    .skill-card-top {
-      gap: 8px;
-    }
-
-    .skill-icon {
-      width: 58px;
-      height: 58px;
-      font-size: 58px;
-      border-radius: 10px;
-    }
-
-    .skill-icon-img {
-      width: 58px;
-      height: 58px;
-    }
-
     .skill-name {
       font-size: 11px;
     }
@@ -427,19 +339,11 @@
       line-height: 1.2;
     }
 
-    .ready-wrap {
-      gap: 8px;
-      padding: 8px 10px;
-      border-radius: 12px;
-    }
-
     .ready-btn {
-      min-width: 110px;
-      padding: 11px 12px;
-      border-radius: 10px;
-      font-size: 13px;
+      min-width: 84px;
+      padding: 10px 10px;
+      font-size: 12px;
       letter-spacing: 1.2px;
-      margin-left: auto;
     }
   }
 </style>

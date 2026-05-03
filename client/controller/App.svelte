@@ -33,6 +33,13 @@
   // ── End state
   let endMessage  = $state('')
 
+  // ── Screen Wake Lock — prevents phone from sleeping during play
+  let wakeLock = null
+  async function requestWakeLock() {
+    if (!('wakeLock' in navigator)) return
+    try { wakeLock = await navigator.wakeLock.request('screen') } catch (_) {}
+  }
+
   // ── Socket (plain let — must NOT be Proxy-wrapped)
   let socket
   const controllerAudio = new ControllerAudio()
@@ -48,7 +55,14 @@
   }
 
   // ── Session token — persists across reconnects so the server can reclaim the character
-  const sessionToken = localStorage.getItem('sessionToken') ?? crypto.randomUUID()
+  // crypto.randomUUID() requires iOS 15.4+ / Chrome 92+; fall back to getRandomValues for older devices
+  function generateUUID() {
+    if (typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+    return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+      (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+    )
+  }
+  const sessionToken = localStorage.getItem('sessionToken') ?? generateUUID()
   localStorage.setItem('sessionToken', sessionToken)
 
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
@@ -68,6 +82,11 @@
   }
 
   onMount(() => {
+    requestWakeLock()
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') requestWakeLock()
+    })
+
     const mq = window.matchMedia('(orientation: portrait)')
     isPortrait = mq.matches
     mq.addEventListener('change', e => {
@@ -184,7 +203,10 @@
     })
   })
 
-  onDestroy(() => { socket?.disconnect() })
+  onDestroy(() => {
+    socket?.disconnect()
+    wakeLock?.release()
+  })
 
   // ── Actions passed down to children
 
@@ -388,7 +410,7 @@
 
   .rotate-overlay button {
     padding: 12px 24px;
-    border-radius: 8px;
+    border-radius: var(--rn-radius-md);
     border: 1px solid var(--rn-border-btn);
     background: var(--rn-bg-surface);
     color: var(--rn-accent);
@@ -413,7 +435,7 @@
     width: 32px;
     height: 32px;
     padding: 0;
-    border-radius: 6px;
+    border-radius: var(--rn-radius-sm);
     border: 1px solid var(--rn-border-btn);
     background: rgba(20, 12, 4, 0.75);
     color: var(--rn-accent);

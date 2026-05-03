@@ -113,7 +113,7 @@
   .title {
     font-size: 18px;
     font-weight: bold;
-    color: var(--rn-info);
+    color: var(--rn-gold);
     margin: 0 0 4px;
   }
 
@@ -130,7 +130,7 @@
     flex-direction: column;
     gap: 4px;
     padding: 8px 10px;
-    border-radius: 8px;
+    border-radius: var(--rn-radius-md);
     border: 2px solid var(--rn-bg-surface);
     background: var(--rn-bg-surface);
     color: var(--rn-text-bright);

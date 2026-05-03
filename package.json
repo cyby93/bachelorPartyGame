@@ -25,6 +25,7 @@
     "express": "^4.18.2",
     "ip": "^1.1.8",
     "nipplejs": "^0.10.2",
+    "nosleep.js": "^0.12.0",
     "pixi.js": "^8.5.0",
     "socket.io": "^4.7.2",
     "socket.io-client": "^4.7.2"

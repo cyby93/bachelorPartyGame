@@ -278,11 +278,9 @@
 
 <style>
   .skill-btn {
-    background:
-      linear-gradient(180deg, rgba(255, 214, 143, 0.045) 0%, rgba(255, 214, 143, 0) 28%),
-      var(--rn-gradient-surface);
+    background: var(--rn-gradient-surface);
     border: 1px solid var(--rn-border-subtle);
-    border-radius: 18px;
+    border-radius: var(--rn-radius-xl);
     padding: 0;
     display: flex;
     flex-direction: column;
@@ -300,20 +298,8 @@
     /* let parent grid size it */
   }
 
-  .skill-btn::before {
-    content: '';
-    position: absolute;
-    inset: 0 auto auto 0;
-    width: 100%;
-    height: 2px;
-    background: linear-gradient(90deg, rgba(255, 214, 143, 0.26), rgba(255, 214, 143, 0.02));
-    pointer-events: none;
-  }
-
   .skill-btn:active {
-    background:
-      linear-gradient(180deg, rgba(255, 214, 143, 0.06) 0%, rgba(255, 214, 143, 0) 28%),
-      linear-gradient(180deg, #2A1808 0%, #1C1004 100%);
+    background: linear-gradient(180deg, #2A1808 0%, #1C1004 100%);
     transform: scale(0.992);
   }
 
@@ -344,7 +330,7 @@
     width: 96px;
     height: 96px;
     padding: 4px;
-    border-radius: 14px;
+    border-radius: var(--rn-radius-lg);
     background: rgba(7, 13, 18, 0.24);
     border: 1px solid rgba(255, 255, 255, 0.04);
   }
@@ -367,14 +353,14 @@
   @media (max-height: 430px) {
     .skill-btn {
       gap: 4px;
-      border-radius: 14px;
+      border-radius: var(--rn-radius-lg);
     }
 
     .skill-icon {
       width: 68px;
       height: 68px;
       font-size: 68px;
-      border-radius: 10px;
+      border-radius: var(--rn-radius-md);
     }
 
     .skill-icon-img {

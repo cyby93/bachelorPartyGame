@@ -14,11 +14,20 @@
   --rn-bg-surface:      #241408;
   --rn-bg-surface-dark: #1A0E06;
 
-  /* ── Borders — amber/gold tones ─────────────────────────────── */
+  /* ── Borders — components + color scale ─────────────────────── */
+  --rn-border-width:  1px;
+  --rn-border-style:  solid;
   --rn-border:          rgba(148, 106, 32, 0.38);
   --rn-border-subtle:   rgba(120, 86, 24, 0.18);
   --rn-border-strong:   rgba(168, 124, 40, 0.56);
   --rn-border-btn:      #5A3810;
+
+  /* ── Radius scale ────────────────────────────────────────────── */
+  --rn-radius-sm:   6px;    /* buttons, compact controls */
+  --rn-radius-md:   10px;   /* standard panels, cards */
+  --rn-radius-lg:   16px;   /* larger content areas */
+  --rn-radius-xl:   22px;   /* touch controls, hero panels */
+  --rn-radius-pill: 999px;  /* hp bars, badges */
 
   /* ── Text — warm parchment tones ────────────────────────────── */
   --rn-text-bright:    #FFF6DC;

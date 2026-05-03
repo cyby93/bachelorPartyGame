@@ -59,11 +59,9 @@
     flex-direction: column;
     gap: 18px;
     padding: 24px 20px;
-    border-radius: 22px;
+    border-radius: var(--rn-radius-xl);
     border: 1px solid var(--rn-border);
-    background:
-      linear-gradient(180deg, rgba(255, 214, 143, 0.05) 0%, rgba(255, 214, 143, 0) 28%),
-      linear-gradient(180deg, rgba(28, 16, 8, 0.96) 0%, rgba(14, 8, 4, 0.96) 100%);
+    background: rgba(26, 14, 6, 0.96);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.04),
       0 18px 40px rgba(0, 0, 0, 0.24);
@@ -114,7 +112,7 @@
   input {
     width: 100%;
     padding: 13px 14px;
-    border-radius: 12px;
+    border-radius: var(--rn-radius-md);
     border: 1px solid var(--rn-border-subtle);
     background: rgba(255, 255, 255, 0.03);
     color: #fff;
@@ -126,7 +124,7 @@
   .next-btn {
     width: 100%;
     padding: 14px;
-    border-radius: 12px;
+    border-radius: var(--rn-radius-md);
     border: none;
     font-size: 15px;
     font-weight: bold;
@@ -144,7 +142,7 @@
     .brand-card {
       gap: 14px;
       padding: 18px 16px;
-      border-radius: 18px;
+      border-radius: var(--rn-radius-xl);
     }
 
     .brand .icon {

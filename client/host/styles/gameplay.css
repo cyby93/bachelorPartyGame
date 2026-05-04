@@ -29,7 +29,7 @@
     inset 0 1px 0 rgba(255, 210, 80, 0.10),
     inset 0 -1px 0 rgba(0, 0, 0, 0.35),
     0 6px 18px rgba(0, 0, 0, 0.35);
-  overflow: hidden;
+  /* overflow: hidden; */
 }
 
 /* WARCRAFT: section header → engraved gold plate */
@@ -105,29 +105,109 @@
 
 /* ── Roster + meters ──────────────────────────────────────────── */
 
-#gameplay-roster,
+#gameplay-roster {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  min-height: 0;
+}
+
 #damage-meter-list,
 #healing-meter-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 2px;
   min-height: 0;
 }
 
-.roster-row,
-.meter-row {
+/* ── Roster rows (HP fill via --hp-pct) ───────────────────────── */
+
+.roster-row {
+  --hp-pct: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 4px;
+  align-items: center;
+  font-size: 10px;
+  padding: 4px 8px;
+  border-radius: var(--rn-radius-sm);
+  border: 1px solid rgba(100, 72, 20, 0.22);
+  background:
+    linear-gradient(
+      90deg,
+      rgba(67, 214, 135, 0.18) calc(var(--hp-pct) * 100%),
+      rgba(0, 0, 0, 0.22) calc(var(--hp-pct) * 100%)
+    );
+  position: relative;
+  overflow: hidden;
+}
+
+.roster-row.dead {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.22) 0%,
+      rgba(0, 0, 0, 0.22) 100%
+    );
+}
+
+.meter-row.compact {
+  height: 6px;
+  padding: 0;
+  min-width: 0;
+  border-radius: var(--rn-radius-pill);
+}
+
+.row-class-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.roster-name {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--rn-accent);
+}
+
+.roster-hp {
+  font-size: 11px;
+  color: var(--rn-text-label);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.roster-row.dead .roster-name,
+.roster-row.dead .roster-hp {
+  color: var(--rn-danger-dim);
+}
+
+/* ── Meter rows (relative fill via --meter-pct + --meter-color) ── */
+
+.meter-row {
+  --meter-pct: 0;
+  --meter-color: #ffffff;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
   font-size: 12px;
-  padding: 8px 9px;
+  padding: 4px 8px;
   border-radius: var(--rn-radius-sm);
-  background: rgba(0, 0, 0, 0.22);
   border: 1px solid rgba(100, 72, 20, 0.22);
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--meter-color) 22%, transparent) calc(var(--meter-pct) * 100%),
+      rgba(0, 0, 0, 0.22) calc(var(--meter-pct) * 100%)
+    );
 }
 
-.roster-main,
 .meter-main {
   display: flex;
   flex-direction: column;
@@ -135,7 +215,6 @@
   min-width: 0;
 }
 
-.roster-name,
 .meter-name {
   font-weight: 700;
   letter-spacing: 0.2px;
@@ -145,23 +224,6 @@
   color: var(--rn-accent);
 }
 
-/* WARCRAFT: HP bar → dark stone inset + WoW green fill */
-.roster-hpbar {
-  height: 7px;
-  border-radius: var(--rn-radius-pill);
-  background: linear-gradient(180deg, #060402 0%, #0E0804 100%);
-  overflow: hidden;
-  border: 1px solid rgba(80, 56, 14, 0.70);
-}
-
-.roster-hpfill {
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--rn-success), #7bed9f);
-  box-shadow: 0 0 10px rgba(67, 214, 135, 0.2);
-}
-
-.roster-state,
 .meter-value {
   font-size: 11px;
   color: var(--rn-text-label);
@@ -169,15 +231,8 @@
   white-space: nowrap;
 }
 
-/* Dead state */
-.roster-row.dead .roster-name,
-.roster-row.dead .roster-state {
-  color: var(--rn-danger-dim);
-}
-
-.roster-row.dead .roster-hpfill {
-  background: linear-gradient(90deg, var(--rn-danger), #ff7675);
-  box-shadow: 0 0 10px rgba(231, 76, 60, 0.2);
+.meter-rate {
+  color: var(--rn-text-dim);
 }
 
 /* ── Meter columns ────────────────────────────────────────────── */

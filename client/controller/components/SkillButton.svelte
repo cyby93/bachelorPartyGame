@@ -188,15 +188,19 @@
     navigator.vibrate?.(20)
 
     if (type === 'INSTANT') {
-      flashFired()
-      onskill?.({ index, vector: { x: 1, y: 0 } })
-      if (skill?.autoRefire) {
-        autoFireInterval = setInterval(() => {
-          if (expiresAt <= Date.now()) {
-            flashFired()
-            onskill?.({ index, vector: { x: 1, y: 0 } })
-          }
-        }, 100)
+      if (isCastHold) {
+        startCast()
+      } else {
+        flashFired()
+        onskill?.({ index, vector: { x: 1, y: 0 } })
+        if (skill?.autoRefire) {
+          autoFireInterval = setInterval(() => {
+            if (expiresAt <= Date.now()) {
+              flashFired()
+              onskill?.({ index, vector: { x: 1, y: 0 } })
+            }
+          }, 100)
+        }
       }
     } else if (type === 'SUSTAINED') {
       held = true
@@ -218,7 +222,9 @@
     }
     e.preventDefault()
     if (autoFireInterval) { clearInterval(autoFireInterval); autoFireInterval = null }
-    if (type === 'SUSTAINED' && held) {
+    if (type === 'INSTANT' && isCastHold) {
+      cancelCast()
+    } else if (type === 'SUSTAINED' && held) {
       held = false
       onskill?.({ index, vector: { x: 1, y: 0 }, action: 'END' })
     }
@@ -232,7 +238,9 @@
     }
     e.preventDefault()
     if (autoFireInterval) { clearInterval(autoFireInterval); autoFireInterval = null }
-    if (type === 'SUSTAINED' && held) {
+    if (type === 'INSTANT' && isCastHold) {
+      cancelCast()
+    } else if (type === 'SUSTAINED' && held) {
       held = false
       onskill?.({ index, vector: { x: 1, y: 0 }, action: 'END' })
     }

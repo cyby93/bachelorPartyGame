@@ -393,22 +393,37 @@ function renderGameplayRoster() {
     return
   }
 
-  rosterEl.innerHTML = players.map(player => {
+  if (rosterEl.querySelector('.empty-state')) rosterEl.innerHTML = ''
+
+  const existing = new Map()
+  rosterEl.querySelectorAll('.roster-row[data-pid]').forEach(el => existing.set(el.dataset.pid, el))
+
+  players.forEach(player => {
     const color = CLASSES[player.className]?.color ?? '#ffffff'
     const maxHp = Math.max(1, player.maxHp ?? player.hp ?? 1)
     const hp = Math.max(0, Math.ceil(player.hp ?? 0))
     const hpPct = player.isDead ? 0 : Math.max(0, Math.min(1, hp / maxHp))
-    const state = player.isDead ? 'Dead' : `${hp} / ${Math.ceil(maxHp)} HP`
 
-    return `
-      <div class="roster-row${player.isDead ? ' dead' : ''}">
-        <div class="roster-main">
-          <div class="roster-name" style="color:${color}">${player.name}</div>
-          <div class="roster-hpbar"><div class="roster-hpfill" style="width:${hpPct * 100}%"></div></div>
-        </div>
-        <div class="roster-state">${state}</div>
-      </div>`
-  }).join('')
+    let row = existing.get(player.id)
+    if (!row) {
+      row = document.createElement('div')
+      row.className = 'roster-row'
+      row.dataset.pid = player.id
+      const iconFile = (player.className ?? '').toLowerCase()
+      row.innerHTML = `
+        <img class="row-class-icon" src="/icons/classes/classicon_${iconFile}.jpg" alt="${player.className}" />
+        <div class="roster-name" style="color:${color}">${player.name}</div>
+        <div class="roster-hp"></div>`
+    }
+
+    row.style.setProperty('--hp-pct', hpPct)
+    row.classList.toggle('dead', !!player.isDead)
+    row.querySelector('.roster-hp').textContent = player.isDead ? 'Dead' : String(hp)
+    rosterEl.appendChild(row)
+    existing.delete(player.id)
+  })
+
+  existing.forEach(el => el.remove())
 }
 
 function renderMeterList(container, totals, rateSuffix, emptyText) {
@@ -424,23 +439,60 @@ function renderMeterList(container, totals, rateSuffix, emptyText) {
       total: totals?.[player.id] ?? 0,
       rate: Math.round((totals?.[player.id] ?? 0) / elapsed),
     }))
+    .filter(row => row.total > 0)
     .sort((a, b) => b.total - a.total)
 
-  if (rows.length === 0 || rows.every(row => row.total === 0)) {
+  if (rows.length === 0) {
     container.innerHTML = `<div class="empty-state">${emptyText}</div>`
     return
   }
 
-  container.innerHTML = rows.map(({ player, total, rate }) => {
+  if (container.querySelector('.empty-state')) container.innerHTML = ''
+
+  const maxTotal = rows[0].total || 1
+  const existing = new Map()
+  container.querySelectorAll('.meter-row[data-pid]').forEach(el => existing.set(el.dataset.pid, el))
+
+  rows.forEach(({ player, total, rate }, i) => {
     const color = CLASSES[player.className]?.color ?? '#ffffff'
-    return `
-      <div class="meter-row">
-        <div class="meter-main">
+    const meterPct = total / maxTotal
+    const isCompact = i >= 5
+
+    let row = existing.get(player.id)
+    const isNew = !row
+    if (isNew) {
+      row = document.createElement('div')
+      row.className = 'meter-row'
+      row.dataset.pid = player.id
+    }
+
+    const wasCompact = row.dataset.compact === '1'
+    if (isNew || wasCompact !== isCompact) {
+      if (isCompact) {
+        row.innerHTML = ''
+      } else {
+        const iconFile = (player.className ?? '').toLowerCase()
+        row.innerHTML = `
+          <img class="row-class-icon" src="/icons/classes/classicon_${iconFile}.jpg" alt="${player.className}" />
           <div class="meter-name" style="color:${color}">${player.name}</div>
-        </div>
-        <div class="meter-value">${total.toLocaleString()} (${rate}/${rateSuffix})</div>
-      </div>`
-  }).join('')
+          <div class="meter-value"></div>`
+      }
+      row.dataset.compact = isCompact ? '1' : '0'
+    }
+
+    row.style.setProperty('--meter-pct', meterPct)
+    row.style.setProperty('--meter-color', color)
+    row.classList.toggle('compact', isCompact)
+    if (!isCompact) {
+      row.querySelector('.meter-value').innerHTML =
+        `${total.toLocaleString()} <span class="meter-rate">(${rate}/${rateSuffix})</span>`
+    }
+
+    container.appendChild(row)
+    existing.delete(player.id)
+  })
+
+  existing.forEach(el => el.remove())
 }
 
 function renderGameplaySidebar() {

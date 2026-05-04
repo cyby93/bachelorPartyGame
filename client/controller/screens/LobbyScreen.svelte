@@ -85,7 +85,9 @@
         </span>
         <div class="skill-details">
             <span class="skill-name">{skill.name}</span>
-            <span class="skill-meta">{(skill.cooldown / 1000).toFixed(1)}s cooldown</span>
+            {#if skill.cooldown > 0}
+              <span class="skill-meta">{(skill.cooldown / 1000).toFixed(1)}s cooldown</span>
+            {/if}
             <span class="skill-input-type">{INPUT_LABELS[skill.inputType] ?? skill.inputType}</span>
             <span class="skill-hint">{INPUT_HINTS[skill.inputType] ?? 'Use this skill from the right-side grid.'}</span>
         </div>

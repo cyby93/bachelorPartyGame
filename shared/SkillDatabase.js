@@ -475,7 +475,7 @@ const SkillDatabase = {
       castBar:          true,
       subtype:          'HEAL_ALLY',
       inputType:        'DIRECTIONAL',
-      cooldown:         1000,
+      cooldown:         0,
       castTime:         1500,
       range:            600,
       healAmount:       13,
@@ -500,7 +500,7 @@ const SkillDatabase = {
       payload: {
         type:       'AOE',
         subtype:    'AOE_SELF',
-        radius:     300,          // heal all players within 300px of caster each tick
+        radius:     300,
         effectType: 'HEAL',
         healAmount: 15,
       },

@@ -45,7 +45,7 @@ export const CAMPAIGN = [
     ],
     spawning: {
       mode: 'wave',
-      waveCount: 8,
+      waveCount: 5,
       betweenWaveDelayMs: 3000,
       // 'random2' — server picks 2 random edges per wave so the horde
       // is grouped and players can't predict which sides to watch.
@@ -55,12 +55,12 @@ export const CAMPAIGN = [
       progression: [
         { fromWave: 1, enemyTypes: ['felGuard', 'coilskarHarpooner'],
           countRange: [3, 4] },
-        { fromWave: 3, enemyTypes: ['felGuard', 'coilskarHarpooner'],
-          countRange: [4, 6] },
-        { fromWave: 5, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic'],
-          countRange: [5, 8] },
-        { fromWave: 7, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic', 'coilskarSerpentGuard', 'bloodProphet', 'illidariCenturion'],
-          countRange: [6, 10] },
+        { fromWave: 2, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic'],
+          countRange: [5, 6] },
+        { fromWave: 3, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic'],
+          countRange: [7, 8] },
+        { fromWave: 4, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic', 'coilskarSerpentGuard', 'bloodProphet', 'illidariCenturion'],
+          countRange: [9, 10] },
       ],
     },
     difficulty: {
@@ -79,24 +79,24 @@ export const CAMPAIGN = [
     audio: {
       music: 'music_level_2_siege',
     },
-    arena: { width: 1200, height: 1200 },
+    arena: { width: 1400, height: 1000 },
     objectives: [
       { type: 'destroyBuildings' },
     ],
     buildings: [
-      { id: 'b1', position: { x: 60, y: 60 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
-      { id: 'b2', position: { x: 1140, y: 60 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
-      { id: 'b3', position: { x: 60, y: 1140 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
-      { id: 'b4', position: { x: 1140, y: 1140 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
+      { id: 'b1', position: { x: 80, y: 80 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
+      { id: 'b2', position: { x: 1320, y: 80 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
+      { id: 'b3', position: { x: 80, y: 920 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
+      { id: 'b4', position: { x: 1320, y: 920 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
     ],
     // Portal beam mechanic: two buildings link via a mirror every 10 seconds.
     // 3-second warning phase, then damage phase. Cyby will tune damage values.
     // mirrors?: [{ id: string, position: { x: number, y: number } }]
     mirrors: [
-      { id: 'm1', position: { x: 600, y: 200 } },
-      { id: 'm2', position: { x: 200, y: 600 } },
-      { id: 'm3', position: { x: 1000, y: 600 } },
-      { id: 'm4', position: { x: 600, y: 1000 } },
+      { id: 'm1', position: { x: 700, y: 200 } },
+      { id: 'm2', position: { x: 400, y: 500 } },
+      { id: 'm3', position: { x: 1000, y: 500 } },
+      { id: 'm4', position: { x: 700, y: 800 } },
     ],
     beamMechanic: {
       cycleMs:         10000,  // full cycle length (warning + damage combined)
@@ -133,7 +133,8 @@ export const CAMPAIGN = [
       enemyTypes: [
         { type: 'felGuard',          weight: 3 },
         { type: 'coilskarHarpooner', weight: 2 },
-      ],
+        { type: 'bonechewerBrute',   weight: 2 },
+],
     },
     difficulty: {
       hpMult:     { base: 1.0, perPlayer: 0.06 },
@@ -223,7 +224,7 @@ export const CAMPAIGN = [
     audio: {
       music: 'music_level_4_cavern',
     },
-    arena: { width: 1400, height: 1200 },
+    arena: { width: 1400, height: 1000 },
     objectives: [
       { type: 'killAll' },
     ],

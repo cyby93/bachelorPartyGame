@@ -1197,7 +1197,7 @@ export default class GameServer {
       x:         Math.round(player.x),
       y:         Math.round(player.y),
       angle:     Math.atan2(v.y, v.x),
-      radius:    config.radius ?? 0,
+      radius:    config.payload?.radius ?? config.radius ?? 0,
       range:     config.range ?? 0,
       color:     classColor,
     })

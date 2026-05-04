@@ -89,8 +89,8 @@ export const ILLIDAN_CONFIG = {
   // maxHp:          Math.round(2116 * R * BALANCE.RLEF),
   maxHp:          Math.round(1200 * R * BALANCE.RLEF),
   speed:          1,
-  // meleeDamage:    Math.round(0.5 * Y * R),      // 20 at defaults
-  meleeDamage:    1,
+  meleeDamage:    Math.round(0.5 * Y * R),      // 20 at defaults
+  // meleeDamage:    1,
   attackCooldown: 2000,
   attackRange:    80,
 

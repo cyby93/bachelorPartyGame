@@ -2,7 +2,9 @@
   import { onMount, onDestroy } from 'svelte'
   import nipplejs from 'nipplejs'
 
-  let { onmove } = $props()
+  // Keep a reference to the props proxy so the callback is always read fresh
+  // (not captured as a stale snapshot in the onMount closure).
+  const p = $props()
 
   let zoneEl   = null
   let joystick = null
@@ -17,17 +19,17 @@
 
     joystick.on('move', (_, data) => {
       if (data.vector) {
-        onmove?.({ x: data.vector.x, y: -data.vector.y })
+        p.onmove?.({ x: data.vector.x, y: -data.vector.y })
       }
     })
 
     joystick.on('end', () => {
-      onmove?.({ x: 0, y: 0 })
+      p.onmove?.({ x: 0, y: 0 })
     })
   })
 
   onDestroy(() => {
-    onmove?.({ x: 0, y: 0 })
+    p.onmove?.({ x: 0, y: 0 })
     joystick?.destroy()
   })
 </script>

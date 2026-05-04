@@ -2,6 +2,10 @@
   let { skills = [], onupgrade } = $props()
   let chosen = $state(false)
 
+  // Mirror the controller grid layout: [SK2, SK4 / SK1, SK3]
+  const GRID_ORDER = [1, 3, 0, 2]
+  let orderedSkills = $derived(GRID_ORDER.map(idx => skills.find(s => s.skillIndex === idx)).filter(Boolean))
+
   const PATH_LABELS = {
     damage: 'Damage',
     cooldown: 'Cooldown',
@@ -63,7 +67,7 @@
   {#if !chosen}
     <p class="title">Upgrade an ability!</p>
     <div class="skill-list">
-      {#each skills as skill}
+      {#each orderedSkills as skill}
         {@const canUpgrade = skill.preview != null}
         <button
           class="skill-card"

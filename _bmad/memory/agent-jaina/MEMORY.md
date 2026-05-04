@@ -36,6 +36,31 @@ Adding a new sidebar card = new `.svelte` file + add fields to `gameState` store
 
 Components use Svelte 4 legacy mode ($: reactive statements, $store auto-subscription). No runes.
 
+## Ability Asset Rule (2026-05-04)
+
+For player-facing spell visuals, use PixelLab object-style sprites for things that read as world objects:
+- projectiles
+- traps
+- totems
+- pickups
+- small spawned props / missile cores
+
+Do not default to object sprites for energy-shape effects. These are better as host-side VFX code:
+- lightning beams / arcs
+- explosions
+- novas / shockwaves
+- ground circles / aura fields
+- burst flashes / impact energy
+
+Practical rule: if it is a thing flying or sitting in the world, object sprite first. If it is energy spreading, bursting, pulsing, or drawing a line through space, procedural VFX first.
+
+Current PixelLab research notes:
+- repo `public/assets/sprites/projectile_fireball.png` is byte-identical to PixelLab object `pyroblast` (`8d3a0ce0-06d5-4115-a98a-177734b4e0bc`)
+- newer gallery-like fireball object is `b06f51e7-876f-447d-99fc-c673971acb5a`
+- recommended split: normal Fireball should use the lighter `fireball` object; Pyroblast can keep the heavier `pyroblast` object; Shadow Bolt fits a 1-direction object sprite; Lightning Bolt should stay line/beam/procedural-first rather than object-first
+
+Repo fit: keep the current sprite + trail + impact architecture for most projectile skills. Reserve animated object support, if ever added, for premium/heavy spells like Pyroblast rather than making it the default for every ability.
+
 ## Known Open Gaps
 
 - Tasks 12 and 13 (socket event schema validation, cooldown/skill button rendering review) blocked on Thrall's `skill:fired` shape being frozen

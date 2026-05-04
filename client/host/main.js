@@ -9,11 +9,14 @@
  */
 
 import { io }         from 'socket.io-client'
+import { mount }      from 'svelte'
 import { EVENTS }     from '../../shared/protocol.js'
-import { CLASSES }    from '../../shared/ClassConfig.js'
 import { LEVEL_SELECT_OPTIONS } from '../../shared/LevelConfig.js'
 import HostGame       from './HostGame.js'
 import AudioManager   from './systems/AudioManager.js'
+import { gameState }  from './stores/gameState.js'
+import GameplaySidebar from './components/GameplaySidebar.svelte'
+import LobbyPlayerList from './components/LobbyPlayerList.svelte'
 
 // ── PixiJS game init (top-level await — supported in Vite ESM) ─────────────
 const game  = new HostGame()
@@ -34,6 +37,10 @@ if (_loadBadge) {
   _loadBadge.textContent = 'Connecting…'
 }
 
+// ── Mount Svelte sidebar components ───────────────────────────────────────
+mount(GameplaySidebar, { target: document.getElementById('gameplay-panel') })
+mount(LobbyPlayerList, { target: document.getElementById('player-list') })
+
 // ── Socket ─────────────────────────────────────────────────────────────────
 const socket = io({ transports: ['websocket'] })
 game.setSocket(socket)
@@ -42,7 +49,6 @@ game.setSocket(socket)
 const body           = document.body
 const badge          = document.getElementById('conn-badge')
 const serverIpEl     = document.getElementById('server-ip')
-const playerListEl   = document.getElementById('player-list')
 const startBtn       = document.getElementById('start-btn')
 const qrWrap         = document.getElementById('qr-code')
 const fullscreenBtn  = document.getElementById('fullscreen-btn')
@@ -122,20 +128,26 @@ upgradeResetBtn?.addEventListener('click', () => {
     socket.emit(EVENTS.DEBUG_SET_SKILL_TIER, { skillIndex: parseInt(slider.dataset.slot, 10), tier: 0 })
   })
 })
-const levelPanelEl   = document.getElementById('level-panel')
-const gameplayLevelIndexEl = document.getElementById('gameplay-level-index')
-const gameplayLevelNameEl = document.getElementById('gameplay-level-name')
-const objectiveLabelEl = document.getElementById('gameplay-objective-label')
-const objectiveValueEl = document.getElementById('gameplay-objective-value')
-const shadeBuffCardEl  = document.getElementById('gameplay-shade-card')
-const shadeHpValueEl   = document.getElementById('gameplay-shade-hp')
-const shadeBuffTextEl  = document.getElementById('gameplay-shade-text')
-const rosterEl         = document.getElementById('gameplay-roster')
-const damageMeterEl    = document.getElementById('damage-meter-list')
-const healingMeterEl   = document.getElementById('healing-meter-list')
-
 let connectionHideTimer = null
 let shellMode = 'menu'
+let currentObjectives = null
+
+function syncGameState() {
+  gameState.set({
+    players: game.knownState.players,
+    stats: game.knownState.stats,
+    boss: game.knownState.boss,
+    objectives: currentObjectives,
+    levelMeta: currentLevelMeta,
+    npcs: game.knownState.npcs ?? [],
+  })
+}
+
+function updateLobbyStartBtn() {
+  const players = Object.values(game.knownState.players).filter(p => !p.isHost)
+  if (botCountEl) botCountEl.textContent = `${players.filter(p => p.isBot).length} / 12 bots`
+  if (startBtn.dataset.scene === 'lobby') startBtn.disabled = players.length === 0
+}
 
 function syncAudioControls() {
   const settings = audio.getSettings()
@@ -345,238 +357,6 @@ document.getElementById('sandbox-overlay-clear-btn')?.addEventListener('click', 
   socket.emit(EVENTS.DEBUG_CLEAR_ENEMIES)
 })
 
-// ── DOM helpers ────────────────────────────────────────────────────────────
-
-function renderDOMPlayerList() {
-  const players = Object.values(game.knownState.players).filter(p => !p.isHost)
-
-  if (players.length === 0) {
-    playerListEl.innerHTML = '<p id="waiting-msg">Waiting for raid members…</p>'
-    if (startBtn.dataset.scene === 'lobby') startBtn.disabled = true
-    return
-  }
-
-  const botCount = players.filter(p => p.isBot).length
-  if (botCountEl) botCountEl.textContent = `${botCount} / 12 bots`
-
-  playerListEl.innerHTML = players.map(p => {
-    const color  = CLASSES[p.className]?.color ?? '#aaa'
-    const botTag = p.isBot ? ' <span style="color:#555;font-size:10px">[BOT]</span>' : ''
-    return `
-      <div class="player-item" style="border-left-color:${color}">
-        <span class="pname">${p.name}${botTag}</span>
-        <span class="pclass" style="color:${color}">${p.className}</span>
-      </div>`
-  }).join('')
-
-  if (startBtn.dataset.scene === 'lobby') startBtn.disabled = false
-}
-
-function clearLevelPanel() {
-  if (levelPanelEl) levelPanelEl.hidden = true
-  if (gameplayLevelIndexEl) gameplayLevelIndexEl.textContent = ''
-  if (gameplayLevelNameEl) gameplayLevelNameEl.textContent = 'Current level'
-  if (objectiveLabelEl) objectiveLabelEl.textContent = ''
-  if (objectiveValueEl) objectiveValueEl.textContent = ''
-  if (shadeBuffCardEl) shadeBuffCardEl.hidden = true
-}
-
-function renderGameplayRoster() {
-  if (!rosterEl) return
-
-  const players = Object.values(game.knownState.players)
-    .filter(p => !p.isHost)
-    .sort((a, b) => a.name.localeCompare(b.name))
-
-  if (players.length === 0) {
-    rosterEl.innerHTML = '<div class="empty-state">Waiting for raid members…</div>'
-    return
-  }
-
-  if (rosterEl.querySelector('.empty-state')) rosterEl.innerHTML = ''
-
-  const existing = new Map()
-  rosterEl.querySelectorAll('.roster-row[data-pid]').forEach(el => existing.set(el.dataset.pid, el))
-
-  players.forEach(player => {
-    const color = CLASSES[player.className]?.color ?? '#ffffff'
-    const maxHp = Math.max(1, player.maxHp ?? player.hp ?? 1)
-    const hp = Math.max(0, Math.ceil(player.hp ?? 0))
-    const hpPct = player.isDead ? 0 : Math.max(0, Math.min(1, hp / maxHp))
-
-    let row = existing.get(player.id)
-    if (!row) {
-      row = document.createElement('div')
-      row.className = 'roster-row'
-      row.dataset.pid = player.id
-      const iconFile = (player.className ?? '').toLowerCase()
-      row.innerHTML = `
-        <img class="row-class-icon" src="/icons/classes/classicon_${iconFile}.jpg" alt="${player.className}" />
-        <div class="roster-name" style="color:${color}">${player.name}</div>
-        <div class="roster-hp"></div>`
-    }
-
-    row.style.setProperty('--hp-pct', hpPct)
-    row.classList.toggle('dead', !!player.isDead)
-    row.querySelector('.roster-hp').textContent = player.isDead ? 'Dead' : String(hp)
-    rosterEl.appendChild(row)
-    existing.delete(player.id)
-  })
-
-  existing.forEach(el => el.remove())
-}
-
-function renderMeterList(container, totals, rateSuffix, emptyText) {
-  if (!container) return
-
-  const players = Object.values(game.knownState.players).filter(p => !p.isHost)
-  const stats = game.knownState.stats
-  const elapsed = Math.max(1, (Date.now() - (stats?.startTime ?? Date.now())) / 1000)
-
-  const rows = players
-    .map(player => ({
-      player,
-      total: totals?.[player.id] ?? 0,
-      rate: Math.round((totals?.[player.id] ?? 0) / elapsed),
-    }))
-    .filter(row => row.total > 0)
-    .sort((a, b) => b.total - a.total)
-
-  if (rows.length === 0) {
-    container.innerHTML = `<div class="empty-state">${emptyText}</div>`
-    return
-  }
-
-  if (container.querySelector('.empty-state')) container.innerHTML = ''
-
-  const maxTotal = rows[0].total || 1
-  const existing = new Map()
-  container.querySelectorAll('.meter-row[data-pid]').forEach(el => existing.set(el.dataset.pid, el))
-
-  rows.forEach(({ player, total, rate }, i) => {
-    const color = CLASSES[player.className]?.color ?? '#ffffff'
-    const meterPct = total / maxTotal
-    const isCompact = i >= 5
-
-    let row = existing.get(player.id)
-    const isNew = !row
-    if (isNew) {
-      row = document.createElement('div')
-      row.className = 'meter-row'
-      row.dataset.pid = player.id
-    }
-
-    const wasCompact = row.dataset.compact === '1'
-    if (isNew || wasCompact !== isCompact) {
-      if (isCompact) {
-        row.innerHTML = ''
-      } else {
-        const iconFile = (player.className ?? '').toLowerCase()
-        row.innerHTML = `
-          <img class="row-class-icon" src="/icons/classes/classicon_${iconFile}.jpg" alt="${player.className}" />
-          <div class="meter-name" style="color:${color}">${player.name}</div>
-          <div class="meter-value"></div>`
-      }
-      row.dataset.compact = isCompact ? '1' : '0'
-    }
-
-    row.style.setProperty('--meter-pct', meterPct)
-    row.style.setProperty('--meter-color', color)
-    row.classList.toggle('compact', isCompact)
-    if (!isCompact) {
-      row.querySelector('.meter-value').innerHTML =
-        `${total.toLocaleString()} <span class="meter-rate">(${rate}/${rateSuffix})</span>`
-    }
-
-    container.appendChild(row)
-    existing.delete(player.id)
-  })
-
-  existing.forEach(el => el.remove())
-}
-
-function renderGameplaySidebar() {
-  renderGameplayRoster()
-  renderMeterList(damageMeterEl, game.knownState.stats?.damage, 's', 'No damage yet.')
-  renderMeterList(healingMeterEl, game.knownState.stats?.heal, 's', 'No healing yet.')
-}
-
-function formatObjective(objective, knownState) {
-  if (!objective) return { label: '', value: '' }
-
-  switch (objective.type) {
-    case 'killCount': {
-      const label = objective.enemyTypes?.length
-        ? `Kill ${objective.target ?? '?'} ${objective.enemyTypes.join(', ')}`
-        : 'Wave progress'
-      return { label, value: `${objective.current ?? 0} / ${objective.target ?? '?'}` }
-    }
-    case 'survive': {
-      const total = objective.durationMs ?? objective.target ?? 0
-      const remaining = Math.max(0, total - (objective.current ?? 0))
-      return { label: 'Survive', value: `${Math.ceil(remaining / 1000)}s remaining` }
-    }
-    case 'surviveWaves':
-      return { label: 'Survive the waves', value: `${objective.current ?? 0} / ${objective.target ?? '?'}` }
-    case 'destroyGates':
-      return { label: 'Destroy the gates', value: `${objective.current ?? 0} / ${objective.target ?? '?'}` }
-    case 'killAll':
-      return { label: 'Defeat all enemies', value: objective.current === 1 ? 'Complete' : 'In progress' }
-    case 'killBoss': {
-      const boss = knownState?.boss
-      if (boss) {
-        const hp = Math.max(0, Math.ceil(boss.hp ?? 0))
-        const maxHp = Math.max(1, Math.ceil(boss.maxHp ?? 1))
-        return { label: boss.name ?? 'Boss', value: `${hp} / ${maxHp} HP` }
-      }
-      return { label: 'Defeat the boss', value: objective.current === 1 ? 'Complete' : 'In progress' }
-    }
-    case 'killBossProtectNPC': {
-      const npc = (knownState?.npcs ?? []).find(entry => entry.id === objective.npcId)
-      const npcState = npc ? `${Math.max(0, Math.ceil(npc.hp ?? 0))} HP` : 'Alive'
-      return { label: 'Protect Akama', value: objective.current === 1 ? 'Complete' : npcState }
-    }
-    default:
-      return { label: 'Objective', value: String(objective.current ?? '') }
-  }
-}
-
-function renderLevelPanel(scene, meta, objectives = meta?.objectives) {
-  const isCombatScene = scene === 'battle' || scene === 'bossFight'
-  if (!isCombatScene) {
-    clearLevelPanel()
-    renderSandboxPanel()
-    return
-  }
-
-  const summary = formatObjective(objectives?.[0] ?? null, game.knownState)
-  if (levelPanelEl) levelPanelEl.hidden = false
-  if (gameplayLevelIndexEl) {
-    gameplayLevelIndexEl.textContent = meta?.debugSandbox
-      ? 'Debug Sandbox'
-      : `Level ${meta?.levelNumber ?? ((meta?.levelIndex ?? 0) + 1)} / ${meta?.totalLevels ?? '?'}`
-  }
-  if (gameplayLevelNameEl) gameplayLevelNameEl.textContent = meta?.levelName ?? 'Current level'
-  if (objectiveLabelEl) objectiveLabelEl.textContent = summary.label || 'Current objective'
-  if (objectiveValueEl) objectiveValueEl.textContent = summary.value || 'In progress'
-
-  // Shade of Akama buff card (Level 4 Phase 1 only)
-  const boss = game.knownState?.boss
-  if (shadeBuffCardEl) {
-    if (boss && boss.isImmune && !boss.isDead) {
-      shadeBuffCardEl.hidden = false
-      const hp = Math.ceil(boss.hp ?? 0)
-      const dmgPct = Math.round(((boss.damageMult ?? 1) - 1) * 100)
-      if (shadeHpValueEl) shadeHpValueEl.textContent = `${hp.toLocaleString()} HP`
-      if (shadeBuffTextEl) shadeBuffTextEl.textContent = dmgPct > 0 ? `+${dmgPct}% Damage` : 'No buff yet'
-    } else {
-      shadeBuffCardEl.hidden = true
-    }
-  }
-
-  renderSandboxPanel()
-}
-
 function setSceneControls(scene) {
   startBtn.dataset.scene = scene
 
@@ -653,27 +433,27 @@ socket.on('disconnect', () => {
 socket.on(EVENTS.INIT, state => {
   game.receiveFullState(state)
   const scene = state.scene ?? 'lobby'
-    const meta = {
-      levelId: state.levelId,
-      levelIndex: state.levelIndex,
-      levelNumber: state.levelNumber,
-      totalLevels: state.totalLevels,
-      levelName: state.levelName,
-      debugSandbox: state.debugSandbox,
-      objectives: state.objectives,
-      arenaWidth: state.arenaWidth,
-      arenaHeight: state.arenaHeight,
-      rooms: state.rooms,
-      passages: state.passages,
-      mirrors: state.mirrors,
-    }
+  const meta = {
+    levelId: state.levelId,
+    levelIndex: state.levelIndex,
+    levelNumber: state.levelNumber,
+    totalLevels: state.totalLevels,
+    levelName: state.levelName,
+    debugSandbox: state.debugSandbox,
+    objectives: state.objectives,
+    arenaWidth: state.arenaWidth,
+    arenaHeight: state.arenaHeight,
+    rooms: state.rooms,
+    passages: state.passages,
+    mirrors: state.mirrors,
+  }
+  currentObjectives = state.objectives ?? null
   game.switchScene(scene, meta)
   currentLevelMeta = meta
   audio.setScene(scene, meta)
   setSceneControls(scene)
-  renderLevelPanel(scene, meta)
-  renderDOMPlayerList()
-  renderGameplaySidebar()
+  updateLobbyStartBtn()
+  syncGameState()
   renderSandboxPanel()
   audio.syncPlayerState(game.knownState.players)
 })
@@ -681,52 +461,40 @@ socket.on(EVENTS.INIT, state => {
 socket.on(EVENTS.PLAYER_JOINED, player => {
   game.addPlayer(player)
   if (!player?.isHost) audio.handlePlayerJoined()
-  renderDOMPlayerList()
-  renderGameplaySidebar()
+  updateLobbyStartBtn()
+  syncGameState()
 })
 
 socket.on(EVENTS.PLAYER_LEFT, id => {
   game.removePlayer(id)
-  renderDOMPlayerList()
-  renderGameplaySidebar()
+  updateLobbyStartBtn()
+  syncGameState()
 })
 
 socket.on(EVENTS.STATE_DELTA, delta => {
   const before = Object.keys(game.knownState.players).length
   game.receiveState(delta)
   const after  = Object.keys(game.knownState.players).length
-  if (after !== before) renderDOMPlayerList()
-  renderGameplaySidebar()
+  if (after !== before) updateLobbyStartBtn()
+  syncGameState()
   audio.syncPlayerState(game.knownState.players)
-
-  // Update shade buff card live during Level 4 Phase 1
-  if (shadeBuffCardEl && !shadeBuffCardEl.hidden) {
-    const boss = game.knownState?.boss
-    if (boss && boss.isImmune && !boss.isDead) {
-      const hp = Math.ceil(boss.hp ?? 0)
-      const dmgPct = Math.round(((boss.damageMult ?? 1) - 1) * 100)
-      if (shadeHpValueEl) shadeHpValueEl.textContent = `${hp.toLocaleString()} HP`
-      if (shadeBuffTextEl) shadeBuffTextEl.textContent = dmgPct > 0 ? `+${dmgPct}% Damage` : 'No buff yet'
-    } else {
-      shadeBuffCardEl.hidden = true
-    }
-  }
 })
 
 socket.on(EVENTS.SCENE_CHANGE, (data) => {
   const { scene, ...meta } = data
+  currentObjectives = data.objectives ?? null
   game.switchScene(scene, meta)
   currentLevelMeta = meta
   audio.setScene(scene, meta)
   setSceneControls(scene)
-  renderLevelPanel(scene, meta)
-  renderGameplaySidebar()
+  syncGameState()
   renderSandboxPanel()
 })
 
 socket.on(EVENTS.OBJECTIVE_UPDATE, ({ objectives }) => {
   game.updateObjectives(objectives)
-  renderLevelPanel(startBtn.dataset.scene, currentLevelMeta ?? {}, objectives)
+  currentObjectives = objectives
+  syncGameState()
 })
 
 socket.on(EVENTS.SET_LEVEL, ({ levelIndex, levelName, skipDialog }) => {

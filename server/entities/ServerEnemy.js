@@ -122,6 +122,15 @@ export default class ServerEnemy {
     this._shieldAngle  = 0      // radians — updated each tick toward nearest player
     this._shieldActive = (base.ai === 'shielded')
 
+    // Blood Prophet AI
+    this._buffRadius       = base.buffRadius       ?? 180
+    this._buffCooldown     = base.buffCooldown     ?? 6000
+    this._buffSpeedMult    = base.buffSpeedMult    ?? 1.5
+    this._teleportRange    = base.teleportRange    ?? 100
+    this._teleportCooldown = base.teleportCooldown ?? 3000
+    this._lastBuff         = 0
+    this._lastTeleport     = 0
+
     // Shadow Demon AI (Level 5, Phase 3) — set by GameServer after spawn
     this.targetPlayerId  = null
 
@@ -187,6 +196,7 @@ export default class ServerEnemy {
       case 'ranged':          _action = this._aiRanged(dt, pps, players, ctx); break
       case 'charger':         _action = this._aiCharger(dt, pps, players, ctx); break
       case 'healer':          _action = this._aiHealer(dt, pps, players, ctx); break
+      case 'bloodProphet':    _action = this._aiBloodProphet(dt, pps, players, ctx); break
       case 'leviathan':       _action = this._aiLeviathan(dt, pps, players, ctx); break
       case 'gateRepairer':    _action = this._aiGateRepairer(dt, pps, players, ctx); break
       case 'channeler':       _action = this._aiChanneler(dt, pps, players, ctx); break
@@ -336,12 +346,12 @@ export default class ServerEnemy {
   _aiHealer(dt, pps, players, ctx) {
     const now = ctx?.now ?? Date.now()
 
-    // Stay near injured allies
+    // Find injured ally to move toward
     const enemies = ctx?.enemies
     let targetX = this.x, targetY = this.y
+    let hasHealTarget = false
 
     if (enemies) {
-      // Find injured ally to move toward
       let bestDist = Infinity
       let bestAlly = null
       enemies.forEach(e => {
@@ -351,27 +361,25 @@ export default class ServerEnemy {
           if (d < bestDist) { bestDist = d; bestAlly = e }
         }
       })
-
       if (bestAlly) {
         targetX = bestAlly.x
         targetY = bestAlly.y
+        hasHealTarget = true
       }
     }
 
-    // Move toward target but keep preferred range from players
+    // Move: flee if too close to player, otherwise approach heal/attack target
     const nearest = this._findNearest(players)
     if (nearest) {
       const dxP = nearest.x - this.x
       const dyP = nearest.y - this.y
       const distP = Math.hypot(dxP, dyP)
 
-      // If too close to a player, flee
       if (distP < this._preferredRange) {
         const flee = Math.min(pps * dt, this._preferredRange - distP)
         this.x -= (dxP / distP) * flee
         this.y -= (dyP / distP) * flee
-      } else {
-        // Move toward injured ally
+      } else if (hasHealTarget) {
         const dx = targetX - this.x
         const dy = targetY - this.y
         const dist = Math.hypot(dx, dy)
@@ -380,6 +388,11 @@ export default class ServerEnemy {
           this.x += (dx / dist) * step
           this.y += (dy / dist) * step
         }
+      } else if (distP > this._attackRange) {
+        // No allies need healing — close in to attack range
+        const step = Math.min(pps * dt, distP - this._attackRange)
+        this.x += (dxP / distP) * step
+        this.y += (dyP / distP) * step
       }
     }
     this._clampToArena()
@@ -407,7 +420,107 @@ export default class ServerEnemy {
         }
       }
     }
+
+    // No allies to heal — attack nearest player if in range and off cooldown
+    if (!hasHealTarget && nearest && now - this._lastAttack >= this._attackCooldown) {
+      const dx = nearest.x - this.x
+      const dy = nearest.y - this.y
+      const dist = Math.hypot(dx, dy)
+      if (dist <= this._attackRange) {
+        this._lastAttack = now
+        const norm = dist || 1
+        return {
+          action: 'shoot',
+          x: this.x,
+          y: this.y,
+          vx: (dx / norm) * this._projSpeed,
+          vy: (dy / norm) * this._projSpeed,
+          damage: this._projDamage,
+          speed: this._projSpeed,
+          color: ENEMY_TYPES[this.type]?.color ?? '#7b4f9e',
+        }
+      }
+    }
+
     return null
+  }
+
+  // ── AI: Blood Prophet (mobile speed-buffer) ─────────────────────────────
+
+  _aiBloodProphet(dt, pps, players, ctx) {
+    const now = ctx?.now ?? Date.now()
+    const actions = []
+
+    // Teleport away if any player is within melee range
+    if (now - this._lastTeleport >= this._teleportCooldown) {
+      let tooClose = false
+      players.forEach(p => {
+        if (p.isHost || p.isDead) return
+        if (Math.hypot(p.x - this.x, p.y - this.y) <= this._teleportRange) tooClose = true
+      })
+
+      if (tooClose) {
+        // Try 8 candidate positions within 300px; pick the one farthest from all players
+        let bestX = this.x, bestY = this.y, bestMinDist = -1
+        const teleportRadius = 300
+        const margin = this.radius + 20
+        for (let attempt = 0; attempt < 8; attempt++) {
+          const angle = Math.random() * Math.PI * 2
+          const dist  = 80 + Math.random() * (teleportRadius - 80)
+          const cx = Math.max(margin, Math.min(this.arenaWidth  - margin, this.x + Math.cos(angle) * dist))
+          const cy = Math.max(margin, Math.min(this.arenaHeight - margin, this.y + Math.sin(angle) * dist))
+          let minDist = Infinity
+          players.forEach(p => {
+            if (p.isHost || p.isDead) return
+            const d = Math.hypot(p.x - cx, p.y - cy)
+            if (d < minDist) minDist = d
+          })
+          if (minDist > bestMinDist) { bestMinDist = minDist; bestX = cx; bestY = cy }
+        }
+        this.x = bestX
+        this.y = bestY
+        this._lastTeleport = now
+        actions.push({ action: 'teleport', x: this.x, y: this.y })
+      }
+    }
+
+    // Move toward centroid of all living allies (whole map — no range cap)
+    const enemies = ctx?.enemies
+    if (enemies) {
+      let sumX = 0, sumY = 0, count = 0
+      enemies.forEach(e => {
+        if (e === this || e.isDead || e.type === 'bloodProphet') return
+        sumX += e.x; sumY += e.y; count++
+      })
+      if (count > 0) {
+        const cx = sumX / count
+        const cy = sumY / count
+        const dx = cx - this.x
+        const dy = cy - this.y
+        const dist = Math.hypot(dx, dy)
+        if (dist > 50) {
+          const step = Math.min(pps * dt, dist - 50)
+          this.x += (dx / dist) * step
+          this.y += (dy / dist) * step
+          this._clampToArena()
+        }
+      }
+    }
+
+    // Pulse speed buff to nearby allies on cooldown
+    if (now - this._lastBuff >= this._buffCooldown) {
+      this._lastBuff = now
+      actions.push({
+        action: 'bloodProphetBuff',
+        x: this.x,
+        y: this.y,
+        radius: this._buffRadius,
+        speedMult: this._buffSpeedMult,
+        duration: 4000,
+      })
+    }
+
+    return actions.length > 0 ? actions : null
   }
 
   // ── AI: Leviathan (multi-target) ─────────────────────────────────────

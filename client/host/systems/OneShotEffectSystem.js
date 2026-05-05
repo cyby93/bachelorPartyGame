@@ -376,6 +376,94 @@ export default class OneShotEffectSystem {
   }
 
   /**
+   * Blood Prophet buff pulse — 0.6s dark crimson expanding ring, radius = buff radius.
+   */
+  bloodProphetBuff(x, y, radius) {
+    const duration = 0.6
+    const gfx = this._getGfx()
+    gfx.position.set(x, y)
+    gfx.alpha = 1; gfx.scale.set(1)
+    this._active.push({ gfx, elapsed: 0, duration, update: (progress) => {
+      gfx.clear()
+      const fade = 1 - progress
+      const r = radius * progress
+
+      // Central inner bloom — first 30%
+      if (progress < 0.3) {
+        const bp = progress / 0.3
+        gfx.circle(0, 0, 35 * bp)
+        gfx.fill({ color: 0x8B0000, alpha: 0.25 * (1 - bp) })
+      }
+
+      if (r > 10) {
+        gfx.circle(0, 0, r - 10)
+        gfx.stroke({ color: 0x660000, width: 2, alpha: 0.45 * fade })
+      }
+      gfx.circle(0, 0, r)
+      gfx.stroke({ color: 0xcc2200, width: 3, alpha: 0.80 * fade })
+      gfx.circle(0, 0, r + 4)
+      gfx.stroke({ color: 0xff4444, width: 1, alpha: 0.35 * fade })
+    }})
+  }
+
+  /**
+   * Blood Prophet teleport blink — 0.25s ring implosion at origin.
+   */
+  bloodProphetTeleport(x, y) {
+    const duration = 0.25
+    const gfx = this._getGfx()
+    gfx.position.set(x, y)
+    gfx.alpha = 1; gfx.scale.set(1)
+    this._active.push({ gfx, elapsed: 0, duration, update: (progress) => {
+      gfx.clear()
+      const r = 50 * (1 - progress)
+      if (r > 2) {
+        gfx.circle(0, 0, r)
+        gfx.stroke({ color: 0x8B0000, width: 3, alpha: 0.9 * (1 - progress) })
+        gfx.circle(0, 0, r * 0.55)
+        gfx.stroke({ color: 0xff2200, width: 2, alpha: 0.55 * (1 - progress) })
+      }
+      // Small flash at the very end
+      if (progress > 0.7) {
+        const fp = (progress - 0.7) / 0.3
+        gfx.circle(0, 0, 14 * fp)
+        gfx.fill({ color: 0x8B0000, alpha: 0.5 * (1 - fp) })
+      }
+    }})
+  }
+
+  /**
+   * Enemy healer pulse — 0.5s soft purple expanding ring, radius = heal radius.
+   */
+  enemyHealPulse(x, y, radius) {
+    const duration = 0.5
+    const gfx = this._getGfx()
+    gfx.position.set(x, y)
+    gfx.alpha = 1; gfx.scale.set(1)
+    this._active.push({ gfx, elapsed: 0, duration, update: (progress) => {
+      gfx.clear()
+      const fade = 1 - progress
+      const r = radius * progress
+
+      // Soft fill at start
+      if (progress < 0.25) {
+        const bp = progress / 0.25
+        gfx.circle(0, 0, r)
+        gfx.fill({ color: 0x7b4f9e, alpha: 0.06 * (1 - bp) })
+      }
+
+      if (r > 8) {
+        gfx.circle(0, 0, r - 8)
+        gfx.stroke({ color: 0x5a3080, width: 2, alpha: 0.45 * fade })
+      }
+      gfx.circle(0, 0, r)
+      gfx.stroke({ color: 0x9b6fbe, width: 3, alpha: 0.75 * fade })
+      gfx.circle(0, 0, r + 4)
+      gfx.stroke({ color: 0xccaaff, width: 1, alpha: 0.35 * fade })
+    }})
+  }
+
+  /**
    * Impact flash — 0.1s bright circle burst.
    */
   impactFlash(x, y, color) {

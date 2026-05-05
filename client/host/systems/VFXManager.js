@@ -70,7 +70,14 @@ export default class VFXManager {
         os.dashTrail(d.x, d.y, d.x + Math.cos(d.angle) * dist, d.y + Math.sin(d.angle) * dist, d.color)
       }
     })
-    this._typeHandlers.set('BUFF',      (d) => os.impactFlash(d.x, d.y, d.color))
+    this._typeHandlers.set('BUFF', (d) => {
+      if (d.subtype === 'BLOOD_PROPHET') { os.bloodProphetBuff(d.x, d.y, d.radius || 180); return }
+      os.impactFlash(d.x, d.y, d.color)
+    })
+    this._typeHandlers.set('TELEPORT', (d) => {
+      if (d.subtype === 'BLOOD_PROPHET') os.bloodProphetTeleport(d.x, d.y)
+    })
+    this._typeHandlers.set('ENEMY_HEAL', (d) => os.enemyHealPulse(d.x, d.y, d.radius || 300))
     this._typeHandlers.set('SHIELD',    (d) => os.impactFlash(d.x, d.y, d.color))
     this._typeHandlers.set('CAST',      (d) => os.impactFlash(d.x, d.y, d.color))
     this._typeHandlers.set('CHANNEL',   (d) => os.impactFlash(d.x, d.y, d.color))

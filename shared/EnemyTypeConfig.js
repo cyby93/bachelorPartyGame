@@ -34,7 +34,7 @@ export const ENEMY_TYPES = {
   felGuard: {
     hp: Math.round(0.70 * X * R), 
     speed: 1.3, 
-    radius: 38,
+    radius: 34,
     contactDamage: Math.round(0.45 * Y * R),
     color: '#1a7a1a',
     ai: 'chase',
@@ -94,26 +94,35 @@ export const ENEMY_TYPES = {
 
   // ── Ashtongue Mystic — broken draenei healer ────────────────────────────
   ashtonghueMystic: {
-    hp: Math.round(0.90 * X * R), speed: 1.0, 
-    radius: 30, 
+    hp: Math.round(0.90 * X * R), speed: 1.0,
+    radius: 30,
     contactDamage: Math.round(0.125 * Y * R),
     color: '#7b4f9e',
     ai: 'healer',
     healAmount: Math.round(0.24 * X * R),
-    healRadius: 130,
+    healRadius: 300,
     healCooldown: 3000,
     preferredRange: 100,
+    // Attack fallback — fires when no allies need healing
+    attackRange:      200,
+    attackCooldown:   3000,
+    projectileSpeed:  220,
+    projectileDamage: Math.round(0.15 * Y * R),
   },
 
-  // ── Bonechewer Blood Prophet — stationary fel orc damage buffer ──────────
+  // ── Bonechewer Blood Prophet — roaming speed-buffer ──────────────────────
   bloodProphet: {
-    hp: Math.round(1.40 * X * R), speed: 0, 
-    radius: 30, contactDamage: 0,
+    hp: Math.round(1.40 * X * R),
+    speed: 0.8,            // mobile — repositions to stay near allied groups
+    radius: 30,
+    contactDamage: 0,
     color: '#8B0000',
-    ai: 'channeler',
-    channelTarget: null,
-    hpBuffPerSecond: 50,
-    damageBuffPerSecond: 2,
+    ai: 'bloodProphet',
+    buffRadius:        180,   // px — radius of the speed-buff pulse
+    buffCooldown:      6000,  // ms between pulses
+    buffSpeedMult:     1.5,   // ×1.5 speed to nearby allies for 4 s
+    teleportRange:     100,   // teleports when a player closes to this distance
+    teleportCooldown:  3000,  // ms between teleports
   },
 
   // ── Coilskar Serpent Guard — shield-bearing naga tank ───────────────────
@@ -127,11 +136,11 @@ export const ENEMY_TYPES = {
 
   // ── Ashtongue Ritual Channeler — repairs ritual objectives ──────────────
   ritualChanneler: {
-    hp: Math.round(0.80 * X * R), speed: 1.1, 
+    hp: Math.round(0.80 * X * R), speed: 1.1,
     radius: 26, contactDamage: Math.round(0.125 * Y * R),
     color: '#6a3d9a',
     ai: 'gateRepairer',
-    repairAmount: 8,
+    repairAmount: 3,   // reduced from 8 — multiple channelers were out-healing player DPS
     repairRange: 60,
   },
 

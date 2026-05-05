@@ -1462,8 +1462,38 @@ export default class GameServer {
           if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
         }
       })
+    } else if (action.action === 'bloodProphetBuff') {
+      // Apply speed-buff to nearby allies
+      this.enemies.forEach(e => {
+        if (e.isDead || e.type === 'bloodProphet') return
+        if (Math.hypot(e.x - action.x, e.y - action.y) > action.radius) return
+        e.activeEffects = e.activeEffects ?? []
+        e.activeEffects.push({
+          source: 'blood_prophet_buff',
+          params: { speedMultiplier: action.speedMult },
+          expiresAt: now + (action.duration ?? 4000),
+        })
+        e.speedMult = (e.speedMult ?? 1) * action.speedMult
+      })
+      this.io.emit(EVENTS.SKILL_FIRED, {
+        type: 'BUFF', subtype: 'BLOOD_PROPHET',
+        x: action.x, y: action.y,
+        radius: action.radius, color: '#8B0000',
+      })
+    } else if (action.action === 'teleport') {
+      this.io.emit(EVENTS.SKILL_FIRED, {
+        type: 'TELEPORT', subtype: 'BLOOD_PROPHET',
+        x: action.x, y: action.y, color: '#8B0000',
+      })
+    } else if (action.action === 'heal') {
+      this.io.emit(EVENTS.SKILL_FIRED, {
+        type: 'ENEMY_HEAL',
+        x: action.x, y: action.y,
+        radius: action.radius ?? 300,
+        color: action.color ?? '#7b4f9e',
+      })
     }
-    // 'heal', 'channel', 'leaveBlaze', 'burningAuraTick', 'berserkAoeTick' handled above
+    // 'heal', 'channel', 'leaveBlaze', 'burningAuraTick', 'berserkAoeTick', 'bloodProphetBuff', 'teleport' handled above
   }
 
   /** Activate the next gate in sequence. */

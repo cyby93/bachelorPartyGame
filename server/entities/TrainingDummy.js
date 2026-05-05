@@ -15,7 +15,7 @@ let _epSeq = 0
 // Find nearest living, non-host player
 function _nearestPlayer(players, x, y) {
   let nearest  = null
-  let bestDist = Infinity
+  let bestDist = 300
   players.forEach(p => {
     if (p.isHost || p.isDead || p.isInvisible) return
     const d = Math.hypot(p.x - x, p.y - y)

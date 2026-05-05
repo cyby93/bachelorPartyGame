@@ -51,6 +51,8 @@ const badge          = document.getElementById('conn-badge')
 const serverIpEl     = document.getElementById('server-ip')
 const startBtn       = document.getElementById('start-btn')
 const qrWrap         = document.getElementById('qr-code')
+const menuQrWrap     = document.getElementById('menu-qr-code')
+const menuServerIpEl = document.getElementById('menu-server-ip')
 const fullscreenBtn  = document.getElementById('fullscreen-btn')
 const menuPlayBtn    = document.getElementById('menu-play-btn')
 const selectedLevelNameEl = document.getElementById('selected-level-name')
@@ -404,7 +406,9 @@ socket.on('connect', () => {
   fetch('/api/network-url')
     .then(r => r.json())
     .then(({ url }) => {
-      serverIpEl.textContent = url.replace(/^https?:\/\//, '')
+      const display = url.replace(/^https?:\/\//, '')
+      serverIpEl.textContent = display
+      if (menuServerIpEl) menuServerIpEl.textContent = display
       if (typeof QRCode !== 'undefined') {
         qrWrap.innerHTML = ''
         new QRCode(qrWrap, {
@@ -414,12 +418,23 @@ socket.on('connect', () => {
           colorDark:  '#000000',
           colorLight: '#ffffff',
         })
+        if (menuQrWrap) {
+          menuQrWrap.innerHTML = ''
+          new QRCode(menuQrWrap, {
+            text:       url,
+            width:      180,
+            height:     180,
+            colorDark:  '#000000',
+            colorLight: '#ffffff',
+          })
+        }
       }
     })
     .catch(() => {
-      // Fallback to current origin if the API is unreachable
       const url = `${window.location.origin}/controller`
-      serverIpEl.textContent = url.replace(/^https?:\/\//, '')
+      const display = url.replace(/^https?:\/\//, '')
+      serverIpEl.textContent = display
+      if (menuServerIpEl) menuServerIpEl.textContent = display
     })
 
   // Register as the host player

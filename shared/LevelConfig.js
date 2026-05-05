@@ -156,30 +156,30 @@ export const CAMPAIGN = [
       width: 1100,
       height: 600,
       rooms: [
-        // Left room: players start here. Full arena height.
-        { id: 'left',  x: 0,   y: 0, width: 530, height: 600 },
-        // Right room: between gate1 and gate2. Full arena height.
-        { id: 'right', x: 570, y: 0, width: 530, height: 600 },
+        // Left room: players start here. Full arena height. Widened to 730px.
+        { id: 'left',  x: 0,   y: 0, width: 730, height: 600 },
+        // Right room: narrowed to 330px so total stays 1100 (730 wall + 40 passage + 330 room).
+        { id: 'right', x: 770, y: 0, width: 330, height: 600 },
       ],
       passages: [
-        // Passage in the middle of the wall, vertically centered in the 600px arena
-        { id: 'passage1', fromRoom: 'left', toRoom: 'right', x: 530, y: 210, width: 40, height: 180, blockedByGate: 'gate1' },
+        // Passage at right edge of left room, vertically centered in the 600px arena
+        { id: 'passage1', fromRoom: 'left', toRoom: 'right', x: 730, y: 210, width: 40, height: 180, blockedByGate: 'gate1' },
       ],
     },
     objectives: [
       { type: 'destroyGates' },
     ],
     gates: [
-      // Gate1 blocks passage1 — x=550 is center of 40px gap (530+20), y=300 is center of passage (210..390)
-      { id: 'gate1', passageId: 'passage1', hp: Math.round(25 * X * R), position: { x: 550, y: 300 }, width: 40, height: 180 },
+      // Gate1 blocks passage1 — x=750 is center of 40px gap (730+20), y=300 is center of passage (210..390)
+      { id: 'gate1', passageId: 'passage1', hp: Math.round(5 * X * R), position: { x: 750, y: 300 }, width: 40, height: 180 },
       // Gate2 at the far right edge of the right room — x=1062 center, y=300 matches gate1
-      { id: 'gate2', passageId: null,       hp: Math.round(35 * X * R), position: { x: 1062, y: 300 }, width: 48, height: 180 },
+      { id: 'gate2', passageId: null,       hp: Math.round(15 * X * R), position: { x: 1062, y: 300 }, width: 48, height: 180 },
     ],
     spawning: {
       mode: 'continuous',
-      interval: 2000,
+      interval: 3000,
       countPerWave: [1, 3],
-      maxAliveAtOnce: 12,
+      maxAliveAtOnce: 10,
       spawnRadius: 60,
       enemyTypes: [
         { type: 'felGuard',          weight: 3 },
@@ -195,8 +195,8 @@ export const CAMPAIGN = [
         {
           phase: 1,
           spawnPoints: [
-            { x: 490, y: 30  },   // Room 1, top wall edge, near gate1
-            { x: 490, y: 570 },   // Room 1, bottom wall edge, near gate1
+            { x: 690, y: 30  },   // Room 1, top wall edge, near gate1
+            { x: 690, y: 570 },   // Room 1, bottom wall edge, near gate1
           ],
         },
         {
@@ -290,14 +290,14 @@ export const CAMPAIGN = [
       count: 6,
       circleRadius: 120,
       centerEntityId: 'shade',
-      hp: Math.round(1.20 * X * R),   // tunable per-level warlock HP (falls back to EnemyTypeConfig if omitted)
+      hp: Math.round(2.20 * X * R),   // tunable per-level warlock HP (falls back to EnemyTypeConfig if omitted)
     },
     // Ambient spawning throughout the encounter — active from phase 1
     spawning: {
       mode: 'continuous',
       interval: 3000,
       countPerWave: [1, 2],
-      maxAliveAtOnce: 8,
+      maxAliveAtOnce: 6,
       spawnEdge: 'all',
       enemyTypes: [
         { type: 'felGuard',          weight: 3 },

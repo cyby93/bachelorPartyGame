@@ -130,7 +130,7 @@ export default class BuildingSpawnSystem {
   _createEnemy(idSeqRef, typeName, base, x, y) {
     const id = ++idSeqRef.value
     const hp            = Math.round(base.hp * this._hpMult)
-    const contactDamage = Math.round(base.contactDamage * this._damageMult)
+    const meleeDamage = Math.round(base.meleeDamage * this._damageMult)
 
     const enemy = new ServerEnemy({
       id,
@@ -140,7 +140,7 @@ export default class BuildingSpawnSystem {
       maxHp:         hp,
       speed:         base.speed,
       radius:        base.radius,
-      contactDamage,
+      meleeDamage,
       generation:    0,
     })
     enemy.setArenaSize(this.arenaWidth, this.arenaHeight)

@@ -289,7 +289,7 @@ export default class SpawnSystem {
     const id = ++idSeqRef.value
 
     const hp            = overrides.hp            ?? Math.round(base.hp * this._hpMult)
-    const contactDamage = overrides.contactDamage  ?? Math.round(base.contactDamage * this._damageMult)
+    const meleeDamage = overrides.meleeDamage  ?? Math.round(base.meleeDamage * this._damageMult)
     const speed         = overrides.speed          ?? base.speed
     const radius        = overrides.radius         ?? base.radius
 
@@ -304,7 +304,7 @@ export default class SpawnSystem {
       maxHp:         hp,
       speed,
       radius,
-      contactDamage,
+      meleeDamage,
       generation:    overrides.generation ?? 0,
     })
     enemy.setArenaSize(this.arenaWidth, this.arenaHeight)

@@ -203,7 +203,7 @@ export default class IllidanEncounter {
         hp: Math.round(base.hp * hpMult), maxHp: Math.round(base.hp * hpMult),
         speed: base.speed,
         radius: base.radius,
-        contactDamage: 0,
+        meleeDamage: 0,
       })
       add.setArenaSize(this.arenaWidth, this.arenaHeight)
       this.enemies.set(id, add)
@@ -475,7 +475,7 @@ export default class IllidanEncounter {
             hp: attack.hp ?? base.hp, maxHp: attack.hp ?? base.hp,
             speed: attack.speed ?? base.speed,
             radius: base.radius,
-            contactDamage: 0,
+            meleeDamage: 0,
           })
           demon.setArenaSize(this.arenaWidth, this.arenaHeight)
           const living = []
@@ -600,7 +600,7 @@ export default class IllidanEncounter {
             hp, maxHp: hp,
             speed: base.speed,
             radius: base.radius,
-            contactDamage: 0,
+            meleeDamage: 0,
           })
           fiend.setArenaSize(this.arenaWidth, this.arenaHeight)
           fiend.sourcePlayerId = spawn.sourcePlayerId

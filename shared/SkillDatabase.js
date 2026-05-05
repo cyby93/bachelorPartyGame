@@ -52,7 +52,7 @@ const SkillDatabase = {
       inputType: 'INSTANT',
       cooldown:  12000,
       damage:    6,             // damage per tick — tune via BalanceConfig
-      radius:    80,           // slightly larger than Cleave range
+      radius:    70,           // slightly larger than Cleave range
       duration:  4000,          // 4 seconds of spinning
       tickRate:  300,           // hits every 300 ms
       effectType: 'DAMAGE',
@@ -63,7 +63,7 @@ const SkillDatabase = {
       name:      'Shield Wall',
       type:      'SHIELD',
       inputType: 'DIRECTIONAL',
-      cooldown:  5000,
+      cooldown:  3000,
       arc:       Math.PI,        // 180° block arc
       icon:      '🛡️',
       iconFile:  'ability_defend'
@@ -105,7 +105,7 @@ const SkillDatabase = {
       type:      'SHIELD',
       inputType: 'DIRECTIONAL',
       cooldown:  3000,
-      arc:       Math.PI / 3,   // 60° block arc
+      arc:       Math.PI,   // 180° block arc
       icon:      '🔆',
       iconFile:  'spell_holy_divineshield'
     },

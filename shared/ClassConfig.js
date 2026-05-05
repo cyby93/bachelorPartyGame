@@ -12,16 +12,16 @@ export const CLASS_NAMES = [
 ]
 
 const _CLASSES = {
-  Warrior:     { name: 'Warrior',       color: '#994000', hp: 120, speed: 2.0, skills: SkillDatabase.Warrior     },
-  Paladin:     { name: 'Paladin',       color: '#ffd900', hp: 120, speed: 2.0, skills: SkillDatabase.Paladin     },
+  Warrior:     { name: 'Warrior',       color: '#994000', hp: 160, speed: 2.0, skills: SkillDatabase.Warrior     },
+  Paladin:     { name: 'Paladin',       color: '#ffd900', hp: 150, speed: 2.0, skills: SkillDatabase.Paladin     },
   Shaman:      { name: 'Shaman',        color: '#302de1', hp: 100, speed: 2.0, skills: SkillDatabase.Shaman      },
   Hunter:      { name: 'Hunter',        color: '#7bff00', hp: 80, speed: 2.0, skills: SkillDatabase.Hunter      },
   Priest:      { name: 'Priest',        color: '#ecf0f1', hp:  80, speed: 1.8, skills: SkillDatabase.Priest      },
   Mage:        { name: 'Mage',          color: '#00ffea', hp:  80, speed: 1.8, skills: SkillDatabase.Mage        },
   Druid:       { name: 'Druid',         color: '#00a326', hp: 100, speed: 2.0, skills: SkillDatabase.Druid       },
-  Rogue:       { name: 'Rogue',         color: '#657900', hp:  100, speed: 2.2, skills: SkillDatabase.Rogue       },
+  Rogue:       { name: 'Rogue',         color: '#657900', hp:  140, speed: 2.2, skills: SkillDatabase.Rogue       },
   Warlock:     { name: 'Warlock',       color: '#a600ff', hp:  80, speed: 1.8, skills: SkillDatabase.Warlock     },
-  DeathKnight: { name: 'Death Knight',  color: '#cf0000', hp: 120, speed: 2.0, skills: SkillDatabase.DeathKnight },
+  DeathKnight: { name: 'Death Knight',  color: '#cf0000', hp: 150, speed: 2.0, skills: SkillDatabase.DeathKnight },
 }
 const _BUFFED_CLASSES = Object.entries(_CLASSES).reduce((buffed, [key, cls]) => {
   buffed[key] = { ...cls, hp: cls.hp * 10}

@@ -11,7 +11,7 @@ import { GAME_CONFIG }   from '../../shared/GameConfig.js'
 import { ENEMY_TYPES }   from '../../shared/EnemyTypeConfig.js'
 
 export default class ServerEnemy {
-  constructor({ id, x, y, type = 'felGuard', hp, maxHp, speed, radius, contactDamage, generation, renderType = null, forcedAnimation = null }) {
+  constructor({ id, x, y, type = 'felGuard', hp, maxHp, speed, radius, meleeDamage, generation, renderType = null, forcedAnimation = null }) {
     const base = ENEMY_TYPES[type] ?? ENEMY_TYPES.felGuard
 
     this.id            = id
@@ -27,7 +27,7 @@ export default class ServerEnemy {
     this.radiusX       = this.hitboxShape === 'oval' ? this.radius / 2 : this.radius
     this.radiusY       = this.radius
     this.speed         = speed  ?? base.speed
-    this.contactDamage = contactDamage ?? base.contactDamage
+    this.meleeDamage   = meleeDamage ?? base.meleeDamage ?? 0
     this.isDead        = false
     this.isPlayer      = false
     this.arenaWidth    = GAME_CONFIG.CANVAS_WIDTH
@@ -54,7 +54,7 @@ export default class ServerEnemy {
     // Ranged AI
     this._lastAttack          = 0
     this._attackRange         = base.attackRange    ?? 300
-    this._attackCooldown      = base.attackCooldown ?? 2500
+    this._attackCooldown      = base.attackCooldown ?? 1500
     this._pendingAttackAbility = null   // set for one tick when attack fires; drives client anim
     this._projSpeed      = base.projectileSpeed  ?? 160
     this._projDamage     = base.projectileDamage  ?? 12

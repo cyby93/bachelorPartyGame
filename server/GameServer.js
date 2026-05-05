@@ -606,7 +606,7 @@ export default class GameServer {
           maxHp: warlockHp,
           speed: base.speed,
           radius: base.radius,
-          contactDamage: base.contactDamage,
+          meleeDamage: base.meleeDamage,
         })
         warlock.setArenaSize(this.arenaWidth, this.arenaHeight)
         warlock._channelTarget = this.boss.id
@@ -632,7 +632,7 @@ export default class GameServer {
           maxHp: Math.round(base.hp * hpMult),
           speed: base.speed,
           radius: base.radius,
-          contactDamage: Math.round(base.contactDamage * damageMult),
+          meleeDamage: Math.round(base.meleeDamage * damageMult),
           generation: entry.generation ?? 0,
         })
         enemy.setArenaSize(this.arenaWidth, this.arenaHeight)
@@ -1252,7 +1252,7 @@ export default class GameServer {
                 hp:            Math.round(e.maxHp * mult),
                 speed:         e.speed * mult,
                 radius:        Math.round(e.radius * mult),
-                contactDamage: Math.round(e.contactDamage * mult),
+                meleeDamage: Math.round(e.meleeDamage * mult),
               })
             }
           }
@@ -1321,14 +1321,13 @@ export default class GameServer {
         })
       }
 
-      // Contact damage to players (rate-limited: once per 500ms per enemy)
-      if (e.contactDamage > 0 && now - e._lastContactDamage > 500) {
+      if (e.meleeDamage > 0 && now - e._lastContactDamage > e._attackCooldown) {
         this.players.forEach(p => {
           if (p.isHost || p.isDead) return
           if (playerHitsEntity(p.x, p.y, e)) {
             if (p.isShieldBlocking(e.x, e.y)) return
             e._lastContactDamage = now
-            p.takeDamage(e.contactDamage)
+            p.takeDamage(e.meleeDamage)
             if (!this.stats.deaths) this.stats.deaths = {}
             if (p.isDead) {
               this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
@@ -1341,7 +1340,7 @@ export default class GameServer {
           if (m.minionType !== 'PET' && m.minionType !== 'WILD_BEAST') return
           if (playerHitsCircle(m.x, m.y, e.x, e.y, e.radius)) {
             e._lastContactDamage = now
-            m.takeDamage(e.contactDamage)
+            m.takeDamage(e.meleeDamage)
           }
         })
       }
@@ -1359,7 +1358,7 @@ export default class GameServer {
         maxHp:         child.hp,
         speed:         child.speed,
         radius:        child.radius,
-        contactDamage: child.contactDamage,
+        meleeDamage: child.meleeDamage,
         generation:    child.generation,
       })
       enemy.setArenaSize(this.arenaWidth, this.arenaHeight)

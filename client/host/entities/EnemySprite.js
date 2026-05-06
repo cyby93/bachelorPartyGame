@@ -77,23 +77,11 @@ export default class EnemySprite {
     this._body.height = displaySize
     this.container.addChild(this._body)
 
-    // Leviathan: persistent aura rings + pulse state
+    // Leviathan: breathing scale pulse state
     if (this.type === 'leviathan') {
       this._leviathanPulseTime = 0
       this._bodyBaseScaleX     = this._body.scale.x
       this._bodyBaseScaleY     = this._body.scale.y
-
-      // Outer glow ring (deep teal, slow pulse)
-      this._leviathanAuraOuter = new Graphics()
-      this._leviathanAuraOuter.circle(0, 0, D + 20)
-      this._leviathanAuraOuter.stroke({ color: 0x1a9e8a, width: 3 })
-      this.container.addChildAt(this._leviathanAuraOuter, 0)
-
-      // Inner shimmer ring (bright teal, faster pulse)
-      this._leviathanAuraInner = new Graphics()
-      this._leviathanAuraInner.circle(0, 0, D + 8)
-      this._leviathanAuraInner.stroke({ color: 0x2dd4bf, width: 2 })
-      this.container.addChildAt(this._leviathanAuraInner, 0)
     }
 
     // Shield arc (Serpent Guard) — hidden by default
@@ -282,14 +270,12 @@ export default class EnemySprite {
       }
     }
 
-    // Leviathan: breathing scale pulse + aura ring pulse
+    // Leviathan: breathing scale pulse
     if (this.type === 'leviathan') {
       this._leviathanPulseTime += dt
       const t = this._leviathanPulseTime
       const pulse = 1 + 0.05 * Math.sin(t * 1.8)
       this._body.scale.set(this._bodyBaseScaleX * pulse, this._bodyBaseScaleY * pulse)
-      this._leviathanAuraOuter.alpha = 0.30 + 0.18 * Math.sin(t * 1.2)
-      this._leviathanAuraInner.alpha = 0.50 + 0.25 * Math.sin(t * 2.4 + 0.9)
     }
 
     // Shield arc (Serpent Guard)

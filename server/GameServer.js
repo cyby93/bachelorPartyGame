@@ -993,23 +993,19 @@ export default class GameServer {
 
       // Spawn enemies from SpawnSystem
       if (this.spawnSystem) {
-        // Level 4: pause ambient spawning while any Leviathan is alive
-        const leviathanAlive = [...this.enemies.values()].some(e => !e.isDead && e.type === 'leviathan')
-        if (!leviathanAlive) {
-          // For gate-based spawning, offset spawn point to the left of the gate
-          // (players advance from the left, enemies defend the gate from the player side)
-          let spawnPos = null
-          if (this.currentLevel?.spawning?.spawnNearActiveGate) {
-            const gate = this._getActiveGate()
-            if (gate) {
-              const offsetX = gate.passageId ? -((gate.width ?? 40) / 2 + 60) : 0
-              spawnPos = { x: gate.x + offsetX, y: gate.y }
-            }
+        // For gate-based spawning, offset spawn point to the left of the gate
+        // (players advance from the left, enemies defend the gate from the player side)
+        let spawnPos = null
+        if (this.currentLevel?.spawning?.spawnNearActiveGate) {
+          const gate = this._getActiveGate()
+          if (gate) {
+            const offsetX = gate.passageId ? -((gate.width ?? 40) / 2 + 60) : 0
+            spawnPos = { x: gate.x + offsetX, y: gate.y }
           }
-          const spawned = this.spawnSystem.tick(now, this.enemies, this._enemyIdSeq, spawnPos)
-          for (const e of spawned) {
-            this.enemies.set(e.id, e)
-          }
+        }
+        const spawned = this.spawnSystem.tick(now, this.enemies, this._enemyIdSeq, spawnPos)
+        for (const e of spawned) {
+          this.enemies.set(e.id, e)
         }
       }
 

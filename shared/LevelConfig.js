@@ -45,8 +45,7 @@ export const CAMPAIGN = [
     ],
     spawning: {
       mode: 'wave',
-      // waveCount: 5,
-      waveCount: 1,
+      waveCount: 5,
       betweenWaveDelayMs: 3000,
       // 'random2' — server picks 2 random edges per wave so the horde
       // is grouped and players can't predict which sides to watch.
@@ -55,8 +54,7 @@ export const CAMPAIGN = [
       spawnEdge: 'random2',
       progression: [
         { fromWave: 1, enemyTypes: ['felGuard', 'coilskarHarpooner'],
-          // countRange: [3, 4] },
-          countRange: [1, 1] },
+          countRange: [3, 4] },
         { fromWave: 2, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic'],
           countRange: [5, 6] },
         { fromWave: 3, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic'],
@@ -230,19 +228,7 @@ export const CAMPAIGN = [
     objectives: [
       { type: 'killAll' },
     ],
-    // Ambient naga trickle — keeps healers relevant and players moving
-    // while the Leviathan split mechanic plays out
-    spawning: {
-      mode: 'continuous',
-      interval: 8000,
-      countPerWave: [1, 2],
-      maxAliveAtOnce: 4,
-      spawnEdge: 'all',
-      enemyTypes: [
-        { type: 'coilskarHarpooner',   weight: 3 },
-        { type: 'coilskarSerpentGuard', weight: 1 },
-      ],
-    },
+    spawning: null,
     initialEnemies: [
       {
         type: 'leviathan',

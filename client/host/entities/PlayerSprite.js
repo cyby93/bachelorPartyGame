@@ -17,11 +17,11 @@
  *       └── [OverheadDisplay._container]  (cast bar, status icons, combo pips)
  */
 
-import { Container, Graphics, Text, Sprite, Assets } from 'pixi.js'
-import { CLASSES }     from '../../../shared/ClassConfig.js'
+import { Assets, Container, Graphics, Sprite, Text } from 'pixi.js'
+import { CLASSES } from '../../../shared/ClassConfig.js'
 import { GAME_CONFIG } from '../../../shared/GameConfig.js'
+import { DIRECTIONAL_ANIMATIONS, DIRECTIONAL_CLASSES } from '../HostGame.js'
 import OverheadDisplay from '../systems/OverheadDisplay.js'
-import { DIRECTIONAL_CLASSES, DIRECTIONAL_ANIMATIONS } from '../HostGame.js'
 
 // Direction names ordered by angle sector (0=East, clockwise)
 const DIRS = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east']
@@ -42,7 +42,7 @@ const SPRITE_SIZE = 124                        // display size for all player sp
 const SPRITE_H    = SPRITE_SIZE / 2           // half-height for UI element positioning
 const BAR_W = 44
 const BAR_H = 5
-
+const OVERHEAD_ZERO = -SPRITE_H + 21
 
 export default class PlayerSprite {
   constructor(data) {
@@ -103,7 +103,7 @@ export default class PlayerSprite {
       style: { fontFamily: 'Arial', fontSize: 12, fontWeight: 'bold', fill: '#ffffff', align: 'center' },
     })
     this._nameText.anchor.set(0.5, 1)
-    this._nameText.position.set(0, -SPRITE_H + 15)
+    this._nameText.position.set(0, OVERHEAD_ZERO - BAR_H - 3 )
     this._statusEffects.addChild(this._nameText)
 
     // ── HP bar ────────────────────────────────────────────────────────────
@@ -114,9 +114,9 @@ export default class PlayerSprite {
     this._hpBg.rect(-BAR_W / 2, 0, BAR_W, BAR_H)
     this._hpBg.fill('#1a1a1a')
     this._hpBg.stroke({ color: '#ffffff', width: 0.5, alpha: 0.25 })
-    this._hpBg.position.set(0, -SPRITE_H - 12)
+    this._hpBg.position.set(0, OVERHEAD_ZERO)
 
-    this._hpFill.position.set(0, -SPRITE_H - 12)
+    this._hpFill.position.set(0, OVERHEAD_ZERO)
 
     this._statusEffects.addChild(this._hpBg)
     this._statusEffects.addChild(this._hpFill)
@@ -149,7 +149,7 @@ export default class PlayerSprite {
 
     // ── Overhead display (cast bar + status icons + combo pips for Rogue) ─────
     this.overhead = new OverheadDisplay(this._statusEffects, {
-      yOffset: -SPRITE_H - 16,
+      yOffset: OVERHEAD_ZERO + BAR_H - 3,
       showCastBar: true,
       showStatusIcons: true,
       showComboPips: className === 'rogue',

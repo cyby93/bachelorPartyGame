@@ -9,7 +9,8 @@ export const EVENTS = {
   JOIN:         'game:join',       // { name, className, isHost }
   INPUT_MOVE:   'input:move',      // { x, y }  (normalised -1..1)
   INPUT_SKILL:  'input:skill',     // { index, vector: { x, y } }
-  INPUT_AIM:    'input:aim',       // { vector: { x, y } }  — updates aim direction and preferred facing, no movement
+  INPUT_AIM:       'input:aim',       // { vector: { x, y } }  — updates aim direction and preferred facing, no movement
+  INPUT_HIGHLIGHT: 'input:highlight', // {}  — player requests a visual beacon on their character
 
   // ── Host → Server (host-only commands) ───────────────────────────────────
   START_GAME:    'host:start',
@@ -38,6 +39,7 @@ export const EVENTS = {
   CHANNEL_INTERRUPTED: 'channel:interrupted',  // { playerId }
   TARGETED_HIT:        'targeted:hit',         // { casterX, casterY, targetX, targetY, effectType, color }
   COMBO_POINTS:        'player:comboPoints',   // { playerId, points }
+  PLAYER_HIGHLIGHT:    'player:highlight',     // { playerId }  — broadcast player's find-me beacon request
 
   // ── Quiz & Upgrade (between levels) ────────────────────────────────────
   QUIZ_QUESTION:        'quiz:question',        // S→All: { question, options }

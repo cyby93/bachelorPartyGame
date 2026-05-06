@@ -541,6 +541,10 @@ socket.on(EVENTS.SKILL_FIRED, data => {
   game.activeRenderer?.onSkillFired?.(data)
 })
 
+socket.on(EVENTS.PLAYER_HIGHLIGHT, data => {
+  game.activeRenderer?.onPlayerHighlight?.(data.playerId)
+})
+
 socket.on(EVENTS.EFFECT_DAMAGE, data => {
   audio.handleEffectDamage(data)
   game.activeRenderer?.onEffectDamage?.(data)

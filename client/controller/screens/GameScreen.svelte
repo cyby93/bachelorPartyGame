@@ -1,9 +1,9 @@
 <script>
-  import { CLASSES } from '../../../shared/ClassConfig.js'
-  import MoveJoystick  from '../components/MoveJoystick.svelte'
-  import SkillButton   from '../components/SkillButton.svelte'
+  import { CLASSES } from '../../../shared/ClassConfig.js';
+  import MoveJoystick from '../components/MoveJoystick.svelte';
+  import SkillButton from '../components/SkillButton.svelte';
 
-  let { playerName = '', className = '', isDead = false, cooldowns = [0,0,0,0], comboPoints = 0, onmove, onskill, onaim } = $props()
+  let { playerName = '', className = '', isDead = false, cooldowns = [0,0,0,0], comboPoints = 0, onmove, onskill, onaim, onhighlight } = $props()
 
   // Grid order: SK2 SK4 / SK1 SK3  (2×2, top row = skills 1,3; bottom = 0,2)
   // Per PLAN layout:
@@ -33,6 +33,9 @@
         </div>
       {/if}
       <span class="hud-note">Abilities stay on the right</span>
+      <button class="find-me-btn" onclick={() => onhighlight?.()} aria-label="Find me">
+        &#x25CE;
+      </button>
     </div>
   </div>
 
@@ -120,6 +123,25 @@
     text-transform: uppercase;
     color: var(--rn-text-label);
     white-space: nowrap;
+  }
+
+  .find-me-btn {
+    width: 100px;
+    background: transparent;
+    border: 1px solid rgba(255, 215, 0, 0.4);
+    border-radius: 6px;
+    color: #ffd700;
+    font-size: 16px;
+    line-height: 1;
+    padding: 3px 7px;
+    cursor: pointer;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .find-me-btn:active {
+    background: rgba(255, 215, 0, 0.15);
   }
 
   .combo-pips {

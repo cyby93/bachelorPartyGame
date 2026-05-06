@@ -1,8 +1,3 @@
-## Visuals
-Enemy and Players should be more distinctable visually
-
-Players might use some button to highlight themselfes -> so they can quickly find themselfes
-
 ## Enemies
 Heal enemies might heal too much. Make them heal single target if they can heal multiple target now
 

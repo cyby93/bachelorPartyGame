@@ -168,8 +168,9 @@ export default class GameServer {
     console.log(`[+] connected   ${socket.id}`)
 
     socket.on(EVENTS.JOIN,          data => this._onJoin(socket, data))
-    socket.on(EVENTS.INPUT_MOVE,    data => this._onInputMove(socket, data))
-    socket.on(EVENTS.INPUT_SKILL,   data => this._onInputSkill(socket, data))
+    socket.on(EVENTS.INPUT_MOVE,      data => this._onInputMove(socket, data))
+    socket.on(EVENTS.INPUT_SKILL,     data => this._onInputSkill(socket, data))
+    socket.on(EVENTS.INPUT_HIGHLIGHT, ()   => this._onInputHighlight(socket))
     socket.on(EVENTS.INPUT_AIM,     ({ vector }) => {
       const player = this.players.get(socket.id)
       if (player && vector) {
@@ -279,6 +280,12 @@ export default class GameServer {
       vector: data?.vector ?? { x: 1, y: 0 },
       action: data?.action ?? undefined,
     })
+  }
+
+  _onInputHighlight(socket) {
+    const player = this.players.get(socket.id)
+    if (!player || player.isHost) return
+    this.io.emit(EVENTS.PLAYER_HIGHLIGHT, { playerId: player.id })
   }
 
   // ── Bot player management (dev/testing tool) ───────────────────────────────

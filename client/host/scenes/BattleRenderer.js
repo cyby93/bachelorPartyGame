@@ -53,6 +53,9 @@ export default class BattleRenderer extends BaseRenderer {
     // Previous-frame HP tracking for hit sparks and death bursts
     this._prevPlayerHp = {}
 
+    // Per-player cooldown tracking for the self-highlight feature
+    this._highlightCooldowns = new Map()   // playerId → last trigger timestamp
+
     // Level metadata (set from outside via setLevelMeta before enter, or via event)
     this._levelMeta = null
 
@@ -528,6 +531,25 @@ export default class BattleRenderer extends BaseRenderer {
       const { x, y } = sprite.container
       this.vfx.triggerImpact(x, y, '#ff4444')
     }
+  }
+
+  onPlayerHighlight(playerId) {
+    const now    = Date.now()
+    const lastAt = this._highlightCooldowns.get(playerId) ?? 0
+    if (now - lastAt < 5000) return
+
+    const sprite = this.playerSprites.get(playerId)
+    if (!sprite) return
+
+    this._highlightCooldowns.set(playerId, now)
+
+    const { x, y } = sprite.container.position
+    this.vfx?.oneShot.aoeFlash(x, y, 60, '#ffd700')
+    setTimeout(() => {
+      if (!this.vfx) return
+      const pos = sprite.container.position
+      this.vfx.oneShot.aoeFlash(pos.x, pos.y, 60, '#ffd700')
+    }, 400)
   }
 
   // ── UI construction ────────────────────────────────────────────────────────

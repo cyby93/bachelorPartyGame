@@ -240,6 +240,10 @@
     socket.emit(EVENTS.INPUT_AIM, { vector })
   }
 
+  function handleHighlight() {
+    socket.emit(EVENTS.INPUT_HIGHLIGHT)
+  }
+
   function handleLobbyReady() {
     lobbyReady = true
   }
@@ -297,6 +301,7 @@
         onmove={handleMove}
         onskill={handleSkill}
         onaim={handleAim}
+        onhighlight={handleHighlight}
       />
     {/if}
 
@@ -310,6 +315,7 @@
       onmove={handleMove}
       onskill={handleSkill}
       onaim={handleAim}
+      onhighlight={handleHighlight}
     />
 
   {:else if screen === 'quiz'}

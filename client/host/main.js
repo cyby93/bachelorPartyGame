@@ -15,8 +15,10 @@ import { LEVEL_SELECT_OPTIONS } from '../../shared/LevelConfig.js'
 import HostGame       from './HostGame.js'
 import AudioManager   from './systems/AudioManager.js'
 import { gameState }  from './stores/gameState.js'
+import { quizState }  from './stores/quizState.js'
 import GameplaySidebar from './components/GameplaySidebar.svelte'
 import LobbyPlayerList from './components/LobbyPlayerList.svelte'
+import SceneOverlay   from './components/SceneOverlay.svelte'
 
 // ── PixiJS game init (top-level await — supported in Vite ESM) ─────────────
 const game  = new HostGame()
@@ -37,9 +39,10 @@ if (_loadBadge) {
   _loadBadge.textContent = 'Connecting…'
 }
 
-// ── Mount Svelte sidebar components ───────────────────────────────────────
+// ── Mount Svelte components ───────────────────────────────────────────────
 mount(GameplaySidebar, { target: document.getElementById('gameplay-panel') })
 mount(LobbyPlayerList, { target: document.getElementById('player-list') })
+mount(SceneOverlay,    { target: document.getElementById('scene-overlay') })
 
 // ── Socket ─────────────────────────────────────────────────────────────────
 const socket = io({ transports: ['websocket'] })
@@ -133,15 +136,19 @@ upgradeResetBtn?.addEventListener('click', () => {
 let connectionHideTimer = null
 let shellMode = 'menu'
 let currentObjectives = null
+let currentScene = 'lobby'
 
 function syncGameState() {
   gameState.set({
-    players: game.knownState.players,
-    stats: game.knownState.stats,
-    boss: game.knownState.boss,
-    objectives: currentObjectives,
-    levelMeta: currentLevelMeta,
-    npcs: game.knownState.npcs ?? [],
+    players:            game.knownState.players,
+    stats:              game.knownState.stats,
+    boss:               game.knownState.boss,
+    objectives:         currentObjectives,
+    levelMeta:          currentLevelMeta,
+    npcs:               game.knownState.npcs ?? [],
+    scene:              currentScene,
+    cumulativeStats:    currentLevelMeta?.cumulativeStats    ?? null,
+    levelCompleteStats: currentLevelMeta?.stats              ?? null,
   })
 }
 
@@ -463,6 +470,7 @@ socket.on(EVENTS.INIT, state => {
     mirrors: state.mirrors,
   }
   currentObjectives = state.objectives ?? null
+  currentScene = scene
   game.switchScene(scene, meta)
   currentLevelMeta = meta
   audio.setScene(scene, meta)
@@ -498,6 +506,8 @@ socket.on(EVENTS.STATE_DELTA, delta => {
 socket.on(EVENTS.SCENE_CHANGE, (data) => {
   const { scene, ...meta } = data
   currentObjectives = data.objectives ?? null
+  currentScene = scene
+  if (scene === 'quiz') quizState.set({ phase: 'waiting', question: null, progress: null, results: null, upgrades: [] })
   game.switchScene(scene, meta)
   currentLevelMeta = meta
   audio.setScene(scene, meta)
@@ -587,24 +597,23 @@ socket.on(EVENTS.PORTAL_BEAM_END, data => {
 // ── Quiz events ───────────────────────────────────────────────────────────
 
 socket.on(EVENTS.QUIZ_QUESTION, data => {
-  game.activeRenderer?.setQuestion?.(data)
+  quizState.set({ phase: 'answering', question: data, progress: null, results: null, upgrades: [] })
 })
 
 socket.on(EVENTS.QUIZ_PROGRESS, data => {
-  game.activeRenderer?.setProgress?.(data)
+  quizState.update(s => ({ ...s, progress: data }))
 })
 
 socket.on(EVENTS.QUIZ_RESULTS, data => {
-  game.activeRenderer?.setResults?.(data)
+  quizState.update(s => ({ ...s, phase: 'results', results: data }))
 })
 
 socket.on(EVENTS.QUIZ_UPGRADE_CHOSEN, data => {
-  game.activeRenderer?.addUpgradeChosen?.(data)
+  quizState.update(s => ({ ...s, phase: 'upgrading', upgrades: [...s.upgrades, data] }))
 })
 
 socket.on(EVENTS.QUIZ_DONE, () => {
-  game.activeRenderer?.setDone?.()
-  // Show CONTINUE button for host to dismiss quiz
+  quizState.update(s => ({ ...s, phase: 'done' }))
   startBtn.textContent   = 'CONTINUE'
   startBtn.disabled      = false
   startBtn.style.display = ''

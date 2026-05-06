@@ -93,11 +93,23 @@ body[data-shell="menu"] #quit-campaign-btn {
 #main-layout {
   flex: 1;
   min-width: 0;
+  position: relative;
   display: flex;
   flex-direction: column;
   background:
     radial-gradient(circle at top, rgba(80, 50, 10, 0.18) 0%, rgba(80, 50, 10, 0) 24%),
     var(--rn-bg-void);
+}
+
+#scene-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+#scene-overlay:not(:empty) {
+  pointer-events: auto;
 }
 
 #canvas-wrap {

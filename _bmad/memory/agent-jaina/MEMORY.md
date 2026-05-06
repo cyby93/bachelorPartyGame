@@ -25,14 +25,22 @@ Host sidebar gameplay panel is now fully Svelte. Components under `client/host/c
 - `GameplaySidebar.svelte` — mounted into `#gameplay-panel`. Renders level info, objective, Shade of Akama card (conditional), raid roster, damage/healing meters. All data from `gameState` store.
 - `LobbyPlayerList.svelte` — mounted into `#player-list`. Renders lobby player list. Data from `gameState` store.
 
-Store at `client/host/stores/gameState.js` — writable with: players, stats, boss, objectives, levelMeta, npcs.
+Store at `client/host/stores/gameState.js` — writable with: players, stats, boss, objectives, levelMeta, npcs, scene, cumulativeStats, levelCompleteStats.
+Store at `client/host/stores/quizState.js` — writable with: phase, question, progress, results, upgrades.
 
 `main.js` pattern:
-- `syncGameState()` — writes store after any state change (called from INIT, STATE_DELTA, SCENE_CHANGE, OBJECTIVE_UPDATE, PLAYER_JOINED, PLAYER_LEFT)
+- `syncGameState()` — writes store after any state change (INIT, STATE_DELTA, SCENE_CHANGE, etc.)
 - `updateLobbyStartBtn()` — updates bot count display + startBtn.disabled (kept separate; store doesn't own button state)
-- `currentObjectives` — tracked separately in main.js because OBJECTIVE_UPDATE overrides meta.objectives mid-scene
+- `currentObjectives` / `currentScene` — tracked separately in main.js
+- Quiz socket events write directly to `quizState` store (not via renderer methods)
+
+**Scene → render layer rule (2026-05-06):**
+- `lobby`, `battle`, `bossFight` — PixiJS canvas (live sprites)
+- `levelComplete`, `quiz`, `result`, `gameover` — DOM/Svelte overlay (`SceneOverlay.svelte` in `#scene-overlay`)
+- Stub renderers exist for the 3 DOM scenes so HostGame.switchScene works without changes
 
 Adding a new sidebar card = new `.svelte` file + add fields to `gameState` store if server data needed. No main.js surgery.
+Adding a new overlay screen = new component + mount in `SceneOverlay.svelte` + add scene key to the active-scenes list.
 
 Components use Svelte 4 legacy mode ($: reactive statements, $store auto-subscription). No runes.
 

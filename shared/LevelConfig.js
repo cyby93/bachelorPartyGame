@@ -45,7 +45,8 @@ export const CAMPAIGN = [
     ],
     spawning: {
       mode: 'wave',
-      waveCount: 5,
+      // waveCount: 5,
+      waveCount: 1,
       betweenWaveDelayMs: 3000,
       // 'random2' — server picks 2 random edges per wave so the horde
       // is grouped and players can't predict which sides to watch.
@@ -54,7 +55,8 @@ export const CAMPAIGN = [
       spawnEdge: 'random2',
       progression: [
         { fromWave: 1, enemyTypes: ['felGuard', 'coilskarHarpooner'],
-          countRange: [3, 4] },
+          // countRange: [3, 4] },
+          countRange: [1, 1] },
         { fromWave: 2, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic'],
           countRange: [5, 6] },
         { fromWave: 3, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic'],

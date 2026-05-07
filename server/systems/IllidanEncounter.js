@@ -356,7 +356,7 @@ export default class IllidanEncounter {
           x:            attack.bossX,
           y:            attack.bossY,
           targetId:     target.id,
-          speed:        280,
+          speed:        attack.speed ?? 280,
           damage:       attack.damage,
           splashRadius: attack.splashRadius,
         })

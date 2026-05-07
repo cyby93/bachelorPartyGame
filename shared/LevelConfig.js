@@ -45,7 +45,7 @@ export const CAMPAIGN = [
     ],
     spawning: {
       mode: 'wave',
-      waveCount: 5,
+      waveCount: 3,
       betweenWaveDelayMs: 3000,
       // 'random2' — server picks 2 random edges per wave so the horde
       // is grouped and players can't predict which sides to watch.

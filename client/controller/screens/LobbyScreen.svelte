@@ -75,6 +75,7 @@
   <div class="skills-grid">
     {#each GRID_ORDER as skillIdx}
       {@const skill = skills[skillIdx]}
+      {#if skill}
       <div class="skill-card" style="--class-color: {classColor}">
         <span class="skill-icon">
           {#if skill.iconFile}
@@ -92,6 +93,7 @@
             <span class="skill-hint">{INPUT_HINTS[skill.inputType] ?? 'Use this skill from the right-side grid.'}</span>
         </div>
       </div>
+      {/if}
     {/each}
   </div>
 </div>

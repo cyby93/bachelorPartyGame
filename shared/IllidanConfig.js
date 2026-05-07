@@ -119,7 +119,8 @@ export const ILLIDAN_CONFIG = {
         name:         'Fireball',
         cooldown:     4000,
         type:         'fireball',
-        damage:       Math.round(1.25 * Y * R),     // 50 at defaults
+        damage:       Math.round(1 * Y * R),     // 40 at defaults
+        speed: 150,
         splashRadius: 60,
       },
       {
@@ -196,7 +197,7 @@ export const ILLIDAN_CONFIG = {
    */
   phases: [
     { threshold: 1.0,  speed: 1.5, name: ILLIDAN_PHASE.HUNT },
-    { threshold: 0.60, speed: 0,   name: ILLIDAN_PHASE.AZZINOTH },
+    { threshold: 0.95, speed: 0,   name: ILLIDAN_PHASE.AZZINOTH },
   ],
 
   /** Where Illidan teleports during Phase 2 — above the top edge. */

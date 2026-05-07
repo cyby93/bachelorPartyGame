@@ -56,7 +56,7 @@
   $: state = $gameState
   $: raidPlayers = Object.values(state.players)
     .filter(p => !p.isHost)
-    .sort((a, b) => a.name.localeCompare(b.name))
+    .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
   $: meta = state.levelMeta
   $: boss = state.boss
   $: objective = formatObjective(state.objectives?.[0] ?? null, state)

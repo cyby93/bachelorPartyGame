@@ -82,8 +82,9 @@ export const ENEMY_TYPES = {
 
   // ── Bonechewer Blade Fury — berserking whirlwind orc ────────────────────
   bonechewerBladeFury: {
-    hp: Math.round(1.20 * HP_MULT * BASE_DPS), 
-    speed: 1.3, 
+    hp: Math.round(1.20 * HP_MULT * BASE_DPS),
+    speed: 1.3,
+    radius: 30,
     meleeDamage: Math.round(0.55 * DAMAGE_MULT * BASE_DPS),
     color: '#cc2200',
     ai: 'berserk',

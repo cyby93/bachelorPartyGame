@@ -534,6 +534,16 @@ socket.on(EVENTS.DEBUG_ACTION_RESULT, ({ message, isError }) => {
   sandboxStatusEl.dataset.error = isError ? 'true' : 'false'
 })
 
+// ── Transition events ─────────────────────────────────────────────────────
+
+socket.on(EVENTS.LEVEL_VICTORY, data => {
+  game.activeRenderer?.onLevelVictory?.(data)
+})
+
+socket.on(EVENTS.TRANSITION_VFX, data => {
+  game.activeRenderer?.onTransitionVfx?.(data)
+})
+
 // ── VFX events ───────────────────────────────────────────────────────────
 
 socket.on(EVENTS.SKILL_FIRED, data => {

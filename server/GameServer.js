@@ -20,6 +20,7 @@ import TrainingDummy, { RangedDummy, MeleeDummy, MovingDummy } from './entities/
 import CooldownSystem    from './systems/CooldownSystem.js'
 import SkillSystem       from './systems/SkillSystem.js'
 import SpawnSystem       from './systems/SpawnSystem.js'
+import TransitionRunner  from './TransitionRunner.js'
 import { ENEMY_TYPES }   from '../shared/EnemyTypeConfig.js'
 import { buildWallSegments, resolveWallCollision, hitsWall } from '../shared/WallCollision.js'
 import { QUIZ_QUESTIONS }  from '../shared/QuizQuestions.js'
@@ -123,6 +124,9 @@ export default class GameServer {
     this.currentLevel      = null
     this.spawnSystem       = null
     this._levelStartTime   = 0
+    this._spawnSystemTimer     = null   // delayed spawn init during opening transition
+    this._levelCompletePending = false  // guard against double-fire of _onLevelComplete
+    this._closingRunner        = null   // TransitionRunner for closing sequence
     this.arenaWidth        = GAME_CONFIG.CANVAS_WIDTH
     this.arenaHeight       = GAME_CONFIG.CANVAS_HEIGHT
     this._wallSegments     = []
@@ -532,9 +536,17 @@ export default class GameServer {
     const hpMult     = (diff.hpMult?.base ?? 1)     + (diff.hpMult?.perPlayer ?? 0)     * (playerCount - 1)
     const damageMult = (diff.damageMult?.base ?? 1) + (diff.damageMult?.perPlayer ?? 0) * (playerCount - 1)
 
-    // Set up spawn system if level has spawning
+    // Set up spawn system if level has spawning — delay start if opening transition requests it
     if (level.spawning) {
-      this.spawnSystem = new SpawnSystem(level, playerCount)
+      const spawnDelay = level.transition?.opening?.enemySpawnDelayMs ?? 0
+      if (spawnDelay > 0) {
+        this._spawnSystemTimer = setTimeout(() => {
+          if (this.currentLevel === level) this.spawnSystem = new SpawnSystem(level, playerCount)
+          this._spawnSystemTimer = null
+        }, spawnDelay)
+      } else {
+        this.spawnSystem = new SpawnSystem(level, playerCount)
+      }
     }
 
     // Set up boss if level has one
@@ -722,6 +734,7 @@ export default class GameServer {
       passages:    level.arena?.passages ?? [],
       mirrors:     level.mirrors ?? [],
       debugSandbox: !!level.debugSandbox,
+      transition:  level.transition ?? null,
     })
   }
 
@@ -775,6 +788,11 @@ export default class GameServer {
     this.minionSpawnSystem = null
     this._illidanEncounter = null
     if (this._dialogSystem) { this._dialogSystem.destroy(); this._dialogSystem = null }
+
+    // Transition state
+    if (this._spawnSystemTimer) { clearTimeout(this._spawnSystemTimer); this._spawnSystemTimer = null }
+    if (this._closingRunner)    { this._closingRunner.abort(); this._closingRunner = null }
+    this._levelCompletePending = false
   }
 
   _resetPlayerInputs() {
@@ -1849,8 +1867,23 @@ export default class GameServer {
     }
   }
 
-  _onLevelComplete() {
+  async _onLevelComplete() {
+    if (this._levelCompletePending) return
+    this._levelCompletePending = true
+
     const levelIndex = this.currentLevelIndex
+
+    // Run closing transition before advancing scene (skip for debug sandbox)
+    if (!this.currentLevel?.debugSandbox) {
+      const closingSteps = this.currentLevel?.transition?.closing?.steps
+      if (closingSteps?.length) {
+        this.io.emit(EVENTS.LEVEL_VICTORY, {})
+        this._closingRunner = new TransitionRunner(this.io)
+        await this._closingRunner.run(closingSteps)
+        this._closingRunner = null
+      }
+    }
+
     if (this.currentLevel?.debugSandbox) {
       this._showLevelComplete()
       return

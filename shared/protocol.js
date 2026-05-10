@@ -61,5 +61,9 @@ export const EVENTS = {
   PORTAL_BEAM_DAMAGE:  'portal:beam_damage',  // S→All: { beamId, points: [{x,y}] } — active damage phase
   PORTAL_BEAM_END:     'portal:beam_end',     // S→All: { beamId }
 
+  // ── Level transitions ────────────────────────────────────────────────────
+  LEVEL_VICTORY:   'level:victory',   // S→All: fired when win condition met, before scene change — client plays closing VFX
+  TRANSITION_VFX:  'transition:vfx',  // S→All: { event: string } — named VFX trigger during transitions
+
   DEBUG_ACTION_RESULT: 'debug:action_result', // S→Host: { message, isError? }
 }

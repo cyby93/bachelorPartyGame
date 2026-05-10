@@ -69,6 +69,18 @@ export const CAMPAIGN = [
       spawnMult:  { base: 1.0, perPlayer: 0.10 },
       countMult:  { base: 1.0, perPlayer: 0.05 },
     },
+    transition: {
+      opening: {
+        fadeInMs: 1200,
+        enemySpawnDelayMs: 2000,
+      },
+      closing: {
+        fadeOutMs: 1500,
+        steps: [
+          { type: 'delay', ms: 2200 },
+        ],
+      },
+    },
     boss: null,
   },
 
@@ -142,6 +154,18 @@ export const CAMPAIGN = [
       spawnMult:  { base: 1.0, perPlayer: 0.10 },
       countMult:  { base: 1.0, perPlayer: 0.05 },
     },
+    transition: {
+      opening: {
+        fadeInMs: 1200,
+        enemySpawnDelayMs: 2000,
+      },
+      closing: {
+        fadeOutMs: 1500,
+        steps: [
+          { type: 'delay', ms: 2200 },
+        ],
+      },
+    },
     boss: null,
   },
 
@@ -214,6 +238,18 @@ export const CAMPAIGN = [
       spawnMult:  { base: 1.0, perPlayer: 0.10 },
       countMult:  { base: 1.0, perPlayer: 0.05 },
     },
+    transition: {
+      opening: {
+        fadeInMs: 1500,
+        enemySpawnDelayMs: 2000,
+      },
+      closing: {
+        fadeOutMs: 1500,
+        steps: [
+          { type: 'delay', ms: 2200 },
+        ],
+      },
+    },
     boss: null,
   },
 
@@ -242,6 +278,18 @@ export const CAMPAIGN = [
       damageMult: { base: 1.0, perPlayer: 0.05 },
       spawnMult:  { base: 1.0, perPlayer: 0.0 },
       countMult:  { base: 1.0, perPlayer: 0.05 },
+    },
+    transition: {
+      opening: {
+        fadeInMs: 1500,
+        // no enemySpawnDelayMs — leviathan uses initialEnemies, not spawnSystem
+      },
+      closing: {
+        fadeOutMs: 1800,
+        steps: [
+          { type: 'delay', ms: 2500 },
+        ],
+      },
     },
     boss: null,
   },
@@ -310,6 +358,18 @@ export const CAMPAIGN = [
       // { speaker: 'akama', text: '[PLACEHOLDER] The Shade has drained this place long enough. Fight with me!', voiceKey: 'voice_akama_shade_intro_02', delayAfter: 3500 },
       // { speaker: 'shade', text: '[PLACEHOLDER] You cannot kill what has already been consumed.', voiceKey: 'voice_shade_intro_01', delayAfter: 3000 },
     ],
+    transition: {
+      opening: {
+        fadeInMs: 2000,
+        // no enemySpawnDelayMs — dialog system gates the boss fight
+      },
+      closing: {
+        fadeOutMs: 2000,
+        steps: [
+          { type: 'delay', ms: 2800 },
+        ],
+      },
+    },
   },
 
   // ── Level 6: Illidan Stormrage ────────────────────────────────────────
@@ -343,7 +403,18 @@ export const CAMPAIGN = [
       // { speaker: 'illidan', text: '[PLACEHOLDER] I have waited ten thousand years for this.', voiceKey: 'voice_illidan_intro_02', delayAfter: 3500 },
       // { speaker: 'akama', text: '[PLACEHOLDER] I have watched you waste away, Illidan.', voiceKey: 'voice_akama_illidan_intro_01', delayAfter: 3000 },
     ],
-
+    transition: {
+      opening: {
+        fadeInMs: 2500,
+        // no enemySpawnDelayMs — Illidan dialog gates the fight
+      },
+      closing: {
+        fadeOutMs: 2500,
+        steps: [
+          { type: 'delay', ms: 3500 },
+        ],
+      },
+    },
   },
 ]
 

@@ -89,6 +89,35 @@ export default class BattleRenderer extends BaseRenderer {
     this._phaseFlashGfx    = new Graphics()
     this._phaseFlashAlpha  = 0
     this._phaseFlashText   = null
+
+    // Level transition overlay (fade-in on open, fade-to-black on close)
+    this._transitionOverlay = null
+    this._transitionAlpha   = 0    // current applied alpha (persists across resize)
+    this._fadeState         = null // { dir: 'in'|'out', speed: number, done: bool, onComplete? }
+  }
+
+  // ── Transition lifecycle ──────────────────────────────────────────────────
+
+  enter() {
+    this._transitionAlpha = 0
+    this._fadeState       = null
+    super.enter()
+
+    const fadeInMs = this._levelMeta?.transition?.opening?.fadeInMs
+    if (fadeInMs > 0) {
+      this._transitionAlpha = 1
+      if (this._transitionOverlay) this._transitionOverlay.alpha = 1
+      this._fadeState = { dir: 'in', speed: 1 / (fadeInMs / 1000), done: false }
+    }
+  }
+
+  onLevelVictory(_data) {
+    const fadeOutMs = this._levelMeta?.transition?.closing?.fadeOutMs ?? 1500
+    this._fadeState = { dir: 'out', speed: 1 / (fadeOutMs / 1000), done: false }
+  }
+
+  onTransitionVfx(_data) {
+    // stub — named VFX hooks wired here in future passes
   }
 
   /** Called by HostGame before enter() to pass level-specific data. */
@@ -126,6 +155,10 @@ export default class BattleRenderer extends BaseRenderer {
     this._prevPlayerHp = {}
     this._levelMeta = null
     this._objectives = []
+
+    // Transition overlay
+    this._fadeState       = null
+    this._transitionAlpha = 0
 
     // Dialog
     if (this._dialogTimer) clearTimeout(this._dialogTimer)
@@ -220,6 +253,22 @@ export default class BattleRenderer extends BaseRenderer {
 
   _syncExtras(dt) {
     super._syncExtras(dt)
+
+    // Tick fade transition
+    if (this._fadeState && !this._fadeState.done && this._transitionOverlay) {
+      if (this._fadeState.dir === 'in') {
+        this._transitionAlpha = Math.max(0, this._transitionAlpha - this._fadeState.speed * dt)
+        if (this._transitionAlpha <= 0) { this._transitionAlpha = 0; this._fadeState.done = true }
+      } else {
+        this._transitionAlpha = Math.min(1, this._transitionAlpha + this._fadeState.speed * dt)
+        if (this._transitionAlpha >= 1) {
+          this._transitionAlpha = 1
+          this._fadeState.done = true
+          this._fadeState.onComplete?.()
+        }
+      }
+      this._transitionOverlay.alpha = this._transitionAlpha
+    }
 
     const state = this.game.knownState
 
@@ -601,6 +650,13 @@ export default class BattleRenderer extends BaseRenderer {
     this._phaseFlashText.position.set(w / 2, h / 2)
     this._phaseFlashText.visible = false
     this._uiRoot.addChild(this._phaseFlashText)
+
+    // Fullscreen black overlay for level transitions — added last so it sits above all UI
+    this._transitionOverlay = new Graphics()
+    this._transitionOverlay.rect(0, 0, w, h)
+    this._transitionOverlay.fill({ color: 0x000000, alpha: 1 })
+    this._transitionOverlay.alpha = this._transitionAlpha
+    this._uiRoot.addChild(this._transitionOverlay)
   }
 
   // ── Illidan encounter events ───────────────────────────────────────────────

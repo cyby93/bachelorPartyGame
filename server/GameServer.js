@@ -103,6 +103,7 @@ export default class GameServer {
     // Level 4: warlock/boss phase tracking
     this._bossPhase = 1
     this._warlockCount = 0
+    this._lastWarlockBuffVfxTime = 0
 
     this.minionSpawnSystem  = null   // ambient minions (activated after dialog)
     this._illidanEncounter  = null   // IllidanEncounter instance for Level 6
@@ -603,6 +604,7 @@ export default class GameServer {
     // Set up warlocks (Level 4 — 6 channelers around the boss)
     this._bossPhase = 1
     this._warlockCount = 0
+    this._lastWarlockBuffVfxTime = 0
     if (level.warlocks && this.boss) {
       const wCfg = level.warlocks
       const count = wCfg.count ?? 6
@@ -629,6 +631,7 @@ export default class GameServer {
         })
         warlock.setArenaSize(this.arenaWidth, this.arenaHeight)
         warlock._channelTarget = this.boss.id
+        warlock._facingAngle = angle + Math.PI  // face toward boss (inward)
         this.enemies.set(id, warlock)
         this._warlockCount++
       }
@@ -779,6 +782,7 @@ export default class GameServer {
     this.portalBeamSystem    = null
     this._bossPhase    = 1
     this._warlockCount = 0
+    this._lastWarlockBuffVfxTime = 0
     this._lastSpawn    = 0
     this.spawnSystem   = null
     this.skillSystem.activeZones    = []
@@ -890,6 +894,7 @@ export default class GameServer {
       this.buildingSpawnSystem = null
       this._bossPhase    = 1
       this._warlockCount = 0
+      this._lastWarlockBuffVfxTime = 0
       this.currentLevelIndex = -1
       this.currentLevel      = null
       this.spawnSystem       = null
@@ -1415,6 +1420,16 @@ export default class GameServer {
         // The damage buff is normalized: +2 dmg/s means +2 to base meleeDamage per second
         // We approximate by scaling _damageMult since boss damage = ability.damage * _damageMult
       })
+      if (warlockAliveCount > 0 && now - this._lastWarlockBuffVfxTime >= 800) {
+        this._lastWarlockBuffVfxTime = now
+        this.io.emit(EVENTS.SKILL_FIRED, {
+          type: 'BUFF',
+          subtype: 'WARLOCK_CHANNEL',
+          x: this.boss.x,
+          y: this.boss.y,
+          warlockCount: warlockAliveCount,
+        })
+      }
     }
   }
 
@@ -2044,6 +2059,7 @@ export default class GameServer {
         return {
           name: skill.name,
           icon: skill.icon,
+          iconFile: skill.iconFile ?? null,
           skillIndex: i,
           currentTier,
           maxTier,

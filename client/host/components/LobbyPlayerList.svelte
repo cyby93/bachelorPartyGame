@@ -10,12 +10,14 @@
 {:else}
   {#each players as player (player.id)}
     {@const color = CLASSES[player.className]?.color ?? '#aaa'}
-    <div class="player-item" style="border-left-color:{color}">
-      <span class="pname">
+    {@const iconFile = (player.className ?? '').toLowerCase()}
+    <div class="roster-row" style="--hp-pct:1">
+      <img class="row-class-icon" src="/icons/classes/classicon_{iconFile}.jpg" alt={player.className} />
+      <div class="roster-name" style="color:{color}">
         {player.name}
-        {#if player.isBot}<span style="color:#555;font-size:10px"> [BOT]</span>{/if}
-      </span>
-      <span class="pclass" style="color:{color}">{player.className}</span>
+        {#if player.isBot}<span style="color:#555;font-size:9px"> [BOT]</span>{/if}
+      </div>
+      <div class="roster-hp">Full</div>
     </div>
   {/each}
 {/if}

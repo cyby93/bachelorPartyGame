@@ -75,24 +75,30 @@
           disabled={!canUpgrade}
           onclick={() => { if (canUpgrade) { chosen = true; onupgrade?.(skill.skillIndex) } }}
         >
-          <div class="skill-header">
-            <span class="icon">{skill.icon}</span>
-            <span class="name">{skill.name}</span>
-            <span class="tier">{skill.currentTier}/{skill.maxTier}</span>
-          </div>
-          {#if canUpgrade}
-            <div class="changes">
-              {#each skill.preview.changes as change}
-                {@const delta = change.to - change.from}
-                {@const sign = delta >= 0 ? '+' : ''}
-                <span class="change" class:positive={delta >= 0} class:negative={delta < 0}>
-                  {formatPath(change.path)}: {formatVal(change.from)} → {formatVal(change.to)} ({sign}{formatVal(delta)})
-                </span>
-              {/each}
-            </div>
+          {#if skill.iconFile}
+            <img class="skill-img" src="/icons/abilities/{skill.iconFile}.jpg" alt={skill.name} />
           {:else}
-            <div class="changes"><span class="maxed-label">MAX</span></div>
+            <span class="skill-img skill-img-fallback">{skill.icon}</span>
           {/if}
+          <div class="skill-body">
+            <div class="skill-header">
+              <span class="name">{skill.name}</span>
+              <span class="tier">{skill.currentTier}/{skill.maxTier}</span>
+            </div>
+            {#if canUpgrade}
+              <div class="changes">
+                {#each skill.preview.changes as change}
+                  {@const delta = change.to - change.from}
+                  {@const sign = delta >= 0 ? '+' : ''}
+                  <span class="change" class:positive={delta >= 0} class:negative={delta < 0}>
+                    {formatPath(change.path)}: {formatVal(change.from)} → {formatVal(change.to)} ({sign}{formatVal(delta)})
+                  </span>
+                {/each}
+              </div>
+            {:else}
+              <div class="changes"><span class="maxed-label">MAX</span></div>
+            {/if}
+          </div>
         </button>
       {/each}
     </div>
@@ -131,8 +137,9 @@
 
   .skill-card {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
+    flex-direction: row;
+    gap: 8px;
+    align-items: flex-start;
     padding: 8px 10px;
     border-radius: var(--rn-radius-md);
     border: 2px solid var(--rn-bg-surface);
@@ -153,15 +160,38 @@
     cursor: default;
   }
 
+  .skill-img {
+    width: 52px;
+    height: 52px;
+    border-radius: var(--rn-radius-sm);
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .skill-img-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    background: rgba(255,255,255,0.05);
+  }
+
+  .skill-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
   .skill-header {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
   }
 
-  .icon { font-size: 18px; }
-  .name { font-weight: bold; flex: 1; }
-  .tier { font-size: 11px; color: var(--rn-text-dim); }
+  .name { font-weight: bold; flex: 1; font-size: 12px; }
+  .tier { font-size: 11px; color: var(--rn-text-dim); flex-shrink: 0; }
 
   .changes {
     display: flex;

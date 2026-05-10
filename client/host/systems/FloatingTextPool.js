@@ -63,6 +63,10 @@ export default class FloatingTextPool {
       t.text = `+${displayAmount}`
       t.style.fill = '#2ecc71'
       t.scale.set(0.9)
+    } else if (type === 'warlockBuff') {
+      t.text = '+'
+      t.style.fill = '#9b59b6'
+      t.scale.set(1.5)
     } else {
       t.text = `${displayAmount}`
       t.style.fill = '#ff4444'
@@ -76,6 +80,7 @@ export default class FloatingTextPool {
       text: t,
       startX: t.x,
       startY: t.y,
+      baseScale: t.scale.x,
       elapsed: 0,
     })
   }
@@ -99,7 +104,7 @@ export default class FloatingTextPool {
       entry.text.alpha = progress > 0.6 ? 1 - (progress - 0.6) / 0.4 : 1
       // Scale pop at start
       if (progress < 0.1) {
-        entry.text.scale.set(1 + (1 - progress / 0.1) * 0.3)
+        entry.text.scale.set(entry.baseScale * (1 + (1 - progress / 0.1) * 0.3))
       }
     }
   }

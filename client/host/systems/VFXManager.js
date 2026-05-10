@@ -40,6 +40,7 @@ export default class VFXManager {
   _buildHandlers() {
     const os = this.oneShot
     const ps = this.particles
+    const ft = this.floatingText
 
     // ── Named-skill handlers (highest priority) ──────────────────────────────
     const skills = [
@@ -72,6 +73,18 @@ export default class VFXManager {
     })
     this._typeHandlers.set('BUFF', (d) => {
       if (d.subtype === 'BLOOD_PROPHET') { os.bloodProphetBuff(d.x, d.y, d.radius || 180); return }
+      if (d.subtype === 'WARLOCK_CHANNEL') {
+        const count = d.warlockCount ?? 1
+        for (let i = 0; i < count; i++) {
+          ft.spawn(
+            d.x + (Math.random() - 0.5) * 50,
+            d.y - 20 + (Math.random() - 0.5) * 30,
+            0,
+            'warlockBuff'
+          )
+        }
+        return
+      }
       os.impactFlash(d.x, d.y, d.color)
     })
     this._typeHandlers.set('TELEPORT', (d) => {

@@ -82,8 +82,8 @@
   }
 
   .options {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 8px;
     width: 100%;
     max-width: 400px;

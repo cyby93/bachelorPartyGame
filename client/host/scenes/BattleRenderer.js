@@ -910,6 +910,7 @@ export default class BattleRenderer extends BaseRenderer {
         const container  = new Container()
         const sprite     = new Sprite(Assets.get(pylon.state === 'active' ? 'pylon_active' : 'pylon_inactive'))
         sprite.anchor.set(0.5)
+        sprite.scale.set(1.5)
         container.addChild(sprite)
         const chargeArc  = new Graphics()
         container.addChild(chargeArc)
@@ -930,10 +931,10 @@ export default class BattleRenderer extends BaseRenderer {
 
       // Pulsing glow scale on active pylon
       if (pylon.state === 'active') {
-        const pulse = 1 + 0.06 * Math.sin(t * 5)
+        const pulse = 1.5 + 0.06 * Math.sin(t * 5)
         entry.sprite.scale.set(pulse)
       } else {
-        entry.sprite.scale.set(1)
+        entry.sprite.scale.set(1.5)
       }
 
       // Charge arc around inactive pylon
@@ -941,7 +942,7 @@ export default class BattleRenderer extends BaseRenderer {
       if (pylon.state === 'inactive' && pylon.charges > 0) {
         const pct   = pylon.charges / 20
         const alpha = 0.5 + 0.3 * Math.sin(t * 3)
-        entry.chargeArc.arc(0, 0, 36, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct)
+        entry.chargeArc.arc(0, 0, 54, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct)
         entry.chargeArc.stroke({ color: 0x44ddff, width: 3, alpha })
       }
     }

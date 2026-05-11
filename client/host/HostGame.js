@@ -257,6 +257,7 @@ export default class HostGame {
     if (state.gates) this.knownState.gates = state.gates
     if (state.buildings) this.knownState.buildings = state.buildings
     if (state.npcs) this.knownState.npcs = state.npcs
+    if (state.pylons) this.knownState.pylons = state.pylons
   }
 
   /** Incremental delta received every server tick. */
@@ -300,6 +301,7 @@ export default class HostGame {
     if ('gates'     in delta)      this.knownState.gates       = delta.gates     ?? []
     if ('buildings' in delta)      this.knownState.buildings   = delta.buildings ?? []
     if ('npcs'      in delta)      this.knownState.npcs        = delta.npcs      ?? []
+    if ('pylons'    in delta)      this.knownState.pylons      = delta.pylons    ?? []
   }
 
   addPlayer(dto) {

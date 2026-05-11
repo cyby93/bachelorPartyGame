@@ -1,6 +1,4 @@
 ## Upgrades
-- Ability cooldowns should be shown on the character overhead display (brainstorming needs together)
-- On abilties that can be self-casted (regrowth, chain heal etc.) should be indicated on pre-cast (brainstorm needed)
 - abilities that target enemies on hold (moonfire, corruption) should be indicated better (brainstorm needed)
 
 ## Connection

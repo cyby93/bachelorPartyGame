@@ -1723,10 +1723,10 @@ export default class SkillSystem {
 
   // ── Internal projectile spawner ────────────────────────────────────────────
 
-  /** Find first enemy in the aim direction within range (for BEAM targeting). */
+  /** Find enemy most aligned with aim direction within range (for BEAM targeting). */
   _findBeamTarget(gs, player, v, range) {
     let best = null
-    let bestDist = Infinity
+    let bestPerp = Infinity
 
     const checkTarget = (target) => {
       if (target.isDead) return
@@ -1734,10 +1734,10 @@ export default class SkillSystem {
       const dy = target.y - player.y
       const dist = Math.hypot(dx, dy)
       if (dist > range || dist < 5) return
-      // Check angle — must be within ~45° of aim direction
       const dot = (dx * v.x + dy * v.y) / dist
-      if (dot < 0.5) return   // cos(60°) ≈ 0.5
-      if (dist < bestDist) { bestDist = dist; best = target }
+      if (dot < 0.5) return   // must be within ~60° cone
+      const perpDist = dist * Math.sqrt(Math.max(0, 1 - dot * dot))
+      if (perpDist < bestPerp) { bestPerp = perpDist; best = target }
     }
 
     gs.enemies.forEach(e => checkTarget(e))
@@ -1780,24 +1780,26 @@ export default class SkillSystem {
     return best
   }
 
-  /** Find closest ally in the aim direction within range (for BUFF/TARGETED ally-targeting). */
+  /** Find ally most aligned with aim direction within range (for BUFF/TARGETED ally-targeting). */
   _findAllyForBuff(gs, player, v, range = 400) {
-    let best = null, bestDist = Infinity
+    let best = null, bestPerp = Infinity
     gs.players.forEach(p => {
       if (p.isDead || p.isHost || p.id === player.id) return
       const dx = p.x - player.x, dy = p.y - player.y
       const dist = Math.hypot(dx, dy)
       if (dist > range || dist < 5) return
-      if ((dx * v.x + dy * v.y) / dist < 0.5) return
-      if (dist < bestDist) { bestDist = dist; best = p }
+      const dot = (dx * v.x + dy * v.y) / dist
+      if (dot < 0.5) return
+      const perpDist = dist * Math.sqrt(Math.max(0, 1 - dot * dot))
+      if (perpDist < bestPerp) { bestPerp = perpDist; best = p }
     })
     return best
   }
 
-  /** Find first ally in the aim direction within range (for TARGETED/HEAL_ALLY). */
+  /** Find ally most aligned with aim direction within range (for TARGETED/HEAL_ALLY). */
   _findRayAlly(gs, player, v, range) {
     let best = null
-    let bestDist = Infinity
+    let bestPerp = Infinity
 
     gs.players.forEach(p => {
       if (p.isDead || p.isHost || p.id === player.id) return
@@ -1807,7 +1809,8 @@ export default class SkillSystem {
       if (dist > range || dist < 5) return
       const dot = (dx * v.x + dy * v.y) / dist
       if (dot < 0.5) return
-      if (dist < bestDist) { bestDist = dist; best = p }
+      const perpDist = dist * Math.sqrt(Math.max(0, 1 - dot * dot))
+      if (perpDist < bestPerp) { bestPerp = perpDist; best = p }
     })
 
     gs.npcs?.forEach(npc => {
@@ -1818,7 +1821,8 @@ export default class SkillSystem {
       if (dist > range || dist < 5) return
       const dot = (dx * v.x + dy * v.y) / dist
       if (dot < 0.5) return
-      if (dist < bestDist) { bestDist = dist; best = npc }
+      const perpDist = dist * Math.sqrt(Math.max(0, 1 - dot * dot))
+      if (perpDist < bestPerp) { bestPerp = perpDist; best = npc }
     })
 
     return best

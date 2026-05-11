@@ -393,6 +393,8 @@ export default class HostGame {
       'enemy_gaterepairer', 'enemy_leviathan', 'enemy_warlock',
       'enemy_flameofazzinoth', 'enemy_shadowdemon', 'enemy_shadowfiend',
       'boss_akama',
+      'pylon_inactive',
+      'pylon_active',
       'projectile_default',
       'projectile_avengers_shield',
       'projectile_fireball',

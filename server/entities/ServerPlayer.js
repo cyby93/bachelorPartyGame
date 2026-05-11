@@ -47,6 +47,7 @@ export default class ServerPlayer {
     this.shieldSkillIndex = -1     // which skill slot holds the active shield
 
     this.isAiming    = false
+    this.aimSelf     = false
     this.lastAimTime = 0
 
     // Derived stats (rebuilt by rebuildStats after every effect change)
@@ -100,6 +101,7 @@ export default class ServerPlayer {
 
     if (this.isAiming && (Date.now() - this.lastAimTime) > 200) {
       this.isAiming = false
+      this.aimSelf  = false
     }
 
     // Prefer active aim direction for facing, otherwise fall back to movement.
@@ -233,6 +235,7 @@ export default class ServerPlayer {
     if (cur.comboPoints  !== prev.comboPoints)  delta.comboPoints  = cur.comboPoints
 
     if (cur.isAiming !== prev.isAiming) delta.isAiming = cur.isAiming
+    if (cur.aimSelf  !== prev.aimSelf)  delta.aimSelf  = cur.aimSelf
 
     // Shield state
     if (cur.shieldActive !== prev.shieldActive) delta.shieldActive = cur.shieldActive
@@ -283,6 +286,7 @@ export default class ServerPlayer {
       isInvisible:  this.isInvisible,
       comboPoints:  this.comboPoints,
       isAiming:     this.isAiming,
+      aimSelf:      this.aimSelf,
       shieldActive:  this.shieldActive,
       shieldAngle:  +this.shieldAngle.toFixed(3),
       shieldArc:    +this.shieldArc.toFixed(3),

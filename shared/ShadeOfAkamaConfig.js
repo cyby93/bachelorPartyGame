@@ -31,4 +31,12 @@ export const SHADE_OF_AKAMA_CONFIG = {
   targetNPC: 'akama',
 
   spriteType: 'akama',
+
+  pylons: {
+    spawnDelay:      8000,   // ms delay after a pylon despawns before the next one spawns
+    chargeRadius:    80,     // px — proximity range to gain charges
+    chargesRequired: 20,
+    healPctPerSec:   0.15,   // fraction of Akama's maxHp healed per second
+    healDuration:    4000,   // ms the active pylon heals for (= 60% total)
+  },
 }

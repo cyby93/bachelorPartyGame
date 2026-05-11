@@ -40,6 +40,13 @@ export function npcsDTO(gs) {
   return arr
 }
 
+export function pylonsDTO(gs) {
+  if (gs._pylons.size === 0) return []
+  const arr = []
+  gs._pylons.forEach(p => arr.push({ id: p.id, x: p.x, y: p.y, state: p.state, charges: p.charges }))
+  return arr
+}
+
 // ── Private helpers ──────────────────────────────────────────────────────────
 
 function waveInfoDTO(gs) {
@@ -105,6 +112,7 @@ export function buildFullState(gs) {
     aoeZones: gs.skillSystem.getZonesDTO(),
     waveInfo: waveInfoDTO(gs),
     stats:    gs.levelStats,
+    pylons:   pylonsDTO(gs),
   }
 }
 
@@ -168,5 +176,6 @@ export function buildDeltaState(gs) {
     waveInfo:         waveInfoDTO(gs),
     eyeBeams:         eyeBeamsDTO(gs),
     illidanFireballs: gs._illidanEncounter?.getFireballsDTO() ?? [],
+    pylons:           pylonsDTO(gs),
   }
 }

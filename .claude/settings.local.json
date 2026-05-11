@@ -90,7 +90,12 @@
       "WebFetch(domain:i.redd.it)",
       "Bash(sed -n '60,78p' D:/Games/bachelorPartyGame/shared/LevelConfig.js)",
       "Bash(sed -n '143,155p' D:/Games/bachelorPartyGame/shared/LevelConfig.js)",
-      "Bash(sed -n '215,256p' D:/Games/bachelorPartyGame/shared/LevelConfig.js)"
+      "Bash(sed -n '215,256p' D:/Games/bachelorPartyGame/shared/LevelConfig.js)",
+      "mcp__pixellab__create_object",
+      "mcp__pixellab__get_object",
+      "mcp__pixellab__list_objects",
+      "Bash(mkdir -p pylon_frames)",
+      "Bash(unzip -o pylon_active.zip -d pylon_frames)"
     ]
   },
   "enableAllProjectMcpServers": true,

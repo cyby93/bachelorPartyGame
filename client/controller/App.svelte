@@ -236,8 +236,8 @@
     socket.emit(EVENTS.INPUT_SKILL, { index, vector, action })
   }
 
-  function handleAim({ vector }) {
-    socket.emit(EVENTS.INPUT_AIM, { vector })
+  function handleAim({ vector, selfZone }) {
+    socket.emit(EVENTS.INPUT_AIM, { vector, selfZone: selfZone ?? false })
   }
 
   function handleHighlight() {

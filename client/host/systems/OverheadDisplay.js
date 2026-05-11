@@ -35,7 +35,8 @@ const EFFECT_ICONS = {
 export default class OverheadDisplay {
   /**
    * @param {Container} entityContainer - the entity's main container
-   * @param {object} config - { yOffset, showCastBar, showStatusIcons, showComboPips }
+   * @param {object} config - { yOffset, showCastBar, showStatusIcons, showComboPips, skills }
+   *   skills: array from SkillDatabase for this class — dots are created for entries with dotColor
    */
   constructor(entityContainer, config = {}) {
     this._entity = entityContainer
@@ -88,12 +89,47 @@ export default class OverheadDisplay {
     this._comboBarGfx     = null
     this._lastComboPoints = -1
     this._lastComboMax    = -1
+    const HP_BAR_H = 5
+    const COMBO_H  = 3
     if (this._config.showComboPips) {
       this._comboBarGfx = new Graphics()
-      // Sit flush below the HP bar (yOffset is the HP bar's Y, bar height is 5px)
-      const HP_BAR_H = 5
-      this._comboBarGfx.position.set(0, this._config.yOffset + HP_BAR_H)
+      // Same slot as the cast bar — no class has both
+      this._comboBarGfx.position.set(0, this._config.yOffset - 6)
       this._container.addChild(this._comboBarGfx)
+    }
+
+    // ── Cooldown bar ──────────────────────────────────────────────
+    // A single bar (same width as HP bar) divided into N equal segments,
+    // one per skill with dotColor. Each segment fills on CD start and drains to empty.
+    this._cdSegments = []   // [{ color, skillIndex, bgX, segW }] — layout info for redraw
+    this._cdBarGfx   = null
+    const skills    = config.skills ?? []
+    const cdSlots   = skills
+      .map((s, i) => ({ color: s.dotColor, skillIndex: i }))
+      .filter(s => s.color != null)
+
+    if (cdSlots.length > 0) {
+      const BAR_W      = 44
+      const SEG_H      = 4
+      const SEG_GAP    = 1
+      const barY       = this._config.yOffset + HP_BAR_H
+      const segW       = (BAR_W - (cdSlots.length - 1) * SEG_GAP) / cdSlots.length
+
+      this._cdBarGfx = new Graphics()
+      this._cdBarGfx.position.set(-BAR_W / 2, barY)
+      this._container.addChild(this._cdBarGfx)
+
+      this._cdSegH = SEG_H
+      this._cdSegW = segW
+      this._cdSegGap = SEG_GAP
+
+      for (let i = 0; i < cdSlots.length; i++) {
+        const bgX = i * (segW + SEG_GAP)
+        this._cdSegments.push({ color: cdSlots[i].color, skillIndex: cdSlots[i].skillIndex, bgX })
+      }
+
+      // Draw initial empty state (backgrounds only)
+      this._drawCdBar({})
     }
   }
 
@@ -224,6 +260,33 @@ export default class OverheadDisplay {
       const fillW = BAR_W * pct
       this._comboBarGfx.rect(-BAR_W / 2, 0, fillW, BAR_H)
       this._comboBarGfx.fill({ color: 0xffdd00, alpha: 0.95 })
+    }
+  }
+
+  /**
+   * Update cooldown bar fills.
+   * snapshot: { skillIndex: { remaining: ms, total: ms }, ... }
+   */
+  setCooldowns(snapshot) {
+    if (!this._cdBarGfx) return
+    this._drawCdBar(snapshot)
+  }
+
+  _drawCdBar(snapshot) {
+    this._cdBarGfx.clear()
+    for (const seg of this._cdSegments) {
+      const cd  = snapshot[seg.skillIndex]
+      const pct = cd && cd.total > 0 ? Math.min(1, cd.remaining / cd.total) : 0
+
+      // Background
+      this._cdBarGfx.rect(seg.bgX, 0, this._cdSegW, this._cdSegH)
+      this._cdBarGfx.fill({ color: 0x111111, alpha: 0.6 })
+
+      // Colored fill — drains left-to-right as cooldown expires
+      if (pct > 0) {
+        this._cdBarGfx.rect(seg.bgX, 0, this._cdSegW * pct, this._cdSegH)
+        this._cdBarGfx.fill({ color: seg.color, alpha: 0.9 })
+      }
     }
   }
 

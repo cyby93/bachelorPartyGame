@@ -100,10 +100,15 @@ export default class GameServer {
     this.buildingSpawnSystem = null
     this.portalBeamSystem    = null
 
-    // Level 4: warlock/boss phase tracking
+    // Level 5: warlock/boss phase tracking
     this._bossPhase = 1
     this._warlockCount = 0
     this._lastWarlockBuffVfxTime = 0
+
+    // Level 5: healing pylons (Phase 2)
+    this._pylons         = new Map()   // id → pylon object
+    this._pylonIdSeq     = 0
+    this._pylonNextSpawn = null        // timestamp to spawn next pylon (null = inactive)
 
     this.minionSpawnSystem  = null   // ambient minions (activated after dialog)
     this._illidanEncounter  = null   // IllidanEncounter instance for Level 6
@@ -176,12 +181,13 @@ export default class GameServer {
     socket.on(EVENTS.INPUT_MOVE,      data => this._onInputMove(socket, data))
     socket.on(EVENTS.INPUT_SKILL,     data => this._onInputSkill(socket, data))
     socket.on(EVENTS.INPUT_HIGHLIGHT, ()   => this._onInputHighlight(socket))
-    socket.on(EVENTS.INPUT_AIM,     ({ vector }) => {
+    socket.on(EVENTS.INPUT_AIM,     ({ vector, selfZone }) => {
       const player = this.players.get(socket.id)
       if (player && vector) {
         player.aimAngle    = Math.atan2(vector.y, vector.x)
         player.angle       = player.aimAngle
         player.isAiming    = true
+        player.aimSelf     = !!selfZone
         player.lastAimTime = Date.now()
         if (player.shieldActive) {
           player.shieldAngle = player.aimAngle
@@ -788,6 +794,10 @@ export default class GameServer {
     this.skillSystem.activeZones    = []
     this.skillSystem._pendingBursts = []
 
+    this._pylons.clear()
+    this._pylonIdSeq     = 0
+    this._pylonNextSpawn = null
+
     // Encounter systems
     this.minionSpawnSystem = null
     this._illidanEncounter = null
@@ -895,6 +905,9 @@ export default class GameServer {
       this._bossPhase    = 1
       this._warlockCount = 0
       this._lastWarlockBuffVfxTime = 0
+      this._pylons.clear()
+      this._pylonIdSeq     = 0
+      this._pylonNextSpawn = null
       this.currentLevelIndex = -1
       this.currentLevel      = null
       this.spawnSystem       = null
@@ -1074,6 +1087,11 @@ export default class GameServer {
       // Update NPCs (Akama attacks boss)
       if (this.npcs.size > 0) {
         this._updateNPCs(dt, now)
+      }
+
+      // Update healing pylons (Level 5 Phase 2)
+      if (this._pylonNextSpawn !== null || this._pylons.size > 0) {
+        this._updatePylons(dt, now)
       }
 
       // Update gates (check destruction, advance sequence)
@@ -1576,6 +1594,82 @@ export default class GameServer {
     // Activate phase-gated spawning
     if (this.spawnSystem) {
       this.spawnSystem.setPhase(2)
+    }
+
+    // Start pylon cycle — first pylon spawns immediately
+    this._pylonNextSpawn = Date.now()
+  }
+
+  _spawnPylon() {
+    const cfg = SHADE_OF_AKAMA_CONFIG.pylons
+    const margin = 150
+    const x = margin + Math.random() * (this.arenaWidth  - margin * 2)
+    const y = margin + Math.random() * (this.arenaHeight - margin * 2)
+    const id = `pylon_${++this._pylonIdSeq}`
+    this._pylons.set(id, {
+      id,
+      x: Math.round(x),
+      y: Math.round(y),
+      state:        'inactive',
+      charges:      0,
+      activatedAt:  null,
+      _playerAccum: {},   // playerId → accumulated seconds in range (server-only)
+    })
+    this.io.emit(EVENTS.SKILL_FIRED, { type: 'PYLON_SPAWN', x: Math.round(x), y: Math.round(y) })
+    console.log(`[~] Pylon ${id} spawned at (${Math.round(x)}, ${Math.round(y)})`)
+    return id
+  }
+
+  _updatePylons(dt, now) {
+    if (this._bossPhase < 2) return
+
+    // Spawn next pylon if due and none active/inactive exist
+    if (this._pylonNextSpawn !== null && now >= this._pylonNextSpawn && this._pylons.size === 0) {
+      this._pylonNextSpawn = null
+      this._spawnPylon()
+    }
+
+    const cfg    = SHADE_OF_AKAMA_CONFIG.pylons
+    const akama  = this.npcs.get('akama')
+
+    for (const [id, pylon] of this._pylons) {
+      if (pylon.state === 'inactive') {
+        // Charge accumulation — one charge per player per second of proximity
+        this.players.forEach(p => {
+          if (p.isHost || p.isDead) return
+          const dist = Math.hypot(p.x - pylon.x, p.y - pylon.y)
+          if (dist <= cfg.chargeRadius) {
+            pylon._playerAccum[p.id] = (pylon._playerAccum[p.id] ?? 0) + dt
+            while (pylon._playerAccum[p.id] >= 1) {
+              pylon.charges++
+              pylon._playerAccum[p.id] -= 1
+            }
+          } else {
+            pylon._playerAccum[p.id] = 0
+          }
+        })
+
+        if (pylon.charges >= cfg.chargesRequired) {
+          pylon.state       = 'active'
+          pylon.charges     = cfg.chargesRequired
+          pylon.activatedAt = now
+          this.io.emit(EVENTS.SKILL_FIRED, { type: 'PYLON_ACTIVATED', id, x: pylon.x, y: pylon.y })
+          console.log(`[~] Pylon ${id} activated`)
+        }
+      } else if (pylon.state === 'active') {
+        // Heal Akama each tick
+        if (akama && !akama.isDead) {
+          const healPerTick = akama.maxHp * cfg.healPctPerSec * dt
+          akama.hp = Math.min(akama.maxHp, akama.hp + healPerTick)
+        }
+
+        if (now - pylon.activatedAt >= cfg.healDuration) {
+          this._pylons.delete(id)
+          this.io.emit(EVENTS.SKILL_FIRED, { type: 'PYLON_EXPIRED', id })
+          console.log(`[~] Pylon ${id} expired — scheduling next in ${cfg.spawnDelay}ms`)
+          this._pylonNextSpawn = now + cfg.spawnDelay
+        }
+      }
     }
   }
 

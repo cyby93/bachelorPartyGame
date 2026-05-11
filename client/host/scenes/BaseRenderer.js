@@ -611,6 +611,10 @@ export default class BaseRenderer {
     this.vfx.oneShot.aoeFlash(data.x, data.y, data.radius, data.color)
   }
 
+  onCooldown(data) {
+    this.playerSprites.get(data.playerId)?.onCooldown?.(data)
+  }
+
   onPlayerAdded(p) {
     if (p.isHost || this.playerSprites.has(p.id)) return
     const sprite = new PlayerSprite(p)

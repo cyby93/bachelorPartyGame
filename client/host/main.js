@@ -546,6 +546,10 @@ socket.on(EVENTS.TRANSITION_VFX, data => {
 
 // ── VFX events ───────────────────────────────────────────────────────────
 
+socket.on(EVENTS.COOLDOWN, data => {
+  game.activeRenderer?.onCooldown?.(data)
+})
+
 socket.on(EVENTS.SKILL_FIRED, data => {
   audio.handleSkillFired(data)
   game.activeRenderer?.onSkillFired?.(data)

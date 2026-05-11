@@ -101,7 +101,7 @@
 
        aimHeartbeat = setInterval(() => {
          if (joystickHeld && lastDistance > 8) {
-           onaim?.({ vector: lastVector })
+           onaim?.({ vector: lastVector, selfZone: skill?.selfCastFallback && lastDistance < 30 })
          }
        }, 100)
 
@@ -121,7 +121,7 @@
         lastVector = { x: data.vector.x, y: -data.vector.y }
       }
       lastDistance = data.distance ?? 0
-      onaim?.({ vector: lastVector })
+      onaim?.({ vector: lastVector, selfZone: skill?.selfCastFallback && lastDistance < 30 })
 
       if (isShieldHold) {
         // Activate shield when joystick dragged past threshold
@@ -151,7 +151,7 @@
       } else if (isCastHold) {
         cancelCast()
       } else if (!isFiller) {
-        if (skill?.selfCastFallback && lastDistance < 15) {
+        if (skill?.selfCastFallback && lastDistance < 30) {
           onskill?.({ index, vector: { x: 0, y: 0 } })   // self-cast sentinel
         } else if (lastDistance > 8) {
           onskill?.({ index, vector: lastVector })

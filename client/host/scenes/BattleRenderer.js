@@ -66,10 +66,16 @@ export default class BattleRenderer extends BaseRenderer {
     this._eyeBeamGfx   = new Graphics()
     this._entityRoot.addChild(this._eyeBeamGfx)
 
-    // Warlock channeling beams (Level 4 Phase 1: warlocks → Shade)
+    // Warlock channeling beams (Level 5 Phase 1: warlocks → Shade)
     this._warlockBeamGfx = new Graphics()
     this._entityRoot.addChild(this._warlockBeamGfx)
     this._warlockBeamTime = 0
+
+    // Healing pylons (Level 5 Phase 2)
+    this.pylonGfx       = new Map()   // pylonId → { container, chargeArc }
+    this._pylonBeamGfx  = new Graphics()
+    this._entityRoot.addChild(this._pylonBeamGfx)
+    this._pylonTime     = 0
 
     // Level 2: Portal Beam graphics
     this._portalBeamGfx  = new Graphics()
@@ -171,6 +177,12 @@ export default class BattleRenderer extends BaseRenderer {
     // Warlock beams
     this._warlockBeamGfx.clear()
     this._warlockBeamTime = 0
+
+    // Pylons
+    this.pylonGfx.forEach(e => e.container.destroy({ children: true }))
+    this.pylonGfx.clear()
+    this._pylonBeamGfx.clear()
+    this._pylonTime = 0
 
     // Portal beams
     this._portalBeamGfx.clear()
@@ -278,9 +290,13 @@ export default class BattleRenderer extends BaseRenderer {
     // Portal Beams (Level 2)
     this._renderPortalBeams(dt)
 
-    // Warlock channeling beams (Level 4 Phase 1)
+    // Warlock channeling beams (Level 5 Phase 1)
     this._warlockBeamTime = (this._warlockBeamTime + dt) % 10
     this._renderWarlockBeams(state)
+
+    // Healing pylons (Level 5 Phase 2)
+    this._pylonTime = (this._pylonTime + dt) % 10
+    this._renderPylons(state, dt)
 
     // Boss
     if (state.boss && !state.boss.isDead) {
@@ -881,6 +897,99 @@ export default class BattleRenderer extends BaseRenderer {
   }
 
   // ── Warlock channeling beams (Level 4 Phase 1) ────────────────────────────
+
+  _renderPylons(state, dt) {
+    const pylons = state.pylons ?? []
+    const t      = this._pylonTime
+    const activeIds = new Set()
+
+    for (const pylon of pylons) {
+      activeIds.add(pylon.id)
+
+      if (!this.pylonGfx.has(pylon.id)) {
+        const container  = new Container()
+        const sprite     = new Sprite(Assets.get(pylon.state === 'active' ? 'pylon_active' : 'pylon_inactive'))
+        sprite.anchor.set(0.5)
+        container.addChild(sprite)
+        const chargeArc  = new Graphics()
+        container.addChild(chargeArc)
+        container.position.set(pylon.x, pylon.y)
+        this._entityRoot.addChild(container)
+        this.pylonGfx.set(pylon.id, { container, sprite, chargeArc })
+      }
+
+      const entry = this.pylonGfx.get(pylon.id)
+      entry.container.position.set(pylon.x, pylon.y)
+
+      // Swap sprite when state changes to active
+      const wantKey = pylon.state === 'active' ? 'pylon_active' : 'pylon_inactive'
+      if (entry._lastState !== pylon.state) {
+        entry.sprite.texture = Assets.get(wantKey)
+        entry._lastState     = pylon.state
+      }
+
+      // Pulsing glow scale on active pylon
+      if (pylon.state === 'active') {
+        const pulse = 1 + 0.06 * Math.sin(t * 5)
+        entry.sprite.scale.set(pulse)
+      } else {
+        entry.sprite.scale.set(1)
+      }
+
+      // Charge arc around inactive pylon
+      entry.chargeArc.clear()
+      if (pylon.state === 'inactive' && pylon.charges > 0) {
+        const pct   = pylon.charges / 20
+        const alpha = 0.5 + 0.3 * Math.sin(t * 3)
+        entry.chargeArc.arc(0, 0, 36, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct)
+        entry.chargeArc.stroke({ color: 0x44ddff, width: 3, alpha })
+      }
+    }
+
+    // Remove stale pylon graphics
+    this.pylonGfx.forEach((entry, id) => {
+      if (!activeIds.has(id)) {
+        entry.container.destroy({ children: true })
+        this.pylonGfx.delete(id)
+      }
+    })
+
+    // Healing beam from active pylon to Akama
+    this._pylonBeamGfx.clear()
+    const activePylon = pylons.find(p => p.state === 'active')
+    if (activePylon) {
+      const akama = (state.npcs ?? []).find(n => n.id === 'akama' && !n.isDead)
+      if (akama) {
+        const sx   = activePylon.x
+        const sy   = activePylon.y
+        const tx   = akama.x
+        const ty   = akama.y
+        const beam = 0.55 + 0.25 * Math.sin(t * 6)
+
+        // Outer glow
+        this._pylonBeamGfx.moveTo(sx, sy)
+        this._pylonBeamGfx.lineTo(tx, ty)
+        this._pylonBeamGfx.stroke({ color: 0xffdd88, width: 8, alpha: 0.12 })
+
+        // Core beam
+        this._pylonBeamGfx.moveTo(sx, sy)
+        this._pylonBeamGfx.lineTo(tx, ty)
+        this._pylonBeamGfx.stroke({ color: 0xffcc44, width: 3, alpha: beam })
+
+        // Flowing dots pylon → Akama (healing flows toward Akama)
+        const dx = tx - sx
+        const dy = ty - sy
+        for (let i = 0; i < 5; i++) {
+          const frac = ((i / 5) + t * 0.35) % 1
+          const px   = sx + dx * frac
+          const py   = sy + dy * frac
+          const a    = Math.sin(frac * Math.PI) * 0.9
+          this._pylonBeamGfx.circle(px, py, 3)
+          this._pylonBeamGfx.fill({ color: 0xffffff, alpha: a })
+        }
+      }
+    }
+  }
 
   _renderWarlockBeams(state) {
     this._warlockBeamGfx.clear()

@@ -9,7 +9,8 @@
  *   │   ├── shapeSprite  (class sprite; texture swapped per direction for directional classes)
  *   │   └── flashGfx
  *   ├── shieldGfx
- *   ├── aimArrow       (child Graphics — rotated to player.aimAngle)
+ *   ├── aimArrow       (child Graphics — rotated to player.aimAngle, hidden when self-casting)
+ *   ├── selfCastRing   (child Graphics — pulsing halo shown instead of arrow when self-casting)
  *   └── statusEffects  (child Container — move this to reposition all overhead UI together)
  *       ├── nameText   (above shape, always upright)
  *       ├── hpBarBg    (background bar, drawn once)
@@ -141,18 +142,31 @@ export default class PlayerSprite {
     this._shieldVisible = false
 
     // ── Aim arrow ─────────────────────────────────────────────────────────
+    this._classColor   = this._classData.color ?? '#ffffff'
     this._aimArrow = new Graphics()
     this._aimArrow.alpha = 0
     this._drawAimArrow()
     this.container.addChild(this._aimArrow)
+
+    // ── Self-cast arc (half-circle at feet, replaces arrow when aimSelf=true) ──
+    this._selfCastRing = new Graphics()
+    this._selfCastRing.arc(0, 24, 20, Math.PI * 15 / 8, Math.PI * 9 / 8)
+    this._selfCastRing.stroke({ color: this._classColor, width: 1.5, alpha: 0.7 })
+    this._selfCastRing.alpha = 0
+    this.container.addChild(this._selfCastRing)
+
     this._aimPulse = 0
 
-    // ── Overhead display (cast bar + status icons + combo pips for Rogue) ─────
+    // ── Cooldown tracking (populated via onCooldown events) ──────────────────
+    this._cooldownEnds = {}   // skillIndex → { endTime, totalMs }
+
+    // ── Overhead display (cast bar + status icons + combo pips + CD dots) ────
     this.overhead = new OverheadDisplay(this._statusEffects, {
       yOffset: OVERHEAD_ZERO + BAR_H - 3,
       showCastBar: true,
       showStatusIcons: true,
       showComboPips: className === 'rogue',
+      skills: this._classData.skills ?? [],
     })
   }
 
@@ -215,9 +229,11 @@ export default class PlayerSprite {
     const HEAD_W     = 10
     const HEAD_H     = 9
 
+    const color = this._classColor ?? '#ffffff'
+
     // Stem
     g.rect(STEM_START, -STEM_H / 2, STEM_END - STEM_START, STEM_H)
-    g.fill({ color: 0xffffff, alpha: 0.9 })
+    g.fill({ color, alpha: 0.9 })
 
     // Arrowhead triangle — tip points right (= player forward in local space)
     g.poly([
@@ -225,7 +241,7 @@ export default class PlayerSprite {
       STEM_END,          -HEAD_H,
       STEM_END,           HEAD_H,
     ])
-    g.fill({ color: 0xffffff, alpha: 0.9 })
+    g.fill({ color, alpha: 0.9 })
   }
 
   // ── Ability animation trigger ─────────────────────────────────────────────
@@ -396,14 +412,22 @@ export default class PlayerSprite {
     }
     this._shieldVisible = shieldOn
 
-    // Aim arrow
+    // Aim indicator
     if (state.isAiming) {
-      this._aimArrow.rotation = state.aimAngle ?? state.angle ?? 0
       this._aimPulse += dt
-      this._aimArrow.alpha = 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(this._aimPulse * Math.PI * 2 / 0.6))
+      const pulse = 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(this._aimPulse * Math.PI * 2 / 0.6))
+      if (state.aimSelf) {
+        this._aimArrow.alpha = 0
+        this._selfCastRing.alpha = pulse
+      } else {
+        this._selfCastRing.alpha = 0
+        this._aimArrow.rotation = state.aimAngle ?? state.angle ?? 0
+        this._aimArrow.alpha = pulse
+      }
     } else {
       this._aimPulse = 0
       this._aimArrow.alpha = 0
+      this._selfCastRing.alpha = 0
     }
 
     // Agonizing Flame aura circle
@@ -438,7 +462,21 @@ export default class PlayerSprite {
     if (this._className === 'rogue') {
       this.overhead.setComboPoints(state.comboPoints ?? 0)
     }
+    if (Object.keys(this._cooldownEnds).length > 0) {
+      const now = Date.now()
+      const snapshot = {}
+      for (const [idx, cd] of Object.entries(this._cooldownEnds)) {
+        snapshot[idx] = { remaining: Math.max(0, cd.endTime - now), total: cd.totalMs }
+      }
+      this.overhead.setCooldowns(snapshot)
+    }
     this.overhead.update(dt)
+  }
+
+  /** Called when the server fires a skill:cooldown event for this player. */
+  onCooldown({ skillIndex, durationMs }) {
+    if (durationMs <= 0) return
+    this._cooldownEnds[skillIndex] = { endTime: Date.now() + durationMs, totalMs: durationMs }
   }
 
   destroy() {

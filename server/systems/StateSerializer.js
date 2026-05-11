@@ -128,16 +128,18 @@ export function buildYouPayload(player, cooldowns, scene) {
     hp:        Math.ceil(player.hp),
     cooldowns: cooldowns.playerExpiresAt(player.id),
     upgrades:  player.skillUpgrades ?? [0, 0, 0, 0],
+    ready:     !!player.ready,
     screen:    _resolveControllerScreen(scene),
   }
 }
 
 function _resolveControllerScreen(scene) {
   switch (scene) {
-    case 'staging':       return 'briefing'
-    case 'lobby':         return 'lobby'
+    case 'staging':          return 'briefing'
+    case 'lobby':            return 'lobby'
+    case 'trainingGrounds':  return 'game'
     case 'battle':
-    case 'bossFight':     return 'game'
+    case 'bossFight':        return 'game'
     case 'quiz':          return 'quiz'
     case 'levelComplete': return 'levelComplete'
     case 'result':        return 'end'

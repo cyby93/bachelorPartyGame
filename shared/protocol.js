@@ -75,6 +75,9 @@ export const EVENTS = {
   PLAYER_READY:  'game:player_ready',   // C→S: {} — player tapped "I GOT IT" in staging briefing
 
   // ── Host session controls ────────────────────────────────────────────────────
-  SESSION_RESET: 'host:session_reset',  // host→S: {} — nuke session, all players rejoin fresh
-  KICK:          'host:kick',           // host→S: { playerId } — remove one player
+  SESSION_RESET:   'host:session_reset',  // host→S: {} — nuke session, all players rejoin fresh
+  KICK:            'host:kick',           // host→S: { playerId } — remove one player
+
+  // ── Campaign entry ────────────────────────────────────────────────────────────
+  HOST_ENTER_RAID: 'host:enterRaid',      // host→S: {} — from training grounds into level 1
 }

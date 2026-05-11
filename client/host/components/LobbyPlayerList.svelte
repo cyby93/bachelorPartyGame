@@ -3,7 +3,8 @@
   import { CLASSES } from '../../../shared/ClassConfig.js'
 
   $: players = Object.values($gameState.players).filter(p => !p.isHost)
-  $: isStaging = $gameState.scene === 'staging'
+  $: showReadyBadge = $gameState.scene === 'staging' || $gameState.scene === 'lobby'
+  $: readyCount = players.filter(p => p.ready).length
 
   function kickPlayer(playerId) {
     const el = document.getElementById('player-list')
@@ -23,7 +24,7 @@
         {player.name}
         {#if player.isBot}<span style="color:#555;font-size:9px"> [BOT]</span>{/if}
       </div>
-      {#if isStaging}
+      {#if showReadyBadge}
         <span class="ready-badge" class:ready={player.ready}>{player.ready ? '✓' : '○'}</span>
         {#if !player.isBot}
           <button class="kick-btn" onclick={() => kickPlayer(player.id)} title="Kick {player.name}">✕</button>
@@ -33,6 +34,9 @@
       {/if}
     </div>
   {/each}
+  {#if showReadyBadge}
+    <p class="ready-count">{readyCount} / {players.length} ready</p>
+  {/if}
 {/if}
 
 <style>
@@ -57,4 +61,11 @@
     flex-shrink: 0;
   }
   .kick-btn:hover { background: rgba(255,80,80,0.12); color: #ff5050; }
+
+  .ready-count {
+    font-size: 12px;
+    color: var(--rn-text-dim, #5f7385);
+    text-align: center;
+    margin-top: 4px;
+  }
 </style>

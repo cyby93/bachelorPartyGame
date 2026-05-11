@@ -61,6 +61,7 @@ const menuPlayBtn    = document.getElementById('menu-play-btn')
 const selectedLevelNameEl = document.getElementById('selected-level-name')
 const prevLevelBtn   = document.getElementById('prev-level-btn')
 const nextLevelBtn   = document.getElementById('next-level-btn')
+const enterRaidBtn    = document.getElementById('enter-raid-btn')
 const quitCampaignBtn = document.getElementById('quit-campaign-btn')
 const skipDialogChk  = document.getElementById('skip-dialog-chk')
 const botAddBtn      = document.getElementById('bot-add-btn')
@@ -280,14 +281,22 @@ function setShellMode(mode) {
 
 menuPlayBtn?.addEventListener('click', () => {
   audio.init()
-  const serverScene = startBtn.dataset.scene ?? game.knownState.scene ?? 'lobby'
-  setShellMode(serverScene === 'battle' || serverScene === 'bossFight' ? 'gameplay' : 'lobby')
+  const serverScene = startBtn.dataset.scene ?? 'staging'
+  if (serverScene === 'staging') {
+    setShellMode('lobby')
+    socket.emit(EVENTS.START_GAME)
+  } else {
+    setShellMode(serverScene === 'battle' || serverScene === 'bossFight' ? 'gameplay' : 'lobby')
+  }
 })
 
 bindAudioControls()
 bindMenuAudioControls()
 
 setConnectionStatus('Connecting...', 'connecting')
+
+// ── Enter Raid ─────────────────────────────────────────────────────────────
+enterRaidBtn?.addEventListener('click', () => socket.emit(EVENTS.HOST_ENTER_RAID))
 
 // ── Quit Campaign ──────────────────────────────────────────────────────────
 quitCampaignBtn?.addEventListener('click', () => {
@@ -386,35 +395,45 @@ function setSceneControls(scene) {
   startBtn.dataset.scene = scene
 
   if (scene === 'battle' || scene === 'bossFight') setShellMode('gameplay')
-  else if (shellMode !== 'menu') setShellMode('lobby')
+  else if (scene !== 'staging') setShellMode('lobby')
 
   if (scene === 'staging') {
     startBtn.textContent   = 'START GAME'
     startBtn.style.display = ''
     startBtn.onclick       = () => socket.emit(EVENTS.START_GAME)
+    if (enterRaidBtn) enterRaidBtn.style.display = 'none'
     updateLobbyStartBtn()
   } else if (scene === 'lobby') {
-    startBtn.textContent = 'START GAME'
-    startBtn.disabled    = Object.values(game.knownState.players).filter(p => !p.isHost).length === 0
+    startBtn.textContent   = 'START CAMPAIGN'
+    startBtn.disabled      = Object.values(game.knownState.players).filter(p => !p.isHost).length === 0
     startBtn.style.display = ''
-    startBtn.onclick     = () => socket.emit(EVENTS.START_GAME)
+    startBtn.onclick       = () => socket.emit(EVENTS.START_GAME)
+    if (enterRaidBtn) enterRaidBtn.style.display = 'none'
     updateLevelDisplay()
+  } else if (scene === 'trainingGrounds') {
+    startBtn.style.display = 'none'
+    if (enterRaidBtn) {
+      enterRaidBtn.style.display = ''
+      enterRaidBtn.disabled = false
+    }
   } else if (scene === 'levelComplete') {
     startBtn.textContent   = 'CONTINUE'
     startBtn.disabled      = false
     startBtn.style.display = ''
     startBtn.onclick       = () => socket.emit(EVENTS.HOST_ADVANCE)
+    if (enterRaidBtn) enterRaidBtn.style.display = 'none'
   } else if (scene === 'quiz') {
-    // Hide button during quiz — host waits for players
     startBtn.style.display = 'none'
+    if (enterRaidBtn) enterRaidBtn.style.display = 'none'
   } else if (scene === 'result' || scene === 'gameover') {
     startBtn.textContent   = 'RESTART GAME'
     startBtn.disabled      = false
     startBtn.style.display = ''
     startBtn.onclick       = () => socket.emit(EVENTS.RESTART_GAME)
+    if (enterRaidBtn) enterRaidBtn.style.display = 'none'
   } else {
-    // In-game: hide the button
     startBtn.style.display = 'none'
+    if (enterRaidBtn) enterRaidBtn.style.display = 'none'
   }
 
   // Quit Campaign: visible during active campaign run
@@ -423,9 +442,9 @@ function setSceneControls(scene) {
     quitCampaignBtn.style.display = campaignScenes.includes(scene) ? '' : 'none'
   }
 
-  // Reset Session: visible during staging and lobby only
+  // Reset Session: visible during staging, lobby, and training grounds
   if (sessionResetBtn) {
-    sessionResetBtn.style.display = (scene === 'staging' || scene === 'lobby') ? '' : 'none'
+    sessionResetBtn.style.display = (scene === 'staging' || scene === 'lobby' || scene === 'trainingGrounds') ? '' : 'none'
   }
 }
 
@@ -497,7 +516,7 @@ socket.on(EVENTS.INIT, state => {
   }
   currentObjectives = state.objectives ?? null
   currentScene = scene
-  game.switchScene(scene === 'staging' ? 'lobby' : scene, meta)
+  game.switchScene(scene === 'staging' ? 'lobby' : scene, meta)  // staging has no own renderer
   currentLevelMeta = meta
   audio.setScene(scene, meta)
   setSceneControls(scene)
@@ -542,7 +561,7 @@ socket.on(EVENTS.SCENE_CHANGE, (data) => {
   currentObjectives = data.objectives ?? null
   currentScene = scene
   if (scene === 'quiz') quizState.set({ phase: 'waiting', question: null, progress: null, results: null, upgrades: [] })
-  // staging uses lobby renderer (fallback in switchScene) + lobby shell
+  // staging has no canvas scene — use lobby renderer as fallback
   game.switchScene(scene === 'staging' ? 'lobby' : scene, meta)
   currentLevelMeta = meta
   audio.setScene(scene, meta)

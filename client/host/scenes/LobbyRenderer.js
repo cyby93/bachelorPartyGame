@@ -1,22 +1,37 @@
 /**
  * client/host/scenes/LobbyRenderer.js
  *
- * Canvas display for the lobby phase.
- * Shows all connected players wandering freely (skill practice).
- * The DOM sidebar handles player list + QR code + start button.
+ * Canvas display for the lobby (gathering hall) phase.
+ * Players can only move — no abilities. Warm visual atmosphere.
+ * The DOM sidebar handles player list + QR code + action buttons.
  */
 
-import { Text } from 'pixi.js'
-import BaseRenderer    from './BaseRenderer.js'
+import { Text, Graphics } from 'pixi.js'
+import BaseRenderer from './BaseRenderer.js'
 
 export default class LobbyRenderer extends BaseRenderer {
-  // constructor inherited — no lobby-specific state needed
+
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+  enter() {
+    super.enter()
+    // Warm amber overlay over the dungeon background
+    const { width: W, height: H } = this.game.currentArena
+    this._bgOverlay = new Graphics()
+    this._bgOverlay.rect(0, 0, W, H)
+    this._bgOverlay.fill({ color: 0xc45e00, alpha: 0.13 })
+    this.game.layers.bg.addChild(this._bgOverlay)
+  }
+
+  _onBeforeExit() {
+    if (this._bgOverlay) {
+      this.game.layers.bg.removeChild(this._bgOverlay)
+      this._bgOverlay.destroy()
+      this._bgOverlay = null
+    }
+  }
 
   // ── Hooks ──────────────────────────────────────────────────────────────────
-
-  _onEnemyCreated(enemy, sprite) {
-    if (enemy.isDummy) sprite.container.tint = 0xf1c40f   // gold tint for training dummies
-  }
 
   _onPlayerSync(p, sprite, pos, dt) {
     if (this.vfx && p.effects) {
@@ -33,11 +48,12 @@ export default class LobbyRenderer extends BaseRenderer {
     const n = activePlayerIds.size
     this._countText.text = n === 0
       ? 'Waiting for the raid to assemble…'
-      : `${n} player${n !== 1 ? 's' : ''} in the staging room`
+      : `${n} raider${n !== 1 ? 's' : ''} in the gathering hall`
   }
 
   _resetUIRefs() {
     this._countText = null
+    this._bgOverlay = null
   }
 
   // ── UI builder ─────────────────────────────────────────────────────────────
@@ -46,12 +62,12 @@ export default class LobbyRenderer extends BaseRenderer {
     const { width: W, height: H } = this.game.getScreenSize()
 
     const title = new Text({
-      text:  'STAGING ROOM',
+      text:  'GATHERING HALL',
       style: {
         fontFamily: 'Trebuchet MS',
         fontSize:   25,
         fontWeight: 'bold',
-        fill:       '#d7b16f',
+        fill:       '#e8c87a',
         align:      'center',
         letterSpacing: 1,
       },
@@ -62,15 +78,15 @@ export default class LobbyRenderer extends BaseRenderer {
 
     this._countText = new Text({
       text:  'Waiting for the raid to assemble…',
-      style: { fontFamily: 'Trebuchet MS', fontSize: 15, fill: '#90a7bb', align: 'center' },
+      style: { fontFamily: 'Trebuchet MS', fontSize: 15, fill: '#a8916b', align: 'center' },
     })
     this._countText.anchor.set(0.5, 0)
     this._countText.position.set(W / 2, 52)
     this._uiRoot.addChild(this._countText)
 
     const hint = new Text({
-      text:  'Warm up in the room while everyone joins.',
-      style: { fontFamily: 'Trebuchet MS', fontSize: 13, fill: '#5f7385', align: 'center' },
+      text:  'Walk around while everyone joins. No abilities yet.',
+      style: { fontFamily: 'Trebuchet MS', fontSize: 13, fill: '#7a6040', align: 'center' },
     })
     hint.anchor.set(0.5, 1)
     hint.position.set(W / 2, H - 14)

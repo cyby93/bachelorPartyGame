@@ -123,10 +123,11 @@
       const you = data.you
       myId = you.id
       if (you.screen && you.screen !== 'name' && you.screen !== 'classSelect') {
-        playerName = you.name      ?? playerName
-        className  = you.className ?? ''
-        cooldowns  = you.cooldowns ?? [0, 0, 0, 0]
-        screen     = you.screen
+        playerName  = you.name      ?? playerName
+        className   = you.className ?? ''
+        cooldowns   = you.cooldowns ?? [0, 0, 0, 0]
+        lobbyReady  = you.ready ?? lobbyReady
+        screen      = you.screen
       }
     })
 
@@ -156,13 +157,12 @@
     socket.on(EVENTS.SCENE_CHANGE, data => {
       if (!validate(EVENTS.SCENE_CHANGE, data, ['scene'])) return
       const { scene, levelName, levelIndex, levelNumber, totalLevels, debugSandbox } = data
-      if (scene === 'battle' || scene === 'bossFight') {
+      if (scene === 'battle' || scene === 'bossFight' || scene === 'trainingGrounds') {
         screen = 'game'
         overlayScreen = null
         overlayData = null
       } else if (scene === 'lobby') {
-        // If coming from staging briefing, player already read their skills — skip to controller view
-        lobbyReady = screen === 'briefing'
+        lobbyReady = lobbyReady || screen === 'briefing'
         screen = 'lobby'
         overlayScreen = null
         overlayData = null
@@ -356,6 +356,7 @@
         {isDead}
         {cooldowns}
         {comboPoints}
+        lobbyMode={true}
         onmove={handleMove}
         onskill={handleSkill}
         onaim={handleAim}

@@ -172,8 +172,6 @@ export default class GameServer {
       () => this._gameTick(),
       1000 / GAME_CONFIG.TICK_RATE
     )
-
-    this._spawnTrainingDummy()
   }
 
   // ── Connection handling ────────────────────────────────────────────────────
@@ -202,6 +200,7 @@ export default class GameServer {
       }
     })
     socket.on(EVENTS.START_GAME,    ()   => this._onStartGame(socket))
+    socket.on(EVENTS.HOST_ENTER_RAID, () => this._onEnterRaid(socket))
     socket.on(EVENTS.RESTART_GAME,  ()   => this._onRestartGame(socket))
     socket.on(EVENTS.QUIT_CAMPAIGN, ()   => this._onRestartGame(socket))
     socket.on(EVENTS.HOST_ADVANCE,  ()   => this._onHostAdvance(socket))
@@ -319,6 +318,7 @@ export default class GameServer {
   }
 
   _onInputSkill(socket, data) {
+    if (this.scene === 'lobby') return
     const queue = this.inputQueues.get(socket.id)
     if (!queue) return
     queue.push({
@@ -465,6 +465,15 @@ export default class GameServer {
       this._changeScene('lobby')
       return
     }
+    if (this.scene === 'lobby') {
+      this._changeScene('trainingGrounds')
+      return
+    }
+  }
+
+  _onEnterRaid(socket) {
+    if (!this.players.get(socket.id)?.isHost) return
+    if (this.scene !== 'trainingGrounds') return
     this._startCampaign()
   }
 
@@ -981,7 +990,7 @@ export default class GameServer {
   _changeScene(name, extra = {}) {
     this._resetPlayerInputs()
 
-    if (name === 'lobby') {
+    if (name === 'lobby' || name === 'trainingGrounds') {
       this._setArenaSize(GAME_CONFIG.CANVAS_WIDTH, GAME_CONFIG.CANVAS_HEIGHT)
       this._wallSegments = []
     }
@@ -1017,8 +1026,15 @@ export default class GameServer {
       this.currentLevelIndex = -1
       this.currentLevel      = null
       this.spawnSystem       = null
+    }
+
+    if (name === 'trainingGrounds') {
+      this.enemies.clear()
+      this.projectiles.clear()
+      this.boss = null
       this._spawnTrainingDummy()
     }
+
   }
 
   _spawnTrainingDummy() {

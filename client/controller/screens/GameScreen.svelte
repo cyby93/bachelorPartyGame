@@ -3,7 +3,7 @@
   import MoveJoystick from '../components/MoveJoystick.svelte';
   import SkillButton from '../components/SkillButton.svelte';
 
-  let { playerName = '', className = '', isDead = false, cooldowns = [0,0,0,0], comboPoints = 0, onmove, onskill, onaim, onhighlight } = $props()
+  let { playerName = '', className = '', isDead = false, cooldowns = [0,0,0,0], comboPoints = 0, lobbyMode = false, onmove, onskill, onaim, onhighlight } = $props()
 
   // Grid order: SK2 SK4 / SK1 SK3  (2×2, top row = skills 1,3; bottom = 0,2)
   // Per PLAN layout:
@@ -45,17 +45,19 @@
       <MoveJoystick {onmove} />
     </div>
 
-    <div class="skill-grid">
-      {#each GRID_ORDER as skillIdx}
-        <SkillButton
-          skill={skills[skillIdx] ?? null}
-          index={skillIdx}
-          expiresAt={cooldowns[skillIdx] ?? 0}
-          {onskill}
-          {onaim}
-        />
-      {/each}
-    </div>
+    {#if !lobbyMode}
+      <div class="skill-grid">
+        {#each GRID_ORDER as skillIdx}
+          <SkillButton
+            skill={skills[skillIdx] ?? null}
+            index={skillIdx}
+            expiresAt={cooldowns[skillIdx] ?? 0}
+            {onskill}
+            {onaim}
+          />
+        {/each}
+      </div>
+    {/if}
   </div>
 
   <!-- ── Dead overlay ── -->

@@ -44,4 +44,31 @@ export default class CooldownSystem {
       this._cd.delete(`${playerId}:${i}`)
     }
   }
+
+  /** Move all cooldown entries from oldId to newId (called on reconnect). */
+  transferPlayer(oldId, newId) {
+    for (let i = 0; i < 4; i++) {
+      const key = `${oldId}:${i}`
+      const exp = this._cd.get(key)
+      if (exp != null) {
+        this._cd.set(`${newId}:${i}`, exp)
+        this._cd.delete(key)
+      }
+    }
+  }
+
+  /**
+   * Absolute expiry timestamps for all 4 skill slots.
+   * Returns [expiresAt0, expiresAt1, expiresAt2, expiresAt3] — 0 means not on cooldown.
+   * Client checks Date.now() < value to determine if skill is locked.
+   */
+  playerExpiresAt(playerId) {
+    const now = Date.now()
+    const result = [0, 0, 0, 0]
+    for (let i = 0; i < 4; i++) {
+      const exp = this._cd.get(`${playerId}:${i}`)
+      result[i] = (exp != null && exp > now) ? exp : 0
+    }
+    return result
+  }
 }

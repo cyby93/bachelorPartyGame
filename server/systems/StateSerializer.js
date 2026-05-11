@@ -117,6 +117,36 @@ export function buildFullState(gs) {
 }
 
 /**
+ * Per-player self-slice included in INIT — tells the reconnecting controller
+ * who it is and which screen to land on. Called once per INIT emit, not broadcast.
+ */
+export function buildYouPayload(player, cooldowns, scene) {
+  return {
+    id:        player.id,
+    name:      player.name,
+    className: player.className,
+    hp:        Math.ceil(player.hp),
+    cooldowns: cooldowns.playerExpiresAt(player.id),
+    upgrades:  player.skillUpgrades ?? [0, 0, 0, 0],
+    screen:    _resolveControllerScreen(scene),
+  }
+}
+
+function _resolveControllerScreen(scene) {
+  switch (scene) {
+    case 'staging':       return 'briefing'
+    case 'lobby':         return 'lobby'
+    case 'battle':
+    case 'bossFight':     return 'game'
+    case 'quiz':          return 'quiz'
+    case 'levelComplete': return 'levelComplete'
+    case 'result':        return 'end'
+    case 'gameover':      return 'end'
+    default:              return 'lobby'
+  }
+}
+
+/**
  * Delta snapshot — broadcast every tick via STATE_DELTA.
  * Includes all fields that change frame-to-frame. Static fields (arena size,
  * level identity, room layout) are omitted — they're in the INIT payload.

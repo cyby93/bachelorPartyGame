@@ -66,6 +66,9 @@ export default class ServerPlayer {
     // HP upgrade count (incremented once per correct quiz answer)
     this.hpUpgrades      = 0
 
+    // Staging readiness — true once player taps "I GOT IT" on the briefing screen
+    this.ready           = false
+
     // Shadow values for delta detection
     this._prev = this._snapshot()
   }
@@ -202,6 +205,7 @@ export default class ServerPlayer {
       className: this.className,
       isHost:    this.isHost,
       isBot:     this.isBot,
+      ready:     this.ready,
       x:         Math.round(this.x),
       y:         Math.round(this.y),
       angle:     +this.angle.toFixed(3),

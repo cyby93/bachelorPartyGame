@@ -15,7 +15,7 @@ import BuildingSpawnSystem from './systems/BuildingSpawnSystem.js'
 import PortalBeamSystem   from './systems/PortalBeamSystem.js'
 import IllidanEncounter   from './systems/IllidanEncounter.js'
 import BotController      from './systems/BotController.js'
-import { buildFullState, buildDeltaState, gatesDTO, buildingsDTO, npcsDTO } from './systems/StateSerializer.js'
+import { buildFullState, buildDeltaState, buildYouPayload, gatesDTO, buildingsDTO, npcsDTO } from './systems/StateSerializer.js'
 import TrainingDummy, { RangedDummy, MeleeDummy, MovingDummy } from './entities/TrainingDummy.js'
 import CooldownSystem    from './systems/CooldownSystem.js'
 import SkillSystem       from './systems/SkillSystem.js'
@@ -64,7 +64,7 @@ export default class GameServer {
   constructor(io) {
     this.io        = io
     this.players   = new Map()      // socketId → ServerPlayer
-    this.scene     = 'lobby'
+    this.scene     = 'staging'      // initial state — server ready, game not yet running
 
     // Per-player input queue: filled by socket handlers, drained each tick
     this.inputQueues = new Map()    // socketId → Array<InputEvent>
@@ -150,6 +150,10 @@ export default class GameServer {
 
     // Bot players (server-side fake players for solo testing)
     this.bots    = new Map()   // botId → { socket (stub), wanderAngle, wanderTimer }
+
+    // Disconnected real players waiting for reconnect — keyed by sessionToken.
+    // Bot-ify timer fires independently after BOT_IFICATION_DELAY_MS.
+    this.disconnectedPlayers = new Map() // sessionToken → ServerPlayer
     this._botSeq = 0
 
     this._botController = new BotController({
@@ -177,6 +181,9 @@ export default class GameServer {
   handleConnection(socket) {
     console.log(`[+] connected   ${socket.id}`)
 
+    socket.on(EVENTS.HANDSHAKE,     data => this._onHandshake(socket, data))
+    socket.on(EVENTS.REJOIN,        ()   => this._onRejoin(socket))
+    socket.on(EVENTS.PLAYER_READY,  ()   => this._onPlayerReady(socket))
     socket.on(EVENTS.JOIN,          data => this._onJoin(socket, data))
     socket.on(EVENTS.INPUT_MOVE,      data => this._onInputMove(socket, data))
     socket.on(EVENTS.INPUT_SKILL,     data => this._onInputSkill(socket, data))
@@ -199,6 +206,8 @@ export default class GameServer {
     socket.on(EVENTS.QUIT_CAMPAIGN, ()   => this._onRestartGame(socket))
     socket.on(EVENTS.HOST_ADVANCE,  ()   => this._onHostAdvance(socket))
     socket.on(EVENTS.SET_LEVEL,     data => this._onSetLevel(socket, data))
+    socket.on(EVENTS.SESSION_RESET,        ()   => this._onSessionReset(socket))
+    socket.on(EVENTS.KICK,                 data => this._onKick(socket, data))
     socket.on(EVENTS.BOT_ADD,              data => this._onBotAdd(socket, data))
     socket.on(EVENTS.BOT_REMOVE,           ()   => this._onBotRemove(socket))
     socket.on(EVENTS.DEBUG_SET_SKILL_TIER, data => this._onDebugSetSkillTier(socket, data))
@@ -211,19 +220,72 @@ export default class GameServer {
 
   // ── Socket event handlers ──────────────────────────────────────────────────
 
-  _onJoin(socket, data) {
-    const { name, className, isHost, isBot, sessionToken } = data ?? {}
+  // ── Handshake — fires on every controller connect ─────────────────────────
 
-    // Reconnect: reclaim a bot-controlled character via session token
-    if (sessionToken && !isBot && !isHost) {
-      for (const [botId, botEntry] of this.bots) {
-        const existing = this.players.get(botId)
-        if (existing?.sessionToken === sessionToken) {
-          this._reclaimBotPlayer(socket, botId, existing)
-          return
-        }
+  _onHandshake(socket, data) {
+    const { token } = data ?? {}
+
+    if (!token) return // fresh player — waits for JOIN after class selection
+
+    // Reclaim: token matches a disconnected player
+    if (this.disconnectedPlayers.has(token)) {
+      this._reclaimPlayer(socket, this.disconnectedPlayers.get(token))
+      return
+    }
+
+    // Dual-tab guard: same token already active on a connected socket
+    for (const p of this.players.values()) {
+      if (p.sessionToken === token && !p.isBot) {
+        socket.emit(EVENTS.FORCE_REJOIN, { reason: 'session_reset' })
+        return
       }
     }
+
+    // Token unknown (old session, post-reset) — send to name screen with message
+    socket.emit(EVENTS.FORCE_REJOIN, { reason: 'session_reset' })
+  }
+
+  _reclaimPlayer(socket, player) {
+    const oldId = player.id
+
+    player.id    = socket.id
+    player.isBot = false
+
+    this.players.set(socket.id, player)
+    this.players.delete(oldId)
+    this.disconnectedPlayers.delete(player.sessionToken)
+
+    this.inputQueues.set(socket.id, [])
+    this.inputQueues.delete(oldId)
+
+    this.cooldowns.transferPlayer(oldId, socket.id)
+    this.bots.delete(oldId)
+
+    this.io.emit(EVENTS.PLAYER_LEFT, oldId)
+    socket.emit(EVENTS.INIT, { ...buildFullState(this), you: buildYouPayload(player, this.cooldowns, this.scene) })
+    this.io.emit(EVENTS.PLAYER_JOINED, player.toDTO())
+
+    console.log(`[↩] reclaimed  ${player.name.padEnd(16)} socket=${socket.id}`)
+  }
+
+  _onRejoin(socket) {
+    const player = this.players.get(socket.id)
+    if (!player || player.isHost) return
+
+    this.disconnectedPlayers.delete(player.sessionToken)
+    this.players.delete(socket.id)
+    this.inputQueues.delete(socket.id)
+    this.cooldowns.clearPlayer(socket.id)
+    this.bots.delete(socket.id)
+
+    this.io.emit(EVENTS.PLAYER_LEFT, socket.id)
+    console.log(`[←] rejoin     ${player.name} (voluntary)`)
+  }
+
+  // ── Fresh join — called after class selection ──────────────────────────────
+
+  _onJoin(socket, data) {
+    const { name, className, isHost, isBot, sessionToken } = data ?? {}
 
     const resolvedClass = resolveClassName(className) ?? 'Warrior'
     const { x, y } = this._randomPointNearCenter(300, 200)
@@ -246,34 +308,8 @@ export default class GameServer {
 
     console.log(`[>] joined  ${player.name.padEnd(16)} class=${resolvedClass}${isHost ? ' (HOST)' : ''}`)
 
-    // Full snapshot for the new arrival
-    socket.emit(EVENTS.INIT, buildFullState(this))
-
-    // Tell everyone else
+    socket.emit(EVENTS.INIT, { ...buildFullState(this), you: buildYouPayload(player, this.cooldowns, this.scene) })
     this.io.emit(EVENTS.PLAYER_JOINED, player.toDTO())
-  }
-
-  _reclaimBotPlayer(socket, oldId, player) {
-    player.id    = socket.id
-    player.isBot = false
-
-    this.players.set(socket.id, player)
-    this.players.delete(oldId)
-
-    this.inputQueues.set(socket.id, this.inputQueues.get(oldId) ?? [])
-    this.inputQueues.delete(oldId)
-
-    // Cooldowns stay keyed to old id — clear them (minor penalty is acceptable)
-    this.cooldowns.clearPlayer(oldId)
-
-    this.bots.delete(oldId)
-
-    // Tell clients old id is gone, new player entity takes over
-    this.io.emit(EVENTS.PLAYER_LEFT, oldId)
-    socket.emit(EVENTS.INIT, buildFullState(this))
-    this.io.emit(EVENTS.PLAYER_JOINED, player.toDTO())
-
-    console.log(`[↩] reclaimed  ${player.name.padEnd(16)} socket=${socket.id}`)
   }
 
   _onInputMove(socket, data) {
@@ -425,7 +461,61 @@ export default class GameServer {
 
   _onStartGame(socket) {
     if (!this.players.get(socket.id)?.isHost) return
+    if (this.scene === 'staging') {
+      this._changeScene('lobby')
+      return
+    }
     this._startCampaign()
+  }
+
+  _onPlayerReady(socket) {
+    const player = this.players.get(socket.id)
+    if (!player || player.isHost || player.isBot) return
+    player.ready = true
+    this.io.emit(EVENTS.PLAYER_JOINED, player.toDTO())
+    console.log(`[✓] ready      ${player.name}`)
+  }
+
+  _onSessionReset(socket) {
+    if (!this.players.get(socket.id)?.isHost) return
+
+    // Broadcast FORCE_REJOIN to all non-host sockets before clearing
+    for (const [socketId, player] of this.players) {
+      if (!player.isHost) {
+        this.io.to(socketId).emit(EVENTS.FORCE_REJOIN, { reason: 'session_reset' })
+      }
+    }
+
+    // Remove all non-host players
+    for (const [socketId, player] of [...this.players]) {
+      if (player.isHost) continue
+      this.players.delete(socketId)
+      this.inputQueues.delete(socketId)
+      this.cooldowns.clearPlayer(socketId)
+      this.bots.delete(socketId)
+      this.io.emit(EVENTS.PLAYER_LEFT, socketId)
+    }
+    this.disconnectedPlayers.clear()
+
+    this.scene = 'staging'
+    this.io.to(socket.id).emit(EVENTS.SCENE_CHANGE, { scene: 'menu' })
+    console.log(`[!] session reset — returning host to menu`)
+  }
+
+  _onKick(hostSocket, data) {
+    if (!this.players.get(hostSocket.id)?.isHost) return
+    const { playerId } = data ?? {}
+    const target = this.players.get(playerId)
+    if (!target || target.isHost) return
+
+    this.io.to(playerId).emit(EVENTS.FORCE_REJOIN, { reason: 'kicked_by_host' })
+    this.players.delete(playerId)
+    this.disconnectedPlayers.delete(target.sessionToken)
+    this.inputQueues.delete(playerId)
+    this.cooldowns.clearPlayer(playerId)
+    this.bots.delete(playerId)
+    this.io.emit(EVENTS.PLAYER_LEFT, playerId)
+    console.log(`[✕] kicked     ${target.name}`)
   }
 
   _onRestartGame(socket) {
@@ -826,9 +916,29 @@ export default class GameServer {
     const player = this.players.get(socket.id)
     console.log(`[-] disconnect  ${player?.name ?? socket.id}`)
 
-    // During active combat, convert to bot so the character keeps fighting
-    if (player && !player.isHost && !player.isBot &&
-        (this.scene === 'battle' || this.scene === 'bossFight')) {
+    if (!player || player.isHost) {
+      this.players.delete(socket.id)
+      this.inputQueues.delete(socket.id)
+      return
+    }
+
+    if (player.isBot) {
+      // Pure testing bot — clean up fully, no reconnect slot needed
+      this.players.delete(socket.id)
+      this.inputQueues.delete(socket.id)
+      this.cooldowns.clearPlayer(socket.id)
+      this.bots.delete(socket.id)
+      this.io.emit(EVENTS.PLAYER_LEFT, socket.id)
+      return
+    }
+
+    // Real player: park in disconnectedPlayers for reconnect window
+    if (player.sessionToken) {
+      this.disconnectedPlayers.set(player.sessionToken, player)
+    }
+
+    if (this.scene === 'battle' || this.scene === 'bossFight') {
+      // Bot-ify immediately during active combat so the character keeps fighting
       player.isBot = true
       this.bots.set(socket.id, {
         socket:           { id: socket.id, emit: () => {} },
@@ -841,19 +951,16 @@ export default class GameServer {
         strafeDirTimer:   0,
         disconnected:     true,
       })
-      console.log(`[↩] bot-ified   ${player.name} (will reclaim on reconnect)`)
+      console.log(`[↩] bot-ified   ${player.name} (reclaim via HANDSHAKE)`)
       return
     }
 
+    // Non-battle disconnect: remove from active simulation
     this.players.delete(socket.id)
     this.inputQueues.delete(socket.id)
-    this.cooldowns.clearPlayer(socket.id)
     this.minions.forEach((m, id) => { if (m.ownerId === socket.id) this.minions.delete(id) })
-
     this.io.emit(EVENTS.PLAYER_LEFT, socket.id)
 
-    // If a player disconnects mid-quiz, re-check whether we can advance the phase
-    // so the remaining connected players are not left waiting forever.
     if (this.scene === 'quiz') {
       const participants = this._getQuizParticipants()
       if (this._quizPhase === 'answering') {
@@ -861,7 +968,6 @@ export default class GameServer {
           this._resolveQuiz()
         }
       } else if (this._quizPhase === 'upgrading') {
-        // Treat the disconnected player as having finished their upgrade choice
         this._quizUpgradesDone.add(socket.id)
         if (participants.length === 0 || this._quizUpgradesDone.size >= participants.length) {
           this._finishQuiz()
@@ -981,6 +1087,7 @@ export default class GameServer {
   // ── Tick loop ──────────────────────────────────────────────────────────────
 
   _gameTick() {
+    if (this.scene === 'staging') return
     try {
     const now = Date.now()
     const dt  = Math.min((now - this.lastTick) / 1000, 0.1)

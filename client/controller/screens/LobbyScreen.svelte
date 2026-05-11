@@ -46,6 +46,13 @@
   let cls        = $derived(CLASSES[className])
   let skills     = $derived(cls?.skills ?? [])
   let classColor = $derived(cls?.color ?? '#00d2ff')
+  let ready      = $state(false)
+
+  function handleReady() {
+    if (ready) return
+    ready = true
+    onready?.()
+  }
 </script>
 
 <div class="lobby" style="--class-color: {classColor}">
@@ -67,8 +74,8 @@
       <span>❤️ {cls?.hp ?? '—'} HP</span>
       <span>⚡ {cls?.speed ?? '—'}x Spd</span>
     </div>
-    <button type="button" class="ready-btn" onclick={() => onready?.()}>
-      I GOT IT
+    <button type="button" class="ready-btn" onclick={handleReady} disabled={ready}>
+      {ready ? 'READY ✓' : 'I GOT IT'}
     </button>
   </div>
 
@@ -284,6 +291,13 @@
   }
 
   .ready-btn:active { opacity: 0.9; }
+  .ready-btn:disabled {
+    background: var(--rn-gradient-surface);
+    color: #4caf50;
+    border: 1px solid rgba(76, 175, 80, 0.4);
+    cursor: default;
+    opacity: 1;
+  }
 
   @media (max-height: 430px) {
     .lobby {

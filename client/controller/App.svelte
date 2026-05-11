@@ -11,7 +11,7 @@
   import UpgradeSelectScreen from './screens/UpgradeSelectScreen.svelte'
   import ControllerAudio from './ControllerAudio.js'
 
-  // ── Screens: 'name' | 'classSelect' | 'lobby' | 'game' | 'levelComplete' | 'end'
+  // ── Screens: 'name' | 'classSelect' | 'lobby' | 'game' | 'levelComplete' | 'end' | 'quiz'
   let screen = $state('name')
 
   // ── Overlay (swappable mid-game screen, e.g. quiz between levels)
@@ -23,7 +23,7 @@
 
   // ── Player state
   let myId        = $state(null)
-  let playerName  = $state('')
+  let playerName  = $state(sessionStorage.getItem('playerName') ?? '')
   let className   = $state('')
   let isDead      = $state(false)
   let cooldowns   = $state([0, 0, 0, 0])  // expiresAt timestamps per skill slot
@@ -32,6 +32,9 @@
 
   // ── End state
   let endMessage  = $state('')
+
+  // ── Rejoin message — shown on NameScreen after kick/reset/voluntary leave
+  let rejoinMessage = $state('')
 
   // ── Screen Wake Lock — prevents phone from sleeping during play
   let wakeLock = null
@@ -54,16 +57,19 @@
     return true
   }
 
-  // ── Session token — persists across reconnects so the server can reclaim the character
-  // crypto.randomUUID() requires iOS 15.4+ / Chrome 92+; fall back to getRandomValues for older devices
+  // ── Session token — scoped to the browser tab via sessionStorage.
+  // Survives page refresh in the same tab so the server can reclaim the character.
+  // A new tab gets no token → fresh join → prevents dual-connection.
+  // crypto.randomUUID() requires iOS 15.4+ / Chrome 92+; fall back to getRandomValues for older devices.
   function generateUUID() {
     if (typeof crypto.randomUUID === 'function') return crypto.randomUUID()
     return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
       (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
     )
   }
-  const sessionToken = localStorage.getItem('sessionToken') ?? generateUUID()
-  localStorage.setItem('sessionToken', sessionToken)
+  if (!sessionStorage.getItem('sessionToken')) {
+    sessionStorage.setItem('sessionToken', generateUUID())
+  }
 
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
   const isStandalone = !!window.navigator.standalone
@@ -99,21 +105,44 @@
     })
 
     socket = io({ transports: ['websocket'] })
+
+    // On every connect: send HANDSHAKE so server can route (reclaim vs. fresh join).
+    // Client never decides whether it's reconnecting — server does.
     socket.on('connect', () => {
-      myId = socket.id
-      // Reconnect: if already past the join screen, re-register with the server
-      if (screen !== 'name' && screen !== 'classSelect' && playerName && className) {
-        socket.emit(EVENTS.JOIN, { name: playerName, className, isHost: false, sessionToken })
-      }
+      socket.emit(EVENTS.HANDSHAKE, {
+        token: sessionStorage.getItem('sessionToken') ?? null,
+        name:  sessionStorage.getItem('playerName')  ?? null,
+      })
     })
 
     // INIT — full state snapshot on join/reconnect.
-    // The controller doesn't render full state, but we guard the shape
-    // so future consumers can rely on a validated payload.
+    // `you` is a self-referential slice that tells this controller who it is
+    // and which screen to land on. Always set myId from you.id, never from socket.id.
     socket.on(EVENTS.INIT, data => {
-      if (!validate(EVENTS.INIT, data, ['players'])) return
-      // Controller currently derives identity from socket.id, not from INIT payload.
-      // Guard is here to catch malformed broadcasts early.
+      if (!validate(EVENTS.INIT, data, ['players', 'you'])) return
+      const you = data.you
+      myId = you.id
+      if (you.screen && you.screen !== 'name' && you.screen !== 'classSelect') {
+        playerName = you.name      ?? playerName
+        className  = you.className ?? ''
+        cooldowns  = you.cooldowns ?? [0, 0, 0, 0]
+        screen     = you.screen
+      }
+    })
+
+    // FORCE_REJOIN — server sends this on kick, session reset, or to clear a stale token.
+    socket.on(EVENTS.FORCE_REJOIN, data => {
+      sessionStorage.removeItem('sessionToken')
+      sessionStorage.setItem('sessionToken', generateUUID())
+      // Name is kept — pre-fills the name field so player doesn't have to retype
+      className     = ''
+      myId          = null
+      screen        = 'name'
+      overlayScreen = null
+      overlayData   = null
+      if (data?.reason === 'kicked_by_host')  rejoinMessage = 'You were removed by the host.'
+      else if (data?.reason === 'session_reset') rejoinMessage = 'The session was reset.'
+      else rejoinMessage = ''
     })
 
     // skill:fired — VFX event consumed by the host renderer, not the controller.
@@ -132,8 +161,9 @@
         overlayScreen = null
         overlayData = null
       } else if (scene === 'lobby') {
+        // If coming from staging briefing, player already read their skills — skip to controller view
+        lobbyReady = screen === 'briefing'
         screen = 'lobby'
-        lobbyReady = false
         overlayScreen = null
         overlayData = null
       } else if (scene === 'quiz') {
@@ -212,6 +242,8 @@
 
   function handleNameSubmit(name) {
     playerName = name
+    sessionStorage.setItem('playerName', name)
+    rejoinMessage = ''
     screen = 'classSelect'
     if (!document.fullscreenElement && !isIOS) toggleFullscreen()
   }
@@ -219,8 +251,26 @@
   function handleClassReady(cls) {
     className = cls
     controllerAudio.handleJoin()
-    socket.emit(EVENTS.JOIN, { name: playerName, className: cls, isHost: false, sessionToken })
-    screen = 'lobby'
+    socket.emit(EVENTS.JOIN, {
+      name:         playerName,
+      className:    cls,
+      isHost:       false,
+      sessionToken: sessionStorage.getItem('sessionToken'),
+    })
+    // Screen is driven by INIT's you.screen — do not set it here
+  }
+
+  function handleVoluntaryRejoin() {
+    socket.emit(EVENTS.REJOIN)
+    sessionStorage.removeItem('sessionToken')
+    sessionStorage.setItem('sessionToken', generateUUID())
+    // Name is kept — pre-fills the name field so player doesn't have to retype
+    className     = ''
+    myId          = null
+    screen        = 'name'
+    overlayScreen = null
+    overlayData   = null
+    rejoinMessage = ''
   }
 
   function handleOverlayDone(result) {
@@ -246,6 +296,7 @@
 
   function handleLobbyReady() {
     lobbyReady = true
+    socket.emit(EVENTS.PLAYER_READY)
   }
 
   function handleQuizAnswer(chosenIndex) {
@@ -279,10 +330,17 @@
 
 <div class="app">
   {#if screen === 'name'}
-    <NameScreen onnext={handleNameSubmit} />
+    <NameScreen onnext={handleNameSubmit} initialName={playerName} message={rejoinMessage} />
 
   {:else if screen === 'classSelect'}
     <ClassSelectScreen onready={handleClassReady} />
+
+  {:else if screen === 'briefing'}
+    <LobbyScreen
+      {playerName}
+      {className}
+      onready={handleLobbyReady}
+    />
 
   {:else if screen === 'lobby'}
     {#if !lobbyReady}
@@ -317,6 +375,7 @@
       onaim={handleAim}
       onhighlight={handleHighlight}
     />
+    <button class="rejoin-btn" onclick={handleVoluntaryRejoin} title="Leave game">✕ Leave</button>
 
   {:else if screen === 'quiz'}
     {#if overlayScreen === 'quizAnswer'}
@@ -453,6 +512,22 @@
     opacity: 0.5;
   }
   .fullscreen-btn:active { opacity: 1; }
+
+  .rejoin-btn {
+    position: fixed;
+    top: 8px;
+    left: 8px;
+    z-index: 9998;
+    padding: 4px 10px;
+    border-radius: var(--rn-radius-sm);
+    border: 1px solid var(--rn-border-btn);
+    background: rgba(20, 12, 4, 0.75);
+    color: var(--rn-text-dim);
+    font-size: 12px;
+    cursor: pointer;
+    opacity: 0.4;
+  }
+  .rejoin-btn:active { opacity: 1; }
 
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>

@@ -66,4 +66,15 @@ export const EVENTS = {
   TRANSITION_VFX:  'transition:vfx',  // S→All: { event: string } — named VFX trigger during transitions
 
   DEBUG_ACTION_RESULT: 'debug:action_result', // S→Host: { message, isError? }
+
+  // ── Connection lifecycle ─────────────────────────────────────────────────────
+  HANDSHAKE:     'game:handshake',      // C→S: { token, name } — emitted on every connect
+  HANDSHAKE_ACK: 'game:handshake_ack', // S→C: { freshToken } — Tier 3, stub for now
+  FORCE_REJOIN:  'game:force_rejoin',   // S→C: { reason: 'kicked_by_host'|'session_reset'|'voluntary' }
+  REJOIN:        'game:rejoin',         // C→S: {} — voluntary rejoin request
+  PLAYER_READY:  'game:player_ready',   // C→S: {} — player tapped "I GOT IT" in staging briefing
+
+  // ── Host session controls ────────────────────────────────────────────────────
+  SESSION_RESET: 'host:session_reset',  // host→S: {} — nuke session, all players rejoin fresh
+  KICK:          'host:kick',           // host→S: { playerId } — remove one player
 }

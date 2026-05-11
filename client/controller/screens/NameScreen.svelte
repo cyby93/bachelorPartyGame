@@ -1,7 +1,7 @@
 <script>
-  let { onnext } = $props()
+  let { onnext, initialName = '', message = '' } = $props()
 
-  let name = $state('')
+  let name = $state(initialName)
 
   function submit() {
     onnext?.(name.trim() || 'Player')
@@ -19,6 +19,9 @@
       <span class="kicker">Controller Link</span>
       <h1>RAID NIGHT</h1>
       <p class="subtitle">Enter your name and join the raid.</p>
+      {#if message}
+        <p class="rejoin-message">{message}</p>
+      {/if}
     </div>
 
     <div class="form">
@@ -132,6 +135,13 @@
     color: var(--rn-gold);
     cursor: pointer;
     letter-spacing: 2px;
+  }
+
+  .rejoin-message {
+    font-size: 13px;
+    color: var(--rn-accent);
+    text-align: center;
+    margin: 4px 0 0;
   }
 
   @media (max-height: 430px) {

@@ -66,6 +66,7 @@ const skipDialogChk  = document.getElementById('skip-dialog-chk')
 const botAddBtn      = document.getElementById('bot-add-btn')
 const botRemoveBtn   = document.getElementById('bot-remove-btn')
 const botCountEl     = document.getElementById('bot-count')
+const sessionResetBtn = document.getElementById('session-reset-btn')
 const sidebar        = document.getElementById('sidebar')
 const debugToggleBtn = document.getElementById('debug-toggle')
 const upgradeSliders = document.querySelectorAll('.upgrade-slider')
@@ -107,6 +108,16 @@ const SANDBOX_ENEMY_ACTIONS = [
 
 botAddBtn?.addEventListener('click', () => socket.emit(EVENTS.BOT_ADD, {}))
 botRemoveBtn?.addEventListener('click', () => socket.emit(EVENTS.BOT_REMOVE))
+
+document.getElementById('session-reset-btn')?.addEventListener('click', () => {
+  if (confirm('Exit the game? All players will be kicked and you will return to the main menu.')) {
+    socket.emit(EVENTS.SESSION_RESET)
+  }
+})
+
+document.getElementById('player-list')?.addEventListener('kick-player', e => {
+  socket.emit(EVENTS.KICK, { playerId: e.detail.playerId })
+})
 
 // ── Debug panel toggle ─────────────────────────────────────────────────────
 debugToggleBtn?.addEventListener('click', () => {
@@ -155,7 +166,12 @@ function syncGameState() {
 function updateLobbyStartBtn() {
   const players = Object.values(game.knownState.players).filter(p => !p.isHost)
   if (botCountEl) botCountEl.textContent = `${players.filter(p => p.isBot).length} / 12 bots`
-  if (startBtn.dataset.scene === 'lobby') startBtn.disabled = players.length === 0
+  const scene = startBtn.dataset.scene
+  if (scene === 'staging') {
+    startBtn.disabled = players.filter(p => p.ready).length === 0
+  } else if (scene === 'lobby') {
+    startBtn.disabled = players.length === 0
+  }
 }
 
 function syncAudioControls() {
@@ -372,7 +388,12 @@ function setSceneControls(scene) {
   if (scene === 'battle' || scene === 'bossFight') setShellMode('gameplay')
   else if (shellMode !== 'menu') setShellMode('lobby')
 
-  if (scene === 'lobby') {
+  if (scene === 'staging') {
+    startBtn.textContent   = 'START GAME'
+    startBtn.style.display = ''
+    startBtn.onclick       = () => socket.emit(EVENTS.START_GAME)
+    updateLobbyStartBtn()
+  } else if (scene === 'lobby') {
     startBtn.textContent = 'START GAME'
     startBtn.disabled    = Object.values(game.knownState.players).filter(p => !p.isHost).length === 0
     startBtn.style.display = ''
@@ -396,10 +417,15 @@ function setSceneControls(scene) {
     startBtn.style.display = 'none'
   }
 
-  // Quit Campaign button: visible during an active campaign run
+  // Quit Campaign: visible during active campaign run
   const campaignScenes = ['battle', 'bossFight', 'levelComplete', 'quiz']
   if (quitCampaignBtn) {
     quitCampaignBtn.style.display = campaignScenes.includes(scene) ? '' : 'none'
+  }
+
+  // Reset Session: visible during staging and lobby only
+  if (sessionResetBtn) {
+    sessionResetBtn.style.display = (scene === 'staging' || scene === 'lobby') ? '' : 'none'
   }
 }
 
@@ -454,7 +480,7 @@ socket.on('disconnect', () => {
 
 socket.on(EVENTS.INIT, state => {
   game.receiveFullState(state)
-  const scene = state.scene ?? 'lobby'
+  const scene = state.scene ?? 'staging'
   const meta = {
     levelId: state.levelId,
     levelIndex: state.levelIndex,
@@ -471,7 +497,7 @@ socket.on(EVENTS.INIT, state => {
   }
   currentObjectives = state.objectives ?? null
   currentScene = scene
-  game.switchScene(scene, meta)
+  game.switchScene(scene === 'staging' ? 'lobby' : scene, meta)
   currentLevelMeta = meta
   audio.setScene(scene, meta)
   setSceneControls(scene)
@@ -505,10 +531,19 @@ socket.on(EVENTS.STATE_DELTA, delta => {
 
 socket.on(EVENTS.SCENE_CHANGE, (data) => {
   const { scene, ...meta } = data
+
+  // 'menu' is a host-only signal to return to the main menu shell after Exit Game
+  if (scene === 'menu') {
+    if (sessionResetBtn) sessionResetBtn.style.display = 'none'
+    setShellMode('menu')
+    return
+  }
+
   currentObjectives = data.objectives ?? null
   currentScene = scene
   if (scene === 'quiz') quizState.set({ phase: 'waiting', question: null, progress: null, results: null, upgrades: [] })
-  game.switchScene(scene, meta)
+  // staging uses lobby renderer (fallback in switchScene) + lobby shell
+  game.switchScene(scene === 'staging' ? 'lobby' : scene, meta)
   currentLevelMeta = meta
   audio.setScene(scene, meta)
   setSceneControls(scene)

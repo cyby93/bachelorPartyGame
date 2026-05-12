@@ -37,7 +37,7 @@ Shared repo-level assistant guidance lives in `AGENTS.md`.
 ### Controller
 
 - only plays minimal local cues
-- current approved scope: join cue and knocked-down cue
+- current approved scope: join cue, knocked-down cue, and level-up cue (quiz correct answer)
 - must not become a second full combat mix
 
 ---
@@ -223,7 +223,7 @@ This allows architecture and gameplay integration to land before sourcing all Wo
 ## Implementation Notes
 
 - current host entrypoint wires `SCENE_CHANGE`, `SKILL_FIRED`, `EFFECT_DAMAGE`, `TARGETED_HIT`, dialog lines, and phase transitions into `AudioManager`
-- current controller entrypoint wires minimal local join/downed cues into `ControllerAudio`
+- current controller entrypoint wires minimal local join/downed/level-up cues into `ControllerAudio`
 - current state contract includes `levelId` in `game:init` and `scene:change` so level audio routing uses a stable identifier
 
 ---

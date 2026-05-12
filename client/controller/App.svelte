@@ -195,7 +195,10 @@
       if (!me) return
       const wasDead = isDead
       if (me.isDead != null) isDead = me.isDead
-      if (!wasDead && isDead) controllerAudio.handlePlayerDown()
+      if (!wasDead && isDead) {
+        controllerAudio.handlePlayerDown()
+        navigator.vibrate?.([300, 100, 300])
+      }
     })
 
     socket.on(EVENTS.COOLDOWN, data => {
@@ -217,6 +220,7 @@
       const correctAnswer = overlayData?.options?.[data.correctIndex] ?? ''
       overlayScreen = 'quizResult'
       overlayData = { correct: !!myResult, correctAnswer }
+      if (myResult) controllerAudio.handleLevelUp()
     })
 
     socket.on(EVENTS.QUIZ_UPGRADE_OPTIONS, data => {

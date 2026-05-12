@@ -616,6 +616,10 @@ export default class GameServer {
     const firstRoom = level.arena?.rooms?.[0]
     this.players.forEach(p => {
       if (p.isHost) return
+      if (campaignIndex === 0) {
+        p.baseMaxHp = CLASSES[p.className].hp
+        p.maxHp     = p.baseMaxHp
+      }
       p.hp              = p.maxHp
       p.isDead          = false
       p.activeCast      = null
@@ -2337,7 +2341,7 @@ export default class GameServer {
     if (this.currentLevel?.debugSandbox) return
     let livingCount = 0
     this.players.forEach(p => {
-      if (!p.isHost && !p.isBot && !p.isDead) livingCount++
+      if (!p.isHost && !p.isDead) livingCount++
     })
     if (livingCount === 0 && this.players.size > 0) {
       console.log('[~] All players dead — game over')

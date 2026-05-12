@@ -227,7 +227,7 @@ export default class ServerEnemy {
     const dx   = nearest.x - this.x
     const dy   = nearest.y - this.y
     const dist = Math.hypot(dx, dy)
-    const stopDist = GAME_CONFIG.PLAYER_RADIUS + this.radius
+    const stopDist = GAME_CONFIG.PLAYER_RADIUS_X + this.radiusX
 
     if (dist <= stopDist) return null
 
@@ -331,7 +331,7 @@ export default class ServerEnemy {
     }
 
     // Walk toward target
-    const stopDist = GAME_CONFIG.PLAYER_RADIUS + this.radius
+    const stopDist = GAME_CONFIG.PLAYER_RADIUS_X + this.radiusX
     if (dist > stopDist) {
       const step = Math.min(pps * dt, dist - stopDist)
       this.x += (dx / dist) * step
@@ -564,7 +564,7 @@ export default class ServerEnemy {
     const mx = this._meleeTarget.x - this.x
     const my = this._meleeTarget.y - this.y
     const mDist = Math.hypot(mx, my)
-    const stopDist = GAME_CONFIG.PLAYER_RADIUS + this.radius
+    const stopDist = GAME_CONFIG.PLAYER_RADIUS_X + this.radiusX
 
     if (mDist > stopDist) {
       const step = Math.min(pps * dt, mDist - stopDist)

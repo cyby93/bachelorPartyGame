@@ -158,13 +158,13 @@ export default class OverheadDisplay {
 
     this._castBarFill.clear()
     if (isChannel) {
-      // Channel: green, drains right-to-left (starts full, empties from right)
+      // Channel: yellow, drains right-to-left (starts full, empties from right)
       const fillW = this._castBarW * (1 - progress)
       this._castBarFill.rect(
         -this._castBarW / 2, this._castBarY,
         fillW, this._castBarH
       )
-      this._castBarFill.fill({ color: 0x00ff88, alpha: 0.9 })
+      this._castBarFill.fill({ color: 0xffcc00, alpha: 0.9 })
     } else {
       const fillW = this._castBarW * progress
       // Cast: yellow, fills left-to-right

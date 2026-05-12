@@ -44,6 +44,13 @@ export default class ControllerAudio {
     this._tone(220, 'sawtooth', 0.08, 0.0, 0.08, 0.18, -50)
   }
 
+  handleLevelUp() {
+    this.init()
+    this._tone(523, 'triangle', 0.07, 0.01, 0.05, 0.10)
+    setTimeout(() => this._tone(659, 'triangle', 0.07, 0.01, 0.05, 0.10), 110)
+    setTimeout(() => this._tone(784, 'triangle', 0.10, 0.01, 0.10, 0.20), 220)
+  }
+
   _loadSettings() {
     try {
       const raw = window.localStorage.getItem(AUDIO_STORAGE_KEYS.CONTROLLER_SETTINGS)

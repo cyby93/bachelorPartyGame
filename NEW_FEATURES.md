@@ -1,2 +1,2 @@
-## Feeling
-- Controller could vibrate on death and/or add sound effect
+## buff/debuff
+- We need to somehow rethink the whol buff/debuff overhead display bar -> too much things happening already there, we might want to create some buff/debuff column on each side of the character maybe?

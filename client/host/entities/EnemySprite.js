@@ -14,6 +14,7 @@ import { DIRECTIONAL_ENEMIES, DIRECTIONAL_ENEMY_ANIMATIONS, DIRECTIONAL_STATIC_E
 import OverheadDisplay     from '../systems/OverheadDisplay.js'
 
 const DEFAULT_R = GAME_CONFIG.ENEMY_RADIUS
+const ENEMY_HP_COLOR = 0xe74c3c  // all-red test — remove to revert to per-type colors
 
 // Direction names ordered by angle sector (0=East, clockwise) — same as PlayerSprite
 const DIRS = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east']
@@ -158,7 +159,7 @@ export default class EnemySprite {
     this._hpFill.clear()
     if (pct > 0) {
       this._hpFill.rect(-W / 2, 0, W * pct, H)
-      this._hpFill.fill(this._color)
+      this._hpFill.fill(ENEMY_HP_COLOR)
     }
   }
 

@@ -1015,6 +1015,13 @@ export default class SkillSystem {
         return
       }
 
+      // Self-cast BURST projectiles have vx=0,vy=0 — they can never travel or expire
+      // naturally, so clean them up immediately rather than letting them freeze in place.
+      if (proj.selfCast && proj.vx === 0 && proj.vy === 0) {
+        gs.projectiles.delete(id)
+        return
+      }
+
       const prevX = proj.x
       const prevY = proj.y
 
@@ -1560,6 +1567,7 @@ export default class SkillSystem {
 
       // Natural expiry
       if (elapsed >= (cast.effectiveCastTime ?? cast.config.castTime)) {
+        if (gs.io) gs.io.emit('channel:ended', { playerId: p.id })
         p.activeCast = null
         return
       }

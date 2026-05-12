@@ -11,8 +11,11 @@
   import UpgradeSelectScreen from './screens/UpgradeSelectScreen.svelte'
   import ControllerAudio from './ControllerAudio.js'
 
-  // ── Screens: 'name' | 'classSelect' | 'lobby' | 'game' | 'levelComplete' | 'end' | 'quiz'
+  // ── Screens: 'name' | 'classSelect' | 'briefing' | 'lobby' | 'game' | 'levelComplete' | 'end' | 'quiz'
   let screen = $state('name')
+
+  // ── Server scene — drives canReady (ready button only visible in 'lobby' JOIN state)
+  let serverScene = $state('staging')
 
   // ── Overlay (swappable mid-game screen, e.g. quiz between levels)
   let overlayScreen = $state(null)   // null | 'quiz' | …
@@ -157,13 +160,15 @@
     socket.on(EVENTS.SCENE_CHANGE, data => {
       if (!validate(EVENTS.SCENE_CHANGE, data, ['scene'])) return
       const { scene, levelName, levelIndex, levelNumber, totalLevels, debugSandbox } = data
+      serverScene = scene
       if (scene === 'battle' || scene === 'bossFight' || scene === 'trainingGrounds') {
         screen = 'game'
         overlayScreen = null
         overlayData = null
       } else if (scene === 'lobby') {
-        lobbyReady = lobbyReady || screen === 'briefing'
-        screen = 'lobby'
+        // Only advance players who have already joined (myId set).
+        // Players still on name/classSelect haven't spawned yet — leave them where they are.
+        if (myId) screen = 'lobby'
         overlayScreen = null
         overlayData = null
       } else if (scene === 'quiz') {
@@ -296,6 +301,9 @@
 
   function handleLobbyReady() {
     lobbyReady = true
+    // If the player is still on the briefing screen when they hit ready,
+    // advance to lobby so lobbyMode GameScreen can render immediately.
+    if (screen === 'briefing') screen = 'lobby'
     socket.emit(EVENTS.PLAYER_READY)
   }
 
@@ -339,6 +347,7 @@
     <LobbyScreen
       {playerName}
       {className}
+      canReady={serverScene === 'lobby'}
       onready={handleLobbyReady}
     />
 
@@ -347,6 +356,7 @@
       <LobbyScreen
         {playerName}
         {className}
+        canReady={serverScene === 'lobby'}
         onready={handleLobbyReady}
       />
     {:else}

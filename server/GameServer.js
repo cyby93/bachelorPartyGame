@@ -466,6 +466,7 @@ export default class GameServer {
       return
     }
     if (this.scene === 'lobby') {
+      this.players.forEach(p => { if (!p.isHost) p.ready = false })
       this._changeScene('trainingGrounds')
       return
     }
@@ -555,7 +556,7 @@ export default class GameServer {
 
     this._clearCombatState()
     this._usedQuestionIds.clear()
-    this._changeScene('lobby')
+    this._changeScene('trainingGrounds')
     this.io.emit(EVENTS.SET_LEVEL, { levelIndex: 0, levelName: LEVEL_SELECT_OPTIONS[0].name, skipDialog: false })
   }
 
@@ -1147,7 +1148,7 @@ export default class GameServer {
     }
 
     // 3. Scene-specific logic
-    if (this.scene === 'lobby') {
+    if (this.scene === 'lobby' || this.scene === 'trainingGrounds') {
       const gs = this._gs()
       this.skillSystem.tick(gs, dt)
       this.enemies.forEach(dummy => dummy.update(dt, gs))
@@ -1248,7 +1249,7 @@ export default class GameServer {
 
   _processSkillInput(player, input) {
     if (player.isDead) return
-    if (this.scene !== 'lobby' && this.scene !== 'battle' && this.scene !== 'bossFight') return
+    if (this.scene !== 'lobby' && this.scene !== 'trainingGrounds' && this.scene !== 'battle' && this.scene !== 'bossFight') return
 
     const { index, vector, action } = input
     const config = player.getSkillConfig(index)

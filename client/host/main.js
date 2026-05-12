@@ -3,155 +3,70 @@
  * Host display entry point.
  *
  * Responsibilities:
- *  - Bootstrap PixiJS via HostGame
- *  - Manage the DOM sidebar (player list, QR code, start/restart button)
- *  - Wire all socket events to HostGame + DOM
+ *  - Bootstrap PixiJS via HostGame (canvas always visible; CreationScreen overlays it)
+ *  - Wire all socket events to HostGame, AudioManager, Svelte stores
+ *  - Mount HostApp.svelte (owns all host UI) BEFORE game.init() so loading progress shows
+ *  - SCENE_CHANGE is the single source of truth for UI stage transitions
  */
 
 import { io }         from 'socket.io-client'
 import { mount }      from 'svelte'
+import { get }        from 'svelte/store'
 import { EVENTS }     from '../../shared/protocol.js'
-import { LEVEL_SELECT_OPTIONS } from '../../shared/LevelConfig.js'
 import HostGame       from './HostGame.js'
 import AudioManager   from './systems/AudioManager.js'
 import { gameState }  from './stores/gameState.js'
 import { quizState }  from './stores/quizState.js'
-import GameplaySidebar from './components/GameplaySidebar.svelte'
-import LobbyPlayerList from './components/LobbyPlayerList.svelte'
+import HostApp        from './HostApp.svelte'
 import SceneOverlay   from './components/SceneOverlay.svelte'
 
-// ── PixiJS game init (top-level await — supported in Vite ESM) ─────────────
+// ── Core instances ──────────────────────────────────────────────
 const game  = new HostGame()
 const audio = new AudioManager()
 
-// Show loading progress in the badge before the sprite-load blocks the thread
-const _loadBadge = document.getElementById('conn-badge')
-if (_loadBadge) {
-  _loadBadge.textContent = 'Loading assets… 0%'
-  _loadBadge.classList.add('visible', 'connecting')
-}
-
-await game.init(document.getElementById('canvas-wrap'), (progress) => {
-  if (_loadBadge) _loadBadge.textContent = `Loading assets… ${Math.round(progress * 100)}%`
-})
-
-if (_loadBadge) {
-  _loadBadge.textContent = 'Connecting…'
-}
-
-// ── Mount Svelte components ───────────────────────────────────────────────
-mount(GameplaySidebar, { target: document.getElementById('gameplay-panel') })
-mount(LobbyPlayerList, { target: document.getElementById('player-list') })
-mount(SceneOverlay,    { target: document.getElementById('scene-overlay') })
-
-// ── Socket ─────────────────────────────────────────────────────────────────
-const socket = io({ transports: ['websocket'] })
-game.setSocket(socket)
-
-// ── DOM refs ───────────────────────────────────────────────────────────────
-const body           = document.body
-const badge          = document.getElementById('conn-badge')
-const serverIpEl     = document.getElementById('server-ip')
-const startBtn       = document.getElementById('start-btn')
-const qrWrap         = document.getElementById('qr-code')
-const menuQrWrap     = document.getElementById('menu-qr-code')
-const menuServerIpEl = document.getElementById('menu-server-ip')
-const fullscreenBtn  = document.getElementById('fullscreen-btn')
-const menuPlayBtn    = document.getElementById('menu-play-btn')
-const selectedLevelNameEl = document.getElementById('selected-level-name')
-const prevLevelBtn   = document.getElementById('prev-level-btn')
-const nextLevelBtn   = document.getElementById('next-level-btn')
-const enterRaidBtn    = document.getElementById('enter-raid-btn')
-const quitCampaignBtn = document.getElementById('quit-campaign-btn')
-const skipDialogChk  = document.getElementById('skip-dialog-chk')
-const botAddBtn      = document.getElementById('bot-add-btn')
-const botRemoveBtn   = document.getElementById('bot-remove-btn')
-const botCountEl     = document.getElementById('bot-count')
-const sessionResetBtn = document.getElementById('session-reset-btn')
-const sidebar        = document.getElementById('sidebar')
-const debugToggleBtn = document.getElementById('debug-toggle')
-const upgradeSliders = document.querySelectorAll('.upgrade-slider')
-const upgradeResetBtn = document.getElementById('upgrade-reset-btn')
-const sandboxOverlayEl = document.getElementById('sandbox-overlay')
-const sandboxActionsEl = document.getElementById('sandbox-overlay-actions')
-const sandboxStatusEl = document.getElementById('sandbox-overlay-status')
-const audioMasterEl = document.getElementById('audio-master')
-const audioMusicEl  = document.getElementById('audio-music')
-const audioSfxEl    = document.getElementById('audio-sfx')
-const audioVoiceEl  = document.getElementById('audio-voice')
-const audioMuteEl   = document.getElementById('audio-muted')
-
-const menuAudioMasterEl = document.getElementById('menu-audio-master')
-const menuAudioMusicEl  = document.getElementById('menu-audio-music')
-const menuAudioSfxEl    = document.getElementById('menu-audio-sfx')
-const menuAudioVoiceEl  = document.getElementById('menu-audio-voice')
-const menuAudioMuteEl   = document.getElementById('menu-audio-muted')
-const menuAudioBtn      = document.getElementById('menu-audio-btn')
-const menuAudioPanel    = document.getElementById('menu-audio-panel')
-
-const SANDBOX_ENEMY_ACTIONS = [
-  { label: 'Felguard',       enemyType: 'felGuard' },
-  { label: 'Harpooner',      enemyType: 'coilskarHarpooner' },
-  { label: 'Brute',          enemyType: 'bonechewerBrute' },
-  { label: 'Blade Fury',     enemyType: 'bonechewerBladeFury' },
-  { label: 'Centurion',      enemyType: 'illidariCenturion' },
-  { label: 'Mystic',         enemyType: 'ashtonghueMystic' },
-  { label: 'Blood Prophet',  enemyType: 'bloodProphet' },
-  { label: 'Serpent Guard',  enemyType: 'coilskarSerpentGuard' },
-  { label: 'Ritual Channeler', enemyType: 'ritualChanneler' },
-  { label: 'Gate Repairer',  enemyType: 'gateRepairer' },
-  { label: 'Warlock',        enemyType: 'warlock' },
-  { label: 'Leviathan',      enemyType: 'leviathan' },
-  { label: 'Shadowfiend',    enemyType: 'shadowfiend' },
-  { label: 'Shadow Demon',   enemyType: 'shadowDemon' },
-  { label: 'Flame of Azzinoth', enemyType: 'flameOfAzzinoth' },
-]
-
-botAddBtn?.addEventListener('click', () => socket.emit(EVENTS.BOT_ADD, {}))
-botRemoveBtn?.addEventListener('click', () => socket.emit(EVENTS.BOT_REMOVE))
-
-document.getElementById('session-reset-btn')?.addEventListener('click', () => {
-  if (confirm('Exit the game? All players will be kicked and you will return to the main menu.')) {
-    socket.emit(EVENTS.SESSION_RESET)
+// Connection badge (global DOM element, managed directly for simplicity)
+const badge = document.getElementById('conn-badge')
+function setBadge(text, variant, autoHideMs = 0) {
+  if (!badge) return
+  clearTimeout(badge._timer)
+  badge.textContent = text
+  badge.classList.remove('connected', 'connecting')
+  if (variant) badge.classList.add(variant)
+  badge.classList.add('visible')
+  if (autoHideMs > 0) {
+    badge._timer = setTimeout(() => badge.classList.remove('visible'), autoHideMs)
   }
+}
+
+// ── Socket — deferred connection so game.init() finishes first ──
+// autoConnect:false prevents connecting before game assets are ready.
+// socket.connect() is called after game.init() completes.
+const socket = io({ transports: ['websocket'], autoConnect: false })
+
+// ── Mount UI components first (CreationScreen shows loading state) ──
+mount(SceneOverlay, { target: document.getElementById('scene-overlay') })
+mount(HostApp, { target: document.getElementById('host-app'), props: { socket, audio } })
+
+// ── Load PixiJS assets — progress updates flow through gameState ──
+await game.init(document.getElementById('canvas-wrap'), (progress) => {
+  gameState.update(s => ({ ...s, loadingProgress: progress }))
 })
 
-document.getElementById('player-list')?.addEventListener('kick-player', e => {
-  socket.emit(EVENTS.KICK, { playerId: e.detail.playerId })
-})
+gameState.update(s => ({ ...s, isLoading: false, loadingProgress: 1 }))
 
-// ── Debug panel toggle ─────────────────────────────────────────────────────
-debugToggleBtn?.addEventListener('click', () => {
-  const isDebug = sidebar.classList.toggle('debug-mode')
-  debugToggleBtn.textContent = isDebug ? '🎮 Play' : '🛠 Debug'
-})
+// ── Now connect to server ───────────────────────────────────────
+game.setSocket(socket)
+socket.connect()
 
-// ── Upgrade debug sliders ──────────────────────────────────────────────────
-upgradeSliders.forEach(slider => {
-  const valEl = slider.nextElementSibling
-  slider.addEventListener('change', () => {
-    const skillIndex = parseInt(slider.dataset.slot, 10)
-    const tier = parseInt(slider.value, 10)
-    if (valEl) valEl.textContent = tier
-    socket.emit(EVENTS.DEBUG_SET_SKILL_TIER, { skillIndex, tier })
-  })
-})
-
-upgradeResetBtn?.addEventListener('click', () => {
-  upgradeSliders.forEach(slider => {
-    slider.value = 0
-    const valEl = slider.nextElementSibling
-    if (valEl) valEl.textContent = '0'
-    socket.emit(EVENTS.DEBUG_SET_SKILL_TIER, { skillIndex: parseInt(slider.dataset.slot, 10), tier: 0 })
-  })
-})
-let connectionHideTimer = null
-let shellMode = 'menu'
+// ── State tracking (feeds syncGameState) ───────────────────────
+let currentScene      = 'staging'
 let currentObjectives = null
-let currentScene = 'lobby'
+let currentLevelMeta  = null
+let currentNetworkUrl = ''
 
 function syncGameState() {
   gameState.set({
+    ...get(gameState),
     players:            game.knownState.players,
     stats:              game.knownState.stats,
     boss:               game.knownState.boss,
@@ -159,391 +74,75 @@ function syncGameState() {
     levelMeta:          currentLevelMeta,
     npcs:               game.knownState.npcs ?? [],
     scene:              currentScene,
+    serverScene:        currentScene,
+    networkUrl:         currentNetworkUrl,
     cumulativeStats:    currentLevelMeta?.cumulativeStats    ?? null,
     levelCompleteStats: currentLevelMeta?.stats              ?? null,
   })
 }
 
-function updateLobbyStartBtn() {
-  const players = Object.values(game.knownState.players).filter(p => !p.isHost)
-  if (botCountEl) botCountEl.textContent = `${players.filter(p => p.isBot).length} / 12 bots`
-  const scene = startBtn.dataset.scene
-  if (scene === 'staging') {
-    startBtn.disabled = players.filter(p => p.ready).length === 0
-  } else if (scene === 'lobby') {
-    startBtn.disabled = players.length === 0
-  }
-}
-
-function syncAudioControls() {
-  const settings = audio.getSettings()
-  if (audioMasterEl) audioMasterEl.value = String(Math.round(settings.master * 100))
-  if (audioMusicEl) audioMusicEl.value = String(Math.round(settings.music * 100))
-  if (audioSfxEl) audioSfxEl.value = String(Math.round(settings.sfx * 100))
-  if (audioVoiceEl) audioVoiceEl.value = String(Math.round(settings.voice * 100))
-  if (audioMuteEl) audioMuteEl.checked = !!settings.muted
-
-  if (menuAudioMasterEl) menuAudioMasterEl.value = String(Math.round(settings.master * 100))
-  if (menuAudioMusicEl)  menuAudioMusicEl.value  = String(Math.round(settings.music  * 100))
-  if (menuAudioSfxEl)    menuAudioSfxEl.value    = String(Math.round(settings.sfx    * 100))
-  if (menuAudioVoiceEl)  menuAudioVoiceEl.value  = String(Math.round(settings.voice  * 100))
-  if (menuAudioMuteEl)   menuAudioMuteEl.checked = !!settings.muted
-
-  updateAudioOutputLabels()
-}
-
-function updateAudioOutputLabels() {
-  ;[audioMasterEl, audioMusicEl, audioSfxEl, audioVoiceEl].forEach(el => {
-    const output = el?.parentElement?.querySelector('output')
-    if (output && el) output.textContent = `${el.value}%`
-  })
-}
-
-function bindAudioControls() {
-  const update = () => {
-    audio.applySettings({
-      master: (Number(audioMasterEl?.value ?? 85) || 0) / 100,
-      music: (Number(audioMusicEl?.value ?? 65) || 0) / 100,
-      sfx: (Number(audioSfxEl?.value ?? 85) || 0) / 100,
-      voice: (Number(audioVoiceEl?.value ?? 90) || 0) / 100,
-      muted: !!audioMuteEl?.checked,
-    })
-    updateAudioOutputLabels()
-  }
-
-  ;[audioMasterEl, audioMusicEl, audioSfxEl, audioVoiceEl].forEach(el => {
-    el?.addEventListener('input', update)
-    el?.addEventListener('change', update)
-  })
-  audioMuteEl?.addEventListener('change', update)
-  syncAudioControls()
-}
-
-function bindMenuAudioControls() {
-  const apply = () => {
-    audio.applySettings({
-      master: (Number(menuAudioMasterEl?.value ?? 85) || 0) / 100,
-      music:  (Number(menuAudioMusicEl?.value  ?? 65) || 0) / 100,
-      sfx:    (Number(menuAudioSfxEl?.value    ?? 85) || 0) / 100,
-      voice:  (Number(menuAudioVoiceEl?.value  ?? 90) || 0) / 100,
-      muted:  !!menuAudioMuteEl?.checked,
-    })
-    // mirror values back to the debug panel sliders
-    if (audioMasterEl) audioMasterEl.value = menuAudioMasterEl?.value ?? audioMasterEl.value
-    if (audioMusicEl)  audioMusicEl.value  = menuAudioMusicEl?.value  ?? audioMusicEl.value
-    if (audioSfxEl)    audioSfxEl.value    = menuAudioSfxEl?.value    ?? audioSfxEl.value
-    if (audioVoiceEl)  audioVoiceEl.value  = menuAudioVoiceEl?.value  ?? audioVoiceEl.value
-    if (audioMuteEl)   audioMuteEl.checked = !!menuAudioMuteEl?.checked
-    updateAudioOutputLabels()
-  }
-  ;[menuAudioMasterEl, menuAudioMusicEl, menuAudioSfxEl, menuAudioVoiceEl].forEach(el => {
-    el?.addEventListener('input', apply)
-    el?.addEventListener('change', apply)
-  })
-  menuAudioMuteEl?.addEventListener('change', apply)
-
-  menuAudioBtn?.addEventListener('click', () => {
-    const open = menuAudioPanel?.classList.toggle('open')
-    if (menuAudioBtn) menuAudioBtn.classList.toggle('active', open)
-  })
-}
-
-function setConnectionStatus(text, variant, autoHideMs = 0) {
-  if (!badge) return
-
-  if (connectionHideTimer) {
-    clearTimeout(connectionHideTimer)
-    connectionHideTimer = null
-  }
-
-  badge.textContent = text
-  badge.classList.remove('connected', 'connecting')
-  if (variant) badge.classList.add(variant)
-  badge.classList.add('visible')
-
-  if (autoHideMs > 0) {
-    connectionHideTimer = setTimeout(() => {
-      badge.classList.remove('visible')
-      connectionHideTimer = null
-    }, autoHideMs)
-  }
-}
-
-function setShellMode(mode) {
-  const previousMode = shellMode
-  shellMode = mode
-  body.dataset.shell = mode
-
-  if (previousMode === 'menu' && mode !== 'menu') {
-    requestAnimationFrame(() => game.resizeToContainer())
-  }
-}
-
-menuPlayBtn?.addEventListener('click', () => {
-  audio.init()
-  const serverScene = startBtn.dataset.scene ?? 'staging'
-  if (serverScene === 'staging') {
-    setShellMode('lobby')
-    socket.emit(EVENTS.START_GAME)
-  } else {
-    setShellMode(serverScene === 'battle' || serverScene === 'bossFight' ? 'gameplay' : 'lobby')
-  }
-})
-
-bindAudioControls()
-bindMenuAudioControls()
-
-setConnectionStatus('Connecting...', 'connecting')
-
-// ── Enter Raid ─────────────────────────────────────────────────────────────
-enterRaidBtn?.addEventListener('click', () => socket.emit(EVENTS.HOST_ENTER_RAID))
-
-// ── Quit Campaign ──────────────────────────────────────────────────────────
-quitCampaignBtn?.addEventListener('click', () => {
-  if (confirm('Quit the current campaign and return to the lobby?')) {
-    socket.emit(EVENTS.QUIT_CAMPAIGN)
-  }
-})
-
-// ── Fullscreen ─────────────────────────────────────────────────────────────
-fullscreenBtn?.addEventListener('click', () => {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen().catch(() => {})
-  } else {
-    document.exitFullscreen().catch(() => {})
-  }
-})
-document.addEventListener('fullscreenchange', () => {
-  if (fullscreenBtn) {
-    fullscreenBtn.textContent = document.fullscreenElement ? '✕ Exit Fullscreen' : '⛶ Fullscreen'
-  }
-})
-
-// ── Level selector (debug) ────────────────────────────────────────────────
-let selectedLevel = 0
-let currentLevelMeta = null
-
-function isSandboxSelection(index = selectedLevel) {
-  return LEVEL_SELECT_OPTIONS[index]?.debugSandbox === true
-}
-
-function renderSandboxPanel() {
-  if (!sandboxOverlayEl || !sandboxActionsEl) return
-
-  const scene = startBtn.dataset.scene ?? game.knownState.scene ?? 'lobby'
-  const activeSandbox = currentLevelMeta?.debugSandbox === true && (scene === 'battle' || scene === 'bossFight')
-
-  sandboxOverlayEl.hidden = !activeSandbox
-  if (!activeSandbox) {
-    sandboxActionsEl.innerHTML = ''
-    return
-  }
-
-  // Build buttons once — rebuilding on every tick destroys them mid-click
-  if (sandboxActionsEl.childElementCount === 0) {
-    sandboxActionsEl.innerHTML = SANDBOX_ENEMY_ACTIONS.map(action => (
-      `<button class="debug-btn" data-enemy-type="${action.enemyType}">${action.label}</button>`
-    )).join('')
-
-    sandboxActionsEl.querySelectorAll('[data-enemy-type]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        socket.emit(EVENTS.DEBUG_SPAWN_ENEMY, { enemyType: btn.dataset.enemyType })
-      })
-    })
-
-    const clearBtn = document.getElementById('sandbox-overlay-clear-btn')
-    if (clearBtn) clearBtn.disabled = false
-
-    if (sandboxStatusEl) {
-      sandboxStatusEl.textContent = 'Sandbox controls ready.'
-      sandboxStatusEl.dataset.error = 'false'
-    }
-  }
-}
-
-function updateLevelDisplay() {
-  const label = isSandboxSelection()
-    ? `Debug: ${LEVEL_SELECT_OPTIONS[selectedLevel]?.name ?? '?'}`
-    : `Level ${selectedLevel + 1}: ${LEVEL_SELECT_OPTIONS[selectedLevel]?.name ?? '?'}`
-  if (selectedLevelNameEl) selectedLevelNameEl.textContent = label
-  renderSandboxPanel()
-}
-
-function emitSetLevel() {
-  socket.emit(EVENTS.SET_LEVEL, { levelIndex: selectedLevel, skipDialog: skipDialogChk?.checked ?? false })
-}
-
-prevLevelBtn?.addEventListener('click', () => {
-  selectedLevel = Math.max(0, selectedLevel - 1)
-  updateLevelDisplay()
-  emitSetLevel()
-})
-nextLevelBtn?.addEventListener('click', () => {
-  selectedLevel = Math.min(LEVEL_SELECT_OPTIONS.length - 1, selectedLevel + 1)
-  updateLevelDisplay()
-  emitSetLevel()
-})
-skipDialogChk?.addEventListener('change', () => {
-  emitSetLevel()
-})
-
-document.getElementById('sandbox-overlay-clear-btn')?.addEventListener('click', () => {
-  socket.emit(EVENTS.DEBUG_CLEAR_ENEMIES)
-})
-
-function setSceneControls(scene) {
-  startBtn.dataset.scene = scene
-
-  if (scene === 'battle' || scene === 'bossFight') setShellMode('gameplay')
-  else if (scene !== 'staging') setShellMode('lobby')
-
-  if (scene === 'staging') {
-    startBtn.textContent   = 'START GAME'
-    startBtn.style.display = ''
-    startBtn.onclick       = () => socket.emit(EVENTS.START_GAME)
-    if (enterRaidBtn) enterRaidBtn.style.display = 'none'
-    updateLobbyStartBtn()
-  } else if (scene === 'lobby') {
-    startBtn.textContent   = 'START CAMPAIGN'
-    startBtn.disabled      = Object.values(game.knownState.players).filter(p => !p.isHost).length === 0
-    startBtn.style.display = ''
-    startBtn.onclick       = () => socket.emit(EVENTS.START_GAME)
-    if (enterRaidBtn) enterRaidBtn.style.display = 'none'
-    updateLevelDisplay()
-  } else if (scene === 'trainingGrounds') {
-    startBtn.style.display = 'none'
-    if (enterRaidBtn) {
-      enterRaidBtn.style.display = ''
-      enterRaidBtn.disabled = false
-    }
-  } else if (scene === 'levelComplete') {
-    startBtn.textContent   = 'CONTINUE'
-    startBtn.disabled      = false
-    startBtn.style.display = ''
-    startBtn.onclick       = () => socket.emit(EVENTS.HOST_ADVANCE)
-    if (enterRaidBtn) enterRaidBtn.style.display = 'none'
-  } else if (scene === 'quiz') {
-    startBtn.style.display = 'none'
-    if (enterRaidBtn) enterRaidBtn.style.display = 'none'
-  } else if (scene === 'result' || scene === 'gameover') {
-    startBtn.textContent   = 'RESTART GAME'
-    startBtn.disabled      = false
-    startBtn.style.display = ''
-    startBtn.onclick       = () => socket.emit(EVENTS.RESTART_GAME)
-    if (enterRaidBtn) enterRaidBtn.style.display = 'none'
-  } else {
-    startBtn.style.display = 'none'
-    if (enterRaidBtn) enterRaidBtn.style.display = 'none'
-  }
-
-  // Quit Campaign: visible during active campaign run
-  const campaignScenes = ['battle', 'bossFight', 'levelComplete', 'quiz']
-  if (quitCampaignBtn) {
-    quitCampaignBtn.style.display = campaignScenes.includes(scene) ? '' : 'none'
-  }
-
-  // Reset Session: visible during staging, lobby, and training grounds
-  if (sessionResetBtn) {
-    sessionResetBtn.style.display = (scene === 'staging' || scene === 'lobby' || scene === 'trainingGrounds') ? '' : 'none'
-  }
-}
-
-// ── Socket events ──────────────────────────────────────────────────────────
+// ── Socket events ──────────────────────────────────────────────
 
 socket.on('connect', () => {
-  setConnectionStatus('Connected', 'connected', 2000)
+  setBadge('Connected', 'connected', 2000)
   audio.init()
 
-  // Display the controller URL and generate QR code using the LAN IP
   fetch('/api/network-url')
     .then(r => r.json())
     .then(({ url }) => {
-      const display = url.replace(/^https?:\/\//, '')
-      serverIpEl.textContent = display
-      if (menuServerIpEl) menuServerIpEl.textContent = display
-      if (typeof QRCode !== 'undefined') {
-        qrWrap.innerHTML = ''
-        new QRCode(qrWrap, {
-          text:       url,
-          width:      150,
-          height:     150,
-          colorDark:  '#000000',
-          colorLight: '#ffffff',
-        })
-        if (menuQrWrap) {
-          menuQrWrap.innerHTML = ''
-          new QRCode(menuQrWrap, {
-            text:       url,
-            width:      180,
-            height:     180,
-            colorDark:  '#000000',
-            colorLight: '#ffffff',
-          })
-        }
-      }
+      currentNetworkUrl = url
+      syncGameState()
     })
     .catch(() => {
-      const url = `${window.location.origin}/controller`
-      const display = url.replace(/^https?:\/\//, '')
-      serverIpEl.textContent = display
-      if (menuServerIpEl) menuServerIpEl.textContent = display
+      currentNetworkUrl = window.location.origin + '/controller'
+      syncGameState()
     })
 
-  // Register as the host player
   socket.emit(EVENTS.JOIN, { name: 'Host Display', className: 'Warrior', isHost: true })
 })
 
-socket.on('disconnect', () => {
-  setConnectionStatus('Disconnected', '', 0)
-})
+socket.on('disconnect', () => setBadge('Disconnected', '', 0))
 
 socket.on(EVENTS.INIT, state => {
   game.receiveFullState(state)
   const scene = state.scene ?? 'staging'
   const meta = {
-    levelId: state.levelId,
-    levelIndex: state.levelIndex,
-    levelNumber: state.levelNumber,
-    totalLevels: state.totalLevels,
-    levelName: state.levelName,
+    levelId:      state.levelId,
+    levelIndex:   state.levelIndex,
+    levelNumber:  state.levelNumber,
+    totalLevels:  state.totalLevels,
+    levelName:    state.levelName,
     debugSandbox: state.debugSandbox,
-    objectives: state.objectives,
-    arenaWidth: state.arenaWidth,
-    arenaHeight: state.arenaHeight,
-    rooms: state.rooms,
-    passages: state.passages,
-    mirrors: state.mirrors,
+    objectives:   state.objectives,
+    arenaWidth:   state.arenaWidth,
+    arenaHeight:  state.arenaHeight,
+    rooms:        state.rooms,
+    passages:     state.passages,
+    mirrors:      state.mirrors,
   }
   currentObjectives = state.objectives ?? null
-  currentScene = scene
-  game.switchScene(scene === 'staging' ? 'lobby' : scene, meta)  // staging has no own renderer
-  currentLevelMeta = meta
+  currentScene      = scene
+  currentLevelMeta  = meta
+  // 'staging' has no dedicated renderer — use lobby renderer as fallback
+  game.switchScene(scene === 'staging' ? 'lobby' : scene, meta)
   audio.setScene(scene, meta)
-  setSceneControls(scene)
-  updateLobbyStartBtn()
-  syncGameState()
-  renderSandboxPanel()
   audio.syncPlayerState(game.knownState.players)
+  syncGameState()
 })
 
 socket.on(EVENTS.PLAYER_JOINED, player => {
   game.addPlayer(player)
   if (!player?.isHost) audio.handlePlayerJoined()
-  updateLobbyStartBtn()
   syncGameState()
 })
 
 socket.on(EVENTS.PLAYER_LEFT, id => {
   game.removePlayer(id)
-  updateLobbyStartBtn()
   syncGameState()
 })
 
 socket.on(EVENTS.STATE_DELTA, delta => {
-  const before = Object.keys(game.knownState.players).length
   game.receiveState(delta)
-  const after  = Object.keys(game.knownState.players).length
-  if (after !== before) updateLobbyStartBtn()
   syncGameState()
   audio.syncPlayerState(game.knownState.players)
 })
@@ -551,23 +150,23 @@ socket.on(EVENTS.STATE_DELTA, delta => {
 socket.on(EVENTS.SCENE_CHANGE, (data) => {
   const { scene, ...meta } = data
 
-  // 'menu' is a host-only signal to return to the main menu shell after Exit Game
+  // 'menu' is a host-only signal: session reset → return to creation screen
   if (scene === 'menu') {
-    if (sessionResetBtn) sessionResetBtn.style.display = 'none'
-    setShellMode('menu')
+    currentScene     = 'staging'
+    currentLevelMeta = null
+    currentObjectives = null
+    game.switchScene('lobby', {})
+    syncGameState()
     return
   }
 
   currentObjectives = data.objectives ?? null
-  currentScene = scene
+  currentScene      = scene
   if (scene === 'quiz') quizState.set({ phase: 'waiting', question: null, progress: null, results: null, upgrades: [] })
-  // staging has no canvas scene — use lobby renderer as fallback
   game.switchScene(scene === 'staging' ? 'lobby' : scene, meta)
   currentLevelMeta = meta
   audio.setScene(scene, meta)
-  setSceneControls(scene)
   syncGameState()
-  renderSandboxPanel()
 })
 
 socket.on(EVENTS.OBJECTIVE_UPDATE, ({ objectives }) => {
@@ -576,19 +175,15 @@ socket.on(EVENTS.OBJECTIVE_UPDATE, ({ objectives }) => {
   syncGameState()
 })
 
-socket.on(EVENTS.SET_LEVEL, ({ levelIndex, levelName, skipDialog }) => {
-  selectedLevel = levelIndex
-  updateLevelDisplay()
-  if (skipDialogChk && skipDialog !== undefined) skipDialogChk.checked = skipDialog
+socket.on(EVENTS.SET_LEVEL, ({ levelIndex }) => {
+  // Acknowledged by GameHUD's internal state — no action needed here
 })
 
 socket.on(EVENTS.DEBUG_ACTION_RESULT, ({ message, isError }) => {
-  if (!sandboxStatusEl) return
-  sandboxStatusEl.textContent = message ?? ''
-  sandboxStatusEl.dataset.error = isError ? 'true' : 'false'
+  console.log(`[sandbox] ${isError ? 'ERROR: ' : ''}${message}`)
 })
 
-// ── Transition events ─────────────────────────────────────────────────────
+// ── Transition events ──────────────────────────────────────────
 
 socket.on(EVENTS.LEVEL_VICTORY, data => {
   game.activeRenderer?.onLevelVictory?.(data)
@@ -598,7 +193,7 @@ socket.on(EVENTS.TRANSITION_VFX, data => {
   game.activeRenderer?.onTransitionVfx?.(data)
 })
 
-// ── VFX events ───────────────────────────────────────────────────────────
+// ── VFX events ─────────────────────────────────────────────────
 
 socket.on(EVENTS.COOLDOWN, data => {
   game.activeRenderer?.onCooldown?.(data)
@@ -628,11 +223,15 @@ socket.on(EVENTS.CHANNEL_INTERRUPTED, data => {
   game.activeRenderer?.onChannelInterrupted?.(data)
 })
 
+socket.on(EVENTS.CHANNEL_ENDED, data => {
+  game.activeRenderer?.onChannelEnded?.(data)
+})
+
 socket.on(EVENTS.SKILL_INTERRUPTED, data => {
   audio.handleSkillInterrupted(data)
 })
 
-// ── Illidan encounter events ──────────────────────────────────────────────
+// ── Illidan encounter events ───────────────────────────────────
 
 socket.on(EVENTS.BOSS_DIALOG_LINE, data => {
   audio.handleDialogLine(data)
@@ -649,7 +248,7 @@ socket.on(EVENTS.ILLIDAN_AURA_PULSE, data => {
   game.activeRenderer?.onIllidanAuraPulse?.(data)
 })
 
-// ── Level 2: Portal Beam events ──────────────────────────────────────────
+// ── Level 2: Portal Beam events ────────────────────────────────
 
 socket.on(EVENTS.PORTAL_BEAM_WARNING, data => {
   audio.handlePortalBeamWarning(data)
@@ -666,7 +265,7 @@ socket.on(EVENTS.PORTAL_BEAM_END, data => {
   game.activeRenderer?.onPortalBeamEnd?.(data)
 })
 
-// ── Quiz events ───────────────────────────────────────────────────────────
+// ── Quiz events ────────────────────────────────────────────────
 
 socket.on(EVENTS.QUIZ_QUESTION, data => {
   quizState.set({ phase: 'answering', question: data, progress: null, results: null, upgrades: [] })
@@ -686,8 +285,4 @@ socket.on(EVENTS.QUIZ_UPGRADE_CHOSEN, data => {
 
 socket.on(EVENTS.QUIZ_DONE, () => {
   quizState.update(s => ({ ...s, phase: 'done' }))
-  startBtn.textContent   = 'CONTINUE'
-  startBtn.disabled      = false
-  startBtn.style.display = ''
-  startBtn.onclick       = () => socket.emit(EVENTS.HOST_ADVANCE)
 })

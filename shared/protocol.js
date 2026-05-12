@@ -37,6 +37,7 @@ export const EVENTS = {
   SKILL_INTERRUPTED:   'skill:interrupted',    // { playerId } — cast/channel cancelled; client should abort cast animation immediately
   EFFECT_DAMAGE:       'effect:damage',        // { targetId, amount, type: 'damage'|'heal', sourceSkill }
   CHANNEL_INTERRUPTED: 'channel:interrupted',  // { playerId }
+  CHANNEL_ENDED:       'channel:ended',        // { playerId } — channel completed its full duration naturally
   TARGETED_HIT:        'targeted:hit',         // { casterX, casterY, targetX, targetY, effectType, color }
   COMBO_POINTS:        'player:comboPoints',   // { playerId, points }
   PLAYER_HIGHLIGHT:    'player:highlight',     // { playerId }  — broadcast player's find-me beacon request

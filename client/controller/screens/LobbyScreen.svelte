@@ -1,10 +1,10 @@
 <script>
-  import { CLASSES } from '../../../shared/ClassConfig.js'
+  import { CLASSES } from '../../../shared/ClassConfig.js';
 
   // Must match GameScreen.svelte GRID_ORDER so the briefing positions match combat
   const GRID_ORDER = [1, 3, 0, 2]
 
-  let { playerName = '', className = '', onready } = $props()
+  let { playerName = '', className = '', canReady = false, onready } = $props()
 
   const CLASS_ICONS = {
     Warrior:     'classicon_warrior',
@@ -74,9 +74,13 @@
       <span>❤️ {cls?.hp ?? '—'} HP</span>
       <span>⚡ {cls?.speed ?? '—'}x Spd</span>
     </div>
-    <button type="button" class="ready-btn" onclick={handleReady} disabled={ready}>
-      {ready ? 'READY ✓' : 'I GOT IT'}
-    </button>
+    {#if canReady}
+      <button type="button" class="ready-btn" onclick={handleReady} disabled={ready}>
+        {ready ? 'READY ✓' : 'I am ready'}
+      </button>
+    {:else}
+      <div class="waiting-pill">Waiting for host…</div>
+    {/if}
   </div>
 
   <div class="skills-grid">
@@ -288,6 +292,24 @@
     cursor: pointer;
     flex-shrink: 0;
     align-self: stretch;
+  }
+
+  .waiting-pill {
+    min-width: 100px;
+    padding: 12px 14px;
+    border-radius: var(--rn-radius-md);
+    border: 1px solid rgba(100, 72, 20, 0.35);
+    background: var(--rn-gradient-surface);
+    color: var(--rn-text-dim);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-align: center;
+    flex-shrink: 0;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .ready-btn:active { opacity: 0.9; }

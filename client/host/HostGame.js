@@ -237,6 +237,13 @@ export default class HostGame {
     this.activeRenderer?.exit()
     this.activeRenderer = this.renderers[name] ?? this.renderers.lobby
 
+    // Clear transient combat state so stale zones/projectiles from the previous
+    // scene don't bleed into the new one before the first STATE_DELTA arrives.
+    this.knownState.aoeZones   = []
+    this.knownState.projectiles = []
+    this.knownState.minions     = []
+    this.knownState.tombstones  = []
+
     // Pass level metadata to renderers that support it
     if (this.activeRenderer.setLevelMeta) {
       this.activeRenderer.setLevelMeta(meta ?? {})

@@ -606,6 +606,9 @@ export default class BaseRenderer {
   /** No-op in base — override in renderers that support channel interruption. */
   onChannelInterrupted(data) {}
 
+  /** No-op in base — override in renderers that need to clean up on natural channel expiry. */
+  onChannelEnded(data) {}
+
   onIllidanAuraPulse(data) {
     if (!this.vfx) return
     this.vfx.oneShot.aoeFlash(data.x, data.y, data.radius, data.color)

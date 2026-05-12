@@ -1,93 +1,23 @@
 /* ──────────────────────────────────────────────────────────────
-   layout.css — Sidebar, shell panel visibility, main canvas area
-   This file controls structural layout only — no decorative styles.
-   The sidebar's visual appearance by shell mode lives here too
-   since it changes the sidebar's entire shape and position.
+   layout.css — Body layout, canvas area, scene overlay.
+   Stage-aware layout driven by body[data-stage] set from HostApp.
    ────────────────────────────────────────────────────────────── */
 
-/* ── Sidebar ─────────────────────────────────────────────────── */
+/* ── Body layout ─────────────────────────────────────────────── */
 
-#sidebar {
-  width: 260px;
-  min-width: 260px;
-  background:
-    linear-gradient(180deg, rgba(80, 50, 10, 0.20) 0%, rgba(0, 0, 0, 0) 18%),
-    linear-gradient(180deg, #1E1208 0%, #160C05 36%, #0E0804 100%);
-  border-right: 1px solid rgba(120, 84, 28, 0.50);
-  box-shadow: inset -1px 0 0 rgba(255, 210, 80, 0.06);
-  display: flex;
-  flex-direction: column;
-  padding: 20px 16px;
-  gap: 16px;
-  overflow: hidden;
+body {
   position: relative;
 }
 
-#sidebar h1 {
-  font-size: 22px;
-  color: var(--rn-gold);
-  letter-spacing: 2px;
-  text-align: center;
-}
+/* ── Host app panel (sidebar area) ───────────────────────────── */
 
-#sidebar h3 {
-  font-size: 13px;
-  color: var(--rn-text-dim);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-/* ── Shell panel visibility ───────────────────────────────────── */
-
-.shell-panel {
-  display: none;
-  flex-direction: column;
-  gap: 16px;
-  min-height: 0;
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-body[data-shell="menu"]     #menu-panel,
-body[data-shell="lobby"]    #lobby-panel,
-body[data-shell="gameplay"] #gameplay-panel {
+#host-app {
   display: flex;
-}
-
-/* ── Menu shell overrides ─────────────────────────────────────── */
-/* In menu mode the sidebar expands full-width and centers content */
-
-body[data-shell="menu"] #main-layout {
-  display: none;
-}
-
-body[data-shell="menu"] #sidebar {
-  width: 100%;
-  min-width: 0;
-  border-right: none;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 24px;
-  background:
-    radial-gradient(circle at 50% 18%, rgba(200, 148, 40, 0.14) 0%, rgba(200, 148, 40, 0) 24%),
-    radial-gradient(circle at 50% -8%, rgba(255, 200, 80, 0.08) 0%, rgba(255, 200, 80, 0) 30%),
-    linear-gradient(180deg, #1E1208 0%, #120A04 52%, #080402 100%);
-}
-
-body[data-shell="menu"] #menu-panel {
-  width: min(620px, 100%);
-  flex: 0 1 auto;
-}
-
-body[data-shell="menu"] #host-actions {
-  width: min(620px, 100%);
-  margin-top: 0;
-}
-
-body[data-shell="menu"] #start-btn,
-body[data-shell="menu"] #quit-campaign-btn {
-  display: none !important;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: 260px;
+  min-width: 260px;
+  overflow: hidden;
 }
 
 /* ── Main canvas area ─────────────────────────────────────────── */
@@ -101,17 +31,6 @@ body[data-shell="menu"] #quit-campaign-btn {
   background:
     radial-gradient(circle at top, rgba(80, 50, 10, 0.18) 0%, rgba(80, 50, 10, 0) 24%),
     var(--rn-bg-void);
-}
-
-#scene-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 10;
-  pointer-events: none;
-}
-
-#scene-overlay:not(:empty) {
-  pointer-events: auto;
 }
 
 #canvas-wrap {
@@ -132,3 +51,94 @@ canvas {
   width: auto !important;
   height: auto !important;
 }
+
+#scene-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+#scene-overlay:not(:empty) {
+  pointer-events: auto;
+}
+
+/* ── CREATION stage: CreationScreen uses position:fixed overlay   */
+/* No layout changes needed — canvas stays properly sized.         */
+/* CreationScreen.svelte uses position:fixed;inset:0 to cover all. */
+
+/* ── Connection badge (global absolute, always on top) ────────── */
+
+#conn-badge {
+  position: fixed;
+  top: 10px;
+  right: 12px;
+  z-index: 100;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: var(--rn-radius-pill);
+  background: rgba(231, 76, 60, 0.95);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+
+#conn-badge.visible    { opacity: 1; }
+#conn-badge.connected  { background: rgba(46, 204, 113, 0.95); }
+#conn-badge.connecting { background: rgba(52, 152, 219, 0.95); }
+
+/* ── Enemy sandbox overlay (dev tool, inside #main-layout) ───── */
+
+#sandbox-overlay {
+  position: absolute;
+  top: 22px;
+  left: 22px;
+  z-index: 15;
+  width: min(340px, calc(100% - 44px));
+  padding: 14px 14px 12px;
+  border-radius: var(--rn-radius-md);
+  border: 1px solid rgba(148, 106, 32, 0.45);
+  background:
+    linear-gradient(180deg, rgba(200, 148, 40, 0.08) 0%, rgba(200, 148, 40, 0) 30%),
+    rgba(14, 8, 4, 0.90);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 210, 80, 0.06),
+    0 14px 32px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+}
+
+#sandbox-overlay[hidden] { display: none; }
+
+#sandbox-overlay-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  color: var(--rn-accent);
+  margin-bottom: 10px;
+}
+
+#sandbox-overlay-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+#sandbox-overlay-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+#sandbox-overlay-status {
+  font-size: 12px;
+  color: var(--rn-text-dim);
+  min-height: 16px;
+  flex: 1;
+}
+
+#sandbox-overlay-status[data-error="true"] { color: #ff8080; }

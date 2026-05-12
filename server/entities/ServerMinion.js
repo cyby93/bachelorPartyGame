@@ -10,6 +10,7 @@ export default class ServerMinion {
     this.id         = id
     this.ownerId    = ownerId
     this.minionType = config.subtype   // 'TOTEM' | 'TRAP' | 'PET' | 'WILD_BEAST'
+    this.spriteKey  = config.spriteKey ?? null
     this.config     = config
     this.x          = x
     this.y          = y
@@ -318,6 +319,7 @@ export default class ServerMinion {
       maxHp:       this.invincible ? null : this.maxHp,
       color:       this.color,
       remaining:   Math.max(0, this.expiresAt - Date.now()),
+      spriteKey:   this.spriteKey,
     }
   }
 }

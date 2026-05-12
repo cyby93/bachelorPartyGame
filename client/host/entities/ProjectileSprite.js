@@ -8,14 +8,19 @@ import { Container, Graphics, Sprite, Assets } from 'pixi.js'
 const TRAIL_LENGTH = 5
 
 // Per-spriteKey visual config. Add an entry here when creating a new ability sprite.
-// trailStyle:  which trail renderer to use ('holy' | 'divine' | 'ichor' | 'default')
-// spinSpeed:   body rotation in radians/frame at 60fps (0 = no spin)
-// bodyScale:   multiplier on radius*2 — values < 1 shrink the body
-// trailLength: history points kept; defaults to TRAIL_LENGTH (5) when omitted
+// trailStyle:    which trail renderer to use ('holy' | 'divine' | 'ichor' | 'default')
+// spinSpeed:     body rotation in radians/frame at 60fps (0 = no spin)
+// bodyScale:     multiplier on radius*2 — values < 1 shrink the body
+// trailLength:   history points kept; defaults to TRAIL_LENGTH (5) when omitted
+// faceDirection: if true, body rotation tracks travel direction instead of spinning
+// angleOffset:   added to travel angle to correct for sprite's rest orientation (radians)
+//                PixelLab arrows rest at northeast (~-π/4), so offset = +π/4 aligns them
 const PROJECTILE_CONFIG = {
-  'projectile_avengers_shield': { trailStyle: 'holy',   spinSpeed: 0.14 },
-  'projectile_penance':         { trailStyle: 'divine', bodyScale: 0.88, trailLength: 8 },
-  'projectile_ichor':           { trailStyle: 'ichor',  spinSpeed: 0.04, trailLength: 7 },
+  'projectile_avengers_shield': { trailStyle: 'holy',    spinSpeed: 0.14 },
+  'projectile_penance':         { trailStyle: 'divine',  bodyScale: 0.88, trailLength: 8 },
+  'projectile_ichor':           { trailStyle: 'ichor',   spinSpeed: 0.04, trailLength: 7 },
+  'projectile_shoot_arrow':     { trailStyle: 'none', bodyScale: 2.0, faceDirection: true, angleOffset: Math.PI / 4 },
+  'projectile_aimed_shot':      { trailStyle: 'none', bodyScale: 2.2, faceDirection: true, angleOffset: Math.PI / 4 },
 }
 
 const DIVINE_COLORS = [0xfffbe0, 0xffeeaa, 0xffd966]
@@ -32,13 +37,17 @@ export default class ProjectileSprite {
 
     const cfg = PROJECTILE_CONFIG[data.spriteKey] ?? {}
 
-    this._color       = colorNum
-    this._radius      = data.radius ?? 8
-    this._trailStyle  = cfg.trailStyle  ?? 'default'
-    this._spinSpeed   = cfg.spinSpeed   ?? 0
-    this._trailMax    = cfg.trailLength ?? TRAIL_LENGTH
-    this._rotation    = 0
-    this._particles   = []  // lingering sparkles / drips: { x, y, born, life, r, color }
+    this._color          = colorNum
+    this._radius         = data.radius ?? 8
+    this._trailStyle     = cfg.trailStyle    ?? 'default'
+    this._spinSpeed      = cfg.spinSpeed     ?? 0
+    this._trailMax       = cfg.trailLength   ?? TRAIL_LENGTH
+    this._rotation       = 0
+    this._faceDirection  = cfg.faceDirection ?? false
+    this._angleOffset    = cfg.angleOffset   ?? 0
+    this._hasPosition    = false
+    this._facingSet      = false
+    this._particles      = []  // lingering sparkles / drips: { x, y, born, life, r, color }
 
     this.container = new Container()
 
@@ -54,6 +63,11 @@ export default class ProjectileSprite {
     this._body.tint   = textureKey === 'projectile_default' ? colorNum : 0xffffff
     this.container.addChild(this._body)
 
+    if (this._faceDirection && data.angle != null) {
+      this._body.rotation = data.angle + this._angleOffset
+      this._facingSet = true
+    }
+
     this._trail = []
   }
 
@@ -62,24 +76,27 @@ export default class ProjectileSprite {
     const newY = state.y
     const now  = Date.now()
 
-    if (this.container.position.x !== 0 || this.container.position.y !== 0) {
+    if (this._hasPosition) {
       const prevX = this.container.position.x
       const prevY = this.container.position.y
       this._trail.unshift({ x: prevX, y: prevY })
       if (this._trail.length > this._trailMax) this._trail.length = this._trailMax
 
+      const dx      = newX - prevX
+      const dy      = newY - prevY
+      const rawDist = Math.sqrt(dx * dx + dy * dy)
+      const dist    = rawDist || 1
+
+      if (this._faceDirection && !this._facingSet && rawDist > 0.05) {
+        this._body.rotation = Math.atan2(dy, dx) + this._angleOffset
+        this._facingSet = true
+      }
+
       if (this._trailStyle === 'divine') {
-        // Tail offset: spawn behind the body in the direction opposite to travel
-        const dx   = newX - prevX
-        const dy   = newY - prevY
-        const dist = Math.sqrt(dx * dx + dy * dy) || 1
         const tailX = prevX - (dx / dist) * this._radius
         const tailY = prevY - (dy / dist) * this._radius
         this._spawnDivineParticles(tailX, tailY, dx / dist, dy / dist, now)
       } else if (this._trailStyle === 'ichor') {
-        const dx   = newX - prevX
-        const dy   = newY - prevY
-        const dist = Math.sqrt(dx * dx + dy * dy) || 1
         this._spawnIchorDrips(prevX, prevY, dx / dist, dy / dist, now)
       }
     }
@@ -90,6 +107,7 @@ export default class ProjectileSprite {
     }
 
     this.container.position.set(newX, newY)
+    this._hasPosition = true
 
     if (this._spinSpeed > 0) {
       this._rotation += this._spinSpeed
@@ -137,15 +155,11 @@ export default class ProjectileSprite {
 
   _drawTrail(cx, cy, now) {
     this._trailGfx.clear()
-    if (this._trailStyle === 'holy') {
-      this._drawHolyTrail(cx, cy)
-    } else if (this._trailStyle === 'divine') {
-      this._drawDivineTrail(cx, cy, now)
-    } else if (this._trailStyle === 'ichor') {
-      this._drawIchorTrail(cx, cy, now)
-    } else {
-      this._drawDefaultTrail(cx, cy)
-    }
+    if (this._trailStyle === 'none')   return
+    if (this._trailStyle === 'holy')   { this._drawHolyTrail(cx, cy);        return }
+    if (this._trailStyle === 'divine') { this._drawDivineTrail(cx, cy, now); return }
+    if (this._trailStyle === 'ichor')  { this._drawIchorTrail(cx, cy, now);  return }
+    this._drawDefaultTrail(cx, cy)
   }
 
   _drawDefaultTrail(cx, cy) {

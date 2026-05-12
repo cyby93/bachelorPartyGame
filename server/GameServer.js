@@ -16,7 +16,7 @@ import PortalBeamSystem   from './systems/PortalBeamSystem.js'
 import IllidanEncounter   from './systems/IllidanEncounter.js'
 import BotController      from './systems/BotController.js'
 import { buildFullState, buildDeltaState, buildYouPayload, gatesDTO, buildingsDTO, npcsDTO } from './systems/StateSerializer.js'
-import TrainingDummy, { RangedDummy, MeleeDummy, MovingDummy } from './entities/TrainingDummy.js'
+import TrainingDummy, { RangedDummy, MeleeDummy } from './entities/TrainingDummy.js'
 import CooldownSystem    from './systems/CooldownSystem.js'
 import SkillSystem       from './systems/SkillSystem.js'
 import SpawnSystem       from './systems/SpawnSystem.js'
@@ -1041,20 +1041,17 @@ export default class GameServer {
   _spawnTrainingDummy() {
     const W = this.arenaWidth
     const H = this.arenaHeight
+    const Y = H * 0.82   // bottom-aligned row
 
-    const idle = new TrainingDummy({ id: 'training-dummy' })
-    const ranged = new RangedDummy({ id: 'ranged-dummy', x: W * 0.2, y: H * 0.5 })
-    const melee = new MeleeDummy({ id: 'melee-dummy', x: W * 0.8, y: H * 0.5 })
-    const moving = new MovingDummy({
-      id: 'moving-dummy', pointA: { x: W * 0.5, y: H * 0.55 }, pointB: { x: W * 0.5, y: H * 0.80 }, speed: 1.5,
-    })
+    const idle   = new TrainingDummy({ id: 'training-dummy', x: W * 0.5,  y: Y })
+    const ranged = new RangedDummy(  { id: 'ranged-dummy',   x: W * 0.25, y: Y })
+    const melee  = new MeleeDummy(   { id: 'melee-dummy',    x: W * 0.75, y: Y })
 
-    ;[idle, ranged, melee, moving].forEach(dummy => dummy.setArenaSize(this.arenaWidth, this.arenaHeight))
+    ;[idle, ranged, melee].forEach(dummy => dummy.setArenaSize(this.arenaWidth, this.arenaHeight))
 
     this.enemies.set('training-dummy', idle)
     this.enemies.set('ranged-dummy', ranged)
     this.enemies.set('melee-dummy', melee)
-    this.enemies.set('moving-dummy', moving)
   }
 
   _setArenaSize(width, height) {

@@ -410,7 +410,13 @@ export default class HostGame {
       'projectile_avengers_shield',
       'projectile_fireball',
       'projectile_penance',
+      'projectile_shoot_arrow',
+      'projectile_aimed_shot',
       'aura_pw_shield',
+      'trap_explosive',
+      'dummy_training',
+      'dummy_ranged',
+      'dummy_tank',
     ]
     const manifest = SPRITE_KEYS.map(k => ({ alias: k, src: `/assets/sprites/${k}.png` }))
 

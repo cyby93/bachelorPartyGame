@@ -167,6 +167,7 @@ export function buildDeltaState(gs) {
         radius:    proj.radius,
         color:     proj.color,
         spriteKey: proj.spriteKey ?? null,
+        angle:     Math.atan2(proj.vy, proj.vx),
       })
     }
   })

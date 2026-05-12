@@ -22,16 +22,33 @@ Leviathan PixelLab ID: `a7aab6e3-b4d3-4d32-9fc4-b58acf24d572`.
 |---|---|---|---|
 | Penance (Priest) | `projectile_penance` | `public/assets/sprites/projectile_penance.png` | `divine` |
 | Avenger's Shield (Paladin) | `projectile_avengers_shield` | `public/assets/sprites/projectile_avengers_shield.png` | `holy` |
+| Shoot Bow (Hunter) | `projectile_shoot_arrow` | `public/assets/sprites/projectile_shoot_arrow.png` | `default` |
+| Aimed Shot (Hunter) | `projectile_aimed_shot` | `public/assets/sprites/projectile_aimed_shot.png` | `default` |
+| Explosive Trap (Hunter) | `trap_explosive` | `public/assets/sprites/trap_explosive.png` | trap object |
 
 All sprites live in the flat `public/assets/sprites/` directory. To add a new projectile: drop `{spriteKey}.png` there and add the key to `SPRITE_KEYS` in `HostGame.js`. No separate manifest entry or subdirectory needed.
 
+## Training Dummy Sprites (2026-05-12)
+
+Three dummies, each with a PixelLab model. Type field in DTO drives STATIC_SPRITE_KEY lookup in EnemySprite.
+
+| Dummy class | dummyType | spriteKey | PixelLab ID |
+|---|---|---|---|
+| TrainingDummy (Idle) | `trainingDummy` | `dummy_training` | `d69d5743-6f97-4474-8df5-fbc0c2a1a69b` |
+| RangedDummy | `rangedDummy` | `dummy_ranged` | `a1505c93-faa8-4c04-949c-96aba3ad110a` |
+| MeleeDummy | `meleeDummy` | `dummy_tank` | `f6fc98a6-48e6-42a7-b6f9-f25000043e45` |
+
+Positioned in a row at y=H*0.82: ranged left (W*0.25), idle center (W*0.5), melee right (W*0.75). MovingDummy removed.
+
+Trap sprite: if `m.spriteKey` is set in minion DTO, BaseRenderer renders a 40×40 Sprite; falls back to diamond shape.
+
 ## Projectile Trail System (`ProjectileSprite.js`)
 
-Four maps keyed by `spriteKey` — add entries to extend, no other files needed:
-- `TRAIL_STYLE_MAP` → trail style name
-- `SPIN_SPEED_MAP` → rotation speed (rad/frame). 0 = no spin
-- `BODY_SCALE_MAP` → body sprite size multiplier. Default 1.0
-- `TRAIL_LENGTH_MAP` → history points per style. Default 5
+`PROJECTILE_CONFIG` keyed by `spriteKey` — add entries to extend, no other files needed:
+- `trailStyle` → trail style name
+- `spinSpeed` → rotation speed (rad/frame). 0 = no spin
+- `bodyScale` → body sprite size multiplier. Default 1.0
+- `trailLength` → history points per style. Default 5
 
 Implemented styles:
 - `holy` — 3-layer golden bloom (outer glow + mid ring + white core). Used for shield-type projectiles.

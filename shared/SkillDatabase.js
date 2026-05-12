@@ -212,9 +212,10 @@ const SkillDatabase = {
       cooldown:  500,
       damage:    5,
       speed:     700,
-      radius:    8,
-      range:     1000,
+      radius:    6,
+      range:     800,
       pierce:    false,
+      spriteKey: 'projectile_shoot_arrow',
       icon:      '🏹',
       iconFile:  'ability_marksmanship'
     },
@@ -233,6 +234,7 @@ const SkillDatabase = {
         range:    1200,
         pierce:   false,
         onHitEffect: { speedMultiplier: 0.5, duration: 3000 },  // 50% slow for 3s
+        spriteKey: 'projectile_aimed_shot',
       },
       icon:      '🎯',
       iconFile:  'inv_spear_07',
@@ -243,7 +245,7 @@ const SkillDatabase = {
       type:        'SPAWN',
       subtype:     'WILD_BEAST',  // randomly picks bear / hawk / panther at cast time
       inputType:   'INSTANT',
-      cooldown:    2000,
+      cooldown:    15000,
       duration:    20000,
       damageBonus: 0,             // added to all beast variants' damage at spawn time
       // Beast variants — server picks one at random each cast
@@ -255,7 +257,7 @@ const SkillDatabase = {
           radius:      22,
           damage:      8,
           attackRange: 50,
-          attackRate:  1200,
+          attackRate:  2000,
           taunt:       true,     // forces nearby enemies to target this minion
           tauntRadius: 150,
         },
@@ -292,6 +294,7 @@ const SkillDatabase = {
       cooldown:  8000,
       duration:  50000,
       triggerRadius: 40,
+      spriteKey: 'trap_explosive',
       trapEffect: {
         type:       'AOE',
         damage:     25,

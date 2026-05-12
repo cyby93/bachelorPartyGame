@@ -240,4 +240,9 @@ export const ENEMY_TYPES = {
     shape: 'triangle',
     ai: 'shadowfiend',
   },
+
+  // ── Training Dummies (client-side display only) ───────────────────────────
+  trainingDummy: { radius: 30, spriteSize: 56, color: '#8B6914' },
+  rangedDummy:   { radius: 30, spriteSize: 56, color: '#1a5f9a' },
+  meleeDummy:    { radius: 30, spriteSize: 56, color: '#8B0000' },
 }

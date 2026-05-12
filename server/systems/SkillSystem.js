@@ -1714,6 +1714,7 @@ export default class SkillSystem {
         pierce:      payload.pierce ?? false,
         onHitEffect: payload.onHitEffect ?? null,
         dot:         payload.dot ?? null,
+        spriteKey:   payload.spriteKey ?? null,
       }, {
         vx: v.x * (payload.speed ?? 300),
         vy: v.y * (payload.speed ?? 300),

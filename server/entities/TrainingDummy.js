@@ -25,7 +25,7 @@ function _nearestPlayer(players, x, y) {
 }
 
 export default class TrainingDummy {
-  constructor({ id, x, y, dummyName } = {}) {
+  constructor({ id, x, y, dummyName, dummyType } = {}) {
     this.arenaWidth  = GAME_CONFIG.CANVAS_WIDTH
     this.arenaHeight = GAME_CONFIG.CANVAS_HEIGHT
     this.id        = id ?? 'training-dummy'
@@ -38,6 +38,7 @@ export default class TrainingDummy {
     this.isDummy   = true
     this.isPlayer  = false
     this.dummyName = dummyName ?? 'Idle'
+    this.dummyType = dummyType ?? 'trainingDummy'
 
     // Fields required by SkillSystem for status effects
     this.activeEffects = []
@@ -79,6 +80,7 @@ export default class TrainingDummy {
   toDTO() {
     return {
       id:        this.id,
+      type:      this.dummyType,
       x:         Math.round(this.x),
       y:         Math.round(this.y),
       hp:        Math.round(this.hp),
@@ -100,7 +102,7 @@ export default class TrainingDummy {
  */
 export class RangedDummy extends TrainingDummy {
   constructor({ id, x, y } = {}) {
-    super({ id, x, y, dummyName: 'Ranged' })
+    super({ id, x, y, dummyName: 'Ranged', dummyType: 'rangedDummy' })
     this._fireCooldown = 1.5   // initial delay before first shot (seconds)
   }
 
@@ -157,7 +159,7 @@ export class RangedDummy extends TrainingDummy {
  */
 export class MeleeDummy extends TrainingDummy {
   constructor({ id, x, y } = {}) {
-    super({ id, x, y, dummyName: 'Melee' })
+    super({ id, x, y, dummyName: 'Melee', dummyType: 'meleeDummy' })
     this._attackCooldown = 1.5   // initial delay before first attack (seconds)
   }
 

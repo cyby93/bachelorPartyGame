@@ -21,7 +21,7 @@
  *   onPlayerRemoved(id)
  */
 
-import { Container, Graphics } from 'pixi.js'
+import { Container, Graphics, Sprite, Assets } from 'pixi.js'
 import PlayerSprite     from '../entities/PlayerSprite.js'
 import EnemySprite      from '../entities/EnemySprite.js'
 import ProjectileSprite from '../entities/ProjectileSprite.js'
@@ -436,28 +436,31 @@ export default class BaseRenderer {
       root.addChild(base)
 
     } else if (m.minionType === 'TRAP') {
-      const diamond = new Graphics()
-      diamond.poly([0, -13, 13, 0, 0, 13, -13, 0])
-      diamond.fill({ color, alpha: 0.5 })
-      diamond.stroke({ color: '#ffdd00', width: 2.5 })
-      root.addChild(diamond)
-
-      const line1 = new Graphics()
-      line1.moveTo(-7, -7)
-      line1.lineTo(7, 7)
-      line1.stroke({ color: '#ffdd00', width: 2 })
-      root.addChild(line1)
-
-      const line2 = new Graphics()
-      line2.moveTo(7, -7)
-      line2.lineTo(-7, 7)
-      line2.stroke({ color: '#ffdd00', width: 2 })
-      root.addChild(line2)
-
-      const dot = new Graphics()
-      dot.circle(0, 0, 3)
-      dot.fill('#ffdd00')
-      root.addChild(dot)
+      const tex = m.spriteKey ? Assets.get(m.spriteKey) : null
+      if (tex) {
+        const img = new Sprite(tex)
+        img.anchor.set(0.5)
+        img.width  = 40
+        img.height = 40
+        root.addChild(img)
+      } else {
+        const diamond = new Graphics()
+        diamond.poly([0, -13, 13, 0, 0, 13, -13, 0])
+        diamond.fill({ color, alpha: 0.5 })
+        diamond.stroke({ color: '#ffdd00', width: 2.5 })
+        root.addChild(diamond)
+        const line1 = new Graphics()
+        line1.moveTo(-7, -7); line1.lineTo(7, 7)
+        line1.stroke({ color: '#ffdd00', width: 2 })
+        root.addChild(line1)
+        const line2 = new Graphics()
+        line2.moveTo(7, -7); line2.lineTo(-7, 7)
+        line2.stroke({ color: '#ffdd00', width: 2 })
+        root.addChild(line2)
+        const dot = new Graphics()
+        dot.circle(0, 0, 3); dot.fill('#ffdd00')
+        root.addChild(dot)
+      }
 
     } else if (m.minionType === 'WILD_BEAST') {
       // Beast color by variant

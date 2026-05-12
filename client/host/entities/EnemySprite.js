@@ -33,6 +33,9 @@ const STATIC_SPRITE_KEY = {
   flameOfAzzinoth: 'enemy_flameofazzinoth',
   shadowDemon:     'enemy_shadowdemon',
   shadowfiend:     'enemy_shadowfiend',
+  trainingDummy:   'dummy_training',
+  rangedDummy:     'dummy_ranged',
+  meleeDummy:      'dummy_tank',
 }
 
 export default class EnemySprite {

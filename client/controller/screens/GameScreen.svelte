@@ -3,7 +3,7 @@
   import MoveJoystick from '../components/MoveJoystick.svelte';
   import SkillButton from '../components/SkillButton.svelte';
 
-  let { playerName = '', className = '', isDead = false, cooldowns = [0,0,0,0], comboPoints = 0, lobbyMode = false, onmove, onskill, onaim, onhighlight } = $props()
+  let { playerName = '', className = '', isDead = false, cooldowns = [0,0,0,0], lobbyMode = false, isFullscreen = false, showFullscreenBtn = false, ontogglefullscreen, onrejoin, onmove, onskill, onaim, onhighlight } = $props()
 
   // Grid order: SK2 SK4 / SK1 SK3  (2×2, top row = skills 1,3; bottom = 0,2)
   // Per PLAN layout:
@@ -25,14 +25,14 @@
     </div>
 
     <div class="hud-status">
-      {#if className === 'Rogue'}
-        <div class="combo-pips" aria-label="Combo points">
-          {#each [0,1,2,3,4] as i}
-            <div class="pip" class:active={i < comboPoints}></div>
-          {/each}
-        </div>
+      {#if showFullscreenBtn}
+        <button class="hud-btn hud-fs-btn" onclick={ontogglefullscreen} title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}>
+          {isFullscreen ? '⤡' : '⤢'}
+        </button>
       {/if}
-      <span class="hud-note">Abilities stay on the right</span>
+      {#if onrejoin && !lobbyMode}
+        <button class="hud-btn hud-leave-btn" onclick={onrejoin}>✕ Leave</button>
+      {/if}
       <button class="find-me-btn" onclick={() => onhighlight?.()} aria-label="Find me">
         &#x25CE;
       </button>
@@ -118,8 +118,7 @@
     max-width: 120px;
   }
 
-  .hud-class,
-  .hud-note {
+  .hud-class {
     font-size: 10px;
     letter-spacing: 1px;
     text-transform: uppercase;
@@ -146,25 +145,40 @@
     background: rgba(255, 215, 0, 0.15);
   }
 
-  .combo-pips {
+  .hud-btn {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: var(--rn-radius-sm);
+    color: var(--rn-text-dim);
+    font-size: 13px;
+    padding: 3px 7px;
+    cursor: pointer;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .hud-btn:active { background: rgba(255, 255, 255, 0.08); }
+
+  .hud-fs-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
     display: flex;
-    gap: 4px;
     align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    color: var(--rn-accent);
+    border-color: rgba(105, 204, 240, 0.3);
+    opacity: 0.65;
   }
+  .hud-fs-btn:active { opacity: 1; }
 
-  .pip {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #333;
-    border: 1px solid #666;
-    transition: background 0.1s, box-shadow 0.1s;
+  .hud-leave-btn {
+    font-size: 11px;
+    opacity: 0.45;
+    padding: 3px 8px;
   }
-
-  .pip.active {
-    background: var(--rn-combo);
-    box-shadow: 0 0 4px var(--rn-combo);
-  }
+  .hud-leave-btn:active { opacity: 1; color: var(--rn-danger-dim); }
 
   .controls {
     flex: 1;

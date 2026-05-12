@@ -540,7 +540,7 @@ export default class SkillSystem {
             return false
           }
         }
-        healedIds = new Set([player.id])
+        healedIds = new Set()
       }
 
       const amount      = config.healAmount  ?? 0

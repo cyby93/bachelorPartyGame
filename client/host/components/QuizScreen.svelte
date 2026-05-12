@@ -1,7 +1,15 @@
 <script>
   import { quizState } from '../stores/quizState.js'
+  import { EVENTS } from '../../../shared/protocol.js'
+  import HostButton from './HostButton.svelte'
+
+  export let socket
 
   const OPTION_LABELS = ['A', 'B', 'C', 'D', 'E', 'F']
+
+  function handleContinue() {
+    socket.emit(EVENTS.HOST_ADVANCE)
+  }
 
   $: phase    = $quizState.phase
   $: question = $quizState.question
@@ -76,7 +84,9 @@
       {/each}
     {/if}
 
-    <p class="quiz-hint">Host — press CONTINUE to proceed</p>
+    <div class="quiz-actions">
+      <HostButton label="Continue" variant="primary" onclick={handleContinue} />
+    </div>
 
   {:else}
     <p class="quiz-waiting">Preparing quiz...</p>
@@ -194,10 +204,16 @@
   margin: 0;
 }
 
-.quiz-hint {
-  font-size: 13px;
-  color: var(--rn-text-dimmer);
-  margin: 12px 0 0;
+.quiz-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.quiz-actions :global(.host-btn) {
+  width: 220px;
+  font-size: 15px;
+  padding: 14px 24px;
 }
 
 .quiz-waiting {

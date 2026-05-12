@@ -4,7 +4,8 @@
   let name = $state(initialName)
 
   function submit() {
-    onnext?.(name.trim() || 'Player')
+    if (!name.trim()) return
+    onnext?.(name.trim())
   }
 
   function onkeydown(e) {
@@ -15,10 +16,8 @@
 <div class="name-screen">
   <div class="brand-card">
     <div class="brand">
-      <span class="icon">⚔️</span>
-      <span class="kicker">Controller Link</span>
       <h1>RAID NIGHT</h1>
-      <p class="subtitle">Enter your name and join the raid.</p>
+      <p class="subtitle">Controller</p>
       {#if message}
         <p class="rejoin-message">{message}</p>
       {/if}
@@ -30,13 +29,14 @@
         bind:value={name}
         placeholder="Your raid name"
         maxlength="15"
+        required
         autocomplete="off"
         autocorrect="off"
         autocapitalize="words"
         spellcheck="false"
         {onkeydown}
       />
-      <button class="next-btn" onclick={submit}>CONTINUE</button>
+      <button class="next-btn" onclick={submit} disabled={!name.trim()}>CONTINUE</button>
     </div>
   </div>
 </div>
@@ -63,7 +63,7 @@
     gap: 18px;
     padding: 24px 20px;
     border-radius: var(--rn-radius-xl);
-    border: 1px solid var(--rn-border);
+    border: 1px solid rgba(148, 106, 32, 0.38);
     background: rgba(26, 14, 6, 0.96);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.04),
@@ -92,7 +92,7 @@
 
   h1 {
     font-size: 34px;
-    color: var(--rn-text-bright);
+    color: var(--rn-gold);
     letter-spacing: 4px;
     margin: 0;
   }
@@ -128,13 +128,23 @@
     width: 100%;
     padding: 14px;
     border-radius: var(--rn-radius-md);
-    border: none;
+    border: 1px solid rgba(160, 112, 30, 0.55);
     font-size: 15px;
     font-weight: bold;
     background: var(--rn-gradient-cta);
-    color: var(--rn-gold);
+    color: var(--rn-text-bright);
     cursor: pointer;
     letter-spacing: 2px;
+    transition: filter 0.12s ease, opacity 0.12s ease;
+  }
+
+  .next-btn:disabled {
+    opacity: 0.38;
+    cursor: not-allowed;
+  }
+
+  .next-btn:not(:disabled):active {
+    filter: brightness(1.12);
   }
 
   .rejoin-message {

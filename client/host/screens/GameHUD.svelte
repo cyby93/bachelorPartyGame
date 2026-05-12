@@ -1,11 +1,10 @@
 <script>
   import { onMount } from 'svelte'
   import { EVENTS } from '../../../shared/protocol.js'
-  import { LEVEL_SELECT_OPTIONS } from '../../../shared/LevelConfig.js'
   import { gameState } from '../stores/gameState.js'
-  import { quizState } from '../stores/quizState.js'
   import HostButton from '../components/HostButton.svelte'
   import GameplaySidebar from '../components/GameplaySidebar.svelte'
+  import DebugOptions from '../components/DebugOptions.svelte'
 
   let { socket } = $props()
 
@@ -30,27 +29,13 @@
   const scene        = $derived($gameState.serverScene)
   const isCampaign   = $derived(['battle', 'bossFight', 'levelComplete', 'quiz'].includes(scene))
   const isTraining   = $derived(scene === 'trainingGrounds')
-  const isLevelComplete = $derived(scene === 'levelComplete')
-  const isQuizDone   = $derived($quizState.phase === 'done')
-  const isResult     = $derived(scene === 'result' || scene === 'gameover')
   const isSandbox    = $derived($gameState.levelMeta?.debugSandbox === true && (scene === 'battle' || scene === 'bossFight'))
 
-  let selectedLevel = $state(0)
-  let skipDialog = $state(false)
   let sandboxStatus = $state('')
   let sandboxError = $state(false)
-  let debugOpen = $state(false)
 
   function handleEnterRaid() {
     socket.emit(EVENTS.HOST_ENTER_RAID)
-  }
-
-  function handleContinue() {
-    socket.emit(EVENTS.HOST_ADVANCE)
-  }
-
-  function handleRestart() {
-    socket.emit(EVENTS.RESTART_GAME)
   }
 
   function handleQuit() {
@@ -63,20 +48,6 @@
     if (confirm('Exit game? All players will be kicked.')) {
       socket.emit(EVENTS.SESSION_RESET)
     }
-  }
-
-  function prevLevel() {
-    selectedLevel = Math.max(0, selectedLevel - 1)
-    emitSetLevel()
-  }
-
-  function nextLevel() {
-    selectedLevel = Math.min(LEVEL_SELECT_OPTIONS.length - 1, selectedLevel + 1)
-    emitSetLevel()
-  }
-
-  function emitSetLevel() {
-    socket.emit(EVENTS.SET_LEVEL, { levelIndex: selectedLevel, skipDialog })
   }
 
   function spawnEnemy(enemyType) {
@@ -95,11 +66,6 @@
     sandboxError = !!isError
   }
 
-  function levelLabel(index) {
-    const opt = LEVEL_SELECT_OPTIONS[index]
-    return opt?.debugSandbox ? `Debug: ${opt.name ?? '?'}` : `Level ${index + 1}: ${opt?.name ?? '?'}`
-  }
-
   function toggleFullscreen() {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {})
@@ -111,30 +77,14 @@
 
 <div class="game-hud">
   <div class="sidebar-inner">
+    <DebugOptions {socket} />
     <GameplaySidebar />
 
     <div class="actions">
       {#if isTraining}
         <HostButton label="Enter Raid" variant="primary" onclick={handleEnterRaid} />
-
-        <div class="level-row">
-          <button class="nav-btn" onclick={prevLevel}>◀</button>
-          <span class="level-name">{levelLabel(selectedLevel)}</span>
-          <button class="nav-btn" onclick={nextLevel}>▶</button>
-        </div>
-        <label class="skip-label">
-          <input type="checkbox" bind:checked={skipDialog} onchange={emitSetLevel} />
-          Skip dialog
-        </label>
       {/if}
 
-      {#if isLevelComplete || isQuizDone}
-        <HostButton label="Continue" variant="primary" onclick={handleContinue} />
-      {/if}
-
-      {#if isResult}
-        <HostButton label="Restart Raid" variant="primary" onclick={handleRestart} />
-      {/if}
 
       {#if isCampaign}
         <HostButton label="Quit Campaign" variant="danger" onclick={handleQuit} />
@@ -196,47 +146,13 @@
     flex-shrink: 0;
   }
 
-  .level-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .level-name {
-    flex: 1;
-    font-size: 11px;
-    color: var(--rn-text-body);
-    text-align: center;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .nav-btn {
-    padding: 3px 8px;
-    border-radius: var(--rn-radius-sm);
-    border: 1px solid var(--rn-border-btn);
-    background: rgba(26, 16, 8, 0.70);
-    color: var(--rn-text-body);
-    cursor: pointer;
-    font-size: 11px;
-    flex-shrink: 0;
-  }
-  .nav-btn:hover { color: var(--rn-gold); }
-
-  .skip-label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 11px;
-    color: var(--rn-text-dim);
-    cursor: pointer;
-  }
-
   .util-row {
     display: flex;
+    align-items: stretch;
     gap: 6px;
-    flex-wrap: wrap;
+    button {
+      flex: 1;
+    }
   }
 
   .util-btn {

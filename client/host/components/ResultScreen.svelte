@@ -1,6 +1,14 @@
 <script>
   import { gameState } from "../stores/gameState.js";
   import { CLASSES } from "../../../shared/ClassConfig.js";
+  import { EVENTS } from "../../../shared/protocol.js";
+  import HostButton from "./HostButton.svelte";
+
+  export let socket;
+
+  function handleRestart() {
+    socket.emit(EVENTS.RESTART_GAME);
+  }
 
   function buildMeterRows(players, totals, elapsed) {
     return players
@@ -141,7 +149,9 @@
     {/if}
   </div>
 
-  <p class="result-hint">Host — press RESTART GAME to play again</p>
+  <div class="result-actions">
+    <HostButton label="Restart Raid" variant="primary" onclick={handleRestart} />
+  </div>
 </div>
 
 <style>
@@ -292,10 +302,15 @@
     color: #ff6655;
   }
 
-  .result-hint {
-    text-align: center;
-    font-size: 13px;
-    color: var(--rn-text-dimmer);
-    margin: 4px 0 0;
+  .result-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+  }
+
+  .result-actions :global(.host-btn) {
+    width: 220px;
+    font-size: 15px;
+    padding: 14px 24px;
   }
 </style>

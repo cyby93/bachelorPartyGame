@@ -30,7 +30,6 @@
   let className   = $state('')
   let isDead      = $state(false)
   let cooldowns   = $state([0, 0, 0, 0])  // expiresAt timestamps per skill slot
-  let comboPoints = $state(0)
   let lobbyReady  = $state(false)
 
   // ── End state
@@ -205,12 +204,6 @@
       cooldowns = cooldowns.map((v, i) => i === data.skillIndex ? Date.now() + data.durationMs : v)
     })
 
-    socket.on(EVENTS.COMBO_POINTS, data => {
-      if (!validate(EVENTS.COMBO_POINTS, data, ['playerId', 'points'])) return
-      if (data.playerId !== myId) return
-      comboPoints = data.points
-    })
-
     // ── Quiz events ─────────────────────────────────────────────────────
     socket.on(EVENTS.QUIZ_QUESTION, data => {
       if (!validate(EVENTS.QUIZ_QUESTION, data, ['question', 'options'])) return
@@ -330,12 +323,6 @@
   </div>
 {/if}
 
-{#if !isPortrait && !isIOS}
-  <button class="fullscreen-btn" onclick={toggleFullscreen} title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}>
-    {isFullscreen ? '⤡' : '⤢'}
-  </button>
-{/if}
-
 <div class="app">
   {#if screen === 'name'}
     <NameScreen onnext={handleNameSubmit} initialName={playerName} message={rejoinMessage} />
@@ -365,8 +352,10 @@
         {className}
         {isDead}
         {cooldowns}
-        {comboPoints}
         lobbyMode={true}
+        showFullscreenBtn={!isPortrait && !isIOS}
+        {isFullscreen}
+        ontogglefullscreen={toggleFullscreen}
         onmove={handleMove}
         onskill={handleSkill}
         onaim={handleAim}
@@ -380,13 +369,15 @@
       {className}
       {isDead}
       {cooldowns}
-      {comboPoints}
+      showFullscreenBtn={!isPortrait && !isIOS}
+      {isFullscreen}
+      ontogglefullscreen={toggleFullscreen}
+      onrejoin={handleVoluntaryRejoin}
       onmove={handleMove}
       onskill={handleSkill}
       onaim={handleAim}
       onhighlight={handleHighlight}
     />
-    <button class="rejoin-btn" onclick={handleVoluntaryRejoin} title="Leave game">✕ Leave</button>
 
   {:else if screen === 'quiz'}
     {#if overlayScreen === 'quizAnswer'}
@@ -501,44 +492,6 @@
     text-align: center;
     line-height: 1.5;
   }
-
-  /* Floating fullscreen toggle — landscape only */
-  .fullscreen-btn {
-    position: fixed;
-    top: 8px;
-    right: 8px;
-    z-index: 9998;
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    border-radius: var(--rn-radius-sm);
-    border: 1px solid var(--rn-border-btn);
-    background: rgba(20, 12, 4, 0.75);
-    color: var(--rn-accent);
-    font-size: 16px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0.5;
-  }
-  .fullscreen-btn:active { opacity: 1; }
-
-  .rejoin-btn {
-    position: fixed;
-    top: 8px;
-    left: 8px;
-    z-index: 9998;
-    padding: 4px 10px;
-    border-radius: var(--rn-radius-sm);
-    border: 1px solid var(--rn-border-btn);
-    background: rgba(20, 12, 4, 0.75);
-    color: var(--rn-text-dim);
-    font-size: 12px;
-    cursor: pointer;
-    opacity: 0.4;
-  }
-  .rejoin-btn:active { opacity: 1; }
 
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>

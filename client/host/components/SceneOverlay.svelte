@@ -4,6 +4,8 @@
   import LevelCompleteScreen from './LevelCompleteScreen.svelte'
   import QuizScreen         from './QuizScreen.svelte'
 
+  export let socket
+
   $: scene = $gameState.scene
   $: active = scene === 'result' || scene === 'gameover' || scene === 'levelComplete' || scene === 'quiz'
 </script>
@@ -11,11 +13,11 @@
 {#if active}
   <div class="scene-overlay">
     {#if scene === 'result' || scene === 'gameover'}
-      <ResultScreen />
+      <ResultScreen {socket} />
     {:else if scene === 'levelComplete'}
-      <LevelCompleteScreen />
+      <LevelCompleteScreen {socket} />
     {:else if scene === 'quiz'}
-      <QuizScreen />
+      <QuizScreen {socket} />
     {/if}
   </div>
 {/if}

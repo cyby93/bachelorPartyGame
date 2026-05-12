@@ -44,7 +44,7 @@ function setBadge(text, variant, autoHideMs = 0) {
 const socket = io({ transports: ['websocket'], autoConnect: false })
 
 // ── Mount UI components first (CreationScreen shows loading state) ──
-mount(SceneOverlay, { target: document.getElementById('scene-overlay') })
+mount(SceneOverlay, { target: document.getElementById('scene-overlay'), props: { socket } })
 mount(HostApp, { target: document.getElementById('host-app'), props: { socket, audio } })
 
 // ── Load PixiJS assets — progress updates flow through gameState ──

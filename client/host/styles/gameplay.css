@@ -125,7 +125,7 @@
 .roster-row {
   --hp-pct: 1;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   gap: 4px;
   align-items: center;
   font-size: 10px;

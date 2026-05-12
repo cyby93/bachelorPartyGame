@@ -1,6 +1,14 @@
 <script>
   import { gameState } from '../stores/gameState.js'
   import { CLASSES } from '../../../shared/ClassConfig.js'
+  import { EVENTS } from '../../../shared/protocol.js'
+  import HostButton from './HostButton.svelte'
+
+  export let socket
+
+  function handleContinue() {
+    socket.emit(EVENTS.HOST_ADVANCE)
+  }
 
   function buildMeterRows(players, totals, elapsed) {
     return players
@@ -88,7 +96,9 @@
     </div>
   {/if}
 
-  <p class="lc-hint">Host — press CONTINUE to advance to the next level</p>
+  <div class="lc-actions">
+    <HostButton label="Continue" variant="primary" onclick={handleContinue} />
+  </div>
 </div>
 
 <style>
@@ -137,10 +147,15 @@
   gap: 4px;
 }
 
-.lc-hint {
-  text-align: center;
-  font-size: 13px;
-  color: var(--rn-text-dimmer);
-  margin: 4px 0 0;
+.lc-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.lc-actions :global(.host-btn) {
+  width: 220px;
+  font-size: 15px;
+  padding: 14px 24px;
 }
 </style>

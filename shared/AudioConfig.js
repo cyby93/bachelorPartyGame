@@ -166,7 +166,7 @@ function buildExplicitSkillAudioMap() {
     Cleave: createSkillAudio('Warrior', 'sfx_family_melee_heavy', 'sfx_skill_cleave_cast', 'sfx_skill_cleave_impact'),
     'Thunder Clap': createSkillAudio('Warrior', 'sfx_family_aoe_shockwave', 'sfx_skill_thunder_clap_cast', 'sfx_skill_thunder_clap_impact'),
     Bladestorm: createSkillAudio('Warrior', 'sfx_family_bladestorm', 'sfx_skill_bladestorm_cast', 'sfx_skill_bladestorm_impact', null, null, 'sfx_skill_bladestorm_channel'),
-    'Shield Wall': createSkillAudio('Warrior', 'sfx_family_shield_guard', 'sfx_skill_shield_wall_cast', 'sfx_skill_shield_wall_impact'),
+    'Shield Block': createSkillAudio('Warrior', 'sfx_family_shield_guard', 'sfx_skill_shield_wall_cast', 'sfx_skill_shield_wall_impact'),
 
     'Hammer Swing': createSkillAudio('Paladin', 'sfx_family_melee_holy', 'sfx_skill_hammer_swing_cast', 'sfx_skill_hammer_swing_impact'),
     "Avenger's Shield": createSkillAudio('Paladin', 'sfx_family_holy_projectile', 'sfx_skill_avengers_shield_cast', 'sfx_skill_avengers_shield_impact', 'sfx_skill_avengers_shield_travel'),
@@ -211,7 +211,7 @@ function buildExplicitSkillAudioMap() {
     Obliterate: createSkillAudio('DeathKnight', 'sfx_family_frost_melee', 'sfx_skill_obliterate_cast', 'sfx_skill_obliterate_impact'),
     'Death Grip': createSkillAudio('DeathKnight', 'sfx_family_grip', 'sfx_skill_death_grip_cast', 'sfx_skill_death_grip_impact'),
     'Death and Decay': createSkillAudio('DeathKnight', 'sfx_family_death_decay', 'sfx_skill_death_and_decay_cast', 'sfx_skill_death_and_decay_impact', null, null, 'sfx_skill_death_and_decay_channel'),
-    'Anti-Magic Shell': createSkillAudio('DeathKnight', 'sfx_family_anti_magic_shell', 'sfx_skill_anti_magic_shell_cast', 'sfx_skill_anti_magic_shell_impact'),
+    'Icebound Fortitude': createSkillAudio('DeathKnight', 'sfx_family_anti_magic_shell', 'sfx_skill_anti_magic_shell_cast', 'sfx_skill_anti_magic_shell_impact'),
   }
 }
 

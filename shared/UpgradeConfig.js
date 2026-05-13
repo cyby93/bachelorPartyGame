@@ -32,11 +32,11 @@ export const UPGRADE_CONFIG = {
       { label: 'Bladestorm +2', deltas: { duration: 500 } },
       { label: 'Bladestorm +3', deltas: { damage: 1, cooldown: -1000 } },
     ],
-    // S3: Shield Wall (SHIELD) — utility only
+    // S3: Shield Block (SHIELD) — utility only
     [
-      { label: 'Shield Wall +1', deltas: { cooldown: -500 } },
-      { label: 'Shield Wall +2', deltas: { arc: 0.3 } },
-      { label: 'Shield Wall +3', deltas: { cooldown: -500, arc: 0.2 } },
+      { label: 'Shield Block +1', deltas: { cooldown: -500 } },
+      { label: 'Shield Block +2', deltas: { arc: 0.3 } },
+      { label: 'Shield Block +3', deltas: { cooldown: -500, arc: 0.2 } },
     ],
   ],
 
@@ -285,11 +285,11 @@ export const UPGRADE_CONFIG = {
       { label: 'Death and Decay +2', deltas: { cooldown: -1000, radius: 15 } },
       { label: 'Death and Decay +3', deltas: { duration: 1000 } },
     ],
-    // S3: Anti-Magic Shell (BUFF) — effectParams.shield 60, duration 7000ms, cooldown 10000ms — defensive only
+    // S3: Icebound Fortitude (BUFF) — effectParams.shield 60, duration 7000ms, cooldown 10000ms — defensive only
     [
-      { label: 'Anti-Magic Shell +1', deltas: { 'effectParams.shield': 20, cooldown: -2000 } },
-      { label: 'Anti-Magic Shell +2', deltas: { duration: 2000, 'effectParams.shield': 20 } },
-      { label: 'Anti-Magic Shell +3', deltas: { 'effectParams.shield': 20, cooldown: -2000 } },
+      { label: 'Icebound Fortitude +1', deltas: { 'effectParams.shield': 20, cooldown: -2000 } },
+      { label: 'Icebound Fortitude +2', deltas: { duration: 2000, 'effectParams.shield': 20 } },
+      { label: 'Icebound Fortitude +3', deltas: { 'effectParams.shield': 20, cooldown: -2000 } },
     ],
   ],
 }

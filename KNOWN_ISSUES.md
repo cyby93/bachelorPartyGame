@@ -4,4 +4,8 @@
 
 
 ## Manual ones
-- I need to tune the effect  trails since they have changed in implementation
+- I need to tune the effect trails since they have changed in implementation
+
+## Classes
+Hunter:
+    - hawk pet should not move if its in range

@@ -52,17 +52,17 @@ const SkillDatabase = {
       subtype:   'BLADESTORM',  // player-attached spinning AOE — follows caster, blocks other skills
       inputType: 'INSTANT',
       cooldown:  12000,
-      damage:    6,             // damage per tick — tune via BalanceConfig
-      radius:    70,           // slightly larger than Cleave range
+      damage:    3,             // damage per tick — tune via BalanceConfig
+      radius:    90,           // slightly larger than Cleave range
       duration:  4000,          // 4 seconds of spinning
-      tickRate:  300,           // hits every 300 ms
+      tickRate:  150,           // hits every 300 ms
       effectType: 'DAMAGE',
       icon:      '🌀',
       iconFile:  'ability_warrior_bladestorm',
       dotColor:  0xcc2200,
     },
     {
-      name:      'Shield Wall',
+      name:      'Shield Block',
       type:      'SHIELD',
       inputType: 'DIRECTIONAL',
       cooldown:  3000,
@@ -142,12 +142,13 @@ const SkillDatabase = {
       cooldown:  0,
       castTime:  1000,
       payload: {
-        type:    'PROJECTILE',
-        damage:  5,
-        speed:   600,
-        radius:  10,
-        range:   500,
-        pierce:  false,
+        type:      'PROJECTILE',
+        damage:    5,
+        speed:     600,
+        radius:    10,
+        range:     500,
+        pierce:    false,
+        spriteKey: 'projectile_lightning_bolt',
       },
       icon:      '⚡',
       iconFile:  'spell_nature_lightning'
@@ -175,13 +176,15 @@ const SkillDatabase = {
       inputType: 'INSTANT',
       cooldown:  10000,
       duration:  12000,
+      spriteKey: 'searing_totem',
       totemAbility: {
-        type:     'PROJECTILE',
-        damage:   3,
-        speed:    600,
-        radius:   8,
-        range:    300,
-        tickRate: 1000,
+        type:      'PROJECTILE',
+        damage:    3,
+        speed:     600,
+        radius:    8,
+        range:     300,
+        tickRate:  1000,
+        spriteKey: 'projectile_fireball',
       },
       icon:      '🔥',
       iconFile:  'spell_fire_searingtotem',
@@ -463,12 +466,13 @@ const SkillDatabase = {
       cooldown:  0,
       castTime:  800,
       payload: {
-        type:    'PROJECTILE',
-        damage:  3,
-        speed:   550,
-        radius:  11,
-        range:   700,
-        pierce:  false,
+        type:      'PROJECTILE',
+        damage:    3,
+        speed:     550,
+        radius:    11,
+        range:     700,
+        pierce:    false,
+        spriteKey: 'projectile_wrath',
       },
       icon:      '☀',
       iconFile:  'spell_nature_wrathv2'
@@ -705,7 +709,7 @@ const SkillDatabase = {
       dotColor:  0x66cc00,
     },
     {
-      name:      'Anti-Magic Shell',
+      name:      'Icebound Fortitude',
       type:      'BUFF',
       inputType: 'INSTANT',
       cooldown:  10000,

@@ -78,12 +78,13 @@ export default class ServerMinion {
       const speed = ability.speed ?? 400
       skillSystem._spawnProjectile(gs, this._asPlayer(), {
         speed,
-        radius:     ability.radius ?? 8,
-        range:      ability.range  ?? 250,
-        damage:     ability.damage ?? 0,
+        radius:     ability.radius    ?? 8,
+        range:      ability.range     ?? 250,
+        damage:     ability.damage    ?? 0,
         healAmount: 0,
         effectType: 'DAMAGE',
         pierce:     false,
+        spriteKey:  ability.spriteKey ?? null,
       }, {
         vx:      (dx / dist) * speed,
         vy:      (dy / dist) * speed,

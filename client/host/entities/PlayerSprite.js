@@ -200,20 +200,51 @@ export default class PlayerSprite {
 
   _drawShieldArc(angle, arc) {
     const g = this._shieldGfx
-    const shieldRadius = SPRITE_H + 8
+    const shieldRadius = SPRITE_H - 20
     const halfArc = arc / 2
 
     g.clear()
 
-    // Semi-transparent filled arc
-    g.moveTo(0, 0)
-    g.arc(0, 0, shieldRadius, angle - halfArc, angle + halfArc)
-    g.lineTo(0, 0)
-    g.fill({ color: 0x00d2ff, alpha: 0.2 })
+    const isWarrior = this._className === 'warrior'
+    const isPaladin = this._className === 'paladin'
 
-    // Bright arc outline
-    g.arc(0, 0, shieldRadius, angle - halfArc, angle + halfArc)
-    g.stroke({ color: 0x00d2ff, width: 3, alpha: 0.8 })
+    if (isWarrior) {
+      // Steel shield — bold metallic arc with inner bevel
+      g.moveTo(0, 0)
+      g.arc(0, 0, shieldRadius + 4, angle - halfArc, angle + halfArc)
+      g.lineTo(0, 0)
+      g.fill({ color: 0x888888, alpha: 0.25 })
+
+      g.arc(0, 0, shieldRadius + 4, angle - halfArc, angle + halfArc)
+      g.stroke({ color: 0xdddddd, width: 5, alpha: 0.9 })
+
+      g.arc(0, 0, shieldRadius - 2, angle - halfArc, angle + halfArc)
+      g.stroke({ color: 0x555555, width: 2, alpha: 0.5 })
+    } else if (isPaladin) {
+      // Divine golden shield — holy glow with inner fill
+      g.moveTo(0, 0)
+      g.arc(0, 0, shieldRadius + 6, angle - halfArc, angle + halfArc)
+      g.lineTo(0, 0)
+      g.fill({ color: 0xffd700, alpha: 0.18 })
+
+      g.arc(0, 0, shieldRadius + 6, angle - halfArc, angle + halfArc)
+      g.stroke({ color: 0xffd700, width: 4, alpha: 0.85 })
+
+      g.arc(0, 0, shieldRadius + 10, angle - halfArc, angle + halfArc)
+      g.stroke({ color: 0xffffff, width: 1.5, alpha: 0.30 })
+
+      g.arc(0, 0, shieldRadius, angle - halfArc, angle + halfArc)
+      g.stroke({ color: 0xffeeaa, width: 2, alpha: 0.55 })
+    } else {
+      // Default blue shield
+      g.moveTo(0, 0)
+      g.arc(0, 0, shieldRadius, angle - halfArc, angle + halfArc)
+      g.lineTo(0, 0)
+      g.fill({ color: 0x00d2ff, alpha: 0.2 })
+
+      g.arc(0, 0, shieldRadius, angle - halfArc, angle + halfArc)
+      g.stroke({ color: 0x00d2ff, width: 3, alpha: 0.8 })
+    }
   }
 
   // ── Aim arrow drawing ─────────────────────────────────────────────────────

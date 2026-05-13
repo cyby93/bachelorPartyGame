@@ -4,6 +4,7 @@
  * Created by BattleRenderer in enter(), destroyed in exit().
  */
 
+import { Graphics }         from 'pixi.js'
 import ParticleSystem       from './ParticleSystem.js'
 import OneShotEffectSystem  from './OneShotEffectSystem.js'
 import GroundEffectSystem   from './GroundEffectSystem.js'
@@ -20,6 +21,9 @@ export default class VFXManager {
     this.ground    = new GroundEffectSystem(layers.groundFx, this.particles)
     this.auras     = new AuraSystem()
     this.floatingText = new FloatingTextPool(layers.worldUi)
+
+    this._fxLayer    = layers.fx
+    this._bladestorms = []   // { gfx, born, duration, angle, getPos }
 
     this._skillHandlers = new Map()
     this._typeHandlers  = new Map()
@@ -44,13 +48,16 @@ export default class VFXManager {
 
     // ── Named-skill handlers (highest priority) ──────────────────────────────
     const skills = [
-      ['Holy Nova',         (d) => { os.holyNovaRing(d.x, d.y, d.radius || 100); ps.holyNovaBurst(d.x, d.y, d.radius || 100); os.impactFlash(d.x, d.y, d.color) }],
-      ['Frost Nova',        (d) => { os.frostNovaRing(d.x, d.y, d.radius || 100); ps.frostNovaBurst(d.x, d.y, d.radius || 100); os.impactFlash(d.x, d.y, d.color) }],
-      ['Fear',              (d) => { os.fearRing(d.x, d.y, d.radius || 100); ps.fearBurst(d.x, d.y, d.radius || 100) }],
-      ['Consecration',      (d) => { os.consecrationBurst(d.x, d.y, d.radius || 100); ps.consecrationSparkle(d.x, d.y); os.impactFlash(d.x, d.y, d.color) }],
-      ['Bloodlust',         (d) => { os.bloodlustWave(d.x, d.y); ps.bloodlustBurst(d.x, d.y); os.impactFlash(d.x, d.y, d.color) }],
-      ['Mass Resurrection', (d) => { os.massResurrectionRing(d.x, d.y); ps.massResurrectionBurst(d.x, d.y) }],
-      ['Tranquility',       (d) => { os.tranquilityField(d.x, d.y, d.radius || 700); ps.tranquilityBurst(d.x, d.y) }],
+      ['Holy Nova',           (d) => { os.holyNovaRing(d.x, d.y, d.radius || 100); ps.holyNovaBurst(d.x, d.y, d.radius || 100); os.impactFlash(d.x, d.y, d.color) }],
+      ['Frost Nova',          (d) => { os.frostNovaRing(d.x, d.y, d.radius || 100); ps.frostNovaBurst(d.x, d.y, d.radius || 100); os.impactFlash(d.x, d.y, d.color) }],
+      ['Fear',                (d) => { os.fearRing(d.x, d.y, d.radius || 100); ps.fearBurst(d.x, d.y, d.radius || 100) }],
+      ['Consecration',        (d) => { os.consecrationBurst(d.x, d.y, d.radius || 100); ps.consecrationSparkle(d.x, d.y); os.impactFlash(d.x, d.y, d.color) }],
+      ['Bloodlust',           (d) => { os.bloodlustWave(d.x, d.y); ps.bloodlustBurst(d.x, d.y); os.impactFlash(d.x, d.y, d.color) }],
+      ['Mass Resurrection',   (d) => { os.massResurrectionRing(d.x, d.y); ps.massResurrectionBurst(d.x, d.y) }],
+      ['Tranquility',         (d) => { os.tranquilityField(d.x, d.y, d.radius || 700); ps.tranquilityBurst(d.x, d.y) }],
+      ['Icebound Fortitude',  (d) => { os.iceboundFortitude(d.x, d.y); ps.iceShards(d.x, d.y) }],
+      // Bladestorm: persistent visual attached via attachBladestorm — fire cast flash only
+      ['Bladestorm',          (d) => { os.aoeFlash(d.x, d.y, d.radius || 70, d.color) }],
     ]
     for (const [name, fn] of skills) this._skillHandlers.set(name, fn)
 
@@ -114,6 +121,71 @@ export default class VFXManager {
     this.ground.update(dt)
     this.auras.update(dt)
     this.floatingText.update(dt)
+    this._tickBladestorms(dt)
+  }
+
+  /**
+   * Attach a spinning Bladestorm visual to a player container for the skill duration.
+   * @param {Function} getPos  — () => { x, y } in world space
+   * @param {number}   duration — ms the storm lasts
+   */
+  attachBladestorm(getPos, duration, radius) {
+    const gfx = new Graphics()
+    this._fxLayer.addChild(gfx)
+    this._bladestorms.push({ gfx, born: Date.now(), duration, radius, angle: 0, getPos })
+  }
+
+  _tickBladestorms(dt) {
+    const now = Date.now()
+    for (let i = this._bladestorms.length - 1; i >= 0; i--) {
+      const b = this._bladestorms[i]
+      const age = now - b.born
+      if (age >= b.duration) {
+        b.gfx.destroy()
+        this._bladestorms.splice(i, 1)
+        continue
+      }
+
+      b.angle += dt * Math.PI * 3.5   // ~1.75 full rotations per second
+
+      const { x, y } = b.getPos()
+      const alpha = age < 200
+        ? age / 200
+        : age > b.duration - 400
+          ? (b.duration - age) / 400
+          : 1.0
+
+      const r = b.radius
+      const r1 = r * 0.45   // blade root — just outside player body
+      const r2 = r * 1.25   // blade tip — extends past hit zone edge so damage range is clearly covered
+      const crossLen = r * 0.20
+
+      b.gfx.clear()
+      b.gfx.position.set(x, y)
+
+      for (let j = 0; j < 6; j++) {
+        const a  = b.angle + j * (Math.PI / 3)
+        const x1 = Math.cos(a) * r1, y1 = Math.sin(a) * r1
+        const x2 = Math.cos(a) * r2, y2 = Math.sin(a) * r2
+
+        b.gfx.moveTo(x1, y1)
+        b.gfx.lineTo(x2, y2)
+        b.gfx.stroke({ color: 0xff3300, width: 4, alpha: 0.85 * alpha })
+
+        const perp = a + Math.PI / 5
+        const mx = Math.cos(a) * ((r1 + r2) / 2)
+        const my = Math.sin(a) * ((r1 + r2) / 2)
+        b.gfx.moveTo(mx - Math.cos(perp) * crossLen, my - Math.sin(perp) * crossLen)
+        b.gfx.lineTo(mx + Math.cos(perp) * crossLen, my + Math.sin(perp) * crossLen)
+        b.gfx.stroke({ color: 0xff7700, width: 2, alpha: 0.65 * alpha })
+      }
+
+      const ringR = r * 1.0
+      b.gfx.circle(0, 0, ringR)
+      b.gfx.stroke({ color: 0xcc2200, width: 2, alpha: 0.35 * alpha })
+      b.gfx.circle(0, 0, ringR)
+      b.gfx.fill({ color: 0xff4400, alpha: 0.06 * alpha })
+    }
   }
 
   /**
@@ -149,6 +221,8 @@ export default class VFXManager {
   }
 
   destroy() {
+    for (const b of this._bladestorms) b.gfx.destroy()
+    this._bladestorms.length = 0
     this.particles.destroy()
     this.oneShot.destroy()
     this.ground.destroy()

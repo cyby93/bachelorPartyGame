@@ -414,26 +414,35 @@ export default class BaseRenderer {
     const color = m.color ?? '#ffffff'
 
     if (m.minionType === 'TOTEM') {
-      const pole = new Graphics()
-      pole.rect(-3, -6, 6, 18)
-      pole.fill(color)
-      root.addChild(pole)
+      const tex = m.spriteKey ? Assets.get(m.spriteKey) : null
+      if (tex) {
+        const img = new Sprite(tex)
+        img.anchor.set(0.5)
+        img.width  = 40
+        img.height = 40
+        root.addChild(img)
+      } else {
+        const pole = new Graphics()
+        pole.rect(-3, -6, 6, 18)
+        pole.fill(color)
+        root.addChild(pole)
 
-      const head = new Graphics()
-      head.circle(0, -15, 9)
-      head.fill(color)
-      head.stroke({ color: '#ffffff', width: 2, alpha: 0.7 })
-      root.addChild(head)
+        const head = new Graphics()
+        head.circle(0, -15, 9)
+        head.fill(color)
+        head.stroke({ color: '#ffffff', width: 2, alpha: 0.7 })
+        root.addChild(head)
 
-      const eye = new Graphics()
-      eye.circle(0, -15, 4)
-      eye.fill('#ffffff')
-      root.addChild(eye)
+        const eye = new Graphics()
+        eye.circle(0, -15, 4)
+        eye.fill('#ffffff')
+        root.addChild(eye)
 
-      const base = new Graphics()
-      base.rect(-8, 12, 16, 4)
-      base.fill({ color: '#ffffff', alpha: 0.3 })
-      root.addChild(base)
+        const base = new Graphics()
+        base.rect(-8, 12, 16, 4)
+        base.fill({ color: '#ffffff', alpha: 0.3 })
+        root.addChild(base)
+      }
 
     } else if (m.minionType === 'TRAP') {
       const tex = m.spriteKey ? Assets.get(m.spriteKey) : null
@@ -463,47 +472,53 @@ export default class BaseRenderer {
       }
 
     } else if (m.minionType === 'WILD_BEAST') {
-      // Beast color by variant
-      const BEAST_COLORS = { bear: 0x8B5E3C, hawk: 0xFFCC00, panther: 0x3B1A5A }
-      const beastColor = BEAST_COLORS[m.chosenBeast] ?? 0x888888
+      const BEAST_SPRITE_KEYS = { bear: 'minion_bear', hawk: 'minion_hawk', panther: 'minion_panther' }
+      const beastSpriteKey = BEAST_SPRITE_KEYS[m.chosenBeast]
+      const beastTex = beastSpriteKey ? Assets.get(beastSpriteKey) : null
 
-      const body = new Graphics()
-      body.circle(0, 2, 13)
-      body.fill({ color: beastColor, alpha: 0.95 })
-      body.stroke({ color: 0xffffff, width: 2, alpha: 0.5 })
-      root.addChild(body)
-
-      // Ear shapes — distinct silhouettes per beast
-      if (m.chosenBeast === 'bear') {
-        // Round stubby ears
-        const earL = new Graphics()
-        earL.circle(-8, -12, 5)
-        earL.fill({ color: beastColor, alpha: 0.95 })
-        earL.stroke({ color: 0xffffff, width: 1, alpha: 0.35 })
-        root.addChild(earL)
-
-        const earR = new Graphics()
-        earR.circle(8, -12, 5)
-        earR.fill({ color: beastColor, alpha: 0.95 })
-        earR.stroke({ color: 0xffffff, width: 1, alpha: 0.35 })
-        root.addChild(earR)
-      } else if (m.chosenBeast === 'hawk') {
-        // Pointed wing-tips (triangle crest)
-        const crest = new Graphics()
-        crest.poly([0, -24, -7, -12, 7, -12])
-        crest.fill({ color: beastColor, alpha: 0.95 })
-        root.addChild(crest)
+      if (beastTex) {
+        const img = new Sprite(beastTex)
+        img.anchor.set(0.5)
+        img.width  = 40
+        img.height = 40
+        root.addChild(img)
       } else {
-        // Panther — pointed ears
-        const earL = new Graphics()
-        earL.poly([-10, -10, -4, -20, 0, -10])
-        earL.fill({ color: beastColor, alpha: 0.95 })
-        root.addChild(earL)
+        // Fallback: colored circle with beast silhouette ears
+        const BEAST_COLORS = { bear: 0x8B5E3C, hawk: 0xFFCC00, panther: 0x3B1A5A }
+        const beastColor = BEAST_COLORS[m.chosenBeast] ?? 0x888888
 
-        const earR = new Graphics()
-        earR.poly([10, -10, 4, -20, 0, -10])
-        earR.fill({ color: beastColor, alpha: 0.95 })
-        root.addChild(earR)
+        const body = new Graphics()
+        body.circle(0, 2, 13)
+        body.fill({ color: beastColor, alpha: 0.95 })
+        body.stroke({ color: 0xffffff, width: 2, alpha: 0.5 })
+        root.addChild(body)
+
+        if (m.chosenBeast === 'bear') {
+          const earL = new Graphics()
+          earL.circle(-8, -12, 5)
+          earL.fill({ color: beastColor, alpha: 0.95 })
+          earL.stroke({ color: 0xffffff, width: 1, alpha: 0.35 })
+          root.addChild(earL)
+          const earR = new Graphics()
+          earR.circle(8, -12, 5)
+          earR.fill({ color: beastColor, alpha: 0.95 })
+          earR.stroke({ color: 0xffffff, width: 1, alpha: 0.35 })
+          root.addChild(earR)
+        } else if (m.chosenBeast === 'hawk') {
+          const crest = new Graphics()
+          crest.poly([0, -24, -7, -12, 7, -12])
+          crest.fill({ color: beastColor, alpha: 0.95 })
+          root.addChild(crest)
+        } else {
+          const earL = new Graphics()
+          earL.poly([-10, -10, -4, -20, 0, -10])
+          earL.fill({ color: beastColor, alpha: 0.95 })
+          root.addChild(earL)
+          const earR = new Graphics()
+          earR.poly([10, -10, 4, -20, 0, -10])
+          earR.fill({ color: beastColor, alpha: 0.95 })
+          root.addChild(earR)
+        }
       }
 
       const hpBg = new Graphics()
@@ -572,6 +587,11 @@ export default class BaseRenderer {
 
   onSkillFired(data) {
     this.vfx?.triggerSkillVFX(data)
+
+    if (data.skillName === 'Bladestorm') {
+      const sprite = this.playerSprites?.get(data.playerId)
+      if (sprite) this.vfx?.attachBladestorm(() => sprite.container.position, 4000, data.radius ?? 70)
+    }
 
     // Trigger one-shot ability sprite animation on the caster (skip pure cast types — cast
     // animation is driven by castProgress in STATE_DELTA, not by SKILL_FIRED)

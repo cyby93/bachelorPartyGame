@@ -28,6 +28,9 @@ Leviathan PixelLab ID: `a7aab6e3-b4d3-4d32-9fc4-b58acf24d572`.
 | Fireball (Mage) | `projectile_fireball` | `public/assets/sprites/projectile_fireball.png` | `fire` |
 | Pyroblast (Mage) | `projectile_fireball` | shared with Fireball — larger radius reads as bigger shot | `fire` |
 | Shadow Bolt (Warlock) | `projectile_shadow_bolt` | `public/assets/sprites/projectile_shadow_bolt.png` | `shadow` |
+| Lightning Bolt (Shaman) | `projectile_lightning_bolt` | `public/assets/sprites/projectile_lightning_bolt.png` | `lightning` |
+| Wrath (Druid) | `projectile_wrath` | `public/assets/sprites/projectile_wrath.png` | `nature` |
+| Searing Totem fireball | `projectile_fireball` | shared with Fireball | `fire` |
 
 All sprites live in the flat `public/assets/sprites/` directory. To add a new projectile: drop `{spriteKey}.png` there and add the key to `SPRITE_KEYS` in `HostGame.js`. No separate manifest entry or subdirectory needed.
 
@@ -44,6 +47,20 @@ Three dummies, each with a PixelLab model. Type field in DTO drives STATIC_SPRIT
 Positioned in a row at y=H*0.82: ranged left (W*0.25), idle center (W*0.5), melee right (W*0.75). MovingDummy removed.
 
 Trap sprite: if `m.spriteKey` is set in minion DTO, BaseRenderer renders a 40×40 Sprite; falls back to diamond shape.
+
+## Minion Sprites (2026-05-13)
+
+TOTEM and WILD_BEAST minions now support sprites via `m.spriteKey`. Same pattern as TRAP: BaseRenderer checks for `Assets.get(m.spriteKey)`, falls back to procedural graphics.
+
+| Minion | spriteKey | PixelLab ID |
+|---|---|---|
+| Searing Totem | `searing_totem` | `59839014-4f87-4ae2-aeb0-45d0b52098e3` |
+| Bear pet | `minion_bear` | `664f74fc-0f8c-4322-9553-f6d1a74776bf` |
+| Hawk pet | `minion_hawk` | `0d185d0a-b322-45bc-a7b6-dd7ebffbc09b` |
+| Panther pet | `minion_panther` | `d7a2d49c-8422-4e9e-b8c8-0e8281a1e52f` |
+
+WILD_BEAST lookup: `BEAST_SPRITE_KEYS = { bear: 'minion_bear', hawk: 'minion_hawk', panther: 'minion_panther' }` in `BaseRenderer._createMinionGfx`.
+Totem gets `spriteKey` from `config.spriteKey` in SkillDatabase → ServerMinion reads it → DTO sends it to client.
 
 ## Projectile Trail System (`ProjectileSprite.js`)
 
@@ -65,8 +82,17 @@ Implemented styles (all use fixed radius, not shrinking-per-index):
 | `fire` | `radius * 0.9` | Deep orange outer, orange mid, yellow-white core. Floating embers. |
 | `ichor` | `radius * 1.1` | Olive-green slimy blobs. Drip particles. |
 | `shadow` | `radius * 0.6` (tunable) | Void bloom + violet ring. Drifting shadow motes. |
+| `lightning` | `radius * 0.7` | Yellow-white electric bloom + fast-decay arc particles. |
+| `nature` | `radius * 0.85` | Green-gold glow + nature spore particles (slow drift). |
 
 To add a new style: register in `PROJECTILE_CONFIG`, implement `_draw{Style}Trail(cx, cy, now)` using `_interpolateTrail`, add branch in `_drawTrail()`.
+
+## Shield Rendering (2026-05-13)
+
+`PlayerSprite._drawShieldArc` is now class-aware:
+- `warrior` → thick steel-gray arc (0xdddddd, double-bevel, +4px radius)
+- `paladin` → golden arc (0xffd700) with outer white glow ring (+6px radius)
+- default → existing blue (0x00d2ff)
 
 ## Cyby's Visual Preferences
 
@@ -90,6 +116,8 @@ Rule: sprites are wrong for burst effects — shapes + particles only.
 | Mass Resurrection | CAST | `massResurrectionRing` (2.0s = castTime) | `massResurrectionBurst` (gravity -150, souls) | Ring duration matches castTime — peaks on revive |
 | Tranquility | CHANNEL | `tranquilityRing` (0.6s, green) | `tranquilityBurst` (gravity -90) | Channel start only; per-tick VFX needs Saurfang |
 | Explosive Trap | EXPLOSION | `explosionBurst` (0.3s, fire) | `explosionBurst` | Emission live in `ServerMinion._updateTrap()`. Payload: `{ type, skillName, x, y, radius, color: '#ff6600' }` |
+| Icebound Fortitude | BUFF | `iceboundFortitude` (0.55s, 8 ice spikes + crystal ring) | `iceShards` (20 blue-white, gravity -20) | |
+| Bladestorm | AOE/BLADESTORM | `aoeFlash` on cast + `attachBladestorm` persistent | — | `attachBladestorm(getPos, 4000)` called from `BaseRenderer.onSkillFired`; VFXManager ticks spinning blades on fx layer |
 
 ## Ricochet Bug (fixed 2026-04-17)
 

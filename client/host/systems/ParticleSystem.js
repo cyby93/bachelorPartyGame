@@ -79,6 +79,11 @@ export default class ParticleSystem {
     this._burst(x, y, 0x44ff88, 18, 100, 0.9, 2.5, { gravity: -90, colors: [0x44ff88, 0x22ddaa, 0xffffff, 0xaaffcc] })
   }
 
+  /** Icebound Fortitude — sharp ice crystal shards fly outward with low gravity. */
+  iceShards(x, y) {
+    this._burst(x, y, 0x88ddff, 20, 180, 0.55, 2, { gravity: -20, colors: [0x88ddff, 0xaaeeff, 0xffffff, 0x44aacc] })
+  }
+
   /** Consecration ambient — 3 golden fire-like sparks scattered within zone. */
   consecrationAmbient(cx, cy, radius) {
     const colors = [0xffcc00, 0xff8800, 0xffffaa, 0xff4400]

@@ -489,6 +489,61 @@ export default class OneShotEffectSystem {
     })
   }
 
+  /**
+   * Icebound Fortitude — 0.55s DK ice crystal burst.
+   * 8 ice spikes radiate outward, crystal ring forms, then fades.
+   */
+  iceboundFortitude(x, y) {
+    const duration = 0.55
+    const gfx = this._getGfx()
+    gfx.position.set(x, y)
+    gfx.alpha = 1; gfx.scale.set(1)
+    this._active.push({ gfx, elapsed: 0, duration, update: (progress) => {
+      gfx.clear()
+      const fade = 1 - progress
+
+      // Crystal blue center bloom — first 30%
+      if (progress < 0.3) {
+        const bp = progress / 0.3
+        gfx.circle(0, 0, 18 + 22 * progress)
+        gfx.fill({ color: 0xaaeeff, alpha: 0.45 * (1 - bp) })
+        gfx.circle(0, 0, 10 + 10 * progress)
+        gfx.fill({ color: 0xffffff, alpha: 0.65 * (1 - bp) })
+      }
+
+      // 8 ice spike radials
+      const spikeReach = 55 * Math.min(1, progress * 2.5)
+      const spikeAlpha = progress < 0.4
+        ? progress / 0.4
+        : 0.85 * (1 - (progress - 0.4) / 0.6)
+      for (let i = 0; i < 8; i++) {
+        const a    = (i / 8) * Math.PI * 2
+        const base = 18
+        const tip  = base + spikeReach
+        gfx.moveTo(Math.cos(a) * base, Math.sin(a) * base)
+        gfx.lineTo(Math.cos(a) * tip,  Math.sin(a) * tip)
+        gfx.stroke({ color: 0xaaeeff, width: 3, alpha: spikeAlpha })
+        // Crystal tip facet
+        if (tip > 25) {
+          const pa = a + 0.3, pb = a - 0.3
+          gfx.moveTo(Math.cos(pa) * (tip - 8), Math.sin(pa) * (tip - 8))
+          gfx.lineTo(Math.cos(a)  * tip,       Math.sin(a)  * tip)
+          gfx.lineTo(Math.cos(pb) * (tip - 8), Math.sin(pb) * (tip - 8))
+          gfx.stroke({ color: 0xffffff, width: 1.5, alpha: spikeAlpha * 0.7 })
+        }
+      }
+
+      // Outer crystal ring
+      const ringR = 18 + spikeReach * 0.55
+      if (ringR > 20) {
+        gfx.circle(0, 0, ringR)
+        gfx.stroke({ color: 0x55ddff, width: 2.5, alpha: 0.7 * fade })
+        gfx.circle(0, 0, ringR + 5)
+        gfx.stroke({ color: 0xffffff, width: 1, alpha: 0.25 * fade })
+      }
+    }})
+  }
+
   update(dt) {
     for (let i = this._active.length - 1; i >= 0; i--) {
       const fx = this._active[i]

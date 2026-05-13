@@ -16,19 +16,23 @@ const TRAIL_LENGTH = 5
 // angleOffset:   added to travel angle to correct for sprite's rest orientation (radians)
 //                PixelLab arrows rest at northeast (~-π/4), so offset = +π/4 aligns them
 const PROJECTILE_CONFIG = {
-  'projectile_avengers_shield': { trailStyle: 'holy',    spinSpeed: 0.14 },
-  'projectile_penance':         { trailStyle: 'divine',  bodyScale: 0.88, trailLength: 8 },
-  'projectile_ichor':           { trailStyle: 'ichor',   spinSpeed: 0.04, trailLength: 7 },
-  'projectile_fireball':        { trailStyle: 'fire',    spinSpeed: 0.06, bodyScale: 1.2, trailLength: 6 },
-  'projectile_shadow_bolt':     { trailStyle: 'shadow',  faceDirection: true, angleOffset: 0, bodyScale: 1.3, trailLength: 12 },
-  'projectile_shoot_arrow':     { trailStyle: 'none', bodyScale: 2.0, faceDirection: true, angleOffset: Math.PI / 4 },
-  'projectile_aimed_shot':      { trailStyle: 'none', bodyScale: 2.2, faceDirection: true, angleOffset: Math.PI / 4 },
+  'projectile_avengers_shield':  { trailStyle: 'holy',      spinSpeed: 0.14 },
+  'projectile_penance':          { trailStyle: 'divine',    bodyScale: 0.88, trailLength: 8 },
+  'projectile_ichor':            { trailStyle: 'ichor',     spinSpeed: 0.04, trailLength: 7 },
+  'projectile_fireball':         { trailStyle: 'fire',      spinSpeed: 0.06, bodyScale: 1.2, trailLength: 6 },
+  'projectile_shadow_bolt':      { trailStyle: 'shadow',    faceDirection: true, angleOffset: 0, bodyScale: 1.3, trailLength: 12 },
+  'projectile_shoot_arrow':      { trailStyle: 'none',      bodyScale: 2.0, faceDirection: true, angleOffset: Math.PI / 4 },
+  'projectile_aimed_shot':       { trailStyle: 'none',      bodyScale: 2.2, faceDirection: true, angleOffset: Math.PI / 4 },
+  'projectile_lightning_bolt':   { trailStyle: 'lightning', faceDirection: true, angleOffset: Math.PI / 4, bodyScale: 1.1, trailLength: 8 },
+  'projectile_wrath':            { trailStyle: 'nature',    spinSpeed: 0.08, bodyScale: 1.1, trailLength: 7 },
 }
 
-const DIVINE_COLORS  = [0xfffbe0, 0xffeeaa, 0xffd966]
-const ICHOR_COLORS   = [0x3a5c1a, 0x4a7a22, 0x6b9e30, 0x8fbe42]
-const FIRE_COLORS    = [0xff2200, 0xff6600, 0xff9900, 0xffcc33, 0xffeeaa]
-const SHADOW_COLORS  = [0x220033, 0x440066, 0x6600aa, 0x8800cc, 0xaa44ff]
+const DIVINE_COLORS     = [0xfffbe0, 0xffeeaa, 0xffd966]
+const ICHOR_COLORS      = [0x3a5c1a, 0x4a7a22, 0x6b9e30, 0x8fbe42]
+const FIRE_COLORS       = [0xff2200, 0xff6600, 0xff9900, 0xffcc33, 0xffeeaa]
+const SHADOW_COLORS     = [0x220033, 0x440066, 0x6600aa, 0x8800cc, 0xaa44ff]
+const LIGHTNING_COLORS  = [0xffffff, 0xaaeeff, 0x44ddff, 0x88ccff]
+const NATURE_COLORS     = [0x44ff44, 0x88ff44, 0xaaff66, 0xffee44, 0x66cc22]
 
 export default class ProjectileSprite {
   constructor(data) {
@@ -105,6 +109,10 @@ export default class ProjectileSprite {
         this._spawnFireEmbers(prevX, prevY, dx / dist, dy / dist, now)
       } else if (this._trailStyle === 'shadow') {
         this._spawnShadowTendrils(prevX, prevY, dx / dist, dy / dist, now)
+      } else if (this._trailStyle === 'lightning') {
+        this._spawnLightningArcs(prevX, prevY, dx / dist, dy / dist, now)
+      } else if (this._trailStyle === 'nature') {
+        this._spawnNatureSpores(prevX, prevY, dx / dist, dy / dist, now)
       }
     }
 
@@ -179,12 +187,14 @@ export default class ProjectileSprite {
 
   _drawTrail(cx, cy, now) {
     this._trailGfx.clear()
-    if (this._trailStyle === 'none')   return
-    if (this._trailStyle === 'holy')   { this._drawHolyTrail(cx, cy);         return }
-    if (this._trailStyle === 'divine') { this._drawDivineTrail(cx, cy, now);  return }
-    if (this._trailStyle === 'ichor')  { this._drawIchorTrail(cx, cy, now);   return }
-    if (this._trailStyle === 'fire')   { this._drawFireTrail(cx, cy, now);    return }
-    if (this._trailStyle === 'shadow') { this._drawShadowTrail(cx, cy, now);  return }
+    if (this._trailStyle === 'none')      return
+    if (this._trailStyle === 'holy')      { this._drawHolyTrail(cx, cy);             return }
+    if (this._trailStyle === 'divine')    { this._drawDivineTrail(cx, cy, now);       return }
+    if (this._trailStyle === 'ichor')     { this._drawIchorTrail(cx, cy, now);        return }
+    if (this._trailStyle === 'fire')      { this._drawFireTrail(cx, cy, now);         return }
+    if (this._trailStyle === 'shadow')    { this._drawShadowTrail(cx, cy, now);       return }
+    if (this._trailStyle === 'lightning') { this._drawLightningTrail(cx, cy, now);    return }
+    if (this._trailStyle === 'nature')    { this._drawNatureTrail(cx, cy, now);       return }
     this._drawDefaultTrail(cx, cy)
   }
 
@@ -332,6 +342,80 @@ export default class ProjectileSprite {
     for (const p of this._particles) {
       const t = 1 - (now - p.born) / p.life
       g.circle(p.x - cx, p.y - cy, p.r * t)
+      g.fill({ color: p.color, alpha: t * 0.65 })
+    }
+  }
+
+  _spawnLightningArcs(wx, wy, fwdX, fwdY, now) {
+    const perpX = -fwdY
+    const perpY =  fwdX
+    for (let i = 0; i < 3; i++) {
+      const side   = (Math.random() - 0.5) * this._radius * 2.5
+      const behind = Math.random() * this._radius * 1.0
+      this._particles.push({
+        x:     wx - fwdX * behind + perpX * side,
+        y:     wy - fwdY * behind + perpY * side,
+        born:  now,
+        life:  80 + Math.random() * 100,
+        r:     0.5 + Math.random() * 1.2,
+        color: LIGHTNING_COLORS[Math.floor(Math.random() * LIGHTNING_COLORS.length)],
+      })
+    }
+  }
+
+  _spawnNatureSpores(wx, wy, fwdX, fwdY, now) {
+    const perpX = -fwdY
+    const perpY =  fwdX
+    for (let i = 0; i < 2; i++) {
+      const side   = (Math.random() - 0.5) * this._radius * 1.6
+      const behind = Math.random() * this._radius * 0.8
+      this._particles.push({
+        x:     wx - fwdX * behind + perpX * side,
+        y:     wy - fwdY * behind + perpY * side,
+        born:  now,
+        life:  250 + Math.random() * 200,
+        r:     0.8 + Math.random() * 1.6,
+        color: NATURE_COLORS[Math.floor(Math.random() * NATURE_COLORS.length)],
+      })
+    }
+  }
+
+  _drawLightningTrail(cx, cy, now) {
+    const g   = this._trailGfx
+    const r   = this._radius * 0.7
+    const pts = this._interpolateTrail(cx, cy, r)
+    for (let i = pts.length - 1; i >= 0; i--) {
+      const { rx, ry, t } = pts[i]
+      g.circle(rx, ry, r * 2.2)
+      g.fill({ color: 0x002244, alpha: t * 0.07 })
+      g.circle(rx, ry, r * 1.2)
+      g.fill({ color: 0x44aaff, alpha: t * 0.22 })
+      g.circle(rx, ry, r * 0.5)
+      g.fill({ color: 0xffffff, alpha: t * 0.60 })
+    }
+    for (const p of this._particles) {
+      const t = 1 - (now - p.born) / p.life
+      g.circle(p.x - cx, p.y - cy, p.r)
+      g.fill({ color: p.color, alpha: t * 0.90 })
+    }
+  }
+
+  _drawNatureTrail(cx, cy, now) {
+    const g   = this._trailGfx
+    const r   = this._radius * 0.85
+    const pts = this._interpolateTrail(cx, cy, r)
+    for (let i = pts.length - 1; i >= 0; i--) {
+      const { rx, ry, t } = pts[i]
+      g.circle(rx, ry, r * 1.8)
+      g.fill({ color: 0x003300, alpha: t * 0.07 })
+      g.circle(rx, ry, r * 1.0)
+      g.fill({ color: 0x44bb22, alpha: t * 0.24 })
+      g.circle(rx, ry, r * 0.45)
+      g.fill({ color: 0xeeff88, alpha: t * 0.50 })
+    }
+    for (const p of this._particles) {
+      const t = 1 - (now - p.born) / p.life
+      g.circle(p.x - cx, p.y - cy, p.r * (0.5 + t * 0.5))
       g.fill({ color: p.color, alpha: t * 0.65 })
     }
   }

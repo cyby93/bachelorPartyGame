@@ -8,6 +8,7 @@
       "Bash(ls *)",
       "Bash(find *)",
       "Bash(grep *)",
+      "Bash(sed *)",
       "Bash(perl:*)",
       "Bash(perl -e ':*)",
       "mcp__pixellab__create_map_object",

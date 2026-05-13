@@ -3,7 +3,7 @@
  * Visual for a single projectile with a fading trail.
  */
 
-import { Container, Graphics, Sprite, Assets } from 'pixi.js'
+import { Assets, Container, Graphics, Sprite } from 'pixi.js'
 
 const TRAIL_LENGTH = 5
 
@@ -20,13 +20,15 @@ const PROJECTILE_CONFIG = {
   'projectile_penance':         { trailStyle: 'divine',  bodyScale: 0.88, trailLength: 8 },
   'projectile_ichor':           { trailStyle: 'ichor',   spinSpeed: 0.04, trailLength: 7 },
   'projectile_fireball':        { trailStyle: 'fire',    spinSpeed: 0.06, bodyScale: 1.2, trailLength: 6 },
+  'projectile_shadow_bolt':     { trailStyle: 'shadow',  faceDirection: true, angleOffset: 0, bodyScale: 1.3, trailLength: 12 },
   'projectile_shoot_arrow':     { trailStyle: 'none', bodyScale: 2.0, faceDirection: true, angleOffset: Math.PI / 4 },
   'projectile_aimed_shot':      { trailStyle: 'none', bodyScale: 2.2, faceDirection: true, angleOffset: Math.PI / 4 },
 }
 
-const DIVINE_COLORS = [0xfffbe0, 0xffeeaa, 0xffd966]
-const ICHOR_COLORS  = [0x3a5c1a, 0x4a7a22, 0x6b9e30, 0x8fbe42]
-const FIRE_COLORS   = [0xff2200, 0xff6600, 0xff9900, 0xffcc33, 0xffeeaa]
+const DIVINE_COLORS  = [0xfffbe0, 0xffeeaa, 0xffd966]
+const ICHOR_COLORS   = [0x3a5c1a, 0x4a7a22, 0x6b9e30, 0x8fbe42]
+const FIRE_COLORS    = [0xff2200, 0xff6600, 0xff9900, 0xffcc33, 0xffeeaa]
+const SHADOW_COLORS  = [0x220033, 0x440066, 0x6600aa, 0x8800cc, 0xaa44ff]
 
 export default class ProjectileSprite {
   constructor(data) {
@@ -101,6 +103,8 @@ export default class ProjectileSprite {
         this._spawnIchorDrips(prevX, prevY, dx / dist, dy / dist, now)
       } else if (this._trailStyle === 'fire') {
         this._spawnFireEmbers(prevX, prevY, dx / dist, dy / dist, now)
+      } else if (this._trailStyle === 'shadow') {
+        this._spawnShadowTendrils(prevX, prevY, dx / dist, dy / dist, now)
       }
     }
 
@@ -176,10 +180,11 @@ export default class ProjectileSprite {
   _drawTrail(cx, cy, now) {
     this._trailGfx.clear()
     if (this._trailStyle === 'none')   return
-    if (this._trailStyle === 'holy')   { this._drawHolyTrail(cx, cy);        return }
-    if (this._trailStyle === 'divine') { this._drawDivineTrail(cx, cy, now); return }
-    if (this._trailStyle === 'ichor')  { this._drawIchorTrail(cx, cy, now);  return }
-    if (this._trailStyle === 'fire')   { this._drawFireTrail(cx, cy, now);   return }
+    if (this._trailStyle === 'holy')   { this._drawHolyTrail(cx, cy);         return }
+    if (this._trailStyle === 'divine') { this._drawDivineTrail(cx, cy, now);  return }
+    if (this._trailStyle === 'ichor')  { this._drawIchorTrail(cx, cy, now);   return }
+    if (this._trailStyle === 'fire')   { this._drawFireTrail(cx, cy, now);    return }
+    if (this._trailStyle === 'shadow') { this._drawShadowTrail(cx, cy, now);  return }
     this._drawDefaultTrail(cx, cy)
   }
 
@@ -195,48 +200,57 @@ export default class ProjectileSprite {
     }
   }
 
+  // Returns an array of { rx, ry, t } — positions along the trail interpolated at `step`
+  // intervals, in newest-first order. rx/ry are relative to the container origin (cx, cy).
+  _interpolateTrail(cx, cy, step) {
+    const src  = [{ x: cx, y: cy }, ...this._trail]
+    const pts  = []
+    const nSrc = src.length
+    for (let i = 0; i < nSrc - 1; i++) {
+      const a  = src[i]
+      const b  = src[i + 1]
+      const dx = b.x - a.x
+      const dy = b.y - a.y
+      const d  = Math.sqrt(dx * dx + dy * dy) || 1
+      const n  = Math.max(1, Math.ceil(d / step))
+      for (let s = 0; s < n; s++) {
+        const frac = s / n
+        pts.push({
+          rx: (a.x + dx * frac) - cx,
+          ry: (a.y + dy * frac) - cy,
+          t:  1 - (i + frac) / (nSrc - 1),
+        })
+      }
+    }
+    return pts
+  }
+
   _drawHolyTrail(cx, cy) {
-    const g = this._trailGfx
-    for (let i = 0; i < this._trail.length; i++) {
-      const pt = this._trail[i]
-      const t  = 1 - (i + 1) / (TRAIL_LENGTH + 1)
-      const r  = this._radius * (0.9 - i * 0.14)
-      if (r <= 0) break
-
-      // Outer bloom
-      g.circle(pt.x - cx, pt.y - cy, r * 2.0)
+    const g   = this._trailGfx
+    const r   = this._radius * 0.9
+    const pts = this._interpolateTrail(cx, cy, r)
+    for (let i = pts.length - 1; i >= 0; i--) {
+      const { rx, ry, t } = pts[i]
+      g.circle(rx, ry, r * 2.0)
       g.fill({ color: 0xffdd44, alpha: t * 0.08 })
-
-      // Mid golden ring
-      g.circle(pt.x - cx, pt.y - cy, r * 1.3)
+      g.circle(rx, ry, r * 1.3)
       g.fill({ color: 0xffcc33, alpha: t * 0.20 })
-
-      // White hot core
-      g.circle(pt.x - cx, pt.y - cy, r * 0.5)
+      g.circle(rx, ry, r * 0.5)
       g.fill({ color: 0xffffff, alpha: t * 0.40 })
     }
   }
 
   _drawDivineTrail(cx, cy, now) {
-    const g = this._trailGfx
-
-    // Core trail — tighter, slightly reduced glow
-    for (let i = 0; i < this._trail.length; i++) {
-      const pt = this._trail[i]
-      const t  = 1 - (i + 1) / (this._trailMax + 1)
-      const r  = this._radius * (0.85 - i * 0.09)
-      if (r <= 0) break
-
-      // Soft warm outer glow
-      g.circle(pt.x - cx, pt.y - cy, r * 1.6)
+    const g   = this._trailGfx
+    const r   = this._radius * 0.85
+    const pts = this._interpolateTrail(cx, cy, r)
+    for (let i = pts.length - 1; i >= 0; i--) {
+      const { rx, ry, t } = pts[i]
+      g.circle(rx, ry, r * 1.6)
       g.fill({ color: 0xffaa33, alpha: t * 0.08 })
-
-      // Bright white-yellow core streak
-      g.circle(pt.x - cx, pt.y - cy, r * 0.75)
+      g.circle(rx, ry, r * 0.75)
       g.fill({ color: 0xfffbe0, alpha: t * 0.42 })
     }
-
-    // Lingering holy sparkles
     for (const p of this._particles) {
       const t = 1 - (now - p.born) / p.life
       g.circle(p.x - cx, p.y - cy, p.r)
@@ -244,37 +258,18 @@ export default class ProjectileSprite {
     }
   }
 
-  /**
-   * Ichor trail: dark olive-green slimy drips.
-   * Heavy and organic — wide gooey blobs that shrink slowly.
-   */
   _drawIchorTrail(cx, cy, now) {
-    const g = this._trailGfx
-    for (let i = 0; i < this._trail.length; i++) {
-      const pt    = this._trail[i]
-      const t     = 1 - (i + 1) / (this._trailMax + 1)
-      // Large outer drip — slimy spread
-      const r = this._radius * (1.1 - i * 0.12)
-      if (r <= 0) break
-
-      const color = ICHOR_COLORS[i % ICHOR_COLORS.length]
-
-      // Outer slimy bloom
-      g.circle(pt.x - cx, pt.y - cy, r * 1.5)
+    const g   = this._trailGfx
+    const r   = this._radius * 1.1
+    const pts = this._interpolateTrail(cx, cy, r)
+    for (let i = pts.length - 1; i >= 0; i--) {
+      const { rx, ry, t } = pts[i]
+      const color = ICHOR_COLORS[Math.floor((1 - t) * ICHOR_COLORS.length) % ICHOR_COLORS.length]
+      g.circle(rx, ry, r * 1.5)
       g.fill({ color: 0x2a4010, alpha: t * 0.18 })
-
-      // Main blob
-      g.circle(pt.x - cx, pt.y - cy, r)
+      g.circle(rx, ry, r)
       g.fill({ color, alpha: t * 0.55 })
-
-      // Bright mucus highlight (tiny center dot)
-      if (i === 0) {
-        g.circle(pt.x - cx - r * 0.25, pt.y - cy - r * 0.25, r * 0.25)
-        g.fill({ color: 0xc8f060, alpha: t * 0.35 })
-      }
     }
-
-    // Drip particles
     for (const p of this._particles) {
       const t = 1 - (now - p.born) / p.life
       g.circle(p.x - cx, p.y - cy, p.r * (0.5 + t * 0.5))
@@ -283,31 +278,61 @@ export default class ProjectileSprite {
   }
 
   _drawFireTrail(cx, cy, now) {
-    const g = this._trailGfx
-    for (let i = 0; i < this._trail.length; i++) {
-      const pt = this._trail[i]
-      const t  = 1 - (i + 1) / (this._trailMax + 1)
-      const r  = this._radius * (0.9 - i * 0.13)
-      if (r <= 0) break
-
-      // Outer heat bloom — deep orange
-      g.circle(pt.x - cx, pt.y - cy, r * 1.8)
+    const g   = this._trailGfx
+    const r   = this._radius * 0.9
+    const pts = this._interpolateTrail(cx, cy, r)
+    for (let i = pts.length - 1; i >= 0; i--) {
+      const { rx, ry, t } = pts[i]
+      g.circle(rx, ry, r * 1.8)
       g.fill({ color: 0xff4400, alpha: t * 0.09 })
-
-      // Mid fire band — orange
-      g.circle(pt.x - cx, pt.y - cy, r * 1.1)
+      g.circle(rx, ry, r * 1.1)
       g.fill({ color: 0xff7700, alpha: t * 0.22 })
-
-      // Hot core — bright yellow-white
-      g.circle(pt.x - cx, pt.y - cy, r * 0.45)
+      g.circle(rx, ry, r * 0.45)
       g.fill({ color: 0xffee88, alpha: t * 0.50 })
     }
-
-    // Floating embers
     for (const p of this._particles) {
       const t = 1 - (now - p.born) / p.life
       g.circle(p.x - cx, p.y - cy, p.r * t)
       g.fill({ color: p.color, alpha: t * 0.70 })
+    }
+  }
+
+  _spawnShadowTendrils(wx, wy, fwdX, fwdY, now) {
+    const perpX = -fwdY
+    const perpY =  fwdX
+    for (let i = 0; i < 2; i++) {
+      const side   = (Math.random() - 0.5) * this._radius * 1.6
+      const behind = Math.random() * this._radius * 1.2
+      this._particles.push({
+        x:     wx - fwdX * behind + perpX * side,
+        y:     wy - fwdY * behind + perpY * side,
+        born:  now,
+        life:  250 + Math.random() * 200,
+        r:     0.7 + Math.random() * 1.6,
+        color: SHADOW_COLORS[Math.floor(Math.random() * SHADOW_COLORS.length)],
+      })
+    }
+  }
+
+  _drawShadowTrail(cx, cy, now) {
+    const g   = this._trailGfx
+    const r   = this._radius * 0.6
+    const pts = this._interpolateTrail(cx, cy, r)
+    for (let i = pts.length - 1; i >= 0; i--) {
+      const { rx, ry, t } = pts[i]
+      g.circle(rx, ry, r * 2.8)
+      g.fill({ color: 0x110022, alpha: t * 0.06 })
+      g.circle(rx, ry, r * 1.6)
+      g.fill({ color: 0x5500aa, alpha: t * 0.16 })
+      g.circle(rx, ry, r * 0.8)
+      g.fill({ color: 0x9933ff, alpha: t * 0.28 })
+    }
+
+    // Drifting shadow motes
+    for (const p of this._particles) {
+      const t = 1 - (now - p.born) / p.life
+      g.circle(p.x - cx, p.y - cy, p.r * t)
+      g.fill({ color: p.color, alpha: t * 0.65 })
     }
   }
 

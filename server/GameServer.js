@@ -117,6 +117,9 @@ export default class GameServer {
     // Debug: skip entrance cinematic when testing boss mechanics
     this.skipDialog = false
 
+    // Debug overrides — persist across deaths/restarts so the host doesn't have to re-set sliders
+    this._debugOverrides = { playerLevel: 0, skillTiers: [0, 0, 0, 0] }
+
     // Stats tracking — cumulative across entire campaign run
     this.stats     = { damage: {}, heal: {}, deaths: {}, resurrections: {}, quiz: {}, kills: 0, startTime: 0 }
     // Per-level stats — reset at the start of each level
@@ -209,8 +212,9 @@ export default class GameServer {
     socket.on(EVENTS.KICK,                 data => this._onKick(socket, data))
     socket.on(EVENTS.BOT_ADD,              data => this._onBotAdd(socket, data))
     socket.on(EVENTS.BOT_REMOVE,           ()   => this._onBotRemove(socket))
-    socket.on(EVENTS.DEBUG_SET_SKILL_TIER, data => this._onDebugSetSkillTier(socket, data))
-    socket.on(EVENTS.DEBUG_SPAWN_ENEMY,    data => this._onDebugSpawnEnemy(socket, data))
+    socket.on(EVENTS.DEBUG_SET_SKILL_TIER,    data => this._onDebugSetSkillTier(socket, data))
+    socket.on(EVENTS.DEBUG_SET_PLAYER_LEVEL,  data => this._onDebugSetPlayerLevel(socket, data))
+    socket.on(EVENTS.DEBUG_SPAWN_ENEMY,       data => this._onDebugSpawnEnemy(socket, data))
     socket.on(EVENTS.DEBUG_CLEAR_ENEMIES,  ()   => this._onDebugClearEnemies(socket))
     socket.on(EVENTS.QUIZ_ANSWER,  data => this._onQuizAnswer(socket, data))
     socket.on(EVENTS.QUIZ_UPGRADE, data => this._onQuizUpgrade(socket, data))
@@ -375,9 +379,26 @@ export default class GameServer {
     const { skillIndex, tier } = data ?? {}
     if (typeof skillIndex !== 'number' || skillIndex < 0 || skillIndex > 3) return
     if (typeof tier !== 'number' || tier < 0 || tier > 3) return
+    this._debugOverrides.skillTiers[skillIndex] = tier
     for (const player of this.players.values()) {
       if (player.isHost) continue
       player.skillUpgrades[skillIndex] = tier
+    }
+  }
+
+  _onDebugSetPlayerLevel(socket, data) {
+    if (!this.players.get(socket.id)?.isHost) return
+    const { level } = data ?? {}
+    if (typeof level !== 'number' || level < 0 || level > 10) return
+    this._debugOverrides.playerLevel = level
+    for (const player of this.players.values()) {
+      if (player.isHost) continue
+      if (player.hpUpgrades === level) continue
+      player.hpUpgrades = 0
+      player.baseMaxHp  = CLASSES[player.className].hp
+      player.maxHp      = player.baseMaxHp
+      player.hp         = Math.min(player.hp, player.maxHp)
+      for (let i = 0; i < level; i++) player.applyHpUpgrade()
     }
   }
 
@@ -451,7 +472,7 @@ export default class GameServer {
 
   _onSetLevel(socket, { levelIndex, skipDialog }) {
     if (!this.players.get(socket.id)?.isHost) return
-    if (this.scene !== 'lobby') return
+    if (this.scene !== 'lobby' && this.scene !== 'trainingGrounds') return
     const idx = Math.max(0, Math.min(levelIndex ?? 0, LEVEL_SELECT_OPTIONS.length - 1))
     const level = this._getLevelBySelectionIndex(idx)
     this.startingLevelIndex = idx
@@ -539,12 +560,23 @@ export default class GameServer {
     // Reset all players to full HP / alive
     this.players.forEach(p => {
       if (!p.isHost) {
+        p.hpUpgrades    = 0
+        p.baseMaxHp     = CLASSES[p.className].hp
+        p.maxHp         = p.baseMaxHp
+        p.skillUpgrades = [0, 0, 0, 0]
+        // Re-apply debug overrides so they're visible in training grounds immediately
+        const { playerLevel, skillTiers } = this._debugOverrides
+        if (playerLevel > 0) {
+          for (let i = 0; i < playerLevel; i++) p.applyHpUpgrade()
+        }
+        if (skillTiers.some(t => t > 0)) {
+          for (let i = 0; i < 4; i++) p.skillUpgrades[i] = skillTiers[i]
+        }
         p.hp          = p.maxHp
         p.isDead      = false
         p.activeCast  = null
         p.shieldActive = false
         p.activeEffects = []
-        p.skillUpgrades = [0, 0, 0, 0]
         p.rebuildStats()
         p.setArenaSize(this.arenaWidth, this.arenaHeight)
         const { x, y } = this._randomPointNearCenter(300, 200)
@@ -616,11 +648,24 @@ export default class GameServer {
     const firstRoom = level.arena?.rooms?.[0]
     this.players.forEach(p => {
       if (p.isHost) return
+      // On fresh campaign start reset HP to class baseline first
       if (campaignIndex === 0) {
-        p.baseMaxHp = CLASSES[p.className].hp
-        p.maxHp     = p.baseMaxHp
+        p.hpUpgrades = 0
+        p.baseMaxHp  = CLASSES[p.className].hp
+        p.maxHp      = p.baseMaxHp
       }
-      p.hp              = p.maxHp
+      // Re-apply persistent debug overrides (survive deaths/restarts — host sets once, plays many times)
+      const { playerLevel, skillTiers } = this._debugOverrides
+      if (playerLevel > 0 && playerLevel !== p.hpUpgrades) {
+        p.hpUpgrades = 0
+        p.baseMaxHp  = CLASSES[p.className].hp
+        p.maxHp      = p.baseMaxHp
+        for (let i = 0; i < playerLevel; i++) p.applyHpUpgrade()
+      }
+      if (skillTiers.some(t => t > 0)) {
+        for (let i = 0; i < 4; i++) p.skillUpgrades[i] = skillTiers[i]
+      }
+      p.hp              = p.maxHp   // full HP — set AFTER overrides so upgraded maxHp is used
       p.isDead          = false
       p.activeCast      = null
       p.shieldActive    = false

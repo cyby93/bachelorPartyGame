@@ -410,6 +410,7 @@ export default class HostGame {
       'projectile_avengers_shield',
       'projectile_fireball',
       'projectile_penance',
+      'projectile_shadow_bolt',
       'projectile_shoot_arrow',
       'projectile_aimed_shot',
       'aura_pw_shield',

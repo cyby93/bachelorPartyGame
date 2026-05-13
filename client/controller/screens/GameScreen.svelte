@@ -261,8 +261,7 @@
       font-size: 13px;
     }
 
-    .hud-class,
-    .hud-note {
+    .hud-class {
       font-size: 9px;
     }
 

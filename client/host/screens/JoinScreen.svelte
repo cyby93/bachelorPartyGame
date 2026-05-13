@@ -123,16 +123,5 @@
 
   .start-area { flex-shrink: 0; }
 
-  .util-btn {
-    padding: 6px 10px;
-    border-radius: var(--rn-radius-sm);
-    border: 1px solid rgba(100, 72, 20, 0.40);
-    background: rgba(26, 16, 8, 0.70);
-    color: var(--rn-text-dim);
-    font-size: 11px;
-    cursor: pointer;
-  }
-  .util-btn:hover { color: var(--rn-text-body); border-color: var(--rn-border); }
-
   .footer-actions { flex-shrink: 0; margin-top: auto; }
 </style>

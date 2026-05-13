@@ -78,18 +78,6 @@
     text-align: center;
   }
 
-  .brand .icon {
-    font-size: 48px;
-    line-height: 1;
-  }
-
-  .kicker {
-    font-size: 11px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--rn-text-label);
-  }
-
   h1 {
     font-size: 34px;
     color: var(--rn-gold);
@@ -163,10 +151,6 @@
       gap: 14px;
       padding: 18px 16px;
       border-radius: var(--rn-radius-xl);
-    }
-
-    .brand .icon {
-      font-size: 38px;
     }
 
     h1 {

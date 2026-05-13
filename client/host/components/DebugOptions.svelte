@@ -8,6 +8,8 @@
   let debugOpen     = $state(false)
   let selectedLevel = $state(0)
   let skipDialog    = $state(false)
+  let skillTiers    = $state([0, 0, 0, 0])
+  let playerLevel   = $state(0)
 
   const botCount = $derived(Object.values($gameState.players).filter(p => p.isBot).length)
 
@@ -38,6 +40,14 @@
   function handleBotRemove() {
     socket.emit(EVENTS.BOT_REMOVE)
   }
+
+  function onSkillTierChange(skillIndex) {
+    socket.emit(EVENTS.DEBUG_SET_SKILL_TIER, { skillIndex, tier: skillTiers[skillIndex] })
+  }
+
+  function onPlayerLevelChange() {
+    socket.emit(EVENTS.DEBUG_SET_PLAYER_LEVEL, { level: playerLevel })
+  }
 </script>
 
 <button class="debug-toggle util-btn" onclick={() => debugOpen = !debugOpen}>
@@ -56,6 +66,28 @@
       <input type="checkbox" bind:checked={skipDialog} onchange={emitSetLevel} />
       Skip opening dialog
     </label>
+
+    <h3 style="margin-top:10px">Player Level (quiz answers: {playerLevel})</h3>
+    <div class="slider-row">
+      <span class="slider-label">0</span>
+      <input type="range" min="0" max="10" step="1"
+        bind:value={playerLevel}
+        oninput={onPlayerLevelChange}
+        class="slider" />
+      <span class="slider-label">10</span>
+    </div>
+
+    <h3 style="margin-top:10px">Ability Tiers (all players)</h3>
+    {#each [0, 1, 2, 3] as si}
+      <div class="slider-row">
+        <span class="slider-label skill-label">Skill {si + 1}</span>
+        <input type="range" min="0" max="3" step="1"
+          bind:value={skillTiers[si]}
+          oninput={() => onSkillTierChange(si)}
+          class="slider" />
+        <span class="slider-label">{skillTiers[si]}</span>
+      </div>
+    {/each}
 
     <h3 style="margin-top:10px">Bots ({botCount} / 12)</h3>
     <div class="bot-row">
@@ -126,6 +158,33 @@
     font-size: 11px;
     color: var(--rn-text-dim);
     cursor: pointer;
+  }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .slider {
+    flex: 1;
+    accent-color: var(--rn-gold);
+    cursor: pointer;
+    height: 4px;
+  }
+
+  .slider-label {
+    font-size: 10px;
+    color: var(--rn-text-dim);
+    min-width: 14px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .skill-label {
+    min-width: 40px;
+    text-align: left;
   }
 
   .bot-row {

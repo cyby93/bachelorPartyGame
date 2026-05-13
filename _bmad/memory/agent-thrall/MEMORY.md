@@ -27,6 +27,7 @@ Leviathan PixelLab ID: `a7aab6e3-b4d3-4d32-9fc4-b58acf24d572`.
 | Explosive Trap (Hunter) | `trap_explosive` | `public/assets/sprites/trap_explosive.png` | trap object |
 | Fireball (Mage) | `projectile_fireball` | `public/assets/sprites/projectile_fireball.png` | `fire` |
 | Pyroblast (Mage) | `projectile_fireball` | shared with Fireball — larger radius reads as bigger shot | `fire` |
+| Shadow Bolt (Warlock) | `projectile_shadow_bolt` | `public/assets/sprites/projectile_shadow_bolt.png` | `shadow` |
 
 All sprites live in the flat `public/assets/sprites/` directory. To add a new projectile: drop `{spriteKey}.png` there and add the key to `SPRITE_KEYS` in `HostGame.js`. No separate manifest entry or subdirectory needed.
 
@@ -52,11 +53,20 @@ Trap sprite: if `m.spriteKey` is set in minion DTO, BaseRenderer renders a 40×4
 - `bodyScale` → body sprite size multiplier. Default 1.0
 - `trailLength` → history points per style. Default 5
 
-Implemented styles:
-- `holy` — 3-layer golden bloom (outer glow + mid ring + white core). Used for shield-type projectiles.
-- `divine` — tight glow streak + tail-spawned holy sparkles. Particles are direction-aware (perpendicular scatter, tail origin only).
+All trails use `_interpolateTrail(cx, cy, step)` — interpolates intermediate positions between stored trail points so circles overlap and form a continuous smear regardless of server tick rate. Step = draw radius of that trail. Returns `{ rx, ry, t }[]` newest-first; draw reversed (oldest→newest) so head paints on top.
 
-To add a new style: register in maps, implement `_draw{Style}Trail(cx, cy, now)`, add branch in `_drawTrail()`.
+`trailLength` controls geometric tail length (number of stored positions), NOT visual density. To get a denser smear, reduce `step` (smaller r). To get a longer tail, increase `trailLength`.
+
+Implemented styles (all use fixed radius, not shrinking-per-index):
+| Style | r multiplier | Notes |
+|---|---|---|
+| `holy` | `radius * 0.9` | 3-layer golden bloom. Shield projectiles. |
+| `divine` | `radius * 0.85` | Warm glow streak + holy sparkle particles. |
+| `fire` | `radius * 0.9` | Deep orange outer, orange mid, yellow-white core. Floating embers. |
+| `ichor` | `radius * 1.1` | Olive-green slimy blobs. Drip particles. |
+| `shadow` | `radius * 0.6` (tunable) | Void bloom + violet ring. Drifting shadow motes. |
+
+To add a new style: register in `PROJECTILE_CONFIG`, implement `_draw{Style}Trail(cx, cy, now)` using `_interpolateTrail`, add branch in `_drawTrail()`.
 
 ## Cyby's Visual Preferences
 

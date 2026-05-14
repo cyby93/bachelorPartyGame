@@ -420,6 +420,25 @@ export default class ProjectileSprite {
     }
   }
 
+  detach() {
+    this._body.visible = false
+    this._detached   = true
+    this._detachedAt = Date.now()
+  }
+
+  updateDetached() {
+    const now     = Date.now()
+    const elapsed = now - this._detachedAt
+    this._particles = this._particles.filter(p => now - p.born < p.life)
+    const fade = Math.max(0, 1 - elapsed / 400)
+    this._trailGfx.alpha = fade
+    if (fade > 0 || this._particles.length > 0) {
+      this._drawTrail(this.container.position.x, this.container.position.y, now)
+      return false
+    }
+    return true
+  }
+
   destroy() {
     this.container.destroy({ children: true })
   }

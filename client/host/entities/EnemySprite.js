@@ -322,14 +322,17 @@ export default class EnemySprite {
       }
 
       if (d.hasDot && d.sourceSkill === 'Corruption') {
-        // Orbiting purple dot
-        const angle = (now / 600) * Math.PI * 2
-        const ox = Math.cos(angle) * (R + 10)
-        const oy = Math.sin(angle) * (R + 10)
+        // Small oval orbit at head level
+        const angle   = (now / 700) * Math.PI * 2
+        const headY   = -(R + 3)
+        const orbitW  = R * 0.65
+        const orbitH  = R * 0.18
+        const ox = Math.cos(angle) * orbitW
+        const oy = headY + Math.sin(angle) * orbitH
+        this._debuffGfx.circle(ox, oy, 2.5)
+        this._debuffGfx.fill({ color: 0xaa44ff, alpha: 0.9 })
         this._debuffGfx.circle(ox, oy, 5)
-        this._debuffGfx.fill({ color: 0xaa44ff, alpha: 0.85 })
-        this._debuffGfx.circle(0, 0, R + 10)
-        this._debuffGfx.stroke({ color: 0x660088, width: 1, alpha: 0.25 })
+        this._debuffGfx.fill({ color: 0x660088, alpha: 0.18 })
       }
 
       if (d.isRooted) {

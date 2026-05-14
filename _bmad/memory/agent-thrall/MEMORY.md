@@ -87,6 +87,17 @@ Implemented styles (all use fixed radius, not shrinking-per-index):
 
 To add a new style: register in `PROJECTILE_CONFIG`, implement `_draw{Style}Trail(cx, cy, now)` using `_interpolateTrail`, add branch in `_drawTrail()`.
 
+**Trail linger on hit (2026-05-14):** When a projectile is removed from server state, `BaseRenderer._syncProjectiles()` calls `s.detach()` (hides body, stamps `_detachedAt`) instead of `s.destroy()`. The sprite is moved to `_dyingProjectiles`; `_tickDying()` calls `s.updateDetached()` each frame, which fades `_trailGfx.alpha` over 400ms and ages out particles. Returns `true` when fully gone → cleanup. Same pattern for boss fireballs via `_dyingBossFireballs`.
+
+## Beam System (`BaseRenderer.js`)
+
+Three beam arrays, all drawn in `_renderBeams()`:
+- `_flashBeams` — static `{x1,y1,x2,y2}` coordinates, expire by timestamp
+- `_trackedBeams` — follow `playerSprites`/`enemySprites` by ID each frame (Death Grip)
+- `_trackedRefBeams` — follow Pixi Container refs each frame; guards with `.destroyed` check (Chain Heal, Regrowth, and any future "line between two moving entities" effects)
+
+`_findClosestSpriteContainer(x, y)` searches both `playerSprites` and `enemySprites`, returns closest container. Used at event-fire time to resolve IDs when `targeted:hit` only carries coordinates. Falls back to `_flashBeams` if no sprite found.
+
 ## Shield Rendering (2026-05-13)
 
 `PlayerSprite._drawShieldArc` is now class-aware:

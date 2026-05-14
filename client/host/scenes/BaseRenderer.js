@@ -40,10 +40,13 @@ export default class BaseRenderer {
     this._projectileContainer      = new Container()
     this._bossFireballContainer    = new Container()
 
-    this._beamGfx    = new Graphics()
-    this._flashBeams = []   // [{ x1, y1, x2, y2, color, expiresAt }]
-    this._beamTime   = 0
-    this._trackedBeams = []  // [{ fromPlayerId, toEnemyId, color, width, expiresAt }]
+    this._beamGfx         = new Graphics()
+    this._flashBeams      = []   // [{ x1, y1, x2, y2, color, expiresAt }]
+    this._beamTime        = 0
+    this._trackedBeams    = []   // [{ fromPlayerId, toEnemyId, color, width, expiresAt }]
+    this._trackedRefBeams = []   // [{ fromRef, toRef, color, width, alpha, expiresAt }]
+    this._dyingProjectiles    = new Map()
+    this._dyingBossFireballs  = new Map()
     this._buildHitHandlers()
 
     this.minionGfx = new Map()   // minionId → Container (drawn shapes)
@@ -195,11 +198,12 @@ export default class BaseRenderer {
 
     this.projSprites.forEach((s, id) => {
       if (!activeIds.has(id)) {
-        this._projectileContainer.removeChild(s.container)
-        s.destroy()
+        s.detach()
+        this._dyingProjectiles.set(id, s)
         this.projSprites.delete(id)
       }
     })
+    this._tickDying(this._dyingProjectiles, this._projectileContainer)
   }
 
   _syncBossFireballs() {
@@ -217,11 +221,35 @@ export default class BaseRenderer {
 
     this._bossFireballSprites.forEach((s, id) => {
       if (!activeIds.has(id)) {
-        this._bossFireballContainer.removeChild(s.container)
-        s.destroy()
+        s.detach()
+        this._dyingBossFireballs.set(id, s)
         this._bossFireballSprites.delete(id)
       }
     })
+    this._tickDying(this._dyingBossFireballs, this._bossFireballContainer)
+  }
+
+  _tickDying(map, container) {
+    map.forEach((s, id) => {
+      if (s.updateDetached()) {
+        container.removeChild(s.container)
+        s.destroy()
+        map.delete(id)
+      }
+    })
+  }
+
+  _findClosestSpriteContainer(x, y) {
+    let best = null, bestDist = Infinity
+    this.playerSprites.forEach(s => {
+      const d = Math.hypot(s.container.x - x, s.container.y - y)
+      if (d < bestDist) { bestDist = d; best = s.container }
+    })
+    this.enemySprites.forEach(s => {
+      const d = Math.hypot(s.container.x - x, s.container.y - y)
+      if (d < bestDist) { bestDist = d; best = s.container }
+    })
+    return best
   }
 
   _renderBeams(dt) {
@@ -280,6 +308,15 @@ export default class BaseRenderer {
       this._beamGfx.moveTo(b.x1, b.y1)
       this._beamGfx.lineTo(b.x2, b.y2)
       this._beamGfx.stroke({ width: b.width ?? 2, color: c, alpha: b.alpha ?? 0.8 })
+    })
+
+    // Tracked ref beams (Chain Heal, Regrowth — follow caster/target containers)
+    this._trackedRefBeams = this._trackedRefBeams.filter(b => b.expiresAt > now)
+    this._trackedRefBeams.forEach(b => {
+      if (b.fromRef.destroyed || b.toRef.destroyed) return
+      this._beamGfx.moveTo(b.fromRef.x, b.fromRef.y)
+      this._beamGfx.lineTo(b.toRef.x,   b.toRef.y)
+      this._beamGfx.stroke({ width: b.width, color: b.color, alpha: b.alpha })
     })
 
     // Tracked beams (Death Grip pull chain — follows live entity positions)
@@ -678,20 +715,35 @@ export default class BaseRenderer {
 
   _hitChainHeal(data) {
     const { casterX, casterY, targetX, targetY } = data
-    // Wider green beam, 400ms
-    this._flashBeams.push({ x1: casterX, y1: casterY, x2: targetX, y2: targetY,
-      color: '#00ff88', width: 4, alpha: 0.9, expiresAt: Date.now() + 400 })
-    this._flashBeams.push({ x1: casterX, y1: casterY, x2: targetX, y2: targetY,
-      color: '#aaffcc', width: 1, alpha: 0.4, expiresAt: Date.now() + 400 })
+    const fromRef = this._findClosestSpriteContainer(casterX, casterY)
+    const toRef   = this._findClosestSpriteContainer(targetX, targetY)
+    const exp = Date.now() + 400
+    if (fromRef && toRef) {
+      this._trackedRefBeams.push({ fromRef, toRef, color: 0x77ff22, width: 4, alpha: 0.9, expiresAt: exp })
+      this._trackedRefBeams.push({ fromRef, toRef, color: 0xeeff88, width: 1, alpha: 0.45, expiresAt: exp })
+    } else {
+      this._flashBeams.push({ x1: casterX, y1: casterY, x2: targetX, y2: targetY,
+        color: '#77ff22', width: 4, alpha: 0.9, expiresAt: exp })
+      this._flashBeams.push({ x1: casterX, y1: casterY, x2: targetX, y2: targetY,
+        color: '#eeff88', width: 1, alpha: 0.45, expiresAt: exp })
+    }
     this.vfx.particles.healBurst(targetX, targetY)
   }
 
   _hitRegrowth(data) {
     const { casterX, casterY, targetX, targetY } = data
-    this._flashBeams.push({ x1: casterX, y1: casterY, x2: targetX, y2: targetY,
-      color: '#00ff88', width: 4, alpha: 0.45, expiresAt: Date.now() + 400 })
-    this._flashBeams.push({ x1: casterX, y1: casterY, x2: targetX, y2: targetY,
-      color: '#aaffcc', width: 1, alpha: 0.2, expiresAt: Date.now() + 400 })
+    const fromRef = this._findClosestSpriteContainer(casterX, casterY)
+    const toRef   = this._findClosestSpriteContainer(targetX, targetY)
+    const exp = Date.now() + 400
+    if (fromRef && toRef) {
+      this._trackedRefBeams.push({ fromRef, toRef, color: 0x00ff88, width: 4, alpha: 0.45, expiresAt: exp })
+      this._trackedRefBeams.push({ fromRef, toRef, color: 0xaaffcc, width: 1, alpha: 0.20, expiresAt: exp })
+    } else {
+      this._flashBeams.push({ x1: casterX, y1: casterY, x2: targetX, y2: targetY,
+        color: '#00ff88', width: 4, alpha: 0.45, expiresAt: exp })
+      this._flashBeams.push({ x1: casterX, y1: casterY, x2: targetX, y2: targetY,
+        color: '#aaffcc', width: 1, alpha: 0.20, expiresAt: exp })
+    }
     this.vfx.particles.healBurst(targetX, targetY)
   }
 

@@ -100,6 +100,11 @@ export default class EnemySprite {
     this.container.addChild(this._berserkGfx)
     this._drawBerserkRing(typeCfg.berserkRadius ?? 65)
 
+    // Debuff visual layer
+    this._debuffGfx = new Graphics()
+    this.container.addChild(this._debuffGfx)
+    this._activeDebuffTypes = new Set()  // track which debuffs are currently shown
+
     // HP pip — fixed 30px wide, 4px tall
     const HP_W = 30, HP_H = 4
     this._hpBarW = HP_W
@@ -295,6 +300,80 @@ export default class EnemySprite {
 
     // Berserk ring (Blade Fury)
     this._berserkGfx.alpha = state.isBerserking ? 0.8 : 0
+
+    this._syncDebuffVisuals(state.debuffs, Date.now())
+  }
+
+  _syncDebuffVisuals(debuffs, now) {
+    this._debuffGfx.clear()
+    if (!debuffs?.length) return
+
+    const R = this._R
+    for (const d of debuffs) {
+      if (d.expiresAt <= now) continue
+
+      if (d.hasDot && d.sourceSkill === 'Moonfire') {
+        // Pulsing blue-white ring
+        const pulse = 0.4 + 0.3 * Math.sin(now / 300)
+        this._debuffGfx.circle(0, 0, R + 8)
+        this._debuffGfx.stroke({ color: 0x4488ff, width: 2, alpha: pulse })
+        this._debuffGfx.circle(0, 0, R + 8)
+        this._debuffGfx.fill({ color: 0x4488ff, alpha: pulse * 0.1 })
+      }
+
+      if (d.hasDot && d.sourceSkill === 'Corruption') {
+        // Orbiting purple dot
+        const angle = (now / 600) * Math.PI * 2
+        const ox = Math.cos(angle) * (R + 10)
+        const oy = Math.sin(angle) * (R + 10)
+        this._debuffGfx.circle(ox, oy, 5)
+        this._debuffGfx.fill({ color: 0xaa44ff, alpha: 0.85 })
+        this._debuffGfx.circle(0, 0, R + 10)
+        this._debuffGfx.stroke({ color: 0x660088, width: 1, alpha: 0.25 })
+      }
+
+      if (d.isRooted) {
+        // Ice crystal spikes at feet only (Frost Nova) — 5 spikes in bottom 60° arc
+        for (let i = 0; i < 5; i++) {
+          const a = Math.PI * 0.5 + (i - 2) * (Math.PI * 0.15)
+          const ix = Math.cos(a) * R, iy = Math.sin(a) * R
+          const ox = Math.cos(a) * (R + 5), oy = Math.sin(a) * (R + 5)
+          this._debuffGfx.moveTo(ix, iy)
+          this._debuffGfx.lineTo(ox, oy)
+          this._debuffGfx.stroke({ color: 0xaaeeff, width: 2, alpha: 0.85 })
+          this._debuffGfx.circle(ox, oy, 1.5)
+          this._debuffGfx.fill({ color: 0xffffff, alpha: 0.7 })
+        }
+      }
+
+      if (d.hasSlow && d.sourceSkill === 'Obliterate') {
+        // Frost flecks — 4 small dots
+        for (let i = 0; i < 4; i++) {
+          const a = (i / 4) * Math.PI * 2 + now / 2000
+          const fx = Math.cos(a) * (R + 5), fy = Math.sin(a) * (R + 5)
+          this._debuffGfx.circle(fx, fy, 3)
+          this._debuffGfx.fill({ color: 0xcceeFF, alpha: 0.7 })
+        }
+      }
+
+      if (d.hasSlow && (d.sourceSkill === 'Aimed Shot' || d.sourceSkill === 'Aimed Strike')) {
+        // Red wound slash above head
+        const oy = -(R + 10)
+        this._debuffGfx.moveTo(-6, oy - 6)
+        this._debuffGfx.lineTo(6, oy + 6)
+        this._debuffGfx.stroke({ color: 0xff4400, width: 2.5, alpha: 0.9 })
+        this._debuffGfx.moveTo(6, oy - 6)
+        this._debuffGfx.lineTo(-6, oy + 6)
+        this._debuffGfx.stroke({ color: 0xff4400, width: 2.5, alpha: 0.9 })
+      }
+
+      if (d.hasSlow && d.sourceSkill === "Avenger's Shield") {
+        // Golden arc above enemy
+        const arcAngle = now / 1200
+        this._debuffGfx.arc(0, 0, R + 9, arcAngle - Math.PI * 0.7, arcAngle + Math.PI * 0.7)
+        this._debuffGfx.stroke({ color: 0xffdd44, width: 2, alpha: 0.75 })
+      }
+    }
   }
 
   destroy() {

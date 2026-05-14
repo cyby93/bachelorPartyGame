@@ -893,6 +893,25 @@ export default class ServerEnemy {
       dto.attackingAbility           = this._pendingAttackAbility
       this._pendingAttackAbility     = null   // consumed — one tick only
     }
+
+    if (this.pullTarget?.pulledBy != null) dto.pulledBy = this.pullTarget.pulledBy
+
+    const now = Date.now()
+    if (this.activeEffects?.length) {
+      const debuffs = this.activeEffects
+        .filter(eff => eff.expiresAt > now && eff.source !== 'grip' && eff.source !== 'fear')
+        .map(eff => ({
+          source:      eff.source,
+          sourceSkill: eff.params?.sourceSkill ?? null,
+          expiresAt:   eff.expiresAt,
+          hasDot:      !!(eff.params?.damagePerTick),
+          hasSlow:     !!(eff.params?.speedMultiplier != null && eff.params.speedMultiplier < 1),
+          isRooted:    !!(eff.params?.rooted),
+          isStunned:   !!(eff.params?.stunned),
+        }))
+      if (debuffs.length > 0) dto.debuffs = debuffs
+    }
+
     return dto
   }
 }

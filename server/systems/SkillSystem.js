@@ -564,6 +564,7 @@ export default class SkillSystem {
             targetX: Math.round(current.x), targetY: Math.round(current.y),
             effectType: 'heal', color,
             sourceSkill: config.name,
+            targetId: current.id,
           })
         }
 
@@ -624,6 +625,7 @@ export default class SkillSystem {
           targetX: Math.round(target.x), targetY: Math.round(target.y),
           effectType: 'damage', color,
           sourceSkill: config.name,
+          targetId: target.id,
         })
       }
       return true
@@ -666,6 +668,7 @@ export default class SkillSystem {
           targetX: Math.round(target.x), targetY: Math.round(target.y),
           effectType: 'damage', color,
           sourceSkill: config.name,
+          targetId: target.id,
         })
       }
       return true
@@ -676,21 +679,30 @@ export default class SkillSystem {
         ? this._findNearestEnemy(gs, player, config.range ?? 350)
         : this._findBeamTarget(gs, player, v, config.range ?? 350)
       if (!target || target.id === 'boss') return false   // boss is immune
-      target.pullTarget = { x: player.x, y: player.y, speed: 600 }
+      target.pullTarget = { x: player.x, y: player.y, speed: 400, pulledBy: player.id }
       target.activeEffects = target.activeEffects ?? []
       target.activeEffects.push({
         source:    'grip',
         ownerId:   player.id,
         params:    { isPull: true },
-        expiresAt: Date.now() + 1000,
+        expiresAt: Date.now() + 1200,
       })
       const color = CLASSES[player.className]?.color ?? '#ffffff'
       if (gs.io) {
+        gs.io.emit('grip:applied', {
+          targetId:       target.id,
+          targetX:        Math.round(target.x),
+          targetY:        Math.round(target.y),
+          casterX:        Math.round(player.x),
+          casterY:        Math.round(player.y),
+          casterPlayerId: player.id,
+        })
         gs.io.emit('targeted:hit', {
           casterX: Math.round(player.x), casterY: Math.round(player.y),
           targetX: Math.round(target.x), targetY: Math.round(target.y),
           effectType: 'damage', color,
           sourceSkill: config.name,
+          targetId: target.id,
         })
       }
       return true

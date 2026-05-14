@@ -165,6 +165,36 @@ export default class ParticleSystem {
     }
   }
 
+  celestialBurst(x, y) {
+    this._burst(x, y, 0x88ccff, 12, 100, 0.35, 3, { gravity: 0, colors: [0x4488ff, 0x88ccff, 0xffffff] })
+  }
+
+  plagueBurst(x, y) {
+    this._burst(x, y, 0x44ff44, 8, 50, 0.6, 2.5, { gravity: -30, colors: [0x228822, 0x44ff44, 0xaaffaa] })
+  }
+
+  shadowBurst(x, y) {
+    this._burst(x, y, 0x550066, 10, 90, 0.35, 2, { gravity: 0, colors: [0x220033, 0x550066, 0x880088] })
+  }
+
+  blinkVanish(x, y) {
+    this._burst(x, y, 0x6699ff, 16, 130, 0.3, 3, { gravity: 0, colors: [0x6699ff, 0xaabbff, 0xffffff] })
+  }
+
+  blinkArrive(x, y) {
+    this._burst(x, y, 0x99bbff, 12, 80, 0.25, 2.5, { gravity: 0, colors: [0x6699ff, 0x99bbff, 0xffffff] })
+  }
+
+  healBurst(x, y) {
+    this._burst(x, y, 0x00ff88, 5, 35, 0.35, 2, { gravity: -40, colors: [0x00ff88, 0x44ffaa, 0xffffff] })
+  }
+
+  hotLeaf(x, y) {
+    const offX = (Math.random() - 0.5) * 20
+    const offY = (Math.random() - 0.5) * 20
+    this._burst(x + offX, y + offY, 0x44dd44, 1, 30, 0.6, 2.5, { gravity: -60, colors: [0x44dd44, 0x22aa22] })
+  }
+
   // ── Per-frame update ───────────────────────────────────────────────────────
 
   update(dt) {

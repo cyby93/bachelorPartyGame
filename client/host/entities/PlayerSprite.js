@@ -141,6 +141,12 @@ export default class PlayerSprite {
     this.container.addChild(this._shieldGfx)
     this._shieldVisible = false
 
+    // ── HoT visual (Regrowth healing-over-time ring) ──────────────────────
+    this._hotGfx = new Graphics()
+    this.container.addChild(this._hotGfx)
+    this._hotActive = false
+    this._hotNextLeaf = 0
+
     // ── Aim arrow ─────────────────────────────────────────────────────────
     this._classColor   = this._classData.color ?? '#ffffff'
     this._aimArrow = new Graphics()
@@ -502,6 +508,27 @@ export default class PlayerSprite {
       this.overhead.setCooldowns(snapshot)
     }
     this.overhead.update(dt)
+
+    this._syncHotVisuals(state.effects, Date.now())
+  }
+
+  _syncHotVisuals(effects, now) {
+    const hasHot = effects?.some(e => e.src?.startsWith('hot:'))
+    if (!hasHot) {
+      if (this._hotActive) {
+        this._hotGfx.clear()
+        this._hotActive = false
+      }
+      return
+    }
+    this._hotActive = true
+    const R = 18  // approximate player display radius for ring
+    const pulse = 0.35 + 0.25 * Math.sin(now / 400)
+    this._hotGfx.clear()
+    this._hotGfx.circle(0, 0, R + 8)
+    this._hotGfx.stroke({ color: 0x00ff44, width: 1, alpha: (pulse + 0.1) * 0.5 })
+    this._hotGfx.circle(0, 0, R + 8)
+    this._hotGfx.fill({ color: 0x00ff44, alpha: pulse * 0.04 })
   }
 
   /** Called when the server fires a skill:cooldown event for this player. */

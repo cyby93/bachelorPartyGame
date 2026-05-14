@@ -214,6 +214,7 @@ export default class ServerPlayer {
       maxHp:     this.maxHp,
       isDead:    this.isDead,
       speed:     this.speed,
+      effects:   this.activeEffects.map(e => ({ src: e.source, params: e.params })),
     }
   }
 

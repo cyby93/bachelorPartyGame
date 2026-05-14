@@ -13,6 +13,27 @@ Level 2:
 I want to create sprites and integrate them into the game for auto targeted abilities (like moonfire, corruption, chain heal, regrowth etc.). Currently a colored line indicating that the ability has hit someone, but i'd like some vfx to be displayed on the target (or targets if we think about the chain heal)
 For example: The moonfire should summon a blue-colored fire beam on the target enemy model like a beam has just hit the enemy from above
 For example 2: When the corruption hits an enemy some continous plague-like vfx should be displayed on the model until the debuff is over
+For exmaple 3: The chain heal should chain the target togheter with a healing beam for a brief moment, indicating that a healing spring went through them
+
+Also some of these abilities apply over time effects. I want those overtime effects to be indicated by a visible continous visual effect.
+
+I give the the list of abilities:
+    auto-targeted abilities:
+        - Druid: Moonfire
+        - Warlock: Corruption cast effect, Drain Life beam effect 
+        - Shaman: Chain heal instant beam effect
+        - Death Knight: Death grip
+        - Rogue: Ambush
+        - Mage: Blink effect
+
+    ability debuffs on enemies:
+        - Druid: Moonfire burn effect, Regrowth healing effect
+        - Warlock: Corruption
+        - Death Knight: Obliterate slow effect
+        - Mage: Frost nova freeze effect
+        - Paladin: Avenger's shield slow effect
+        - Hunter: Aimed shot slow effect
+
 ## VFX for debuffs on enemies
 I want to display special vfxs emitted from the enemy who has dedicated debuffs:
 I want visual representation for player damage overtime and status effects like: Corruption, Moonfire, Frost Nova, any slow effect

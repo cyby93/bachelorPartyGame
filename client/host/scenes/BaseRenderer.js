@@ -43,6 +43,8 @@ export default class BaseRenderer {
     this._beamGfx    = new Graphics()
     this._flashBeams = []   // [{ x1, y1, x2, y2, color, expiresAt }]
     this._beamTime   = 0
+    this._trackedBeams = []  // [{ fromPlayerId, toEnemyId, color, width, expiresAt }]
+    this._buildHitHandlers()
 
     this.minionGfx = new Map()   // minionId → Container (drawn shapes)
 
@@ -241,17 +243,18 @@ export default class BaseRenderer {
       const t     = this._beamTime
       const pulse = 0.55 + 0.2 * Math.sin(t * 8)
 
-      // Outer glow
+      const glowColor = 0x00ff88
+      const coreColor = 0x00ff88
+      const dotColor  = 0x00ff88
+
       this._beamGfx.moveTo(sx, sy)
       this._beamGfx.lineTo(tx, ty)
-      this._beamGfx.stroke({ color: 0x00ff88, width: 6, alpha: 0.18 })
+      this._beamGfx.stroke({ color: glowColor, width: 6, alpha: 0.18 })
 
-      // Core beam
       this._beamGfx.moveTo(sx, sy)
       this._beamGfx.lineTo(tx, ty)
-      this._beamGfx.stroke({ color: 0x00ff88, width: 2.5, alpha: pulse })
+      this._beamGfx.stroke({ color: coreColor, width: 2.5, alpha: pulse })
 
-      // White core
       this._beamGfx.moveTo(sx, sy)
       this._beamGfx.lineTo(tx, ty)
       this._beamGfx.stroke({ color: 0xffffff, width: 1, alpha: pulse * 0.55 })
@@ -265,7 +268,7 @@ export default class BaseRenderer {
         const py   = ty + dy * frac
         const a    = Math.sin(frac * Math.PI) * 0.85
         this._beamGfx.circle(px, py, 3)
-        this._beamGfx.fill({ color: 0x00ff88, alpha: a })
+        this._beamGfx.fill({ color: dotColor, alpha: a })
       }
     })
 
@@ -276,7 +279,33 @@ export default class BaseRenderer {
       const c = parseInt(b.color.replace('#', ''), 16)
       this._beamGfx.moveTo(b.x1, b.y1)
       this._beamGfx.lineTo(b.x2, b.y2)
-      this._beamGfx.stroke({ width: 2, color: c, alpha: 0.8 })
+      this._beamGfx.stroke({ width: b.width ?? 2, color: c, alpha: b.alpha ?? 0.8 })
+    })
+
+    // Tracked beams (Death Grip pull chain — follows live entity positions)
+    this._trackedBeams = this._trackedBeams.filter(b => b.expiresAt > now)
+    this._trackedBeams.forEach(b => {
+      const fromSprite = this.playerSprites.get(b.fromPlayerId)
+      const toSprite   = this.enemySprites.get(b.toEnemyId)
+      if (!fromSprite || !toSprite) return
+      const sx = fromSprite.container.x, sy = fromSprite.container.y
+      const tx = toSprite.container.x,   ty = toSprite.container.y
+      const t  = this._beamTime
+      // Iron chain — grey glow + core
+      this._beamGfx.moveTo(sx, sy)
+      this._beamGfx.lineTo(tx, ty)
+      this._beamGfx.stroke({ color: 0x555555, width: 5, alpha: 0.2 })
+      this._beamGfx.moveTo(sx, sy)
+      this._beamGfx.lineTo(tx, ty)
+      this._beamGfx.stroke({ color: 0x999999, width: b.width, alpha: 0.6 })
+      // Chain links — static dots along beam
+      const dx = tx - sx, dy = ty - sy
+      for (let i = 0; i < 6; i++) {
+        const frac = (i / 5)
+        const px = sx + dx * frac, py = sy + dy * frac
+        this._beamGfx.circle(px, py, 3)
+        this._beamGfx.fill({ color: 0xbbbbbb, alpha: 0.7 })
+      }
     })
   }
 
@@ -601,17 +630,98 @@ export default class BaseRenderer {
     }
   }
 
+  _buildHitHandlers() {
+    const bind = fn => fn.bind(this)
+    this._hitHandlers = new Map([
+      ['Moonfire',    bind(this._hitMoonfire)],
+      ['Corruption',  bind(this._hitCorruption)],
+      ['Chain Heal',  bind(this._hitChainHeal)],
+      ['Regrowth',    bind(this._hitRegrowth)],
+      ['Death Grip',  bind(this._hitDeathGrip)],
+      ['Ambush',      bind(this._hitAmbush)],
+    ])
+  }
+
   onTargetedHit(data) {
     if (!this.vfx) return
+    const handler = this._hitHandlers?.get(data.sourceSkill)
+    if (handler) {
+      handler(data)
+    } else {
+      this._hitGeneric(data)
+    }
+  }
+
+  _hitGeneric(data) {
     const { casterX, casterY, targetX, targetY, effectType, color } = data
-    this._flashBeams.push({
-      x1: casterX, y1: casterY,
-      x2: targetX, y2: targetY,
-      color: color ?? '#ffffff',
-      expiresAt: Date.now() + 300,
-    })
+    this._flashBeams.push({ x1: casterX, y1: casterY, x2: targetX, y2: targetY,
+      color: color ?? '#ffffff', width: 2, expiresAt: Date.now() + 300 })
     const impactColor = effectType === 'heal' ? '#44ff44' : color
     this.vfx.triggerImpact(targetX, targetY, impactColor)
+  }
+
+  _hitMoonfire(data) {
+    const { targetX, targetY } = data
+    // Vertical column from above — blue-white
+    this._flashBeams.push({ x1: targetX, y1: targetY - 140, x2: targetX, y2: targetY,
+      color: '#88ccff', width: 3, alpha: 0.9, expiresAt: Date.now() + 250 })
+    this.vfx.oneShot.aoeFlash(targetX, targetY, 28, '#4488ff')
+    this.vfx.particles.celestialBurst(targetX, targetY)
+  }
+
+  _hitCorruption(data) {
+    const { targetX, targetY } = data
+    // No line — plague hit at target
+    this.vfx.oneShot.aoeFlash(targetX, targetY, 32, '#aa44ff')
+    this.vfx.particles.shadowBurst(targetX, targetY)
+  }
+
+  _hitChainHeal(data) {
+    const { casterX, casterY, targetX, targetY } = data
+    // Wider green beam, 400ms
+    this._flashBeams.push({ x1: casterX, y1: casterY, x2: targetX, y2: targetY,
+      color: '#00ff88', width: 4, alpha: 0.9, expiresAt: Date.now() + 400 })
+    this._flashBeams.push({ x1: casterX, y1: casterY, x2: targetX, y2: targetY,
+      color: '#aaffcc', width: 1, alpha: 0.4, expiresAt: Date.now() + 400 })
+    this.vfx.particles.healBurst(targetX, targetY)
+  }
+
+  _hitRegrowth(data) {
+    const { casterX, casterY, targetX, targetY } = data
+    this._flashBeams.push({ x1: casterX, y1: casterY, x2: targetX, y2: targetY,
+      color: '#00ff88', width: 4, alpha: 0.45, expiresAt: Date.now() + 400 })
+    this._flashBeams.push({ x1: casterX, y1: casterY, x2: targetX, y2: targetY,
+      color: '#aaffcc', width: 1, alpha: 0.2, expiresAt: Date.now() + 400 })
+    this.vfx.particles.healBurst(targetX, targetY)
+  }
+
+  _hitDeathGrip(data) {
+    const { casterX, casterY, targetX, targetY } = data
+    // Faint iron chain shot
+    this._flashBeams.push({ x1: casterX, y1: casterY, x2: targetX, y2: targetY,
+      color: '#888888', width: 3, alpha: 0.5, expiresAt: Date.now() + 200 })
+    this.vfx.triggerImpact(targetX, targetY, '#888888')
+  }
+
+  _hitAmbush(data) {
+    const { casterX, casterY, targetX, targetY } = data
+    // Faint shadow trace
+    this._flashBeams.push({ x1: casterX, y1: casterY, x2: targetX, y2: targetY,
+      color: '#221133', width: 2, alpha: 0.45, expiresAt: Date.now() + 250 })
+    this.vfx.oneShot.aoeFlash(targetX, targetY, 24, '#550066')
+    this.vfx.particles.shadowBurst(targetX, targetY)
+  }
+
+  onGripApplied(data) {
+    if (!this.vfx) return
+    const { targetId, casterPlayerId } = data
+    this._trackedBeams.push({
+      fromPlayerId: casterPlayerId,
+      toEnemyId:    targetId,
+      color:        0x888888,
+      width:        2.5,
+      expiresAt:    Date.now() + 1200,
+    })
   }
 
   onEffectDamage(data) {

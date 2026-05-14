@@ -42,6 +42,7 @@ export const EVENTS = {
   TARGETED_HIT:        'targeted:hit',         // { casterX, casterY, targetX, targetY, effectType, color }
   COMBO_POINTS:        'player:comboPoints',   // { playerId, points }
   PLAYER_HIGHLIGHT:    'player:highlight',     // { playerId }  — broadcast player's find-me beacon request
+  GRIP_APPLIED:    'grip:applied',    // S→All: { targetId, targetX, targetY, casterX, casterY, casterPlayerId }
 
   // ── Quiz & Upgrade (between levels) ────────────────────────────────────
   QUIZ_QUESTION:        'quiz:question',        // S→All: { question, options }

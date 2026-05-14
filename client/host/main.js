@@ -218,6 +218,10 @@ socket.on(EVENTS.TARGETED_HIT, data => {
   game.activeRenderer?.onTargetedHit?.(data)
 })
 
+socket.on(EVENTS.GRIP_APPLIED, data => {
+  game.activeRenderer?.onGripApplied?.(data)
+})
+
 socket.on(EVENTS.CHANNEL_INTERRUPTED, data => {
   audio.handleChannelInterrupted(data)
   game.activeRenderer?.onChannelInterrupted?.(data)

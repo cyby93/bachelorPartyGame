@@ -1393,6 +1393,8 @@ export default class GameServer {
     this.io.emit(EVENTS.COOLDOWN, { playerId: player.id, skillIndex: index, durationMs: effectiveCooldown })
 
     const gs = this._gs()
+    const _preDashX = config.type === 'DASH' ? Math.round(player.x) : null
+    const _preDashY = config.type === 'DASH' ? Math.round(player.y) : null
     this.skillSystem.execute(gs, player, config, index, vector ?? { x: 1, y: 0 }, action)
 
     // Non-directional CAST abilities (e.g. Mass Resurrection) set activeCast here but don't
@@ -1403,7 +1405,7 @@ export default class GameServer {
     // Emit skill fired event for VFX
     const classColor = CLASSES[player.className]?.color ?? '#ffffff'
     const v = vector ?? { x: 1, y: 0 }
-    this.io.emit(EVENTS.SKILL_FIRED, {
+    const _skillPayload = {
       playerId:  player.id,
       skillName: config.name,
       type:      config.type,
@@ -1414,7 +1416,12 @@ export default class GameServer {
       radius:    config.payload?.radius ?? config.radius ?? 0,
       range:     config.range ?? 0,
       color:     classColor,
-    })
+    }
+    if (_preDashX !== null && config.subtype === 'TELEPORT') {
+      _skillPayload.srcX = _preDashX
+      _skillPayload.srcY = _preDashY
+    }
+    this.io.emit(EVENTS.SKILL_FIRED, _skillPayload)
   }
 
   // ── Enemy management ────────────────────────────────────────────────────────

@@ -58,6 +58,14 @@ export default class VFXManager {
       ['Icebound Fortitude',  (d) => { os.iceboundFortitude(d.x, d.y); ps.iceShards(d.x, d.y) }],
       // Bladestorm: persistent visual attached via attachBladestorm — fire cast flash only
       ['Bladestorm',          (d) => { os.aoeFlash(d.x, d.y, d.radius || 70, d.color) }],
+      ['Blink', (d) => {
+        if (d.srcX != null) {
+          os.aoeFlash(d.srcX, d.srcY, 35, d.color)
+          ps.blinkVanish(d.srcX, d.srcY)
+        }
+        os.aoeFlash(d.x, d.y, 35, d.color)
+        ps.blinkArrive(d.x, d.y)
+      }],
     ]
     for (const [name, fn] of skills) this._skillHandlers.set(name, fn)
 

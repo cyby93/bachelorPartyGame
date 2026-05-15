@@ -1307,8 +1307,8 @@ export default class GameServer {
     const config = player.getSkillConfig(index)
     if (!config) return
 
-    // Bladestorm suppresses all other skills while active
-    if (player.bladestormActive && config.subtype !== 'BLADESTORM') return
+    // Bladestorm suppresses Shield Block only — other skills remain usable
+    if (player.bladestormActive && config.type === 'SHIELD') return
 
     // Vanish/stealth breaks when any ability other than the stealth skill itself is used
     if (player.isInvisible) {
@@ -1515,9 +1515,10 @@ export default class GameServer {
         this.players.forEach(p => {
           if (p.isHost || p.isDead) return
           if (playerHitsEntity(p.x, p.y, e)) {
-            if (p.isShieldBlocking(e.x, e.y)) return
+            const { damage: shadowDmg } = p.shieldResult(e.x, e.y, p.maxHp * 10)
+            if (shadowDmg <= 0) return
             e._lastContactDamage = now
-            p.takeDamage(p.maxHp * 10)   // effectively instant kill
+            p.takeDamage(shadowDmg)
             this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: 9999, type: 'damage', sourceSkill: 'Shadow Demon' })
             if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
           }
@@ -1552,9 +1553,11 @@ export default class GameServer {
         this.players.forEach(p => {
           if (p.isHost || p.isDead) return
           if (playerHitsEntity(p.x, p.y, e)) {
-            if (p.isShieldBlocking(e.x, e.y)) return
+            const { damage: meleeDmg, type: meleeType } = p.shieldResult(e.x, e.y, e.meleeDamage)
+            if (meleeDmg <= 0) return
             e._lastContactDamage = now
-            p.takeDamage(e.meleeDamage)
+            p.takeDamage(meleeDmg)
+            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: meleeDmg, type: meleeType, sourceSkill: 'Melee' })
             if (!this.stats.deaths) this.stats.deaths = {}
             if (p.isDead) {
               this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
@@ -1692,9 +1695,10 @@ export default class GameServer {
       this.players.forEach(p => {
         if (p.isHost || p.isDead) return
         if (playerHitsCircle(p.x, p.y, action.x, action.y, action.radius)) {
-          if (p.isShieldBlocking?.(action.x, action.y)) return
-          p.takeDamage(action.damage)
-          this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: action.damage, type: 'damage', sourceSkill: 'Whirlwind' })
+          const { damage: whirlDmg, type: whirlType } = p.shieldResult(action.x, action.y, action.damage)
+          if (whirlDmg <= 0) return
+          p.takeDamage(whirlDmg)
+          this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: whirlDmg, type: whirlType, sourceSkill: 'Whirlwind' })
           if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
         }
       })
@@ -1885,9 +1889,12 @@ export default class GameServer {
         const target = attack.target
         if (target && !target.isDead) {
           const d = Math.hypot(target.x - this.boss.x, target.y - this.boss.y)
-          if (d < 350 && !target.isShieldBlocking(this.boss.x, this.boss.y)) {
-            target.takeDamage(attack.damage ?? 30)
-            if (target.isDead) this.stats.deaths[target.id] = (this.stats.deaths[target.id] ?? 0) + 1
+          if (d < 350) {
+            const { damage: beamDmg } = target.shieldResult(this.boss.x, this.boss.y, attack.damage ?? 30)
+            if (beamDmg > 0) {
+              target.takeDamage(beamDmg)
+              if (target.isDead) this.stats.deaths[target.id] = (this.stats.deaths[target.id] ?? 0) + 1
+            }
           }
         }
       } else if (attack.type === 'aoe') {
@@ -1895,16 +1902,20 @@ export default class GameServer {
         this.players.forEach(p => {
           if (p.isHost || p.isDead) return
           if (playerHitsCircle(p.x, p.y, attack.bossX, attack.bossY, r)) {
-            if (p.isShieldBlocking(attack.bossX, attack.bossY)) return
-            p.takeDamage(attack.damage ?? 25)
+            const { damage: aoeDmg } = p.shieldResult(attack.bossX, attack.bossY, attack.damage ?? 25)
+            if (aoeDmg <= 0) return
+            p.takeDamage(aoeDmg)
             if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
           }
         })
       } else if (attack.type === 'charge') {
         const target = attack.target
-        if (target && !target.isDead && !target.isShieldBlocking(this.boss.x, this.boss.y)) {
-          target.takeDamage(attack.damage ?? 40)
-          if (target.isDead) this.stats.deaths[target.id] = (this.stats.deaths[target.id] ?? 0) + 1
+        if (target && !target.isDead) {
+          const { damage: chargeDmg } = target.shieldResult(this.boss.x, this.boss.y, attack.damage ?? 40)
+          if (chargeDmg > 0) {
+            target.takeDamage(chargeDmg)
+            if (target.isDead) this.stats.deaths[target.id] = (this.stats.deaths[target.id] ?? 0) + 1
+          }
         }
       }
     }
@@ -1913,11 +1924,12 @@ export default class GameServer {
     this.players.forEach(p => {
       if (p.isHost || p.isDead) return
       if (playerHitsEntity(p.x, p.y, this.boss, 5)) {
-        if (p.isShieldBlocking(this.boss.x, this.boss.y)) return
+        const { damage: contactDmg } = p.shieldResult(this.boss.x, this.boss.y, 5)
+        if (contactDmg <= 0) return
         if (!p._lastBossContact) p._lastBossContact = 0
         if (now - p._lastBossContact > 500) {
           p._lastBossContact = now
-          p.takeDamage(5)
+          p.takeDamage(contactDmg)
           if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
         }
       }
@@ -1961,11 +1973,12 @@ export default class GameServer {
     this.players.forEach(p => {
       if (p.isHost || p.isDead) return
       if (playerHitsEntity(p.x, p.y, this.boss, 5)) {
-        if (p.isShieldBlocking(this.boss.x, this.boss.y)) return
+        const { damage: contactDmg } = p.shieldResult(this.boss.x, this.boss.y, 5)
+        if (contactDmg <= 0) return
         if (!p._lastBossContact) p._lastBossContact = 0
         if (now - p._lastBossContact > 500) {
           p._lastBossContact = now
-          p.takeDamage(5)
+          p.takeDamage(contactDmg)
           if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
         }
       }

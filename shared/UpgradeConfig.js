@@ -32,11 +32,11 @@ export const UPGRADE_CONFIG = {
       { label: 'Bladestorm +2', deltas: { duration: 500 } },
       { label: 'Bladestorm +3', deltas: { damage: 1, cooldown: -1000 } },
     ],
-    // S3: Shield Block (SHIELD) — utility only
+    // S3: Shield Block (SHIELD) — base 65%/10 absorb, +8.3% reduction and +5 absorb per tier → 90%/25 at T3
     [
-      { label: 'Shield Block +1', deltas: { cooldown: -500 } },
-      { label: 'Shield Block +2', deltas: { arc: 0.3 } },
-      { label: 'Shield Block +3', deltas: { cooldown: -500, arc: 0.2 } },
+      { label: 'Shield Block +1', deltas: { shieldReduction: 0.083, shieldAbsorbThreshold: 5, cooldown: -500 } },
+      { label: 'Shield Block +2', deltas: { shieldReduction: 0.083, shieldAbsorbThreshold: 5, arc: 0.3 } },
+      { label: 'Shield Block +3', deltas: { shieldReduction: 0.084, shieldAbsorbThreshold: 5, cooldown: -500, arc: 0.2 } },
     ],
   ],
 
@@ -54,11 +54,11 @@ export const UPGRADE_CONFIG = {
       { label: "Avenger's Shield +2", deltas: { damage: 7 } },
       { label: "Avenger's Shield +3", deltas: { damage: 7, cooldown: -500 } },
     ],
-    // S2: Divine Shield (SHIELD) — utility only
+    // S2: Divine Shield (SHIELD) — base 65%/10 absorb, +8.3% reduction and +5 absorb per tier → 90%/25 at T3
     [
-      { label: 'Divine Shield +1', deltas: { cooldown: -300 } },
-      { label: 'Divine Shield +2', deltas: { arc: 0.3 } },
-      { label: 'Divine Shield +3', deltas: { cooldown: -400, arc: 0.2 } },
+      { label: 'Divine Shield +1', deltas: { shieldReduction: 0.083, shieldAbsorbThreshold: 5, cooldown: -300 } },
+      { label: 'Divine Shield +2', deltas: { shieldReduction: 0.083, shieldAbsorbThreshold: 5, arc: 0.3 } },
+      { label: 'Divine Shield +3', deltas: { shieldReduction: 0.084, shieldAbsorbThreshold: 5, cooldown: -400, arc: 0.2 } },
     ],
     // S3: Consecration (AOE_SELF) — damage 3/tick, 8 ticks, healAmount 3, cooldown 7000ms → base DPS ~3.4
     [
@@ -107,21 +107,21 @@ export const UPGRADE_CONFIG = {
     // S1: Aimed Shot (CAST) — payload.damage 45, castTime 1500ms, cooldown 4000ms → base DPS ~11.3
     [
       { label: 'Aimed Shot +1', deltas: { 'payload.damage': 8 } },
-      { label: 'Aimed Shot +2', deltas: { 'payload.damage': 8, castTime: -200 } },
+      { label: 'Aimed Shot +2', deltas: { 'payload.damage': 8, castTime: -500 } },
       { label: 'Aimed Shot +3', deltas: { 'payload.damage': 9, cooldown: -500 } },
     ],
     // S2: Call of the Wild (SPAWN/WILD_BEAST) — damageBonus 0 (added to all variants at spawn), duration 20000ms, cooldown 2000ms
     // damageBonus is applied server-side in SkillSystem when flattening beastVariants → petStats.
     [
       { label: 'Call of the Wild +1', deltas: { damageBonus: 1, duration: 2000 } },
-      { label: 'Call of the Wild +2', deltas: { damageBonus: 1, cooldown: -300 } },
-      { label: 'Call of the Wild +3', deltas: { damageBonus: 2, duration: 2000, cooldown: -300 } },
+      { label: 'Call of the Wild +2', deltas: { damageBonus: 1, cooldown: -500 } },
+      { label: 'Call of the Wild +3', deltas: { damageBonus: 2, duration: 2000, cooldown: -500 } },
     ],
     // S3: Explosive Trap (SPAWN/TRAP) — trapEffect.damage 25, trapEffect.radius 120, cooldown 8000ms → base DPS ~3.2
     [
-      { label: 'Explosive Trap +1', deltas: { 'trapEffect.damage': 4, cooldown: -1000 } },
-      { label: 'Explosive Trap +2', deltas: { 'trapEffect.damage': 4, 'trapEffect.radius': 15 } },
-      { label: 'Explosive Trap +3', deltas: { 'trapEffect.damage': 5 } },
+      { label: 'Explosive Trap +1', deltas: { 'trapEffect.damage': 5, cooldown: -1000 } },
+      { label: 'Explosive Trap +2', deltas: { 'trapEffect.damage': 5, 'trapEffect.radius': 15 } },
+      { label: 'Explosive Trap +3', deltas: { 'trapEffect.damage': 10 } },
     ],
   ],
 

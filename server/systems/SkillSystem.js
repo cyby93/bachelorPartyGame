@@ -430,10 +430,12 @@ export default class SkillSystem {
   _executeShield(player, config, vector, action, skillIndex) {
     if (action === 'START') {
       const v = normalize(vector ?? { x: 1, y: 0 })
-      player.shieldActive     = true
-      player.shieldAngle      = Math.atan2(v.y, v.x)
-      player.shieldArc        = config.arc ?? Math.PI / 2
-      player.shieldSkillIndex = skillIndex
+      player.shieldActive          = true
+      player.shieldAngle           = Math.atan2(v.y, v.x)
+      player.shieldArc             = config.arc ?? Math.PI / 2
+      player.shieldReduction       = config.shieldReduction ?? 0.6
+      player.shieldAbsorbThreshold = config.shieldAbsorbThreshold ?? 0
+      player.shieldSkillIndex      = skillIndex
     } else if (action === 'END') {
       player.shieldActive     = false
       player.shieldSkillIndex = -1
@@ -1232,16 +1234,13 @@ export default class SkillSystem {
           if (!this._collision.ellipseCircleOverlap(playerEllipse, projCircle)) return
 
           proj.hit.add(p.id)
-          // Directional shield blocks the projectile entirely
-          if (p.isShieldBlocking(proj.x, proj.y)) {
+          const { damage, type: dmgType } = p.shieldResult(proj.x, proj.y, proj.damage ?? 0)
+          if (damage <= 0) {
             if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount: 0, type: 'blocked', sourceSkill: null })
           } else {
-            const amount = proj.damage ?? 0
-            if (amount > 0) {
-              const minHp = gs.scene === 'lobby' ? 1 : 0
-              const dealt = p.takeDamage(amount, minHp)
-              if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount: dealt, type: 'damage', sourceSkill: null })
-            }
+            const minHp = gs.scene === 'lobby' ? 1 : 0
+            const dealt  = p.takeDamage(damage, minHp)
+            if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount: dealt, type: dmgType, sourceSkill: null })
           }
           if (!proj.pierce) proj.isAlive = false
         })

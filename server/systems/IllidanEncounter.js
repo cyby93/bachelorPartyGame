@@ -124,13 +124,14 @@ export default class IllidanEncounter {
     this.players.forEach(p => {
       if (p.isHost || p.isDead) return
       if (playerHitsCircle(p.x, p.y, this.boss.x, this.boss.y, meleeRange)) {
-        if (p.isShieldBlocking(this.boss.x, this.boss.y)) return
+        const rawMelee = Math.round(ILLIDAN_CONFIG.meleeDamage * this.boss._damageMult)
+        const { damage: meleeDmg, type: meleeType } = p.shieldResult(this.boss.x, this.boss.y, rawMelee)
+        if (meleeDmg <= 0) return
         if (!p._lastBossContact) p._lastBossContact = 0
         if (now - p._lastBossContact > meleeCooldown) {
           p._lastBossContact = now
-          const dmg = Math.round(ILLIDAN_CONFIG.meleeDamage * this.boss._damageMult)
-          p.takeDamage(dmg)
-          this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: dmg, type: 'damage', sourceSkill: 'Melee' })
+          p.takeDamage(meleeDmg)
+          this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: meleeDmg, type: meleeType, sourceSkill: 'Melee' })
           if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
           this._tryEmitAttackCry(now)
         }
@@ -305,9 +306,10 @@ export default class IllidanEncounter {
         this.players.forEach(p => {
           if (p.isHost || p.isDead) return
           if (playerHitsCircle(p.x, p.y, crashX, crashY, attack.radius)) {
-            if (p.isShieldBlocking(crashX, crashY)) return
-            p.takeDamage(attack.damage)
-            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: attack.damage, type: 'damage', sourceSkill: 'Flame Crash' })
+            const { damage: crashDmg, type: crashType } = p.shieldResult(crashX, crashY, attack.damage)
+            if (crashDmg <= 0) return
+            p.takeDamage(crashDmg)
+            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: crashDmg, type: crashType, sourceSkill: 'Flame Crash' })
             applyDeath(p)
           }
         })
@@ -334,9 +336,10 @@ export default class IllidanEncounter {
           let diff = Math.abs(angle - facing)
           if (diff > Math.PI) diff = 2 * Math.PI - diff
           if (diff <= coneHalfRad) {
-            if (p.isShieldBlocking(attack.bossX, attack.bossY)) return
-            p.takeDamage(attack.damage)
-            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: attack.damage, type: 'damage', sourceSkill: 'Draw Soul' })
+            const { damage: soulDmg, type: soulType } = p.shieldResult(attack.bossX, attack.bossY, attack.damage)
+            if (soulDmg <= 0) return
+            p.takeDamage(soulDmg)
+            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: soulDmg, type: soulType, sourceSkill: 'Draw Soul' })
             this.io.emit(EVENTS.TARGETED_HIT, {
               casterX: p.x, casterY: p.y,
               targetX: attack.bossX, targetY: attack.bossY,
@@ -468,9 +471,10 @@ export default class IllidanEncounter {
         this.players.forEach(p => {
           if (p.isHost || p.isDead) return
           if (playerHitsCircle(p.x, p.y, primary.x, primary.y, attack.splashRadius)) {
-            if (p.isShieldBlocking(attack.bossX, attack.bossY)) return
-            p.takeDamage(attack.damage)
-            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: attack.damage, type: 'damage', sourceSkill: 'Agonizing Flames' })
+            const { damage: flameDmg, type: flameType } = p.shieldResult(attack.bossX, attack.bossY, attack.damage)
+            if (flameDmg <= 0) return
+            p.takeDamage(flameDmg)
+            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: flameDmg, type: flameType, sourceSkill: 'Agonizing Flames' })
             applyDeath(p)
           }
         })
@@ -492,12 +496,16 @@ export default class IllidanEncounter {
         this.players.forEach(p => { if (!p.isHost && !p.isDead) living.push(p) })
         if (!living.length) break
         for (const target of living) {
+          const ddx  = target.x - attack.bossX
+          const ddy  = target.y - attack.bossY
+          const dist = Math.hypot(ddx, ddy) || 1
+          const speed = 280
           this._illidanFireballs.push({
             id:           ++this._illidanFireballSeq,
             x:            attack.bossX,
             y:            attack.bossY,
-            targetId:     target.id,
-            speed:        280,
+            vx:           (ddx / dist) * speed,
+            vy:           (ddy / dist) * speed,
             damage:       attack.damage,
             splashRadius: attack.splashRadius,
             radius:       10,
@@ -707,10 +715,35 @@ export default class IllidanEncounter {
 
   _tickFireballs(dt) {
     const HIT_DIST = 20
+    const margin   = 150
     for (let i = this._illidanFireballs.length - 1; i >= 0; i--) {
-      const fb     = this._illidanFireballs[i]
-      const target = this.players.get(fb.targetId)
+      const fb = this._illidanFireballs[i]
 
+      // ── Straight projectile (Shadow Blast) ──────────────────────────────
+      if (fb.vx !== undefined) {
+        fb.x += fb.vx * dt
+        fb.y += fb.vy * dt
+
+        let hit = false
+        this.players.forEach(p => {
+          if (p.isHost || p.isDead) return
+          if (!playerHitsCircle(p.x, p.y, fb.x, fb.y, fb.splashRadius)) return
+          hit = true
+          const { damage: fbDmg, type: fbType } = p.shieldResult(fb.x, fb.y, fb.damage)
+          if (fbDmg <= 0) return
+          p.takeDamage(fbDmg)
+          this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: fbDmg, type: fbType, sourceSkill: fb.sourceSkill ?? 'Shadow Blast' })
+          if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
+        })
+
+        const oob = fb.x < -margin || fb.x > this.arenaWidth + margin
+                 || fb.y < -margin || fb.y > this.arenaHeight + margin
+        if (hit || oob) this._illidanFireballs.splice(i, 1)
+        continue
+      }
+
+      // ── Homing projectile (Azzinoth fireballs) ──────────────────────────
+      const target = this.players.get(fb.targetId)
       if (!target || target.isDead) {
         this._illidanFireballs.splice(i, 1)
         continue
@@ -724,9 +757,10 @@ export default class IllidanEncounter {
         this.players.forEach(p => {
           if (p.isHost || p.isDead) return
           if (playerHitsCircle(p.x, p.y, fb.x, fb.y, fb.splashRadius)) {
-            if (p.isShieldBlocking(fb.x, fb.y)) return
-            p.takeDamage(fb.damage)
-            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: fb.damage, type: 'damage', sourceSkill: fb.sourceSkill ?? 'Fireball' })
+            const { damage: fbDmg, type: fbType } = p.shieldResult(fb.x, fb.y, fb.damage)
+            if (fbDmg <= 0) return
+            p.takeDamage(fbDmg)
+            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: fbDmg, type: fbType, sourceSkill: fb.sourceSkill ?? 'Fireball' })
             if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
           }
         })

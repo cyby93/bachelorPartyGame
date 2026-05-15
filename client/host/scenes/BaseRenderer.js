@@ -779,7 +779,9 @@ export default class BaseRenderer {
     const { targetId, amount, type } = data
     const pos = this._resolveTargetPosition(targetId)
     if (!pos) return
-    this.vfx.spawnDamageNumber(pos.x, pos.y - 20, amount, type)
+    // Numbers on enemies (player-dealt) show in orange; numbers on players (enemy-dealt) stay red
+    const displayType = (type === 'damage' && !this.playerSprites.has(targetId)) ? 'playerDamage' : type
+    this.vfx.spawnDamageNumber(pos.x, pos.y - 20, amount, displayType)
     // Add impact sparks for direct damage hits (AOE, melee, etc. that emit effect:damage)
     if (type === 'damage' && amount > 0) {
       this.vfx.particles.hitSpark(pos.x, pos.y, '#ff8844')

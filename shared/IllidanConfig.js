@@ -171,8 +171,8 @@ export const ILLIDAN_CONFIG = {
         name: "Shadow Blast",
         cooldown: 1000,
         type: "shadowBlast",
-        castTime: 2500,
-        damage: Math.round(1.5 * Y * R), // 60 at defaults
+        castTime: 3500,
+        damage: Math.round(1 * Y * R), // 40 at defaults
         splashRadius: 80,
       },
       {

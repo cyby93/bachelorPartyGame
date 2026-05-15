@@ -8,7 +8,7 @@ import { Assets, Container, Graphics, Sprite } from 'pixi.js'
 const TRAIL_LENGTH = 5
 
 // Per-spriteKey visual config. Add an entry here when creating a new ability sprite.
-// trailStyle:    which trail renderer to use ('holy' | 'divine' | 'ichor' | 'fire' | 'none' | 'default')
+// trailStyle:    which trail renderer to use ('holy' | 'divine' | 'ichor' | 'fire' | 'wind' | 'none' | 'default')
 // spinSpeed:     body rotation in radians/frame at 60fps (0 = no spin)
 // bodyScale:     multiplier on radius*2 — values < 1 shrink the body
 // trailLength:   history points kept; defaults to TRAIL_LENGTH (5) when omitted
@@ -21,8 +21,8 @@ const PROJECTILE_CONFIG = {
   'projectile_ichor':            { trailStyle: 'ichor',     spinSpeed: 0.04, trailLength: 7 },
   'projectile_fireball':         { trailStyle: 'fire',      spinSpeed: 0.06, bodyScale: 1.2, trailLength: 6 },
   'projectile_shadow_bolt':      { trailStyle: 'shadow',    faceDirection: true, angleOffset: 0, bodyScale: 1.3, trailLength: 12 },
-  'projectile_shoot_arrow':      { trailStyle: 'none',      bodyScale: 2.0, faceDirection: true, angleOffset: Math.PI / 4 },
-  'projectile_aimed_shot':       { trailStyle: 'none',      bodyScale: 2.2, faceDirection: true, angleOffset: Math.PI / 4 },
+  'projectile_shoot_arrow':      { trailStyle: 'wind',      bodyScale: 2.0, faceDirection: true, angleOffset: Math.PI / 4, trailLength: 10 },
+  'projectile_aimed_shot':       { trailStyle: 'wind',      bodyScale: 2.2, faceDirection: true, angleOffset: Math.PI / 4, trailLength: 12 },
   'projectile_lightning_bolt':   { trailStyle: 'lightning', faceDirection: true, angleOffset: Math.PI / 4, bodyScale: 1.1, trailLength: 8 },
   'projectile_wrath':            { trailStyle: 'nature',    spinSpeed: 0.08, bodyScale: 1.1, trailLength: 7 },
 }
@@ -195,6 +195,7 @@ export default class ProjectileSprite {
     if (this._trailStyle === 'shadow')    { this._drawShadowTrail(cx, cy, now);       return }
     if (this._trailStyle === 'lightning') { this._drawLightningTrail(cx, cy, now);    return }
     if (this._trailStyle === 'nature')    { this._drawNatureTrail(cx, cy, now);       return }
+    if (this._trailStyle === 'wind')      { this._drawWindTrail(cx, cy);              return }
     this._drawDefaultTrail(cx, cy)
   }
 
@@ -417,6 +418,19 @@ export default class ProjectileSprite {
       const t = 1 - (now - p.born) / p.life
       g.circle(p.x - cx, p.y - cy, p.r * (0.5 + t * 0.5))
       g.fill({ color: p.color, alpha: t * 0.65 })
+    }
+  }
+
+  _drawWindTrail(cx, cy) {
+    const g   = this._trailGfx
+    const r   = this._radius * 0.4
+    const pts = this._interpolateTrail(cx, cy, r * 1.5)
+    for (let i = pts.length - 1; i >= 0; i--) {
+      const { rx, ry, t } = pts[i]
+      g.circle(rx, ry, r * 1.4)
+      g.fill({ color: 0x99ccff, alpha: t * 0.10 })
+      g.circle(rx, ry, r * 1.0)
+      g.fill({ color: 0xffffff, alpha: t * 0.30 })
     }
   }
 

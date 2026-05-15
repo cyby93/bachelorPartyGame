@@ -28,7 +28,7 @@ const SkillDatabase = {
       cooldown:  1000,
       damage:    8,
       range:     80,
-      angle:     Math.PI / 3,   // 60° cone
+      angle:     Math.PI,   // 180° cone
       icon:      '⚔️',
       iconFile:  'ability_warrior_cleave'
     },
@@ -52,24 +52,26 @@ const SkillDatabase = {
       subtype:   'BLADESTORM',  // player-attached spinning AOE — follows caster, blocks other skills
       inputType: 'INSTANT',
       cooldown:  12000,
-      damage:    3,             // damage per tick — tune via BalanceConfig
-      radius:    90,           // slightly larger than Cleave range
+      damage:    5,             // damage per tick — tune via BalanceConfig
+      radius:    70,           // slightly larger than Cleave range
       duration:  4000,          // 4 seconds of spinning
-      tickRate:  150,           // hits every 300 ms
+      tickRate:  200,           // hits every 200 ms
       effectType: 'DAMAGE',
       icon:      '🌀',
       iconFile:  'ability_warrior_bladestorm',
       dotColor:  0xcc2200,
     },
     {
-      name:      'Shield Block',
-      type:      'SHIELD',
-      inputType: 'DIRECTIONAL',
-      cooldown:  3000,
-      arc:       Math.PI,        // 180° block arc
-      icon:      '🛡️',
-      iconFile:  'ability_defend',
-      dotColor:  0xcccccc,
+      name:                'Shield Block',
+      type:                'SHIELD',
+      inputType:           'DIRECTIONAL',
+      cooldown:            3000,
+      arc:                 Math.PI,  // 180° block arc
+      shieldReduction:     0.65,     // base 65% reduction on overflow damage; upgradeable to 90%
+      shieldAbsorbThreshold: 10,     // flat damage fully absorbed before reduction; upgradeable to 25
+      icon:                '🛡️',
+      iconFile:            'ability_defend',
+      dotColor:            0xcccccc,
     }
   ],
 
@@ -82,7 +84,7 @@ const SkillDatabase = {
       cooldown:  1200,
       damage:    10,
       range:     70,
-      angle:     Math.PI / 3,   // 60° cone
+      angle:     Math.PI  / 2,   // 90° cone
       icon:      '🔨',
       iconFile:  'spell_paladin_hammerofwrath'
     },
@@ -105,14 +107,16 @@ const SkillDatabase = {
       dotColor:  0x88ccff,
     },
     {
-      name:      'Divine Shield',
-      type:      'SHIELD',
-      inputType: 'DIRECTIONAL',
-      cooldown:  3000,
-      arc:       Math.PI,   // 180° block arc
-      icon:      '🔆',
-      iconFile:  'spell_holy_divineshield',
-      dotColor:  0xffd700,
+      name:                'Divine Shield',
+      type:                'SHIELD',
+      inputType:           'DIRECTIONAL',
+      cooldown:            3000,
+      arc:                 Math.PI,  // 180° block arc
+      shieldReduction:     0.65,     // base 65% reduction on overflow damage; upgradeable to 90%
+      shieldAbsorbThreshold: 10,     // flat damage fully absorbed before reduction; upgradeable to 25
+      icon:                '🔆',
+      iconFile:            'spell_holy_divineshield',
+      dotColor:            0xffd700,
     },
     {
       name:      'Consecration',
@@ -120,12 +124,12 @@ const SkillDatabase = {
       subtype:   'AOE_SELF',
       inputType: 'INSTANT',
       cooldown:  7000,
-      damage:    3,
+      damage:    4,
       radius:    100,
       duration:  6000,
       tickRate:  700,
       effectType: 'DUAL',
-      healAmount: 3,
+      healAmount: 4,
       icon:      '⭐',
       iconFile:  'spell_holy_innerfire',
       dotColor:  0xffaa33,
@@ -143,7 +147,7 @@ const SkillDatabase = {
       castTime:  1000,
       payload: {
         type:      'PROJECTILE',
-        damage:    5,
+        damage:    7,
         speed:     600,
         radius:    10,
         range:     500,
@@ -179,10 +183,10 @@ const SkillDatabase = {
       spriteKey: 'searing_totem',
       totemAbility: {
         type:      'PROJECTILE',
-        damage:    3,
+        damage:    4,
         speed:     600,
         radius:    8,
-        range:     300,
+        range:     600,
         tickRate:  1000,
         spriteKey: 'projectile_fireball',
       },
@@ -195,9 +199,9 @@ const SkillDatabase = {
       type:      'AOE',
       subtype:   'AOE_SELF',
       inputType: 'INSTANT',
-      cooldown:  30000,
+      cooldown:  20000,
       radius:    2500,
-      duration:  10000,
+      duration:  7000,
       effectType: 'BUFF',
       effectParams: { speedMultiplier: 1.3, fireRateMultiplier: 1.3 },
       icon:      '⛈️',
@@ -231,12 +235,12 @@ const SkillDatabase = {
       castTime:  1500,          // noticeable cast time
       payload: {
         type:     'PROJECTILE',
-        damage:   45,           // greatly more than Shoot Bow (5)
+        damage:   30,           // greatly more than Shoot Bow (5)
         speed:    800,
         radius:   10,
         range:    1200,
         pierce:   false,
-        onHitEffect: { speedMultiplier: 0.5, duration: 3000 },  // 50% slow for 3s
+        onHitEffect: { speedMultiplier: 0.5, duration: 4000 },  // 50% slow for 3s
         spriteKey: 'projectile_aimed_shot',
       },
       icon:      '🎯',
@@ -255,7 +259,7 @@ const SkillDatabase = {
       beastVariants: [
         {
           beast:       'bear',
-          hp:          120,
+          hp:          100,
           speed:       1.6,
           radius:      22,
           damage:      8,
@@ -271,7 +275,7 @@ const SkillDatabase = {
           speed:       3.5,
           radius:      10,
           damage:      3,
-          attackRange: 300,
+          attackRange: 400,
           attackRate:  400,
           ranged:      true,
         },
@@ -300,7 +304,7 @@ const SkillDatabase = {
       spriteKey: 'trap_explosive',
       trapEffect: {
         type:       'AOE',
-        damage:     25,
+        damage:     50,
         radius:     120,
         effectType: 'DAMAGE',
       },
@@ -320,7 +324,7 @@ const SkillDatabase = {
       cooldown:     3000,
       // damage:       500,
       // healAmount:   500,
-      damage:       10,
+      damage:       8,
       healAmount:   12,
       speed:        600,
       radius:       10,
@@ -354,7 +358,7 @@ const SkillDatabase = {
       type:             'BUFF',
       subtype:          'TARGETED',
       inputType:        'DIRECTIONAL',
-      cooldown:         5000,
+      cooldown:         4000,
       duration:         7000,
       range:            600,
       selfCastFallback: true,
@@ -368,8 +372,8 @@ const SkillDatabase = {
       type:      'CAST',
       inputType: 'INSTANT',
       castBar:   true,
-      cooldown:  15000,
-      castTime:  2000,
+      cooldown:  20000,
+      castTime:  3000,
       payload: {
         type:       'AOE',
         subtype:    'AOE_SELF',
@@ -409,7 +413,7 @@ const SkillDatabase = {
       type:      'AOE',
       subtype:   'AOE_SELF',
       inputType: 'INSTANT',
-      cooldown:  10000,
+      cooldown:  7000,
       radius:    180,
       effectType: 'DEBUFF',
       effectParams: { rooted: true, duration: 2000 },
@@ -422,7 +426,7 @@ const SkillDatabase = {
       type:      'DASH',
       subtype:   'TELEPORT',
       inputType: 'DIRECTIONAL',
-      cooldown:  7000,
+      cooldown:  5000,
       distance:  250,
       icon:      '✨',
       iconFile:  'spell_arcane_blink',
@@ -433,7 +437,7 @@ const SkillDatabase = {
       type:      'CAST',
       castBar:   true,
       inputType: 'DIRECTIONAL',
-      cooldown:  6000,
+      cooldown:  7000,
       castTime:  2000,
       payload: {
         type:    'PROJECTILE',
@@ -467,7 +471,7 @@ const SkillDatabase = {
       castTime:  800,
       payload: {
         type:      'PROJECTILE',
-        damage:    3,
+        damage:    4,
         speed:     550,
         radius:    11,
         range:     700,
@@ -484,7 +488,7 @@ const SkillDatabase = {
       inputType:        'DIRECTIONAL',
       cooldown:         1000,
       range:            450,
-      damage:           3,
+      damage:           4,
       dot: {
         damagePerTick: 3,
         tickRate:      1000,
@@ -504,9 +508,9 @@ const SkillDatabase = {
       cooldown:         0,
       castTime:         1500,
       range:            600,
-      healAmount:       13,
+      healAmount:       12,
       hot: {
-        healPerTick: 3,
+        healPerTick: 7,
         tickRate:    800,
         duration:    6000,
         sourceSkill: 'Regrowth',
@@ -520,7 +524,7 @@ const SkillDatabase = {
       type:      'CHANNEL',
       subtype:   'UNTARGETED',
       inputType: 'INSTANT',
-      cooldown:  13000,
+      cooldown:  16000,
       castTime:  4000,
       tickRate:  500,
       payload: {
@@ -528,7 +532,7 @@ const SkillDatabase = {
         subtype:    'AOE_SELF',
         radius:     300,
         effectType: 'HEAL',
-        healAmount: 15,
+        healAmount: 12,
       },
       icon:      '⭐',
       iconFile:  'spell_nature_tranquility',
@@ -555,8 +559,8 @@ const SkillDatabase = {
       type:      'BUFF',
       subtype:   'STEALTH',
       inputType: 'INSTANT',
-      cooldown:  5000,
-      duration:  8000,
+      cooldown:  7000,
+      duration:  5000,
       effectParams: {
         invisible:              true,
         opacity:                0.15,
@@ -571,8 +575,8 @@ const SkillDatabase = {
       name:      'Sprint',
       type:      'BUFF',
       inputType: 'INSTANT',
-      cooldown:  10000,
-      duration:  5000,
+      cooldown:  7000,
+      duration:  4000,
       effectParams: { speedMultiplier: 2.0 },
       icon:      '☠️',
       iconFile:  'ability_rogue_sprint',
@@ -585,7 +589,7 @@ const SkillDatabase = {
       inputType:   'TARGETED',
       cooldown:    7000,
       range:       350,
-      damage:      60,
+      damage:      50,
       comboDamage: 20,
       icon:        '💀',
       iconFile:    'ability_rogue_ambush',
@@ -607,7 +611,7 @@ const SkillDatabase = {
         damage:    12,
         speed:     550,
         radius:    10,
-        range:     600,
+        range:     700,
         pierce:    false,
         spriteKey: 'projectile_shadow_bolt',
       },
@@ -622,10 +626,10 @@ const SkillDatabase = {
       inputType:        'DIRECTIONAL',
       cooldown:         0,
       castTime:         800,
-      range:            600,
+      range:            700,
       damage:       2,
       dot: {
-        damagePerTick: 5,
+        damagePerTick: 6,
         tickRate:      700,
         duration:      7000,
         sourceSkill:   'Corruption',
@@ -644,7 +648,7 @@ const SkillDatabase = {
       range:     1000,
       tickRate:  500,
       damagePerTick: 4,
-      healPerTick:   4,
+      healPerTick:   6,
       icon:      '💜',
       iconFile:  'spell_shadow_lifedrain02',
       dotColor:  0xcc44ff,
@@ -654,8 +658,8 @@ const SkillDatabase = {
       type:      'AOE',
       subtype:   'AOE_SELF',
       inputType: 'INSTANT',
-      cooldown:  15000,
-      radius:    250,
+      cooldown:  12000,
+      radius:    300,
       effectType: 'FEAR',
       fearDuration: 2500,
       icon:      '😱',
@@ -675,7 +679,7 @@ const SkillDatabase = {
       range:     70,
       angle:     Math.PI / 3,   // 60° cone
       effectParams: { speedMultiplier: 0.6, duration: 1500 },
-      lifesteal: 1.0,           // 100% lifesteal — heals DK for full damage dealt
+      lifesteal: 1.2,           // 120% lifesteal — heals DK for full damage dealt
       icon:      '❄️',
       iconFile:  'spell_deathknight_classicon'
     },
@@ -685,8 +689,8 @@ const SkillDatabase = {
       subtype:          'GRIP',
       inputType:        'TARGETED',
       selfCastFallback: true,
-      cooldown:         6000,
-      damage:           10,
+      cooldown:         5000,
+      damage:           15,
       range:            350,
       effectType:       'GRIP',
       icon:             '🪝',
@@ -698,7 +702,7 @@ const SkillDatabase = {
       type:      'AOE',
       subtype:   'AOE_ADJACENT',   // spawns adjacent to caster: edge touches caster, extends outward
       inputType: 'DIRECTIONAL',
-      cooldown:  12000,
+      cooldown:  10000,
       damage:    4,
       radius:    120,
       duration:  7000,
@@ -714,7 +718,7 @@ const SkillDatabase = {
       inputType: 'INSTANT',
       cooldown:  10000,
       duration:  7000,
-      effectParams: { damageReduction: 0.8, shield: 60 },
+      effectParams: { damageReduction: 0.6, shield: 60 },
       icon:      '💎',
       iconFile:  'spell_deathknight_iceboundfortitude',
       dotColor:  0x00cccc,

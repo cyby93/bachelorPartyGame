@@ -41,10 +41,12 @@ export default class ServerPlayer {
 
     // Cast state (set by SkillSystem)
     this.activeCast   = null
-    this.shieldActive = false
-    this.shieldAngle  = 0          // radians — direction shield faces
-    this.shieldArc    = 0          // radians — total arc width
-    this.shieldSkillIndex = -1     // which skill slot holds the active shield
+    this.shieldActive          = false
+    this.shieldAngle           = 0  // radians — direction shield faces
+    this.shieldArc             = 0  // radians — total arc width
+    this.shieldReduction       = 0  // fraction of overflow damage blocked (0–1)
+    this.shieldAbsorbThreshold = 0  // flat damage fully absorbed before reduction kicks in
+    this.shieldSkillIndex      = -1 // which skill slot holds the active shield
 
     this.isAiming    = false
     this.aimSelf     = false
@@ -166,6 +168,22 @@ export default class ServerPlayer {
     let diff = Math.abs(attackAngle - this.shieldAngle)
     if (diff > Math.PI) diff = Math.PI * 2 - diff
     return diff <= this.shieldArc / 2
+  }
+
+  /**
+   * Returns { damage, type } after applying the directional shield.
+   *   type 'damage'  — not in shield arc, full amount passes
+   *   type 'blocked' — amount ≤ shieldAbsorbThreshold, fully absorbed (damage = 0)
+   *   type 'reduced' — partial mitigation: flat absorb + % reduction on the rest
+   */
+  shieldResult(attackerX, attackerY, amount) {
+    if (!this.isShieldBlocking(attackerX, attackerY)) {
+      return { damage: amount, type: 'damage' }
+    }
+    const afterAbsorb = Math.max(0, amount - this.shieldAbsorbThreshold)
+    const reduced     = Math.round(afterAbsorb * (1 - this.shieldReduction))
+    if (reduced <= 0) return { damage: 0, type: 'blocked' }
+    return { damage: reduced, type: 'reduced' }
   }
 
   // ── Skill helpers ─────────────────────────────────────────────────────

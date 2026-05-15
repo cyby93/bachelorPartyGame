@@ -200,16 +200,16 @@ export class MeleeDummy extends TrainingDummy {
     if (dist <= ATTACK_RANGE && this._attackCooldown <= 0) {
       this._attackCooldown = 1.5
 
-      // Directional shield check — if the player's shield faces this dummy, block it
-      if (target.isShieldBlocking(this.x, this.y)) {
+      const { damage: dummyDmg, type: dummyType } = target.shieldResult(this.x, this.y, 20)
+      if (dummyDmg <= 0) {
         if (gs.io) gs.io.emit('effect:damage', { targetId: target.id, amount: 0, type: 'blocked', sourceSkill: null })
         return
       }
 
-      // Deal damage — minHp=1 so players can never die in lobby
-      const dealt = target.takeDamage(20, 1)
+      // minHp=1 so players can never die in lobby
+      const dealt = target.takeDamage(dummyDmg, 1)
       if (gs.io) {
-        gs.io.emit('effect:damage', { targetId: target.id, amount: dealt, type: 'damage', sourceSkill: null })
+        gs.io.emit('effect:damage', { targetId: target.id, amount: dealt, type: dummyType, sourceSkill: null })
       }
     }
   }

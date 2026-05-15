@@ -1,0 +1,37 @@
+{
+  "group_id": "0e8c7196-5702-4baa-83ef-461b5f85b10a",
+  "objects": [
+    {
+      "id": "239aec3c-e5ed-48ca-a56e-214254904cd6",
+      "name": "shoot arrow",
+      "prompt": "simple hunter arrow",
+      "size": {
+        "width": 48,
+        "height": 48
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "2eb100a2-3c8d-4519-981b-c414d0f8c069",
+      "name": "aimed shot arrow",
+      "prompt": "simple hunter arrow",
+      "size": {
+        "width": 48,
+        "height": 48
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    }
+  ],
+  "export_version": "1.0",
+  "export_date": "2026-05-15T20:55:00.059278"
+}

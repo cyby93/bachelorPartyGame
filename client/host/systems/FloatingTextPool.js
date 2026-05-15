@@ -59,6 +59,10 @@ export default class FloatingTextPool {
       t.text = 'Blocked'
       t.style.fill = '#aaaaaa'
       t.scale.set(0.85)
+    } else if (type === 'reduced') {
+      t.text = `${displayAmount}`
+      t.style.fill = '#aaaaaa'
+      t.scale.set(0.9)
     } else if (type === 'heal') {
       t.text = `+${displayAmount}`
       t.style.fill = '#2ecc71'
@@ -67,6 +71,10 @@ export default class FloatingTextPool {
       t.text = '+'
       t.style.fill = '#9b59b6'
       t.scale.set(1.5)
+    } else if (type === 'playerDamage') {
+      t.text = `${displayAmount}`
+      t.style.fill = '#ffaa00'
+      t.scale.set(1.0)
     } else {
       t.text = `${displayAmount}`
       t.style.fill = '#ff4444'

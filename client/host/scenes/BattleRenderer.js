@@ -84,13 +84,6 @@ export default class BattleRenderer extends BaseRenderer {
     this._mirrorGfx      = new Graphics()
     this._entityRoot.addChild(this._mirrorGfx)
 
-    // Illidan dialog overlay (cinematic intro + phase transitions)
-    this._dialogContainer  = new Container()
-    this._dialogBg         = null
-    this._dialogSpeaker    = null
-    this._dialogText       = null
-    this._dialogTimer      = null
-
     // Phase transition flash
     this._phaseFlashGfx    = new Graphics()
     this._phaseFlashAlpha  = 0
@@ -165,11 +158,6 @@ export default class BattleRenderer extends BaseRenderer {
     // Transition overlay
     this._fadeState       = null
     this._transitionAlpha = 0
-
-    // Dialog
-    if (this._dialogTimer) clearTimeout(this._dialogTimer)
-    this._dialogTimer = null
-    this._dialogContainer.removeChildren()
 
     // Eye beams
     this._eyeBeamGfx.clear()
@@ -622,34 +610,8 @@ export default class BattleRenderer extends BaseRenderer {
   _buildUI() {
     this._uiRoot.removeChildren()
 
-    // Dialog box (shown during cinematic and phase transitions)
     const w = this.game.app.renderer.width
     const h = this.game.app.renderer.height
-
-    this._dialogBg = new Graphics()
-    this._dialogBg.rect(0, 0, w, 80)
-    this._dialogBg.fill({ color: 0x000000, alpha: 0.75 })
-    this._dialogBg.rect(0, 0, w, 80)
-    this._dialogBg.stroke({ color: 0x444444, width: 1 })
-    this._dialogContainer.addChild(this._dialogBg)
-
-    this._dialogSpeaker = new Text({
-      text: '',
-      style: { fontFamily: 'Arial', fontSize: 13, fontWeight: 'bold', fill: '#ffffff' },
-    })
-    this._dialogSpeaker.position.set(20, 12)
-    this._dialogContainer.addChild(this._dialogSpeaker)
-
-    this._dialogText = new Text({
-      text: '',
-      style: { fontFamily: 'Arial', fontSize: 16, fill: '#eeeeee', wordWrap: true, wordWrapWidth: w - 40 },
-    })
-    this._dialogText.position.set(20, 34)
-    this._dialogContainer.addChild(this._dialogText)
-
-    this._dialogContainer.position.set(0, h - 90)
-    this._dialogContainer.visible = false
-    this._uiRoot.addChild(this._dialogContainer)
 
     // Phase transition flash overlay
     this._phaseFlashGfx.rect(0, 0, w, h)
@@ -676,25 +638,6 @@ export default class BattleRenderer extends BaseRenderer {
   }
 
   // ── Illidan encounter events ───────────────────────────────────────────────
-
-  /** Show an Illidan dialog line in the cinematic box at the bottom. */
-  onIllidanDialogLine({ speaker, text }) {
-    if (!this._dialogContainer) return
-
-    const speakerLabel = speaker === 'illidan' ? 'ILLIDAN STORMRAGE' : 'AKAMA'
-    const speakerColor = speaker === 'illidan' ? '#9933ff' : '#00ccaa'
-
-    this._dialogSpeaker.text  = speakerLabel
-    this._dialogSpeaker.style = { ...this._dialogSpeaker.style, fill: speakerColor }
-    this._dialogText.text     = text
-    this._dialogContainer.visible = true
-
-    // Auto-hide after a generous timeout (server controls the actual timing)
-    if (this._dialogTimer) clearTimeout(this._dialogTimer)
-    this._dialogTimer = setTimeout(() => {
-      if (this._dialogContainer) this._dialogContainer.visible = false
-    }, 8000)
-  }
 
   /** Flash overlay, phase label, and boss transition animation on Illidan phase transitions. */
   onIllidanPhaseTransition({ phase, freeze, freezeDuration }) {
@@ -739,8 +682,6 @@ export default class BattleRenderer extends BaseRenderer {
     }
     requestAnimationFrame(fade)
 
-    // Hide dialog box on phase transition
-    if (this._dialogContainer) this._dialogContainer.visible = false
   }
 
   // ── Portal Beam rendering (Level 2) ──────────────────────────────────────

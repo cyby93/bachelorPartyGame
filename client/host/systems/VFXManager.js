@@ -54,7 +54,7 @@ export default class VFXManager {
       ['Consecration',        (d) => { os.consecrationBurst(d.x, d.y, d.radius || 100); ps.consecrationSparkle(d.x, d.y); os.impactFlash(d.x, d.y, d.color) }],
       ['Bloodlust',           (d) => { os.bloodlustWave(d.x, d.y); ps.bloodlustBurst(d.x, d.y); os.impactFlash(d.x, d.y, d.color) }],
       ['Mass Resurrection',   (d) => { os.massResurrectionRing(d.x, d.y); ps.massResurrectionBurst(d.x, d.y) }],
-      ['Tranquility',         (d) => { os.tranquilityField(d.x, d.y, d.radius || 700); ps.tranquilityBurst(d.x, d.y) }],
+      ['Tranquility',         (d) => { os.tranquilityField(d.x, d.y, d.radius || 700, () => ps.tranquilityAmbient(d.x, d.y, d.radius || 700)); ps.tranquilityBurst(d.x, d.y) }],
       ['Icebound Fortitude',  (d) => { os.iceboundFortitude(d.x, d.y); ps.iceShards(d.x, d.y) }],
       // Bladestorm: persistent visual attached via attachBladestorm — fire cast flash only
       ['Bladestorm',          (d) => { os.aoeFlash(d.x, d.y, d.radius || 70, d.color) }],
@@ -156,7 +156,13 @@ export default class VFXManager {
 
       b.angle += dt * Math.PI * 3.5   // ~1.75 full rotations per second
 
-      const { x, y } = b.getPos()
+      const pos = b.getPos()
+      if (!pos) {
+        b.gfx.destroy()
+        this._bladestorms.splice(i, 1)
+        continue
+      }
+      const { x, y } = pos
       const alpha = age < 200
         ? age / 200
         : age > b.duration - 400

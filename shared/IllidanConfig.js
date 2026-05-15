@@ -30,39 +30,44 @@
  *  the 12-min enrage. Upgrades are the margin between a clean kill and a wipe.
  */
 
-import { BASE_BOSS_DEFAULTS } from './BaseBossConfig.js'
-import { BALANCE } from './BalanceConfig.js'
+import { BALANCE } from "./BalanceConfig.js";
+import { BASE_BOSS_DEFAULTS } from "./BaseBossConfig.js";
 
-const R = BALANCE.RANGED_BASE_DPS
-const X = BALANCE.ENEMY_HP_MULT
-const Y = BALANCE.ENEMY_DAMAGE_MULT
+const R = BALANCE.RANGED_BASE_DPS;
+const X = BALANCE.ENEMY_HP_MULT;
+const Y = BALANCE.ENEMY_DAMAGE_MULT;
 
 export const ILLIDAN_PHASE = Object.freeze({
-  HUNT:       'hunt',        // Phase 1 — sword form, full HP → 60%
-  AZZINOTH:   'azzinoth',    // Phase 2 — airborne, immune, Flames of Azzinoth active
-  HUNT_2:     'hunt_2',      // Phase 3 — sword form again, 60% → 30%
-  DEMON_FORM: 'demon_form',  // Phase 4 — demon form grounded, 30% → death
-})
+  HUNT: "hunt", // Phase 1 — sword form, full HP → 60%
+  AZZINOTH: "azzinoth", // Phase 2 — airborne, immune, Flames of Azzinoth active
+  HUNT_2: "hunt_2", // Phase 3 — sword form again, 60% → 30%
+  DEMON_FORM: "demon_form", // Phase 4 — demon form grounded, 30% → death
+});
 
 const _huntAbilities = [
   {
-    name:       'Flame Crash',
-    cooldown:   6000,
-    type:       'flameCrash',
-    castTime:   1500,
-    meleeOnly:  true,
-    damage:     Math.round(0.25 * Y * R),       // 10 at defaults
-    radius:     120,
-    groundFire: { radius: 80, duration: 30000, tickDamage: Math.round(0.375 * Y * R), tickRate: 500 },
+    name: "Flame Crash",
+    cooldown: 6000,
+    type: "flameCrash",
+    castTime: 1500,
+    meleeOnly: true,
+    damage: Math.round(0.25 * Y * R), // 10 at defaults
+    radius: 120,
+    groundFire: {
+      radius: 80,
+      duration: 30000,
+      tickDamage: Math.round(0.375 * Y * R),
+      tickRate: 500,
+    },
   },
   {
-    name:          'Draw Soul',
-    cooldown:      10000,
-    type:          'drawSoul',
-    damage:        Math.round(0.5 * Y * R),  // 20 at defaults
-    coneAngle:     90,   // degrees
-    coneRange:     200,
-    healPerTarget: Math.round(7 * R),         // 70 at defaults
+    name: "Draw Soul",
+    cooldown: 10000,
+    type: "drawSoul",
+    damage: Math.round(0.5 * Y * R), // 20 at defaults
+    coneAngle: 90, // degrees
+    coneRange: 200,
+    healPerTarget: Math.round(7 * R), // 70 at defaults
   },
   // {
   //   name:           'Shear',
@@ -72,34 +77,35 @@ const _huntAbilities = [
   //   duration:       3000,
   // },
   {
-    name:          'Parasitic Shadowfiend',
-    cooldown:      14000,
-    type:          'parasiticShadowfiend',
-    dotDamage:     Math.round(0.125 * Y * R),   // 5 at defaults
-    dotInterval:   1000,
-    dotDuration:   8000,
-    spawnCount:    2,
-    shadowfiendHp: Math.round(1.5 * X * R),      // 60 at defaults
+    name: "Parasitic Shadowfiend",
+    cooldown: 14000,
+    type: "parasiticShadowfiend",
+    dotDamage: Math.round(0.125 * Y * R), // 5 at defaults
+    dotInterval: 1000,
+    dotDuration: 8000,
+    spawnCount: 2,
+    shadowfiendHp: Math.round(1.5 * X * R), // 60 at defaults
   },
-]
+];
 
 export const ILLIDAN_CONFIG = {
   ...BASE_BOSS_DEFAULTS,
-  name:           'Illidan Stormrage',
+  name: "Illidan Stormrage",
   // maxHp:          Math.round(2116 * R * BALANCE.RLEF),
-  maxHp:          Math.round(1200 * R * BALANCE.RLEF),
-  speed:          1,
-  meleeDamage:    Math.round(0.5 * Y * R),      // 20 at defaults
+  maxHp: Math.round(1200 * R * BALANCE.RLEF),
+  speed: 1,
+  meleeDamage: Math.round(0.5 * Y * R), // 20 at defaults
   // meleeDamage:    1,
   attackCooldown: 2000,
-  attackRange:    80,
+  attackRange: 80,
 
-  spriteType:  'illidan',
+  spriteType: "illidan",
+  demonFormRadius: 85, // boss grows when transforming to demon form
   phaseModels: {
-    [ILLIDAN_PHASE.HUNT]:       'illidan',
-    [ILLIDAN_PHASE.AZZINOTH]:   'illidan',
-    [ILLIDAN_PHASE.HUNT_2]:     'illidan',
-    [ILLIDAN_PHASE.DEMON_FORM]: 'illidan_demon',
+    [ILLIDAN_PHASE.HUNT]: "illidan",
+    [ILLIDAN_PHASE.AZZINOTH]: "illidan",
+    [ILLIDAN_PHASE.HUNT_2]: "illidan",
+    [ILLIDAN_PHASE.DEMON_FORM]: "illidan_demon",
   },
 
   /**
@@ -108,7 +114,7 @@ export const ILLIDAN_CONFIG = {
    */
   phaseAbilities: {
     // ── Phase 1 & 3: sword form ───────────────────────────────────────────
-    [ILLIDAN_PHASE.HUNT]:   _huntAbilities,
+    [ILLIDAN_PHASE.HUNT]: _huntAbilities,
     [ILLIDAN_PHASE.HUNT_2]: _huntAbilities,
 
     // ── Phase 2: demon form airborne — immune, outside map ───────────────
@@ -116,29 +122,34 @@ export const ILLIDAN_CONFIG = {
     // Flames of Azzinoth are destroyed.
     [ILLIDAN_PHASE.AZZINOTH]: [
       {
-        name:         'Fireball',
-        cooldown:     4000,
-        type:         'fireball',
-        damage:       Math.round(1 * Y * R),     // 40 at defaults
+        name: "Fireball",
+        cooldown: 4000,
+        type: "fireball",
+        damage: Math.round(1 * Y * R), // 40 at defaults
         speed: 150,
         splashRadius: 60,
       },
       {
-        name:        'Dark Barrage',
-        cooldown:    8000,
-        type:        'darkBarrage',
-        dotDamage:   Math.round(0.25 * Y * R),      // 10 at defaults
+        name: "Dark Barrage",
+        cooldown: 8000,
+        type: "darkBarrage",
+        dotDamage: Math.round(0.25 * Y * R), // 10 at defaults
         dotInterval: 1000,
         dotDuration: 6000,
       },
       {
-        name:         'Eye Beams',
-        cooldown:     12000,
-        type:         'eyeBeams',
-        drawDuration: 2000,   // ms to draw the line across the arena
-        lineLength:   420,
-        groundFire:   { radius: 40, duration: 26000, tickDamage: Math.round(0.75 * Y * R), tickRate: 1000 },
-        damage:       Math.round(1.5 * Y * R),     // 60 at defaults — tip-hit while drawing
+        name: "Eye Beams",
+        cooldown: 12000,
+        type: "eyeBeams",
+        drawDuration: 2000, // ms to draw the line across the arena
+        lineLength: 420,
+        groundFire: {
+          radius: 40,
+          duration: 26000,
+          tickDamage: Math.round(0.75 * Y * R),
+          tickRate: 1000,
+        },
+        damage: Math.round(1.5 * Y * R), // 60 at defaults — tip-hit while drawing
       },
     ],
 
@@ -146,31 +157,31 @@ export const ILLIDAN_CONFIG = {
     // Illidan is stationary. He stands and casts — speed is set to 0.
     [ILLIDAN_PHASE.DEMON_FORM]: [
       {
-        name:         'Agonizing Flames',
-        cooldown:     12000,
-        type:         'agonizingFlames',
-        damage:       Math.round(1.5 * Y * R),     // 60 at defaults
+        name: "Agonizing Flames",
+        cooldown: 12000,
+        type: "agonizingFlames",
+        damage: Math.round(1.5 * Y * R), // 60 at defaults
         splashRadius: 100,
-        dotDamage:    Math.round(0.25 * Y * R),    // 10 at defaults
-        dotInterval:  1000,
-        dotDuration:  10000,
-        dotRadius:    100,
+        dotDamage: Math.round(0.25 * Y * R), // 10 at defaults
+        dotInterval: 1000,
+        dotDuration: 10000,
+        dotRadius: 100,
       },
       {
-        name:         'Shadow Blast',
-        cooldown:     1000,
-        type:         'shadowBlast',
-        castTime:     2500,
-        damage:       Math.round(1.5 * Y * R),        // 60 at defaults
+        name: "Shadow Blast",
+        cooldown: 1000,
+        type: "shadowBlast",
+        castTime: 2500,
+        damage: Math.round(1.5 * Y * R), // 60 at defaults
         splashRadius: 80,
       },
       {
-        name:     'Summon Shadow Demons',
+        name: "Summon Shadow Demons",
         cooldown: 12000,
-        type:     'summonShadowDemons',
-        count:    2,
-        hp:       Math.round(10 * X * R),              // 500 at defaults — tanky, requires focused fire
-        speed:    0.6,                               // slow crawl — kill it before it reaches the player
+        type: "summonShadowDemons",
+        count: 2,
+        hp: Math.round(10 * X * R), // 500 at defaults — tanky, requires focused fire
+        speed: 0.6, // slow crawl — kill it before it reaches the player
       },
     ],
   },
@@ -186,9 +197,9 @@ export const ILLIDAN_CONFIG = {
    * Attack and cast cooldowns are divided by their respective multipliers,
    * forcing the encounter to resolve one way or another.
    */
-  enrageTimer:           BALANCE.ILLIDAN_ENRAGE_MS,
+  enrageTimer: BALANCE.ILLIDAN_ENRAGE_MS,
   enrageAttackSpeedMult: BALANCE.ILLIDAN_ENRAGE_ATTACK_MULT,
-  enrageCastSpeedMult:   BALANCE.ILLIDAN_ENRAGE_CAST_MULT,
+  enrageCastSpeedMult: BALANCE.ILLIDAN_ENRAGE_CAST_MULT,
 
   /**
    * HP-based phase thresholds (P1 → P2 only).
@@ -196,8 +207,8 @@ export const ILLIDAN_CONFIG = {
    * P4 (demon_form) is triggered by IllidanEncounter when HP ≤ 30% in P3.
    */
   phases: [
-    { threshold: 1.0,  speed: 1.5, name: ILLIDAN_PHASE.HUNT },
-    { threshold: 0.95, speed: 0,   name: ILLIDAN_PHASE.AZZINOTH },
+    { threshold: 1.0, speed: 1.5, name: ILLIDAN_PHASE.HUNT },
+    { threshold: 0.95, speed: 0, name: ILLIDAN_PHASE.AZZINOTH },
   ],
 
   /** Where Illidan teleports during Phase 2 — above the top edge. */
@@ -205,7 +216,67 @@ export const ILLIDAN_CONFIG = {
 
   /** Adds spawned when Phase 2 begins. */
   phase2Adds: [
-    { type: 'flameOfAzzinoth', x: 480, y: 300 },
-    { type: 'flameOfAzzinoth', x: 960, y: 300 },
+    { type: "flameOfAzzinoth", x: 480, y: 300 },
+    { type: "flameOfAzzinoth", x: 960, y: 300 },
   ],
-}
+
+  /**
+   * Dialog lines played on phase transitions.
+   * speaker: 'illidan' | 'akama'
+   * voiceKey: filename in /assets/audio/voice/ (without extension)
+   * delayAfter: how long (ms) the dialog box stays visible
+   * text: replace [PLACEHOLDER] with the actual spoken line
+   */
+  phaseDialog: {
+    [ILLIDAN_PHASE.AZZINOTH]: [
+      {
+        speaker: "illidan",
+        text: "I will not be touched by rabble such as you!",
+        voiceKey: "voice_illidan_phase_flame_of_azzinoths",
+        delayAfter: 5000,
+      },
+      {
+        speaker: "illidan",
+        text: "Behold the flames of Azzinoth!",
+        voiceKey: "voice_illidan_phase_flame_of_azzinoths_02",
+        delayAfter: 4000,
+      },
+    ],
+    [ILLIDAN_PHASE.HUNT_2]: [
+      {
+        speaker: "illidan",
+        text: "I will not be touched by rabble such as you!",
+        voiceKey: "voice_illidan_phase_3",
+        delayAfter: 4000,
+      },
+    ],
+    [ILLIDAN_PHASE.DEMON_FORM]: {
+      speaker: "illidan",
+      text: "Behold the power... of the demon within!",
+      voiceKey: "voice_illidan_phase_demon_form",
+      delayAfter: 5000,
+    },
+  },
+
+  /**
+   * Reactive combat VO — played without subtitle overlay or SFX ducking.
+   * Keys follow the pattern voice_illidan_<category>_NN.ogg in /assets/audio/voice/.
+   * Tune cooldowns here once you have real assets to judge pacing.
+   */
+  reactiveVo: {
+    killTaunt: {
+      keys: ['voice_illidan_player_dies_01', 'voice_illidan_player_dies_02'],
+      cooldownMs: 20000,
+    },
+    attackCry: {
+      keys: ['vo_illidan_attack_01', 'vo_illidan_attack_02'],
+      cooldownMinMs: 1000,
+      cooldownMaxMs: 3000,
+    },
+    woundCry: {
+      keys: ['vo_illidan_wound_01', 'vo_illidan_wound_02'],
+      cooldownMinMs: 1000,
+      cooldownMaxMs: 3000,
+    },
+  },
+};

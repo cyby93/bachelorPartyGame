@@ -69,6 +69,13 @@ export default class ServerBoss {
      */
     this.onEnrage = null
 
+    /**
+     * Optional callback fired whenever the boss takes damage.
+     * Wired by IllidanEncounter to drive reactive wound-cry VO.
+     * @type {((amount: number) => void) | null}
+     */
+    this.onTakeDamage = null
+
     // Contact damage rate-limiter per player: Map<playerId, timestamp>
     // Stored externally on ServerPlayer as _lastBossContact
   }
@@ -76,6 +83,7 @@ export default class ServerBoss {
   takeDamage(amount) {
     if (this.isDead || this.isImmune) return
     this.hp = Math.max(0, this.hp - amount)
+    this.onTakeDamage?.(amount)
     if (this.hp === 0) { this.isDead = true; return }
     this._updatePhase()
   }

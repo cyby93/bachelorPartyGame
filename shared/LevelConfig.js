@@ -394,15 +394,62 @@ export const CAMPAIGN = [
       spawnMult:  { base: 1.0, perPlayer: 0.0  },
     },
     boss: 'ILLIDAN',
+    bossSpawnPosition: { x: 820, y: 450 },
+    bossInitialAngle: Math.PI,   // face west (toward Akama on the left)
+
+    // Akama stands on the left side for the opening dialog — decorative, does not fight.
+    npcs: [
+      {
+        id:             'akama',
+        name:           'Akama',
+        hp:             Math.round(40 * X * R),
+        speed:          0.8,
+        radius:         48,
+        meleeDamage:    15,
+        attackCooldown: 1500,
+        attackRange:    50,
+        target:         null,     // decorative — does not attack Illidan
+        initialAngle:   0,        // face east (toward Illidan)
+        spawnPosition:  { x: 220, y: 450 },
+      },
+    ],
 
     // Entrance cinematic. Boss is immune until all lines have played.
     // After dialog completes, boss becomes vulnerable.
     // TODO(Cyby): Replace [PLACEHOLDER] lines with final Illidan text.
     dialog: [
-      { speaker: 'illidan', text: '[PLACEHOLDER] You are not prepared!', voiceKey: 'voice_illidan_intro_01', delayAfter: 3500 },
-      // { speaker: 'illidan', text: '[PLACEHOLDER] I have waited ten thousand years for this.', voiceKey: 'voice_illidan_intro_02', delayAfter: 3500 },
-      // { speaker: 'akama', text: '[PLACEHOLDER] I have watched you waste away, Illidan.', voiceKey: 'voice_akama_illidan_intro_01', delayAfter: 3000 },
+      // { 
+      //   speaker: 'illidan', 
+      //   text: 'Akama. Your duplicity is hardly surprising. I should have slaughtered you and your malformed brethren long ago.', 
+      //   voiceKey: 'voice_illidan_intro_01', 
+      //   delayAfter: 14000 
+      // },
+      // { 
+      //   speaker: 'akama', 
+      //   text: 'We"ve come to end your reign, Illidan. My people and all of Outland shall be free!', 
+      //   voiceKey: 'voice_akama_intro_02', 
+      //   delayAfter: 10000 
+      // },
+      // { 
+      //   speaker: 'illidan', 
+      //   text: 'Boldly said. But I remain...unconvinced.', 
+      //   voiceKey: 'voice_illidan_intro_03', 
+      //   delayAfter: 8000 
+      // },
+      // { 
+      //   speaker: 'akama', 
+      //   text: 'The time has come! The moment is at hand!', 
+      //   voiceKey: 'voice_akama_intro_04', 
+      //   delayAfter: 4000 
+      // },
+      { 
+        speaker: 'illidan', 
+        text: 'You are not prepared!', 
+        voiceKey: 'voice_illidan_intro_05', 
+        delayAfter: 5000 
+      },
     ],
+    
     transition: {
       opening: {
         fadeInMs: 2500,

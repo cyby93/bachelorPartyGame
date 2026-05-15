@@ -125,10 +125,20 @@ Rule: sprites are wrong for burst effects — shapes + particles only.
 | Consecration | AOE_SELF | `consecrationBurst` (0.4s, gold) | `consecrationSparkle` (rises, gravity -80) | Persistent zone from GroundEffectSystem |
 | Bloodlust | AOE_SELF | `bloodlustWave` (0.55s, 3 staggered rings) | `bloodlustBurst` (30 particles, massive) | Fixed radii (80/160/280px), not game radius 2500 |
 | Mass Resurrection | CAST | `massResurrectionRing` (2.0s = castTime) | `massResurrectionBurst` (gravity -150, souls) | Ring duration matches castTime — peaks on revive |
-| Tranquility | CHANNEL | `tranquilityRing` (0.6s, green) | `tranquilityBurst` (gravity -90) | Channel start only; per-tick VFX needs Saurfang |
+| Tranquility | CHANNEL | `tranquilityField` (4.0s persistent ring, `OneShotEffectSystem`) | `tranquilityBurst` + `tranquilityAmbient` per-frame | `tranquilityField` accepts `emitFn` callback; VFXManager passes `() => ps.tranquilityAmbient(...)` |
 | Explosive Trap | EXPLOSION | `explosionBurst` (0.3s, fire) | `explosionBurst` | Emission live in `ServerMinion._updateTrap()`. Payload: `{ type, skillName, x, y, radius, color: '#ff6600' }` |
 | Icebound Fortitude | BUFF | `iceboundFortitude` (0.55s, 8 ice spikes + crystal ring) | `iceShards` (20 blue-white, gravity -20) | |
 | Bladestorm | AOE/BLADESTORM | `aoeFlash` on cast + `attachBladestorm` persistent | — | `attachBladestorm(getPos, 4000)` called from `BaseRenderer.onSkillFired`; VFXManager ticks spinning blades on fx layer |
+
+## Debuff Rendering Patterns (2026-05-14)
+
+**Moonfire DoT:** 8 `_moonfireParticles` in `EnemySprite` — lazily initialized, zig-zag via `sin(now/160 + phase)` lateral push per particle. Bounces off body boundary. Nulled when debuff expires. Dots are deliberately small + semi-transparent (r=1.4, α=0.45).
+
+**Corruption DoT:** Horizontal ellipse orbit at head level. `orbitW = R * 0.65`, `orbitH = R * 0.18`, center at `y = -(R + 3)`. Dot r=2.5.
+
+**Per-sprite particle state pattern:** Initialize lazily in the debuff block, store on `this._moonfireParticles`; null on expiry. `_moonfireLastTime` tracks dt across frames. Cap dt at 50ms to avoid jumps after tab unfocus.
+
+**TrainingDummy debuff gap:** `TrainingDummy.toDTO()` is a SEPARATE codepath from `ServerEnemy.toDTO()`. Any new state field must be added to BOTH. When debuffs were added to ServerEnemy, TrainingDummy was missed — all DoT visuals were invisible on dummies until fixed (2026-05-14).
 
 ## Ricochet Bug (fixed 2026-04-17)
 

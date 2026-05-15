@@ -237,7 +237,7 @@ export default class ProjectileSprite {
 
   _drawHolyTrail(cx, cy) {
     const g   = this._trailGfx
-    const r   = this._radius * 0.9
+    const r   = this._radius * 0.7
     const pts = this._interpolateTrail(cx, cy, r)
     for (let i = pts.length - 1; i >= 0; i--) {
       const { rx, ry, t } = pts[i]
@@ -252,7 +252,7 @@ export default class ProjectileSprite {
 
   _drawDivineTrail(cx, cy, now) {
     const g   = this._trailGfx
-    const r   = this._radius * 0.85
+    const r   = this._radius * 0.4
     const pts = this._interpolateTrail(cx, cy, r)
     for (let i = pts.length - 1; i >= 0; i--) {
       const { rx, ry, t } = pts[i]
@@ -289,7 +289,7 @@ export default class ProjectileSprite {
 
   _drawFireTrail(cx, cy, now) {
     const g   = this._trailGfx
-    const r   = this._radius * 0.9
+    const r   = this._radius * 0.7
     const pts = this._interpolateTrail(cx, cy, r)
     for (let i = pts.length - 1; i >= 0; i--) {
       const { rx, ry, t } = pts[i]

@@ -45,6 +45,24 @@
 - `levelId` is the routing key for level-specific music, not display name.
 - Controller volume controls are intentionally omitted; phone hardware volume is sufficient.
 
+## Reactive Combat VO (Illidan Level 6)
+
+- `boss:boss_vo` event — carries `{ speaker, voiceKey }`, no subtitle, no ducking. Wired in `main.js` → `audio.handleBossVo()`.
+- Three triggers: kill taunt (20s cooldown), attack cry (3–10s random), wound cry (3–10s random).
+- All cooldowns configurable in `ILLIDAN_CONFIG.reactiveVo` in `shared/IllidanConfig.js`.
+- Wound cry hooked via `boss.onTakeDamage` callback set in IllidanEncounter constructor.
+- Kill taunt detected via per-tick `_checkNewDeaths()` in IllidanEncounter.update().
+- Attack cry fires from melee contact loop and `_handleAbility()` dispatch.
+- Reactive VO silently drops if `_activeVoiceEl` is set (cinematic takes priority, no interruption).
+- Asset keys: `voice_illidan_kill_01/02`, `voice_illidan_attack_01/02`, `voice_illidan_wound_01/02` — drop .ogg in `/assets/audio/voice/`.
+
+## SFX Ducking During Cinematic Dialog
+
+- `handleDialogLine` passes `{ duckSfx: true }` to `_duckForVoice` — sfx bus drops to 20% (`AUDIO_DUCKING.voiceSfxDialogMultiplier`).
+- `_sfxDuck` multiplier applied in `_playHtmlOneShot` and `_applySettings` (looping sfx too).
+- Releases smoothly on `handleDialogClear` via `_sfxDucked` state flag.
+- Attack cries, wound cries, kill taunts are NOT cinematic — they use `handleBossVo` which never touches ducking.
+
 ## Verification State
 
 - Audio implementation passes `npm run build`.

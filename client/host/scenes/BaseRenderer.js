@@ -21,11 +21,11 @@
  *   onPlayerRemoved(id)
  */
 
-import { Container, Graphics, Sprite, Assets } from 'pixi.js'
-import PlayerSprite     from '../entities/PlayerSprite.js'
-import EnemySprite      from '../entities/EnemySprite.js'
+import { Assets, Container, Graphics, Sprite } from 'pixi.js'
+import EnemySprite from '../entities/EnemySprite.js'
+import PlayerSprite from '../entities/PlayerSprite.js'
 import ProjectileSprite from '../entities/ProjectileSprite.js'
-import VFXManager       from '../systems/VFXManager.js'
+import VFXManager from '../systems/VFXManager.js'
 
 export default class BaseRenderer {
   constructor(game) {
@@ -699,9 +699,7 @@ export default class BaseRenderer {
 
   _hitMoonfire(data) {
     const { targetX, targetY } = data
-    // Vertical column from above — blue-white
-    this._flashBeams.push({ x1: targetX, y1: targetY - 140, x2: targetX, y2: targetY,
-      color: '#88ccff', width: 3, alpha: 0.9, expiresAt: Date.now() + 250 })
+    this.vfx.oneShot.moonfireBeam(targetX, targetY)
     this.vfx.oneShot.aoeFlash(targetX, targetY, 28, '#4488ff')
     this.vfx.particles.celestialBurst(targetX, targetY)
   }
@@ -772,7 +770,7 @@ export default class BaseRenderer {
       toEnemyId:    targetId,
       color:        0x888888,
       width:        2.5,
-      expiresAt:    Date.now() + 1200,
+      expiresAt:    Date.now() + 600,
     })
   }
 

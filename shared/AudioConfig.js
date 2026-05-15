@@ -28,6 +28,7 @@ export const CONTROLLER_AUDIO_BUS_DEFAULTS = {
 export const AUDIO_DUCKING = {
   voiceMusicMultiplier: 0.45,
   voiceSfxMultiplier: 0.85,
+  voiceSfxDialogMultiplier: 0.20,
   releaseMs: 220,
 }
 
@@ -340,6 +341,17 @@ export const ENCOUNTER_AUDIO = {
   },
 }
 
+// Reactive combat VO asset registry — keys match ILLIDAN_CONFIG.reactiveVo.*keys
+// Drop the matching .ogg files in /assets/audio/voice/ to activate them.
+export const ILLIDAN_REACTIVE_VO_AUDIO = {
+  voice_illidan_kill_01:   { key: 'voice_illidan_kill_01',   src: '/assets/audio/voice/voice_illidan_kill_01.ogg' },
+  voice_illidan_kill_02:   { key: 'voice_illidan_kill_02',   src: '/assets/audio/voice/voice_illidan_kill_02.ogg' },
+  voice_illidan_attack_01: { key: 'voice_illidan_attack_01', src: '/assets/audio/voice/voice_illidan_attack_01.ogg' },
+  voice_illidan_attack_02: { key: 'voice_illidan_attack_02', src: '/assets/audio/voice/voice_illidan_attack_02.ogg' },
+  voice_illidan_wound_01:  { key: 'voice_illidan_wound_01',  src: '/assets/audio/voice/voice_illidan_wound_01.ogg' },
+  voice_illidan_wound_02:  { key: 'voice_illidan_wound_02',  src: '/assets/audio/voice/voice_illidan_wound_02.ogg' },
+}
+
 export const DIALOG_AUDIO = {
   akama: {
     family: 'voice_akama',
@@ -428,7 +440,7 @@ export function getDialogAudio(speaker, text, voiceKey = null) {
     speaker,
     family: speakerCfg.family,
     voiceKey: resolvedVoiceKey,
-    src: `/assets/audio/voice/${resolvedVoiceKey}.mp3`,
+    src: `/assets/audio/voice/${resolvedVoiceKey}.ogg`,
   }
 }
 

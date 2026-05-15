@@ -56,6 +56,7 @@ export default class BossSprite {
     hpBg.stroke({ color: '#ffffff', width: 0.5, alpha: 0.3 })
     hpBg.position.set(0, -this._radius - 26)
 
+    this._hpBg   = hpBg
     this._hpFill = new Graphics()
     this._hpFill.position.set(0, -this._radius - 26)
 
@@ -146,6 +147,15 @@ export default class BossSprite {
 
     if (state.radius && state.radius !== this._radius) {
       this._radius = state.radius
+      const bodySprite = this._body.children[0]
+      if (bodySprite) {
+        bodySprite.width  = this._radius * 4
+        bodySprite.height = this._radius * 4
+      }
+      const barY = -this._radius - 26
+      this._hpBg.position.y   = barY
+      this._hpFill.position.y = barY
+      this.overhead._config.yOffset = barY
     }
 
     if (state.maxHp) this._updateHpBar(state.hp / state.maxHp)

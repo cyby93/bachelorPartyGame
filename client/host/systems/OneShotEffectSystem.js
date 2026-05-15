@@ -308,10 +308,44 @@ export default class OneShotEffectSystem {
   }
 
   /**
+   * Moonfire beam — 0.25s column that shrinks its full width to zero over its lifetime.
+   * Both top and bottom edges narrow symmetrically toward the centre line.
+   */
+  moonfireBeam(x, y) {
+    const duration = 0.5
+    const gfx = this._getGfx()
+    gfx.position.set(x, y)
+    gfx.alpha = 1; gfx.scale.set(1)
+    this._active.push({ gfx, elapsed: 0, duration, update: (progress) => {
+      gfx.clear()
+      const fade  = 1 - progress
+      const w     = 9 * fade   // half-width: starts at 9px, collapses to 0
+      const beamH = 140
+      if (w < 0.4) return
+      // Outer glow column
+      gfx.moveTo(-w * 1.5, -beamH); gfx.lineTo(w * 1.5, -beamH)
+      gfx.lineTo(w * 1.5, 0);       gfx.lineTo(-w * 1.5, 0)
+      gfx.closePath()
+      gfx.fill({ color: 0x4488ff, alpha: 0.28 * fade })
+      // Main beam
+      gfx.moveTo(-w, -beamH); gfx.lineTo(w, -beamH)
+      gfx.lineTo(w, 0);       gfx.lineTo(-w, 0)
+      gfx.closePath()
+      gfx.fill({ color: 0x88ccff, alpha: 0.80 * fade })
+      // Bright core
+      gfx.moveTo(-w * 0.35, -beamH); gfx.lineTo(w * 0.35, -beamH)
+      gfx.lineTo(w * 0.35, 0);       gfx.lineTo(-w * 0.35, 0)
+      gfx.closePath()
+      gfx.fill({ color: 0xddeeff, alpha: 0.92 * fade })
+    }})
+  }
+
+  /**
    * Tranquility field — 4.0s persistent pulsing green healing zone (matches castTime).
    * Fades in quickly, pulses gently throughout the channel, fades out at end.
+   * Optional emitFn called each frame for continuous particle emission.
    */
-  tranquilityField(x, y, radius) {
+  tranquilityField(x, y, radius, emitFn) {
     const duration = 4.0
     const gfx = this._getGfx()
     gfx.position.set(x, y)
@@ -330,6 +364,8 @@ export default class OneShotEffectSystem {
       gfx.stroke({ color: 0x44ff88, width: 3, alpha: 0.45 * pulse * env })
       gfx.circle(0, 0, radius - 10)
       gfx.stroke({ color: 0x22ddaa, width: 1, alpha: 0.25 * pulse * env })
+
+      emitFn?.()
     }
     this._active.push(entry)
   }

@@ -65,6 +65,8 @@ export default class EnemySprite {
     this._attackTimer        = 0        // seconds remaining in one-shot attack animation
     this._currentAttackAbility = null   // ability key being played in 'attack' state
     this._forcedAnimation    = data.forcedAnimation ?? null
+    this._moonfireParticles  = null
+    this._moonfireLastTime   = 0
 
     this.container = new Container()
 
@@ -306,19 +308,54 @@ export default class EnemySprite {
 
   _syncDebuffVisuals(debuffs, now) {
     this._debuffGfx.clear()
-    if (!debuffs?.length) return
+    if (!debuffs?.length) {
+      this._moonfireParticles = null
+      return
+    }
 
     const R = this._R
+
+    // Clean up Moonfire particle state when the debuff is gone
+    const hasMoonfire = debuffs.some(d => d.expiresAt > now && d.hasDot && d.sourceSkill === 'Moonfire')
+    if (!hasMoonfire) this._moonfireParticles = null
+
     for (const d of debuffs) {
       if (d.expiresAt <= now) continue
 
       if (d.hasDot && d.sourceSkill === 'Moonfire') {
-        // Pulsing blue-white ring
-        const pulse = 0.4 + 0.3 * Math.sin(now / 300)
-        this._debuffGfx.circle(0, 0, R + 8)
-        this._debuffGfx.stroke({ color: 0x4488ff, width: 2, alpha: pulse })
-        this._debuffGfx.circle(0, 0, R + 8)
-        this._debuffGfx.fill({ color: 0x4488ff, alpha: pulse * 0.1 })
+        // Lazy-init zig-zag particle cluster covering the enemy body
+        if (!this._moonfireParticles) {
+          this._moonfireParticles = Array.from({ length: 8 }, () => {
+            const a = Math.random() * Math.PI * 2
+            const r = Math.random() * R * 0.8
+            return { x: Math.cos(a) * r, y: Math.sin(a) * r,
+                     vx: (Math.random() - 0.5) * 30, vy: (Math.random() - 0.5) * 30,
+                     phase: Math.random() * Math.PI * 2 }
+          })
+          this._moonfireLastTime = now
+        }
+        const dtSec = Math.min(now - this._moonfireLastTime, 50) / 1000
+        this._moonfireLastTime = now
+
+        for (const p of this._moonfireParticles) {
+          // Zig-zag: sinusoidal lateral push per particle phase
+          const zigzag = Math.sin(now / 160 + p.phase) * 38
+          p.x += (p.vx + zigzag) * dtSec
+          p.y += p.vy * dtSec
+          // Bounce when leaving body radius
+          const dist = Math.sqrt(p.x * p.x + p.y * p.y)
+          if (dist > R * 0.85) {
+            const nx = p.x / dist, ny = p.y / dist
+            p.vx = -nx * 25 + (Math.random() - 0.5) * 20
+            p.vy = -ny * 25 + (Math.random() - 0.5) * 20
+            p.x  = nx * R * 0.8; p.y = ny * R * 0.8
+          }
+          // Draw: small semi-transparent dot + faint glow
+          this._debuffGfx.circle(p.x, p.y, 1.4)
+          this._debuffGfx.fill({ color: 0x88aaff, alpha: 0.45 })
+          this._debuffGfx.circle(p.x, p.y, 3.0)
+          this._debuffGfx.fill({ color: 0x4466ff, alpha: 0.10 })
+        }
       }
 
       if (d.hasDot && d.sourceSkill === 'Corruption') {

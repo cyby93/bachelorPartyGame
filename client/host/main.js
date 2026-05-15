@@ -17,8 +17,10 @@ import HostGame       from './HostGame.js'
 import AudioManager   from './systems/AudioManager.js'
 import { gameState }  from './stores/gameState.js'
 import { quizState }  from './stores/quizState.js'
+import { dialogLine } from './stores/dialogStore.js'
 import HostApp        from './HostApp.svelte'
 import SceneOverlay   from './components/SceneOverlay.svelte'
+import DialogOverlay  from './components/DialogOverlay.svelte'
 
 // ── Core instances ──────────────────────────────────────────────
 const game  = new HostGame()
@@ -44,8 +46,9 @@ function setBadge(text, variant, autoHideMs = 0) {
 const socket = io({ transports: ['websocket'], autoConnect: false })
 
 // ── Mount UI components first (CreationScreen shows loading state) ──
-mount(SceneOverlay, { target: document.getElementById('scene-overlay'), props: { socket } })
-mount(HostApp, { target: document.getElementById('host-app'), props: { socket, audio } })
+mount(SceneOverlay,   { target: document.getElementById('scene-overlay'),  props: { socket } })
+mount(DialogOverlay,  { target: document.getElementById('dialog-overlay') })
+mount(HostApp,        { target: document.getElementById('host-app'),       props: { socket, audio } })
 
 // ── Load PixiJS assets — progress updates flow through gameState ──
 await game.init(document.getElementById('canvas-wrap'), (progress) => {
@@ -150,6 +153,8 @@ socket.on(EVENTS.STATE_DELTA, delta => {
 socket.on(EVENTS.SCENE_CHANGE, (data) => {
   const { scene, ...meta } = data
 
+  dialogLine.set(null)
+
   // 'menu' is a host-only signal: session reset → return to creation screen
   if (scene === 'menu') {
     currentScene     = 'staging'
@@ -176,7 +181,8 @@ socket.on(EVENTS.OBJECTIVE_UPDATE, ({ objectives }) => {
 })
 
 socket.on(EVENTS.SET_LEVEL, ({ levelIndex }) => {
-  // Acknowledged by GameHUD's internal state — no action needed here
+  audio.handleDialogClear()
+  dialogLine.set(null)
 })
 
 socket.on(EVENTS.DEBUG_ACTION_RESULT, ({ message, isError }) => {
@@ -239,12 +245,23 @@ socket.on(EVENTS.SKILL_INTERRUPTED, data => {
 
 socket.on(EVENTS.BOSS_DIALOG_LINE, data => {
   audio.handleDialogLine(data)
-  game.activeRenderer?.onIllidanDialogLine?.(data)
+  dialogLine.set(data)
+})
+
+socket.on(EVENTS.BOSS_VO, data => {
+  audio.handleBossVo(data)
 })
 
 socket.on(EVENTS.ILLIDAN_PHASE_TRANSITION, data => {
+  dialogLine.set(null)
   audio.handlePhaseTransition(data)
   game.activeRenderer?.onIllidanPhaseTransition?.(data)
+  if (data.dialog) {
+    setTimeout(() => {
+      audio.handleDialogLine(data.dialog)
+      dialogLine.set(data.dialog)
+    }, 300)
+  }
 })
 
 socket.on(EVENTS.ILLIDAN_AURA_PULSE, data => {

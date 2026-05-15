@@ -39,6 +39,8 @@ export default class AudioManager {
     this._currentMusicKey = null
     this._currentLevelId = null
     this._musicDuck = 1
+    this._sfxDuck = 1
+    this._sfxDucked = false
     this._lastDamageAt = 0
     this._lastDownedPlayers = new Set()
     this._throttle = {
@@ -49,6 +51,9 @@ export default class AudioManager {
     this._channelPlayers = new Map()
     this._loopingSfx = new Map()
     this._sfxCache = new Map()
+    this._activeVoiceEl = null
+    this._reactiveVoiceEl = null
+    this._voiceReleaseTimer = null
   }
 
   init() {
@@ -142,12 +147,41 @@ export default class AudioManager {
   handleDialogLine(data) {
     if (!data) return
     const dialog = getDialogAudio(data.speaker, data.text, data.voiceKey)
-    this._duckForVoice(true)
+    this._duckForVoice(true, { duckSfx: true })
     this._playVoice(dialog)
   }
 
   handleDialogClear() {
+    window.clearTimeout(this._voiceReleaseTimer)
+    this._voiceReleaseTimer = null
+    if (this._activeVoiceEl) {
+      this._activeVoiceEl.pause()
+      this._activeVoiceEl.currentTime = 0
+      this._activeVoiceEl = null
+    }
     this._duckForVoice(false)
+  }
+
+  handleBossVo(data) {
+    if (!data?.voiceKey) return
+    if (this._activeVoiceEl) return  // cinematic dialog takes priority
+    if (this._reactiveVoiceEl) {
+      this._reactiveVoiceEl.pause()
+      this._reactiveVoiceEl = null
+    }
+    const src = `/assets/audio/voice/${data.voiceKey}.ogg`
+    const busVolume = clamp01(this._settings.voice ?? this._settings.sfx)
+    const el = new Audio(src)
+    el.volume = clamp01(this._settings.master) * busVolume * 0.85
+    el.muted = !!this._settings.muted
+    el.preload = 'auto'
+    this._reactiveVoiceEl = el
+    el.addEventListener('ended', () => {
+      if (this._reactiveVoiceEl === el) this._reactiveVoiceEl = null
+    }, { once: true })
+    el.play().catch(() => {
+      if (this._reactiveVoiceEl === el) this._reactiveVoiceEl = null
+    })
   }
 
   handlePhaseTransition() {
@@ -269,7 +303,7 @@ export default class AudioManager {
     const muted = !!this._settings.muted
     this._buses.master.gain.value = muted ? 0 : clamp01(this._settings.master)
     this._buses.music.gain.value = clamp01(this._settings.music)
-    this._buses.sfx.gain.value = clamp01(this._settings.sfx)
+    this._buses.sfx.gain.value = clamp01(this._settings.sfx) * this._sfxDuck
     this._buses.voice.gain.value = clamp01(this._settings.voice)
 
     if (this._musicEl) {
@@ -279,8 +313,9 @@ export default class AudioManager {
 
     for (const entry of this._loopingSfx.values()) {
       const busVolume = clamp01(this._settings[entry.busName] ?? this._settings.sfx)
+      const duckScale = entry.busName === 'sfx' ? this._sfxDuck : 1
       entry.el.muted = muted
-      entry.el.volume = clamp01(this._settings.master) * busVolume * clamp01(entry.volumeScale)
+      entry.el.volume = clamp01(this._settings.master) * busVolume * clamp01(entry.volumeScale) * duckScale
     }
   }
 
@@ -312,21 +347,66 @@ export default class AudioManager {
     this._musicEl = audio
   }
 
-  _duckForVoice(active) {
+  _duckForVoice(active, { duckSfx = false } = {}) {
     if (!this._buses) return
+
+    const sfxWasDucked = this._sfxDucked
+
+    if (active && duckSfx) {
+      this._sfxDuck   = AUDIO_DUCKING.voiceSfxDialogMultiplier
+      this._sfxDucked = true
+    }
+
     this._musicDuck = active ? AUDIO_DUCKING.voiceMusicMultiplier : 1
     this._applySettings()
-    const target = active ? clamp01(this._settings.music) * AUDIO_DUCKING.voiceMusicMultiplier : clamp01(this._settings.music)
+
     const now = this._ctx?.currentTime ?? 0
+    const musicTarget = active
+      ? clamp01(this._settings.music) * AUDIO_DUCKING.voiceMusicMultiplier
+      : clamp01(this._settings.music)
     this._buses.music.gain.cancelScheduledValues(now)
     this._buses.music.gain.setValueAtTime(this._buses.music.gain.value, now)
-    this._buses.music.gain.linearRampToValueAtTime(target, now + (AUDIO_DUCKING.releaseMs / 1000))
+    this._buses.music.gain.linearRampToValueAtTime(musicTarget, now + AUDIO_DUCKING.releaseMs / 1000)
+
+    // Restore sfx bus smoothly when releasing a dialog duck
+    if (!active && sfxWasDucked) {
+      this._sfxDuck   = 1
+      this._sfxDucked = false
+      const sfxTarget = clamp01(this._settings.sfx)
+      this._buses.sfx.gain.cancelScheduledValues(now)
+      this._buses.sfx.gain.setValueAtTime(this._buses.sfx.gain.value, now)
+      this._buses.sfx.gain.linearRampToValueAtTime(sfxTarget, now + AUDIO_DUCKING.releaseMs / 1000)
+    }
   }
 
   _playVoice(dialog) {
-    this._playNamedSfx(dialog.voiceKey, { bus: 'voice', volumeScale: 0.7, fallbackPitch: 0.85, src: dialog.src })
-    window.clearTimeout(this._voiceReleaseTimer)
-    this._voiceReleaseTimer = window.setTimeout(() => this.handleDialogClear(), 1800)
+    if (this._activeVoiceEl) {
+      this._activeVoiceEl.pause()
+      this._activeVoiceEl.currentTime = 0
+      this._activeVoiceEl = null
+    }
+    if (!dialog?.src) return
+
+    const busVolume = clamp01(this._settings.voice ?? this._settings.sfx)
+    const el = new Audio(dialog.src)
+    el.volume = clamp01(this._settings.master) * busVolume * 0.7
+    el.muted   = !!this._settings.muted
+    el.preload = 'auto'
+    this._activeVoiceEl = el
+
+    el.addEventListener('ended', () => {
+      if (this._activeVoiceEl === el) {
+        this._activeVoiceEl = null
+        this._duckForVoice(false)
+      }
+    }, { once: true })
+
+    el.play().catch(() => {
+      if (this._activeVoiceEl === el) {
+        this._activeVoiceEl = null
+        this._duckForVoice(false)
+      }
+    })
   }
 
   _playNamedSfx(_key, options = {}) {
@@ -348,7 +428,8 @@ export default class AudioManager {
     const base = this._getCachedSfx(src)
     const el = base ? base.cloneNode() : new Audio(src)
     const busVolume = clamp01(this._settings[busName] ?? this._settings.sfx)
-    el.volume = clamp01(this._settings.master) * busVolume * clamp01(volumeScale)
+    const duckScale = busName === 'sfx' ? this._sfxDuck : 1
+    el.volume = clamp01(this._settings.master) * busVolume * clamp01(volumeScale) * duckScale
     el.muted = !!this._settings.muted
     el.preload = 'auto'
     el.play().catch(() => {
@@ -356,6 +437,7 @@ export default class AudioManager {
       const fallbackPitch = busName === 'voice' ? 0.85 : undefined
       this._tone(220 * (fallbackPitch ?? this._pitchFromFamily(family)), 'square', 0.08 * volumeScale, 0, 0.05, 0.09, 18, busName)
     })
+    return el
   }
 
   _startLoopingSfx(loopId, key, options = {}) {

@@ -55,10 +55,22 @@ export default class IllidanEncounter {
     this._illidanFireballs    = []
     this._illidanFireballSeq  = 0
 
+    // Reactive VO cooldown timestamps (Date.now-based, not the tick `now`)
+    this._deadPlayerIds    = new Set()
+    this._killTauntNextAt  = 0
+    this._attackCryNextAt  = 0
+    this._woundCryNextAt   = 0
+
     // Wire phase-change callback on the boss entity
     this.boss.onPhaseChange = (phase) => {
-      this.io.emit(EVENTS.ILLIDAN_PHASE_TRANSITION, { phase })
-      if (phase === ILLIDAN_PHASE.AZZINOTH) this._onPhase2()
+      if (phase === ILLIDAN_PHASE.AZZINOTH) {
+        this._executePhaseTransition(ILLIDAN_PHASE.AZZINOTH, {}, () => this._onPhase2())
+      }
+    }
+
+    // Wire wound-cry callback on the boss entity
+    this.boss.onTakeDamage = () => {
+      this._tryEmitWoundCry(Date.now())
     }
   }
 
@@ -77,6 +89,8 @@ export default class IllidanEncounter {
   /** Main encounter tick — call every server tick. */
   update(dt, now) {
     if (!this.boss) return
+
+    this._checkNewDeaths(now)
 
     // Phase 2: boss is outside the map — skip movement/contact but fire abilities
     if (this._state.phase2AddsSpawned && !this._state.phase3Entered) {
@@ -118,6 +132,7 @@ export default class IllidanEncounter {
           p.takeDamage(dmg)
           this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: dmg, type: 'damage', sourceSkill: 'Melee' })
           if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
+          this._tryEmitAttackCry(now)
         }
       }
     })
@@ -168,15 +183,45 @@ export default class IllidanEncounter {
 
   getFireballsDTO() {
     return this._illidanFireballs.map(fb => ({
-      id:     fb.id,
-      x:      Math.round(fb.x),
-      y:      Math.round(fb.y),
-      radius: 12,
-      color:  '#ff6600',
+      id:        fb.id,
+      x:         Math.round(fb.x),
+      y:         Math.round(fb.y),
+      radius:    fb.radius ?? 12,
+      color:     fb.color ?? '#ff6600',
+      spriteKey: fb.spriteKey ?? 'projectile_fireball',
     }))
   }
 
   // ── Phase transitions ────────────────────────────────────────────────────────
+
+  /**
+   * Generic phase transition gate.
+   * Sets boss immune immediately, emits the client event, then calls mechanicsFn
+   * either instantly (no dialog) or after dialog.delayAfter ms.
+   */
+  _executePhaseTransition(phase, eventExtras, mechanicsFn) {
+    this.boss.isImmune = true
+    const raw   = ILLIDAN_CONFIG.phaseDialog?.[phase] ?? null
+    const lines = Array.isArray(raw) ? raw : (raw ? [raw] : [])
+
+    // First line travels with the phase-transition event; subsequent lines are
+    // scheduled separately via BOSS_DIALOG_LINE so the client sequences them.
+    this.io.emit(EVENTS.ILLIDAN_PHASE_TRANSITION, { phase, dialog: lines[0] ?? null, ...eventExtras })
+
+    let accumulated = lines[0]?.delayAfter ?? 0
+    for (let i = 1; i < lines.length; i++) {
+      const line   = lines[i]
+      const fireAt = accumulated
+      setTimeout(() => this.io.emit(EVENTS.BOSS_DIALOG_LINE, line), fireAt)
+      accumulated += line.delayAfter ?? 0
+    }
+
+    if (accumulated > 0) {
+      setTimeout(mechanicsFn, accumulated)
+    } else {
+      mechanicsFn()
+    }
+  }
 
   _onPhase2() {
     if (this._state.phase2AddsSpawned) return
@@ -216,16 +261,16 @@ export default class IllidanEncounter {
     this._state.phase3Entered = true
 
     console.log('[Illidan] Phase 3 — hunt_2 (sword form resumes)')
+    this.boss._phases = []   // prevent _updatePhase() from interfering during dialog
 
-    this.boss._phases              = []   // prevent _updatePhase() from interfering
-    this.boss.phase                = ILLIDAN_PHASE.HUNT_2
-    this.boss.isImmune             = false
-    this.boss.speed                = ILLIDAN_CONFIG.phases[0].speed
-    this.boss._abilityCooldowns    = {}   // reset all cooldowns for the second sword phase
-    this.boss.x                    = this.arenaWidth  / 2
-    this.boss.y                    = this.arenaHeight / 2
-
-    this.io.emit(EVENTS.ILLIDAN_PHASE_TRANSITION, { phase: ILLIDAN_PHASE.HUNT_2, freeze: true, freezeDuration: 2500 })
+    this._executePhaseTransition(ILLIDAN_PHASE.HUNT_2, { freeze: true, freezeDuration: 2500 }, () => {
+      this.boss.phase             = ILLIDAN_PHASE.HUNT_2
+      this.boss.isImmune          = false
+      this.boss.speed             = ILLIDAN_CONFIG.phases[0].speed
+      this.boss._abilityCooldowns = {}   // reset cooldowns for second sword phase
+      this.boss.x                 = this.arenaWidth  / 2
+      this.boss.y                 = this.arenaHeight / 2
+    })
   }
 
   _onPhase4() {
@@ -233,13 +278,14 @@ export default class IllidanEncounter {
     this._state.phase4Entered = true
 
     console.log('[Illidan] Phase 4 — demon_form')
+    this.boss._phases = []   // prevent _updatePhase() from interfering during dialog
 
-    this.boss._phases  = []
-    this.boss.phase    = ILLIDAN_PHASE.DEMON_FORM
-    this.boss.isImmune = false
-    this.boss.speed    = 0
-
-    this.io.emit(EVENTS.ILLIDAN_PHASE_TRANSITION, { phase: ILLIDAN_PHASE.DEMON_FORM, freeze: true, freezeDuration: 3500 })
+    this._executePhaseTransition(ILLIDAN_PHASE.DEMON_FORM, { freeze: true, freezeDuration: 3500 }, () => {
+      this.boss.phase    = ILLIDAN_PHASE.DEMON_FORM
+      this.boss.isImmune = false
+      this.boss.speed    = 0
+      this.boss.radius   = ILLIDAN_CONFIG.demonFormRadius ?? 85
+    })
   }
 
   // ── Ability handler ──────────────────────────────────────────────────────────
@@ -359,6 +405,9 @@ export default class IllidanEncounter {
           speed:        attack.speed ?? 280,
           damage:       attack.damage,
           splashRadius: attack.splashRadius,
+          color:        '#ff6600',
+          spriteKey:    'projectile_fireball',
+          sourceSkill:  'Fireball',
         })
         break
       }
@@ -442,21 +491,21 @@ export default class IllidanEncounter {
         const living = []
         this.players.forEach(p => { if (!p.isHost && !p.isDead) living.push(p) })
         if (!living.length) break
-        const target = living[Math.floor(Math.random() * living.length)]
-        this.io.emit(EVENTS.TARGETED_HIT, {
-          casterX: attack.bossX, casterY: attack.bossY,
-          targetX: target.x, targetY: target.y,
-          effectType: 'damage', color: '#6600cc',
-        })
-        this.players.forEach(p => {
-          if (p.isHost || p.isDead) return
-          if (playerHitsCircle(p.x, p.y, target.x, target.y, attack.splashRadius)) {
-            if (p.isShieldBlocking(attack.bossX, attack.bossY)) return
-            p.takeDamage(attack.damage)
-            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: attack.damage, type: 'damage', sourceSkill: 'Shadow Blast' })
-            applyDeath(p)
-          }
-        })
+        for (const target of living) {
+          this._illidanFireballs.push({
+            id:           ++this._illidanFireballSeq,
+            x:            attack.bossX,
+            y:            attack.bossY,
+            targetId:     target.id,
+            speed:        280,
+            damage:       attack.damage,
+            splashRadius: attack.splashRadius,
+            radius:       10,
+            color:        '#8800cc',
+            spriteKey:    'projectile_shadow_bolt',
+            sourceSkill:  'Shadow Blast',
+          })
+        }
         break
       }
 
@@ -488,6 +537,48 @@ export default class IllidanEncounter {
         break
       }
     }
+
+    this._tryEmitAttackCry(now)
+  }
+
+  // ── Reactive VO ──────────────────────────────────────────────────────────────
+
+  _checkNewDeaths(now) {
+    this.players.forEach(p => {
+      if (p.isHost) return
+      if (p.isDead) {
+        if (!this._deadPlayerIds.has(p.id)) {
+          this._deadPlayerIds.add(p.id)
+          this._tryEmitKillTaunt(now)
+        }
+      } else {
+        this._deadPlayerIds.delete(p.id)
+      }
+    })
+  }
+
+  _tryEmitKillTaunt(now) {
+    const cfg = ILLIDAN_CONFIG.reactiveVo?.killTaunt
+    if (!cfg || now < this._killTauntNextAt) return
+    const voiceKey = cfg.keys[Math.floor(Math.random() * cfg.keys.length)]
+    this.io.emit(EVENTS.BOSS_VO, { speaker: 'illidan', voiceKey })
+    this._killTauntNextAt = now + cfg.cooldownMs
+  }
+
+  _tryEmitAttackCry(now) {
+    const cfg = ILLIDAN_CONFIG.reactiveVo?.attackCry
+    if (!cfg || now < this._attackCryNextAt) return
+    const voiceKey = cfg.keys[Math.floor(Math.random() * cfg.keys.length)]
+    this.io.emit(EVENTS.BOSS_VO, { speaker: 'illidan', voiceKey })
+    this._attackCryNextAt = now + cfg.cooldownMinMs + Math.random() * (cfg.cooldownMaxMs - cfg.cooldownMinMs)
+  }
+
+  _tryEmitWoundCry(now) {
+    const cfg = ILLIDAN_CONFIG.reactiveVo?.woundCry
+    if (!cfg || now < this._woundCryNextAt) return
+    const voiceKey = cfg.keys[Math.floor(Math.random() * cfg.keys.length)]
+    this.io.emit(EVENTS.BOSS_VO, { speaker: 'illidan', voiceKey })
+    this._woundCryNextAt = now + cfg.cooldownMinMs + Math.random() * (cfg.cooldownMaxMs - cfg.cooldownMinMs)
   }
 
   // ── Per-tick subsystems ──────────────────────────────────────────────────────
@@ -635,7 +726,7 @@ export default class IllidanEncounter {
           if (playerHitsCircle(p.x, p.y, fb.x, fb.y, fb.splashRadius)) {
             if (p.isShieldBlocking(fb.x, fb.y)) return
             p.takeDamage(fb.damage)
-            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: fb.damage, type: 'damage', sourceSkill: 'Fireball' })
+            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: fb.damage, type: 'damage', sourceSkill: fb.sourceSkill ?? 'Fireball' })
             if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
           }
         })

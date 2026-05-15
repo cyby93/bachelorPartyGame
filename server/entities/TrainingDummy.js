@@ -78,7 +78,7 @@ export default class TrainingDummy {
   }
 
   toDTO() {
-    return {
+    const dto = {
       id:        this.id,
       type:      this.dummyType,
       x:         Math.round(this.x),
@@ -88,6 +88,22 @@ export default class TrainingDummy {
       isDummy:   true,
       dummyName: this.dummyName,
     }
+    if (this.activeEffects?.length) {
+      const now     = Date.now()
+      const debuffs = this.activeEffects
+        .filter(eff => eff.expiresAt > now && eff.source !== 'grip' && eff.source !== 'fear')
+        .map(eff => ({
+          source:      eff.source,
+          sourceSkill: eff.params?.sourceSkill ?? null,
+          expiresAt:   eff.expiresAt,
+          hasDot:      !!(eff.params?.damagePerTick),
+          hasSlow:     !!(eff.params?.speedMultiplier != null && eff.params.speedMultiplier < 1),
+          isRooted:    !!(eff.params?.rooted),
+          isStunned:   !!(eff.params?.stunned),
+        }))
+      if (debuffs.length > 0) dto.debuffs = debuffs
+    }
+    return dto
   }
 
   setArenaSize(width, height) {

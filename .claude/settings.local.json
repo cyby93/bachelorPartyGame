@@ -96,7 +96,9 @@
       "mcp__pixellab__list_objects",
       "Bash(mkdir -p pylon_frames)",
       "Bash(unzip -o pylon_active.zip -d pylon_frames)",
-      "Bash(xxd /mnt/c/Workspace/bachelorPartyGame/public/assets/sprites/projectile_shadow_bolt.png)"
+      "Bash(xxd /mnt/c/Workspace/bachelorPartyGame/public/assets/sprites/projectile_shadow_bolt.png)",
+      "Bash(file *)",
+      "Bash(wait)"
     ]
   },
   "enableAllProjectMcpServers": true,

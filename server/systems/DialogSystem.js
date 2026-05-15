@@ -55,14 +55,16 @@ export default class DialogSystem {
     }
 
     const line = this._lines[this._index++]
+    const delayAfter = line.delayAfter ?? 2500
     this._emitFn('boss:dialog_line', {
-      speaker: line.speaker,
-      text: line.text,
-      voiceKey: line.voiceKey ?? null,
+      speaker:   line.speaker,
+      text:      line.text,
+      voiceKey:  line.voiceKey  ?? null,
       durationMs: line.durationMs ?? null,
+      delayAfter,
     })
 
-    const delay = line.delayAfter ?? 2500
+    const delay = delayAfter
     this._timer = setTimeout(() => this._playNext(), delay)
   }
 }

@@ -45,7 +45,7 @@ export default class ServerNPC {
     this.isIdle        = true
 
     this._lastAttack   = 0
-    this._facingAngle  = Math.PI / 2   // default facing south
+    this._facingAngle  = config.initialAngle ?? Math.PI / 2
   }
 
   setArenaSize(width, height) {

@@ -79,6 +79,31 @@ export default class ParticleSystem {
     this._burst(x, y, 0x44ff88, 18, 100, 0.9, 2.5, { gravity: -90, colors: [0x44ff88, 0x22ddaa, 0xffffff, 0xaaffcc] })
   }
 
+  /** Tranquility per-frame ambient — tiny green motes rising across the healing field. */
+  tranquilityAmbient(cx, cy, radius) {
+    const colors = [0x44ff88, 0x66ffaa, 0xaaffcc, 0x22ddaa, 0xffffff]
+    for (let i = 0; i < 2; i++) {
+      if (this._particles.length >= MAX_PARTICLES) break
+      const a = Math.random() * Math.PI * 2
+      const r = Math.random() * radius * 0.92
+      const x = cx + Math.cos(a) * r
+      const y = cy + Math.sin(a) * r
+      const color = colors[Math.floor(Math.random() * colors.length)]
+      const life  = 0.8 + Math.random() * 0.5
+      let p = this._pool.pop()
+      if (p) {
+        p.x = x; p.y = y
+        p.vx = (Math.random() - 0.5) * 14
+        p.vy = -(38 + Math.random() * 55)
+        p.color = color; p.life = life; p.maxLife = life
+        p.radius = 1.0 + Math.random() * 1.8; p.gravity = -12
+      } else {
+        p = { x, y, vx: (Math.random() - 0.5) * 14, vy: -(38 + Math.random() * 55), color, life, maxLife: life, radius: 1.0 + Math.random() * 1.8, gravity: -12 }
+      }
+      this._particles.push(p)
+    }
+  }
+
   /** Icebound Fortitude — sharp ice crystal shards fly outward with low gravity. */
   iceShards(x, y) {
     this._burst(x, y, 0x88ddff, 20, 180, 0.55, 2, { gravity: -20, colors: [0x88ddff, 0xaaeeff, 0xffffff, 0x44aacc] })

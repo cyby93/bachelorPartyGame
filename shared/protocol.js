@@ -56,6 +56,7 @@ export const EVENTS = {
 
   // ── Boss dialog / Illidan encounter ─────────────────────────────────────
   BOSS_DIALOG_LINE:         'boss:dialog_line',         // S→All: { speaker, text, voiceKey?, durationMs? }
+  BOSS_VO:                  'boss:boss_vo',             // S→All: { speaker, voiceKey } — reactive VO; no subtitle, no sfx duck
   ILLIDAN_PHASE_TRANSITION: 'illidan:phase_transition', // S→All: { phase, freeze?: bool, freezeDuration?: ms }
   ILLIDAN_AURA_PULSE:       'illidan:aura_pulse',       // S→All: { x, y, radius, color }
 

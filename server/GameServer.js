@@ -713,6 +713,9 @@ export default class GameServer {
         this.boss.x = level.bossSpawnPosition.x
         this.boss.y = level.bossSpawnPosition.y
       }
+      if (level.bossInitialAngle != null) {
+        this.boss.angle = level.bossInitialAngle
+      }
     }
 
     // Set up gates (Level 2)
@@ -859,7 +862,10 @@ export default class GameServer {
           }
         },
       })
-      this._dialogSystem.start((event, data) => this.io.emit(event, data))
+      const fadeInMs = level.transition?.opening?.fadeInMs ?? 0
+      setTimeout(() => {
+        if (this._dialogSystem) this._dialogSystem.start((event, data) => this.io.emit(event, data))
+      }, fadeInMs)
     } else if (level.boss && level.minionSpawning && !this.minionSpawnSystem) {
       // No dialog (skipDialog=true or no dialog array) — activate minion spawning immediately.
       this.minionSpawnSystem = new SpawnSystem(

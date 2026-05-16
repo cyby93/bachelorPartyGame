@@ -1,41 +1,20 @@
 /**
  * client/host/systems/OverheadDisplay.js
- * Per-entity component managing cast bar, status icons, and damage numbers.
+ * Per-entity component managing cast bar, combo pips, and cooldown bar.
  *
  * Layout (bottom to top above entity):
- *   1. HP bar (existing, managed by sprite)
+ *   1. HP bar (managed by PlayerSprite; frame animated for Regrowth)
  *   2. Cast bar (shown only when casting)
- *   3. Status icon row (small colored circles with letters)
+ *   3. Cooldown bar (one segment per skill with dotColor)
+ *   4. Combo pip bar (Rogue only)
  */
 
-import { Container, Graphics, Text } from 'pixi.js'
-import VFXAssets from './VFXAssets.js'
-
-// Status effect → icon letter + color mapping
-const EFFECT_ICONS = {
-  sprint:          { letter: 'S', color: 0x00ffff },
-  speed:           { letter: 'S', color: 0x00ffff },
-  bloodlust:       { letter: 'B', color: 0xff4444 },
-  shield:          { letter: 'W', color: 0xffff00 },
-  stealth:         { letter: 'I', color: 0x9966ff },
-  invisible:       { letter: 'I', color: 0x9966ff },
-  root:            { letter: 'R', color: 0x8b4513 },
-  stun:            { letter: 'X', color: 0xff8800 },
-  bear:            { letter: 'B', color: 0x8b4513 },
-  damage_boost:    { letter: 'D', color: 0xff0000 },
-  armor:           { letter: 'A', color: 0xcccccc },
-  reduction:       { letter: 'A', color: 0xcccccc },
-  // Illidan debuffs
-  shear:           { letter: 'C', color: 0xff4400 },
-  parasitic:       { letter: 'P', color: 0x9900cc },
-  darkBarrage:     { letter: 'D', color: 0x330099 },
-  agonizingFlames: { letter: 'F', color: 0xff8800 },
-}
+import { Container, Graphics } from 'pixi.js'
 
 export default class OverheadDisplay {
   /**
    * @param {Container} entityContainer - the entity's main container
-   * @param {object} config - { yOffset, showCastBar, showStatusIcons, showComboPips, skills }
+   * @param {object} config - { yOffset, showCastBar, showComboPips, skills }
    *   skills: array from SkillDatabase for this class — dots are created for entries with dotColor
    */
   constructor(entityContainer, config = {}) {
@@ -43,7 +22,6 @@ export default class OverheadDisplay {
     this._config = {
       yOffset: config.yOffset ?? -30,
       showCastBar: config.showCastBar ?? true,
-      showStatusIcons: config.showStatusIcons ?? true,
       showComboPips: config.showComboPips ?? false,
     }
 
@@ -74,15 +52,6 @@ export default class OverheadDisplay {
       this._castBarW = BAR_W
       this._castBarY = barY
       this._castBarH = BAR_H
-    }
-
-    // ── Status icons ──────────────────────────────────────────────
-    this._iconContainer = null
-    this._currentIconKeys = []
-    if (this._config.showStatusIcons) {
-      this._iconContainer = new Container()
-      this._iconContainer.position.set(0, this._config.yOffset - 18)
-      this._container.addChild(this._iconContainer)
     }
 
     // ── Combo point bar (Rogue only) ──────────────────────────────
@@ -174,62 +143,6 @@ export default class OverheadDisplay {
       )
       this._castBarFill.fill({ color: 0xffcc00, alpha: 0.9 })
     }
-  }
-
-  /**
-   * Set status icons from effect keys.
-   * @param {Array<{src: string, params: object}>} effects
-   */
-  setStatusIcons(effects) {
-    if (!this._iconContainer) return
-    if (!effects || effects.length === 0) {
-      if (this._currentIconKeys.length > 0) {
-        this._iconContainer.removeChildren()
-        this._currentIconKeys = []
-      }
-      return
-    }
-
-    // Derive icon keys from effects
-    const keys = []
-    for (const eff of effects) {
-      const p = eff.params ?? {}
-      if (p.speedMultiplier && p.speedMultiplier > 1) keys.push('speed')
-      if (p.damageMultiplier && p.damageMultiplier > 1) keys.push('damage_boost')
-      if (p.damageReduction) keys.push('reduction')
-      // shield is now shown as a sprite overlay via AuraSystem — no status icon needed
-      if (p.invisible) keys.push('invisible')
-      if (p.rooted) keys.push('root')
-      if (p.stunned) keys.push('stun')
-      if (p.transformSprite === 'bear') keys.push('bear')
-      // Illidan debuffs
-      if (p.shear)           keys.push('shear')
-      if (p.parasitic)       keys.push('parasitic')
-      if (p.darkBarrage)     keys.push('darkBarrage')
-      if (p.agonizingFlames) keys.push('agonizingFlames')
-    }
-
-    // Deduplicate
-    const uniqueKeys = [...new Set(keys)]
-
-    // Check if changed
-    const keyStr = uniqueKeys.join(',')
-    const prevStr = this._currentIconKeys.join(',')
-    if (keyStr === prevStr) return
-
-    this._currentIconKeys = uniqueKeys
-    this._iconContainer.removeChildren()
-
-    const spacing = 16
-    const startX = -(uniqueKeys.length - 1) * spacing / 2
-
-    uniqueKeys.forEach((key, i) => {
-      const iconDef = EFFECT_ICONS[key]
-      if (!iconDef) return
-      const icon = VFXAssets.statusIcon(iconDef.letter, iconDef.color)
-      icon.position.set(startX + i * spacing, 0)
-      this._iconContainer.addChild(icon)
-    })
   }
 
   /**

@@ -141,11 +141,14 @@ export default class PlayerSprite {
     this.container.addChild(this._shieldGfx)
     this._shieldVisible = false
 
-    // ── HoT visual (Regrowth healing-over-time ring) ──────────────────────
+    // ── HoT visual (Regrowth — animated HP bar frame glow) ───────────────
     this._hotGfx = new Graphics()
-    this.container.addChild(this._hotGfx)
+    this._statusEffects.addChild(this._hotGfx)
     this._hotActive = false
-    this._hotNextLeaf = 0
+
+    // ── DoT body indicator (Illidan debuffs / damage-over-time) ──────────
+    this._dotGfx = new Graphics()
+    this.container.addChild(this._dotGfx)
 
     // ── Aim arrow ─────────────────────────────────────────────────────────
     this._classColor   = this._classData.color ?? '#ffffff'
@@ -170,7 +173,6 @@ export default class PlayerSprite {
     this.overhead = new OverheadDisplay(this._statusEffects, {
       yOffset: OVERHEAD_ZERO + BAR_H - 3,
       showCastBar: true,
-      showStatusIcons: true,
       showComboPips: className === 'rogue',
       skills: this._classData.skills ?? [],
     })
@@ -493,14 +495,11 @@ export default class PlayerSprite {
 
     // Update overhead display
     this.overhead.updateCastBar(state.castProgress ?? 0, state.isChanneling ?? false)
-    if (state.effects) {
-      this.overhead.setStatusIcons(state.effects)
-    }
     if (this._className === 'rogue') {
       this.overhead.setComboPoints(state.comboPoints ?? 0)
     }
+    const now = Date.now()
     if (Object.keys(this._cooldownEnds).length > 0) {
-      const now = Date.now()
       const snapshot = {}
       for (const [idx, cd] of Object.entries(this._cooldownEnds)) {
         snapshot[idx] = { remaining: Math.max(0, cd.endTime - now), total: cd.totalMs }
@@ -509,7 +508,8 @@ export default class PlayerSprite {
     }
     this.overhead.update(dt)
 
-    this._syncHotVisuals(state.effects, Date.now())
+    this._syncHotVisuals(state.effects, now)
+    this._syncDotVisuals(state.effects, now)
   }
 
   _syncHotVisuals(effects, now) {
@@ -522,13 +522,37 @@ export default class PlayerSprite {
       return
     }
     this._hotActive = true
-    const R = 18  // approximate player display radius for ring
-    const pulse = 0.35 + 0.25 * Math.sin(now / 400)
+    // Animate a glowing border around the HP bar frame
+    const pulse = 0.5 + 0.5 * Math.sin(now / 400)
+    const PAD = 2
     this._hotGfx.clear()
-    this._hotGfx.circle(0, 0, R + 8)
-    this._hotGfx.stroke({ color: 0x00ff44, width: 1, alpha: (pulse + 0.1) * 0.5 })
-    this._hotGfx.circle(0, 0, R + 8)
-    this._hotGfx.fill({ color: 0x00ff44, alpha: pulse * 0.04 })
+    this._hotGfx.rect(-BAR_W / 2 - PAD, OVERHEAD_ZERO - PAD, BAR_W + PAD * 2, BAR_H + PAD * 2)
+    this._hotGfx.stroke({ color: 0x00ff44, width: 1.5, alpha: 0.4 + 0.5 * pulse })
+  }
+
+  _syncDotVisuals(effects, now) {
+    if (!effects?.length) {
+      this._dotGfx.clear()
+      return
+    }
+    const hasDot = effects.some(e => {
+      const src = e.src ?? ''
+      if (src === 'illidan:agonizingFlames') return false  // has its own dedicated visual
+      const p = e.params ?? {}
+      return src.startsWith('dot:') || p.shear || p.parasitic || p.darkBarrage
+    })
+    if (!hasDot) {
+      this._dotGfx.clear()
+      return
+    }
+    // Pulsing fel-purple ring around character body — clearly visible presence indicator
+    const pulse = 0.5 + 0.5 * Math.sin(now / 350)
+    const R = RX + 6
+    this._dotGfx.clear()
+    this._dotGfx.ellipse(0, 0, R + pulse * 3, (R + pulse * 3) * (RY / RX))
+    this._dotGfx.fill({ color: 0x6600cc, alpha: 0.12 + 0.08 * pulse })
+    this._dotGfx.ellipse(0, 0, R + pulse * 3, (R + pulse * 3) * (RY / RX))
+    this._dotGfx.stroke({ color: 0xaa44ff, width: 2, alpha: 0.7 + 0.3 * pulse })
   }
 
   /** Called when the server fires a skill:cooldown event for this player. */

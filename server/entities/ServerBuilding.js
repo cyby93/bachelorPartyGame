@@ -14,16 +14,17 @@ export default class ServerBuilding {
    * @param {number} hpMult – difficulty HP multiplier
    */
   constructor(config, hpMult = 1) {
-    this.id     = config.id
-    this.hp     = Math.round((config.hp ?? 600) * hpMult)
-    this.maxHp  = this.hp
-    this.x      = config.position?.x ?? 0
-    this.y      = config.position?.y ?? 0
-    this.width  = config.width  ?? 60
-    this.height = config.height ?? 60
-    this.radius = Math.max(this.width, this.height) / 2
+    this.id       = config.id
+    this.hp       = Math.round((config.hp ?? 600) * hpMult)
+    this.maxHp    = this.hp
+    this.x        = config.position?.x ?? 0
+    this.y        = config.position?.y ?? 0
+    this.width    = config.width  ?? 60
+    this.height   = config.height ?? 60
+    this.radius   = Math.max(this.width, this.height) / 2
+    this.spriteKey = config.spriteKey ?? null
     this.isDead    = false
-    this.isActive  = true      // all buildings are always active
+    this.isActive  = true
     this.isPlayer  = false
     this.isBuilding = true
   }
@@ -49,6 +50,7 @@ export default class ServerBuilding {
       isDead:     this.isDead,
       isActive:   this.isActive,
       isBuilding: true,
+      spriteKey:  this.spriteKey,
     }
   }
 }

@@ -40,7 +40,7 @@ export const DIRECTIONAL_ENEMIES = new Set([
 ])
 
 /** Enemy types with 8 directional static sprites but no frame animation. Asset keys: enemy_{type}_{dir} */
-export const DIRECTIONAL_STATIC_ENEMIES = new Set(['leviathan'])
+export const DIRECTIONAL_STATIC_ENEMIES = new Set(['leviathan', 'shadowfiend'])
 
 export const DIRECTIONAL_ENEMY_ANIMATIONS = {
   felGuard:             { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
@@ -402,7 +402,8 @@ export default class HostGame {
       'player_shaman',
       'player_deathknight',
       'enemy_gaterepairer', 'enemy_leviathan', 'enemy_warlock',
-      'enemy_flameofazzinoth', 'enemy_shadowdemon', 'enemy_shadowfiend',
+      'enemy_flameofazzinoth', 'enemy_shadowdemon',
+      'portal_building',
       'boss_akama',
       'pylon_inactive',
       'pylon_active',

@@ -34,6 +34,19 @@ Leviathan PixelLab ID: `a7aab6e3-b4d3-4d32-9fc4-b58acf24d572`.
 
 All sprites live in the flat `public/assets/sprites/` directory. To add a new projectile: drop `{spriteKey}.png` there and add the key to `SPRITE_KEYS` in `HostGame.js`. No separate manifest entry or subdirectory needed.
 
+## Building Sprites (2026-05-17)
+
+Level 2 portal buildings use `spriteKey: 'portal_building'` threaded through LevelConfig → ServerBuilding.toDTO() → BattleRenderer.
+`buildingGfx` now stores `{ container, hpGfx, bW, bH }` objects (not raw Graphics). Container holds Sprite body + separate hpGfx child.
+PixelLab object ID: `b05d5cd3-503c-4ef2-90e1-3077156d46b6` (56×56, 1 dir). File: `public/assets/sprites/portal_building.png`.
+
+## Shadowfiend — Directional Static (2026-05-17)
+
+`shadowfiend` added to `DIRECTIONAL_STATIC_ENEMIES` in HostGame.js (same pattern as leviathan).
+8 direction sprites at `public/assets/sprites/shadowfiend/{dir}.png`. Key format: `enemy_shadowfiend_{dir}`.
+PixelLab object ID: `3af7147c-86fb-4b42-9434-c13c3250e912` (48×48, 8 dirs, high top-down).
+`enemy_shadowfiend` removed from flat SPRITE_KEYS — now loaded by the DIRECTIONAL_STATIC_ENEMIES manifest loop.
+
 ## Training Dummy Sprites (2026-05-12)
 
 Three dummies, each with a PixelLab model. Type field in DTO drives STATIC_SPRITE_KEY lookup in EnemySprite.

@@ -148,7 +148,7 @@ export default class BattleRenderer extends BaseRenderer {
     this.tombstoneGfx.clear()
     this.gateGfx.forEach(gfx => gfx.destroy())
     this.gateGfx.clear()
-    this.buildingGfx.forEach(gfx => gfx.destroy())
+    this.buildingGfx.forEach(entry => entry.container.destroy({ children: true }))
     this.buildingGfx.clear()
 
     this._prevPlayerHp = {}
@@ -512,61 +512,68 @@ export default class BattleRenderer extends BaseRenderer {
     for (const building of buildings) {
       if (building.isDead) {
         if (this.buildingGfx.has(building.id)) {
-          const gfx = this.buildingGfx.get(building.id)
-          this._entityRoot.removeChild(gfx)
-          gfx.destroy()
+          const entry = this.buildingGfx.get(building.id)
+          this._entityRoot.removeChild(entry.container)
+          entry.container.destroy({ children: true })
           this.buildingGfx.delete(building.id)
         }
         continue
       }
 
       if (!this.buildingGfx.has(building.id)) {
-        const gfx = new Graphics()
-        this.buildingGfx.set(building.id, gfx)
-        this._entityRoot.addChild(gfx)
+        const bW = building.width  ?? 60
+        const bH = building.height ?? 60
+        const container = new Container()
+        const hpGfx = new Graphics()
+        let body
+
+        const tex = building.spriteKey ? Assets.get(building.spriteKey) : null
+        if (tex) {
+          body = new Sprite(tex)
+          body.anchor.set(0.5)
+          body.width  = bW
+          body.height = bH
+        } else {
+          body = new Graphics()
+          body.rect(-bW / 2, -bH / 2, bW, bH)
+          body.fill({ color: 0x8B6914, alpha: 0.85 })
+          body.rect(-bW / 2, -bH / 2, bW, bH)
+          body.stroke({ color: 0xA0822A, width: 3 })
+          const inset = 8
+          body.rect(-bW / 2 + inset, -bH / 2 + inset, bW - inset * 2, bH - inset * 2)
+          body.stroke({ color: 0x6B4F10, width: 1 })
+        }
+
+        container.addChild(body, hpGfx)
+        this._entityRoot.addChild(container)
+        this.buildingGfx.set(building.id, { container, hpGfx, bW, bH })
       }
 
-      const gfx = this.buildingGfx.get(building.id)
-      const bW = building.width  ?? 60
-      const bH = building.height ?? 60
+      const { container, hpGfx, bW, bH } = this.buildingGfx.get(building.id)
+      container.position.set(building.x, building.y)
+
       const hpPct = building.hp / (building.maxHp || 1)
-
-      gfx.clear()
-
-      // Building body — stone/brown rectangle
-      const bX = building.x - bW / 2
-      const bY = building.y - bH / 2
-      gfx.rect(bX, bY, bW, bH)
-      gfx.fill({ color: 0x8B6914, alpha: 0.85 })
-      gfx.rect(bX, bY, bW, bH)
-      gfx.stroke({ color: 0xA0822A, width: 3 })
-
-      // Inner detail — smaller rect
-      const inset = 8
-      gfx.rect(bX + inset, bY + inset, bW - inset * 2, bH - inset * 2)
-      gfx.stroke({ color: 0x6B4F10, width: 1 })
-
-      // HP bar above building
       const barW = Math.max(bW, 60)
       const barH = 5
-      const barX = building.x - barW / 2
-      const barY = bY - 12
-      gfx.rect(barX, barY, barW, barH)
-      gfx.fill({ color: 0x111111, alpha: 0.8 })
+      const barX = -barW / 2
+      const barY = -bH / 2 - 12
+      hpGfx.clear()
+      hpGfx.rect(barX, barY, barW, barH)
+      hpGfx.fill({ color: 0x111111, alpha: 0.8 })
       if (hpPct > 0) {
         const hpColor = hpPct > 0.5 ? 0xe74c3c : hpPct > 0.25 ? 0xe67e22 : 0xc0392b
-        gfx.rect(barX, barY, barW * hpPct, barH)
-        gfx.fill(hpColor)
+        hpGfx.rect(barX, barY, barW * hpPct, barH)
+        hpGfx.fill(hpColor)
       }
-      gfx.rect(barX, barY, barW, barH)
-      gfx.stroke({ color: 0x333333, width: 1 })
+      hpGfx.rect(barX, barY, barW, barH)
+      hpGfx.stroke({ color: 0x333333, width: 1 })
     }
 
     // Remove stale building graphics
-    this.buildingGfx.forEach((gfx, id) => {
+    this.buildingGfx.forEach((entry, id) => {
       if (!activeBuildingIds.has(id)) {
-        this._entityRoot.removeChild(gfx)
-        gfx.destroy()
+        this._entityRoot.removeChild(entry.container)
+        entry.container.destroy({ children: true })
         this.buildingGfx.delete(id)
       }
     })

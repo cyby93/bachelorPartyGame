@@ -96,10 +96,10 @@ export const CAMPAIGN = [
       { type: 'destroyBuildings' },
     ],
     buildings: [
-      { id: 'b1', position: { x: 80, y: 80 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
-      { id: 'b2', position: { x: 1320, y: 80 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
-      { id: 'b3', position: { x: 80, y: 920 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
-      { id: 'b4', position: { x: 1320, y: 920 }, hp: Math.round(12 * X * R), width: 60, height: 60 },
+      { id: 'b1', position: { x: 80, y: 80 }, hp: Math.round(12 * X * R), width: 60, height: 60, spriteKey: 'portal_building' },
+      { id: 'b2', position: { x: 1320, y: 80 }, hp: Math.round(12 * X * R), width: 60, height: 60, spriteKey: 'portal_building' },
+      { id: 'b3', position: { x: 80, y: 920 }, hp: Math.round(12 * X * R), width: 60, height: 60, spriteKey: 'portal_building' },
+      { id: 'b4', position: { x: 1320, y: 920 }, hp: Math.round(12 * X * R), width: 60, height: 60, spriteKey: 'portal_building' },
     ],
     // Portal beam mechanic: two buildings link via a mirror every 10 seconds.
     // 3-second warning phase, then damage phase. Cyby will tune damage values.

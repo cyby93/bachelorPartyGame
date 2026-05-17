@@ -3,6 +3,7 @@ import {
   AUDIO_STORAGE_KEYS,
   AUDIO_STINGERS,
   AUDIO_DUCKING,
+  HIT_FLESH_KEYS,
   SKILL_AUDIO_ONE_SHOTS,
   createDefaultAudioSettings,
   getDialogAudio,
@@ -130,7 +131,16 @@ export default class AudioManager {
     if (t - this._lastDamageAt < this._throttle.hit) return
     this._lastDamageAt = t
 
-    const sourceAudio = getSourceSkillAudio(data.sourceSkill) ?? getSkillAudio(data.sourceSkill)
+    const enemyAudio = getSourceSkillAudio(data.sourceSkill)
+    if (data.type !== 'heal' && enemyAudio) {
+      this._playNamedSfx(this._randomFleshHitKey(), { family: 'combat_hit' })
+      return
+    }
+    if (data.type !== 'heal' && !data.sourceSkill) {
+      this._playNamedSfx('sfx_skill_shoot_bow_impact', { family: 'combat_projectile' })
+      return
+    }
+    const sourceAudio = enemyAudio ?? getSkillAudio(data.sourceSkill)
     const key = data.type === 'heal'
       ? (sourceAudio?.impact ?? AUDIO_STINGERS.hitHeal.key)
       : (sourceAudio?.impact ?? AUDIO_STINGERS.hitDamage.key)
@@ -139,7 +149,12 @@ export default class AudioManager {
 
   handleTargetedHit(data) {
     if (!data) return
-    const sourceAudio = getSourceSkillAudio(data.sourceSkill) ?? getSkillAudio(data.sourceSkill)
+    const enemyAudio = getSourceSkillAudio(data.sourceSkill)
+    if (enemyAudio) {
+      this._playNamedSfx(this._randomFleshHitKey(), { family: 'combat_hit' })
+      return
+    }
+    const sourceAudio = getSkillAudio(data.sourceSkill)
     const key = sourceAudio?.impact ?? 'combat_targeted_hit'
     this._playNamedSfx(key, { family: sourceAudio?.family ?? data.effectType ?? 'targeted' })
   }
@@ -193,15 +208,16 @@ export default class AudioManager {
   }
 
   handlePortalBeamWarning() {
-    this._playNamedSfx('portal_beam_warning', { family: 'portal_beam' })
+    this._stopLoopingSfx('portal_beam')
+    this._playNamedSfx('fx_portal_beam_start', { family: 'portal_beam' })
   }
 
   handlePortalBeamDamage() {
-    this._playNamedSfx('portal_beam_damage', { family: 'portal_beam' })
+    this._startLoopingSfx('portal_beam', 'fx_portal_beam_loop', { volumeScale: 0.9 })
   }
 
   handlePortalBeamEnd() {
-    this._playNamedSfx('portal_beam_end', { family: 'portal_beam' })
+    this._stopLoopingSfx('portal_beam')
   }
 
   handlePlayerJoined() {
@@ -488,6 +504,10 @@ export default class AudioManager {
     audio.load()
     this._sfxCache.set(src, audio)
     return audio
+  }
+
+  _randomFleshHitKey() {
+    return HIT_FLESH_KEYS[Math.floor(Math.random() * HIT_FLESH_KEYS.length)]
   }
 
   _pitchFromFamily(family) {

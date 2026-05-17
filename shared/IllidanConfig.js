@@ -232,14 +232,14 @@ export const ILLIDAN_CONFIG = {
       {
         speaker: "illidan",
         text: "I will not be touched by rabble such as you!",
-        voiceKey: "voice_illidan_phase_flame_of_azzinoths",
-        delayAfter: 5000,
+        voiceKey: "voice_illidan_phase_flame_of_azzinoths_01",
+        delayAfter: 6000,
       },
       {
         speaker: "illidan",
         text: "Behold the flames of Azzinoth!",
         voiceKey: "voice_illidan_phase_flame_of_azzinoths_02",
-        delayAfter: 4000,
+        delayAfter: 6000,
       },
     ],
     [ILLIDAN_PHASE.HUNT_2]: [

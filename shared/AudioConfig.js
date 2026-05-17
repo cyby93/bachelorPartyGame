@@ -76,12 +76,19 @@ export const AUDIO_STINGERS = {
   phaseTransition: { key: 'boss_phase_transition', src: '/assets/audio/sfx/boss_phase_transition.mp3' },
 }
 
+export const HIT_FLESH_KEYS = ['fx_hit_flesh_01', 'fx_hit_flesh_02', 'fx_hit_flesh_03']
+
 export const AUDIO_ONE_SHOTS = {
   combat_targeted_hit: { key: 'combat_targeted_hit', src: '/assets/audio/sfx/combat_targeted_hit.mp3' },
   portal_beam_warning: { key: 'portal_beam_warning', src: '/assets/audio/sfx/portal_beam_warning.mp3' },
   portal_beam_damage: { key: 'portal_beam_damage', src: '/assets/audio/sfx/portal_beam_damage.mp3' },
   portal_beam_end: { key: 'portal_beam_end', src: '/assets/audio/sfx/portal_beam_end.mp3' },
   boss_aura_pulse: { key: 'boss_aura_pulse', src: '/assets/audio/sfx/boss_aura_pulse.mp3' },
+  fx_hit_flesh_01: { key: 'fx_hit_flesh_01', src: '/assets/audio/sfx/fx_hit_flesh_01.ogg' },
+  fx_hit_flesh_02: { key: 'fx_hit_flesh_02', src: '/assets/audio/sfx/fx_hit_flesh_02.ogg' },
+  fx_hit_flesh_03: { key: 'fx_hit_flesh_03', src: '/assets/audio/sfx/fx_hit_flesh_03.ogg' },
+  fx_portal_beam_start: { key: 'fx_portal_beam_start', src: '/assets/audio/sfx/fx_portal_beam_start.ogg' },
+  fx_portal_beam_loop: { key: 'fx_portal_beam_loop', src: '/assets/audio/sfx/fx_portal_beam_loop.ogg' },
   sfx_enemy_felguard_melee: { key: 'sfx_enemy_felguard_melee', src: '/assets/audio/sfx/sfx_enemy_felguard_melee.mp3' },
   sfx_enemy_bonechewer_brute_melee: { key: 'sfx_enemy_bonechewer_brute_melee', src: '/assets/audio/sfx/sfx_enemy_bonechewer_brute_melee.mp3' },
   sfx_enemy_illidari_centurion_charge: { key: 'sfx_enemy_illidari_centurion_charge', src: '/assets/audio/sfx/sfx_enemy_illidari_centurion_charge.mp3' },

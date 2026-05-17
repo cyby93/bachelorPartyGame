@@ -2,6 +2,7 @@ import { GAME_CONFIG } from '../../../shared/GameConfig.js'
 import {
   AUDIO_STORAGE_KEYS,
   AUDIO_STINGERS,
+  AUDIO_ONE_SHOTS,
   AUDIO_DUCKING,
   HIT_FLESH_KEYS,
   SKILL_AUDIO_ONE_SHOTS,
@@ -49,6 +50,7 @@ export default class AudioManager {
     this._sfxDuck = 1
     this._sfxDucked = false
     this._lastDamageAt = 0
+    this._lastPlayerImpactAt = 0
     this._lastDownedPlayers = new Set()
     this._throttle = {
       hit: 90,
@@ -134,19 +136,27 @@ export default class AudioManager {
     if (!data) return
     if (DOT_SILENT_SKILLS.has(data.sourceSkill)) return
     const t = nowMs()
-    if (t - this._lastDamageAt < this._throttle.hit) return
-    this._lastDamageAt = t
 
     const enemyAudio = getSourceSkillAudio(data.sourceSkill)
     if (data.type !== 'heal' && enemyAudio) {
-      this._playNamedSfx(this._randomFleshHitKey(), { family: 'combat_hit' })
+      if (t - this._lastDamageAt < this._throttle.hit) return
+      this._lastDamageAt = t
+      if (enemyAudio.family?.startsWith('sfx_boss_')) {
+        this._playNamedSfx(enemyAudio.impact, { family: enemyAudio.family, volumeScale: 0.5 })
+      } else {
+        this._playNamedSfx(this._randomFleshHitKey(), { family: 'combat_hit', volumeScale: 0.5 })
+      }
       return
     }
     if (data.type !== 'heal' && !data.sourceSkill) {
-      this._playNamedSfx('sfx_skill_shoot_bow_impact', { family: 'combat_projectile' })
+      if (t - this._lastDamageAt < this._throttle.hit) return
+      this._lastDamageAt = t
+      this._playNamedSfx('sfx_skill_shoot_bow_impact', { family: 'combat_projectile', volumeScale: 0.5 })
       return
     }
-    const sourceAudio = enemyAudio ?? getSkillAudio(data.sourceSkill)
+    if (t - this._lastPlayerImpactAt < this._throttle.hit) return
+    this._lastPlayerImpactAt = t
+    const sourceAudio = getSkillAudio(data.sourceSkill)
     const key = data.type === 'heal'
       ? (sourceAudio?.impact ?? AUDIO_STINGERS.hitHeal.key)
       : (sourceAudio?.impact ?? AUDIO_STINGERS.hitDamage.key)
@@ -205,6 +215,10 @@ export default class AudioManager {
     })
   }
 
+  handleLeviathanDeath() {
+    this._playNamedSfx('sfx_enemy_leviathan_death', { family: 'sfx_enemy_leviathan', volumeScale: 0.8 })
+  }
+
   handlePhaseTransition() {
     this._playNamedSfx(AUDIO_STINGERS.phaseTransition.key, { family: 'boss_phase' })
   }
@@ -237,27 +251,38 @@ export default class AudioManager {
       if (!player?.id) continue
       activePlayerIds.add(player.id)
 
-      const previous = this._channelPlayers.get(player.id) ?? { castSkill: null, isChanneling: false }
+      const previous = this._channelPlayers.get(player.id) ?? { castSkill: null, isChanneling: false, castSfxEl: null }
       const castSkill = player.castSkill ?? null
       const castProgress = player.castProgress
       const isChanneling = !!player.isChanneling
+
+      let castSfxEl = previous.castSfxEl ?? null
 
       if (castSkill && castProgress != null && previous.castSkill !== castSkill) {
         const skillAudio = getSkillAudio(castSkill)
         if (isChanneling) {
           if (skillAudio.cast) this._playNamedSfx(skillAudio.cast, { family: skillAudio.family, variation: player.id })
           if (skillAudio.channel) this._startLoopingSfx(player.id, skillAudio.channel, { volumeScale: 0.85 })
+          castSfxEl = null
         } else {
           const startCue = skillAudio.precast ?? skillAudio.cast
-          if (startCue) this._playNamedSfx(startCue, { family: skillAudio.family, variation: player.id })
+          castSfxEl = startCue ? this._playNamedSfx(startCue, { family: skillAudio.family, variation: player.id }) : null
         }
+      }
+
+      // Cast fired or cancelled: stop the cast SFX early if it's still playing
+      if (previous.castSkill && !castSkill && !previous.isChanneling && castSfxEl) {
+        castSfxEl.pause()
+        castSfxEl.src = ''
+        castSfxEl = null
       }
 
       if ((!isChanneling || !castSkill || castProgress == null) && previous.isChanneling) {
         this._stopPlayerChannelAudio(player.id)
+        castSfxEl = null
       }
 
-      this._channelPlayers.set(player.id, { castSkill, isChanneling })
+      this._channelPlayers.set(player.id, { castSkill, isChanneling, castSfxEl })
 
       if (!player || player.isHost || !player.isDead) continue
       deadNow.add(player.id)
@@ -438,8 +463,9 @@ export default class AudioManager {
 
     if (asset?.src) {
       const volumeScale = options.volumeScale ?? sfxCategoryScale(_key)
-      this._playHtmlOneShot(asset.src, options.bus ?? 'sfx', volumeScale)
+      return this._playHtmlOneShot(asset.src, options.bus ?? 'sfx', volumeScale)
     }
+    return null
   }
 
   _playHtmlOneShot(src, busName, volumeScale = 1) {
@@ -485,10 +511,14 @@ export default class AudioManager {
   }
 
   _primeSfxCache() {
-    for (const assetDef of Object.values(SKILL_AUDIO_ONE_SHOTS)) {
-      const asset = withResolvedAudioPaths(assetDef, 'sfx')
-      if (!asset?.src) continue
-      this._getCachedSfx(asset.src)
+    const allAssets = [
+      ...Object.values(SKILL_AUDIO_ONE_SHOTS),
+      ...Object.values(AUDIO_ONE_SHOTS),
+      ...Object.values(AUDIO_STINGERS),
+    ]
+    for (const assetDef of allAssets) {
+      if (!assetDef?.src) continue
+      this._getCachedSfx(assetDef.src)
     }
   }
 

@@ -65,6 +65,10 @@ export const EVENTS = {
   PORTAL_BEAM_DAMAGE:  'portal:beam_damage',  // S→All: { beamId, points: [{x,y}] } — active damage phase
   PORTAL_BEAM_END:     'portal:beam_end',     // S→All: { beamId }
 
+  // ── Level 4: Leviathan split sequence ───────────────────────────────
+  LEVIATHAN_DEATH: 'leviathan:death', // S→All: { entityId, x, y, generation } — fires at death, before despawn
+  LEVIATHAN_SPAWN: 'leviathan:spawn', // S→All: { entityId, x, y, generation } — fires when child becomes active
+
   // ── Level transitions ────────────────────────────────────────────────────
   LEVEL_VICTORY:   'level:victory',   // S→All: fired when win condition met, before scene change — client plays closing VFX
   TRANSITION_VFX:  'transition:vfx',  // S→All: { event: string } — named VFX trigger during transitions

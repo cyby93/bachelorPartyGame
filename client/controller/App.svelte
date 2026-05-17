@@ -253,13 +253,13 @@
   function handleClassReady(cls) {
     className = cls
     controllerAudio.handleJoin()
+    screen = 'joining'
     socket.emit(EVENTS.JOIN, {
       name:         playerName,
       className:    cls,
       isHost:       false,
       sessionToken: sessionStorage.getItem('sessionToken'),
     })
-    // Screen is driven by INIT's you.screen — do not set it here
   }
 
   function handleVoluntaryRejoin() {
@@ -333,6 +333,13 @@
 
   {:else if screen === 'classSelect'}
     <ClassSelectScreen onready={handleClassReady} />
+
+  {:else if screen === 'joining'}
+    <div class="joining-screen">
+      <span class="joining-class">{className}</span>
+      <p class="joining-label">Joining the raid…</p>
+      <div class="joining-spinner"></div>
+    </div>
 
   {:else if screen === 'briefing'}
     <LobbyScreen
@@ -433,6 +440,39 @@
   .app {
     width: 100%;
     height: 100%;
+  }
+
+  .joining-screen {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 24px;
+    background: var(--rn-gradient-bg);
+  }
+
+  .joining-class {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--rn-text-bright);
+  }
+
+  .joining-label {
+    font-size: 14px;
+    color: var(--rn-text-label);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .joining-spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid var(--rn-border);
+    border-top-color: var(--rn-gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
   }
 
   .end-screen {

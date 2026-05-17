@@ -71,7 +71,14 @@ export default class BuildingSpawnSystem {
 
     const baseInterval   = this.config.baseInterval ?? 3000
     const buffFactor     = this.config.buffFactor ?? 0.25
-    const maxPerBuilding = Math.ceil((this.config.maxAlivePerBuilding ?? 6) * this._countMult)
+
+    // If maxTotalAlive is set, distribute it among alive buildings to keep difficulty constant.
+    // Otherwise fall back to the old per-building cap.
+    let aliveBuildings = 0
+    buildings.forEach(b => { if (!b.isDead) aliveBuildings++ })
+    const maxPerBuilding = this.config.maxTotalAlive != null
+      ? Math.ceil((this.config.maxTotalAlive * this._countMult) / Math.max(aliveBuildings, 1))
+      : Math.ceil((this.config.maxAlivePerBuilding ?? 6) * this._countMult)
     const [minCount, maxCount] = this.config.countPerSpawn ?? [1, 2]
     const scaledMin      = Math.ceil(minCount * this._countMult)
     const scaledMax      = Math.ceil(maxCount * this._countMult)

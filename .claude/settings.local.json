@@ -98,7 +98,8 @@
       "Bash(unzip -o pylon_active.zip -d pylon_frames)",
       "Bash(xxd /mnt/c/Workspace/bachelorPartyGame/public/assets/sprites/projectile_shadow_bolt.png)",
       "Bash(file *)",
-      "Bash(wait)"
+      "Bash(wait)",
+      "Bash(cd /d \"D:\\\\Games\\\\bachelorPartyGame\")"
     ]
   },
   "enableAllProjectMcpServers": true,

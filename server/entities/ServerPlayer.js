@@ -138,6 +138,9 @@ export default class ServerPlayer {
       }
       if (remaining <= 0) return 0
     }
+    if (this.damageReduction > 0) {
+      remaining *= (1 - this.damageReduction)
+    }
     const dealt = Math.round(remaining)
     this.hp = Math.max(minHp, this.hp - dealt)
     if (minHp === 0 && this.hp === 0) this.isDead = true

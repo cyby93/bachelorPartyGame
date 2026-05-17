@@ -681,7 +681,15 @@ export default class SkillSystem {
         ? this._findNearestEnemy(gs, player, config.range ?? 350)
         : this._findBeamTarget(gs, player, v, config.range ?? 350)
       if (!target || target.id === 'boss') return false   // boss is immune
-      target.pullTarget = { x: player.x, y: player.y, speed: 400, pulledBy: player.id }
+      const _gripDx = target.x - player.x
+      const _gripDy = target.y - player.y
+      const _gripDist = Math.hypot(_gripDx, _gripDy) || 1
+      const _gripStop = GAME_CONFIG.PLAYER_RADIUS_X + (target.radius ?? 20)
+      target.pullTarget = {
+        x: player.x + (_gripDx / _gripDist) * _gripStop,
+        y: player.y + (_gripDy / _gripDist) * _gripStop,
+        speed: 400, pulledBy: player.id,
+      }
       target.activeEffects = target.activeEffects ?? []
       target.activeEffects.push({
         source:    'grip',
@@ -840,6 +848,10 @@ export default class SkillSystem {
         if (!p.isDead || p.isHost) return
         if (this._collision.distance({ x: cx, y: cy }, { x: p.x, y: p.y }) <= radius) {
           p.revive()
+          if (player?.id) {
+            if (gs.stats?.resurrections)      gs.stats.resurrections[player.id]      = (gs.stats.resurrections[player.id]      ?? 0) + 1
+            if (gs.levelStats?.resurrections) gs.levelStats.resurrections[player.id] = (gs.levelStats.resurrections[player.id] ?? 0) + 1
+          }
         }
       })
       return
@@ -934,7 +946,9 @@ export default class SkillSystem {
         const aoeCircle    = { x: cx, y: cy, radius }
         const buildingRect = { x: building.x, y: building.y, width: building.width ?? 60, height: building.height ?? 60 }
         if (this._collision.circleRectOverlap(aoeCircle, buildingRect)) {
-          building.takeDamage(Math.round((config.damage ?? 0) * (player?.damageMult ?? 1)))
+          const bAoeDmg = Math.round((config.damage ?? 0) * (player?.damageMult ?? 1))
+          building.takeDamage(bAoeDmg)
+          if (gs.io && bAoeDmg > 0) gs.io.emit('effect:damage', { targetId: building.id, amount: bAoeDmg, type: 'damage', sourceSkill: null })
         }
       })
     }
@@ -1180,7 +1194,10 @@ export default class SkillSystem {
           const buildingRect  = { x: building.x, y: building.y, width: building.width ?? 60, height: building.height ?? 60 }
           if (this._collision.circleRectOverlap(projCircle, buildingRect)) {
             proj.hit.add(building.id)
-            building.takeDamage(proj.damage ?? 0)
+            const bDmg = Math.round((proj.damage ?? 0) * (gs.players.get(proj.ownerId)?.damageMult ?? 1))
+            building.takeDamage(bDmg)
+            if (gs.io && bDmg > 0) gs.io.emit('effect:damage', { targetId: building.id, amount: bDmg, type: 'damage', sourceSkill: null })
+            if (gs.stats && proj.ownerId) gs.stats.damage[proj.ownerId] = (gs.stats.damage[proj.ownerId] ?? 0) + bDmg
             if (!proj.pierce) proj.isAlive = false
           }
         })
@@ -1236,11 +1253,11 @@ export default class SkillSystem {
           proj.hit.add(p.id)
           const { damage, type: dmgType } = p.shieldResult(proj.x, proj.y, proj.damage ?? 0)
           if (damage <= 0) {
-            if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount: 0, type: 'blocked', sourceSkill: null })
+            if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount: 0, type: 'blocked', sourceSkill: proj.sourceSkill ?? null })
           } else {
             const minHp = gs.scene === 'lobby' ? 1 : 0
             const dealt  = p.takeDamage(damage, minHp)
-            if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount: dealt, type: dmgType, sourceSkill: null })
+            if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount: dealt, type: dmgType, sourceSkill: proj.sourceSkill ?? null })
           }
           if (!proj.pierce) proj.isAlive = false
         })
@@ -1284,7 +1301,15 @@ export default class SkillSystem {
       if (!target.isPlayer && target.id !== 'boss') {
         const owner = gs.players.get(proj.ownerId)
         if (owner) {
-          target.pullTarget = { x: owner.x, y: owner.y, speed: 600 }
+          const _projGripDx = target.x - owner.x
+          const _projGripDy = target.y - owner.y
+          const _projGripDist = Math.hypot(_projGripDx, _projGripDy) || 1
+          const _projGripStop = GAME_CONFIG.PLAYER_RADIUS_X + (target.radius ?? 20)
+          target.pullTarget = {
+            x: owner.x + (_projGripDx / _projGripDist) * _projGripStop,
+            y: owner.y + (_projGripDy / _projGripDist) * _projGripStop,
+            speed: 600,
+          }
           target.activeEffects = target.activeEffects ?? []
           target.activeEffects.push({
             source: 'grip',
@@ -1469,6 +1494,24 @@ export default class SkillSystem {
           e.pullTarget = null
         }
       }
+    })
+
+    // Tick DoT damage on buildings (e.g. Moonfire, Corruption landed on a building)
+    const now2 = Date.now()
+    gs.buildings?.forEach(b => {
+      if (b.isDead || !b.activeEffects?.length) return
+      for (const eff of b.activeEffects) {
+        if (eff.params?.damagePerTick && eff.params?.tickRate) {
+          if (!eff.lastDamageTick) eff.lastDamageTick = now2
+          if (now2 - eff.lastDamageTick >= eff.params.tickRate) {
+            eff.lastDamageTick = now2
+            const bDotDmg = eff.params.damagePerTick
+            b.takeDamage(bDotDmg)
+            if (gs.io && bDotDmg > 0) gs.io.emit('effect:damage', { targetId: b.id, amount: bDotDmg, type: 'damage', sourceSkill: eff.params.sourceSkill ?? null })
+          }
+        }
+      }
+      b.activeEffects = b.activeEffects.filter(eff => eff.expiresAt > now2)
     })
   }
 
@@ -1762,6 +1805,7 @@ export default class SkillSystem {
 
     gs.enemies.forEach(e => checkTarget(e))
     if (gs.boss && !gs.boss.isDead && !gs.boss.isImmune) checkTarget(gs.boss)
+    gs.buildings?.forEach(b => { if (!b.isDead) checkTarget(b) })
 
     return best
   }
@@ -1778,6 +1822,7 @@ export default class SkillSystem {
     }
     gs.enemies.forEach(e => check(e))
     if (gs.boss && !gs.boss.isDead && !gs.boss.isImmune) check(gs.boss)
+    gs.buildings?.forEach(b => { if (!b.isDead) check(b) })
     return best
   }
 

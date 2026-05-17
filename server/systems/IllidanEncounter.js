@@ -410,7 +410,7 @@ export default class IllidanEncounter {
           splashRadius: attack.splashRadius,
           color:        '#ff6600',
           spriteKey:    'projectile_fireball',
-          sourceSkill:  'Fireball',
+          sourceSkill:  'Illidan Fireball',
         })
         break
       }

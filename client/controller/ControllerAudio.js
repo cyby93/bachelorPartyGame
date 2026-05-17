@@ -69,10 +69,17 @@ export default class ControllerAudio {
 
   _playBuffer(buffer) {
     if (!this._ctx || !this._gain) return
-    const src = this._ctx.createBufferSource()
-    src.buffer = buffer
-    src.connect(this._gain)
-    src.start()
+    const play = () => {
+      const src = this._ctx.createBufferSource()
+      src.buffer = buffer
+      src.connect(this._gain)
+      src.start()
+    }
+    if (this._ctx.state === 'suspended') {
+      this._ctx.resume().then(play).catch(() => {})
+    } else {
+      play()
+    }
   }
 
   _loadSettings() {

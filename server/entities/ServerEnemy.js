@@ -592,6 +592,7 @@ export default class ServerEnemy {
           speed: this._projSpeed,
           color: ENEMY_TYPES[this.type]?.color ?? '#2E8B57',
           spriteKey: 'projectile_ichor',
+          sourceSkill: 'Leviathan Volley',
           // Exclude melee target from projectile hits
           excludeTargetId: this._meleeTarget.id,
           homingTargetId: target.id,

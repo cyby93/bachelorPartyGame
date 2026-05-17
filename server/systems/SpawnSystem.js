@@ -63,6 +63,9 @@ export default class SpawnSystem {
     // ── Gate-phase spawn points (for Level 3 — spawn points change when a gate dies) ──
     this._spawnPhases    = this.config?.spawnPhases ?? null   // array of { phase, spawnPoints }
     this._activeSpawnPhase = 1                                // starts at phase 1
+
+    // Enemy types that are conditionally excluded (e.g. ritualChanneler when no gate is damaged)
+    this.excludeTypes = new Set()
   }
 
   /** Returns the scaling multiplier for a given difficulty dimension. */
@@ -143,7 +146,11 @@ export default class SpawnSystem {
     for (let i = 0; i < count; i++) {
       if (this._ownedEnemyIds.size + spawned.length >= maxAlive) break
 
-      const typeName = this._typeTable[Math.floor(Math.random() * this._typeTable.length)]
+      const availableTypes = this.excludeTypes.size
+        ? this._typeTable.filter(t => !this.excludeTypes.has(t))
+        : this._typeTable
+      if (!availableTypes.length) continue
+      const typeName = availableTypes[Math.floor(Math.random() * availableTypes.length)]
       const base     = ENEMY_TYPES[typeName]
       if (!base) continue
 

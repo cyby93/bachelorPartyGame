@@ -182,6 +182,7 @@ const SkillDatabase = {
       duration:  12000,
       spriteKey: 'searing_totem',
       totemAbility: {
+        name:      'Searing Totem',
         type:      'PROJECTILE',
         damage:    4,
         speed:     600,

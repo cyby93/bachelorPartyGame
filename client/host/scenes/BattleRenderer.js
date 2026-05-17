@@ -227,7 +227,7 @@ export default class BattleRenderer extends BaseRenderer {
     if (gate && !gate.isDead) return { x: gate.x, y: gate.y }
     // Building targets
     const building = (this.game.knownState.buildings ?? []).find(b => b.id === targetId)
-    if (building && !building.isDead) return { x: building.x, y: building.y }
+    if (building && !building.isDead) return { x: building.x + (building.width ?? 60) / 2, y: building.y + (building.height ?? 60) / 2 }
     return null
   }
 
@@ -245,7 +245,7 @@ export default class BattleRenderer extends BaseRenderer {
     if (gate && !gate.isDead) return { x: gate.x, y: gate.y }
     // Building targets
     const building = (this.game.knownState.buildings ?? []).find(b => b.id === targetId)
-    if (building && !building.isDead) return { x: building.x, y: building.y }
+    if (building && !building.isDead) return { x: building.x + (building.width ?? 60) / 2, y: building.y + (building.height ?? 60) / 2 }
     return null
   }
 
@@ -550,7 +550,7 @@ export default class BattleRenderer extends BaseRenderer {
       }
 
       const { container, hpGfx, bW, bH } = this.buildingGfx.get(building.id)
-      container.position.set(building.x, building.y)
+      container.position.set(building.x + bW / 2, building.y + bH / 2)
 
       const hpPct = building.hp / (building.maxHp || 1)
       const barW = Math.max(bW, 60)
@@ -642,6 +642,50 @@ export default class BattleRenderer extends BaseRenderer {
     this._transitionOverlay.fill({ color: 0x000000, alpha: 1 })
     this._transitionOverlay.alpha = this._transitionAlpha
     this._uiRoot.addChild(this._transitionOverlay)
+  }
+
+  // ── Leviathan split events ─────────────────────────────────────────────────
+
+  onLeviathanDeath({ entityId }) {
+    const sprite = this.enemySprites.get(entityId)
+    if (!sprite) return
+    const c = sprite.container
+    const startScale = c.scale.x
+    const startTime = performance.now()
+    const duration = 1000
+
+    const shrink = () => {
+      if (!c.parent) return
+      const t = Math.min((performance.now() - startTime) / duration, 1)
+      const eased = 1 - t * t * t  // Cubic.In
+      const s = Math.max(startScale * eased, 0.05)
+      c.scale.set(s)
+      if (t < 1) requestAnimationFrame(shrink)
+    }
+    requestAnimationFrame(shrink)
+  }
+
+  onLeviathanSpawn({ entityId }) {
+    const sprite = this.enemySprites.get(entityId)
+    if (!sprite) return
+    const c = sprite.container
+    const targetScale = c.scale.x
+    c.scale.set(0)
+    c.alpha = 0
+    const startTime = performance.now()
+    const duration = 1000
+    const fadeDuration = 200
+
+    const grow = () => {
+      if (!c.parent) return
+      const t = Math.min((performance.now() - startTime) / duration, 1)
+      const eased = 1 - Math.pow(1 - t, 3)  // Cubic.Out
+      c.scale.set(targetScale * eased)
+      c.alpha = Math.min(t / (fadeDuration / duration), 1)
+      if (t < 1) requestAnimationFrame(grow)
+      else c.alpha = 1
+    }
+    requestAnimationFrame(grow)
   }
 
   // ── Illidan encounter events ───────────────────────────────────────────────

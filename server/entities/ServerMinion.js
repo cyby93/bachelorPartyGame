@@ -218,9 +218,9 @@ export default class ServerMinion {
             onImpact: null,
           })
         }
-        // Move toward target at full hawk speed
-        if (dist > 30) {
-          const move = Math.min(dist, this.speed * 60 * dt)
+        // Move toward target only if outside attack range
+        if (dist > attackRange) {
+          const move = Math.min(dist - attackRange + 10, this.speed * 60 * dt)
           this.x += (dx / dist) * move
           this.y += (dy / dist) * move
         }
@@ -275,6 +275,7 @@ export default class ServerMinion {
 
     gs.enemies.forEach(check)
     if (gs.boss && !gs.boss.isDead) check(gs.boss)
+    gs.buildings?.forEach(b => { if (!b.isDead) check(b) })
 
     return best
   }
@@ -291,6 +292,7 @@ export default class ServerMinion {
 
     gs.enemies.forEach(check)
     if (gs.boss && !gs.boss.isDead) check(gs.boss)
+    gs.buildings?.forEach(b => { if (!b.isDead) check(b) })
 
     return best
   }

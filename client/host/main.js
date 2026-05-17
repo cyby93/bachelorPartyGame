@@ -269,6 +269,17 @@ socket.on(EVENTS.ILLIDAN_AURA_PULSE, data => {
   game.activeRenderer?.onIllidanAuraPulse?.(data)
 })
 
+// ── Level 4: Leviathan split events ───────────────────────────
+
+socket.on(EVENTS.LEVIATHAN_DEATH, data => {
+  audio.handleLeviathanDeath()
+  game.activeRenderer?.onLeviathanDeath?.(data)
+})
+
+socket.on(EVENTS.LEVIATHAN_SPAWN, data => {
+  game.activeRenderer?.onLeviathanSpawn?.(data)
+})
+
 // ── Level 2: Portal Beam events ────────────────────────────────
 
 socket.on(EVENTS.PORTAL_BEAM_WARNING, data => {

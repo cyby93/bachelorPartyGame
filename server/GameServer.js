@@ -1212,6 +1212,16 @@ export default class GameServer {
 
       // Spawn enemies from SpawnSystem
       if (this.spawnSystem) {
+        // Repairer-type enemies (ritualChanneler) only spawn when a gate is actually damaged
+        if (this.gates?.size) {
+          const anyGateDamaged = [...this.gates.values()].some(g => !g.isDead && g.hp < g.maxHp)
+          if (anyGateDamaged) {
+            this.spawnSystem.excludeTypes.delete('ritualChanneler')
+          } else {
+            this.spawnSystem.excludeTypes.add('ritualChanneler')
+          }
+        }
+
         // For gate-based spawning, offset spawn point to the left of the gate
         // (players advance from the left, enemies defend the gate from the player side)
         let spawnPos = null
@@ -1437,58 +1447,79 @@ export default class GameServer {
     const activeGate = this._getActiveGate()
     const ctx = { enemies: this.enemies, now, projectiles: this.projectiles, enemyIdSeq: this._enemyIdSeq, activeGate, minions: this.minions }
 
-    // Collect enemies to spawn from split-on-death (defer to avoid modifying map during iteration)
-    const pendingSplits = []
     let warlockAliveCount = 0
 
     this.enemies.forEach((e, id) => {
       if (e.isDead) {
+        // ── Leviathan split-on-death: 1s death animation before despawn ──────
+        if (e.splitOnDeath) {
+          if (!e._deathAt) {
+            // First frame of death — emit event, notify systems, pre-compute children
+            e._deathAt = now
+            this.io.emit(EVENTS.LEVIATHAN_DEATH, { entityId: id, x: Math.round(e.x), y: Math.round(e.y), generation: e.generation })
+
+            this.spawnSystem?.onEnemyDied(id)
+            this.buildingSpawnSystem?.onEnemyDied(id)
+            this.minionSpawnSystem?.onEnemyDied(id)
+            this._illidanEncounter?.onEnemyDied(id)
+
+            // Pre-compute child data if this generation can split
+            if (e.generation < (e.splitOnDeath.maxGenerations - 1)) {
+              const split = e.splitOnDeath
+              const mult  = split.statMultiplier
+              const base  = ENEMY_TYPES[e.type]
+              if (base) {
+                const childGen = e.generation + 1
+                e._pendingChildren = []
+                for (let i = 0; i < split.count; i++) {
+                  const angle = (i / split.count) * Math.PI * 2 + (Math.random() - 0.5) * 0.5
+                  const dist = e.radius * 1.5 + 20
+                  e._pendingChildren.push({
+                    type:        e.type,
+                    x:           e.x + Math.cos(angle) * dist,
+                    y:           e.y + Math.sin(angle) * dist,
+                    generation:  childGen,
+                    hp:          Math.round(e.maxHp * mult),
+                    speed:       e.speed * mult,
+                    radius:      Math.round(e.radius * mult),
+                    meleeDamage: Math.round(e.meleeDamage * mult),
+                  })
+                }
+              }
+            }
+          }
+
+          // After 1000ms: spawn children
+          if (e._pendingChildren && now - e._deathAt >= 1000) {
+            for (const child of e._pendingChildren) {
+              const childId = ++this._enemyIdSeq.value
+              const childEnemy = new ServerEnemy({ id: childId, ...child, maxHp: child.hp })
+              childEnemy.setArenaSize(this.arenaWidth, this.arenaHeight)
+              this.enemies.set(childId, childEnemy)
+              this.io.emit(EVENTS.LEVIATHAN_SPAWN, { entityId: childId, x: Math.round(child.x), y: Math.round(child.y), generation: child.generation })
+            }
+            e._pendingChildren = null
+          }
+
+          // After 1100ms: despawn
+          if (now - e._deathAt >= 1100) {
+            this.enemies.delete(id)
+            this.killCount++
+            this._killsByType[e.type] = (this._killsByType[e.type] ?? 0) + 1
+            this.stats.kills = this.killCount
+          }
+          return
+        }
+
+        // ── Normal enemy death ────────────────────────────────────────────────
         this.enemies.delete(id)
         this.killCount++
         this._killsByType[e.type] = (this._killsByType[e.type] ?? 0) + 1
         this.stats.kills = this.killCount
 
-        // Notify spawn systems
-        if (this.spawnSystem) {
-          this.spawnSystem.onEnemyDied(id)
-        }
-        if (this.buildingSpawnSystem) {
-          this.buildingSpawnSystem.onEnemyDied(id)
-        }
-        if (this.minionSpawnSystem) {
-          this.minionSpawnSystem.onEnemyDied(id)
-        }
-
-        // Split-on-death: queue child spawns
-        if (e.splitOnDeath && e.generation < (e.splitOnDeath.maxGenerations - 1)) {
-          const split = e.splitOnDeath
-          const mult  = split.statMultiplier
-          const base  = ENEMY_TYPES[e.type]
-          if (base) {
-            const childGen = e.generation + 1
-            for (let i = 0; i < split.count; i++) {
-              const angle = (i / split.count) * Math.PI * 2 + (Math.random() - 0.5) * 0.5
-              const dist = e.radius * 1.5 + 20
-              const offsetX = Math.cos(angle) * dist
-              const offsetY = Math.sin(angle) * dist
-              pendingSplits.push({
-                type:          e.type,
-                x:             e.x + offsetX,
-                y:             e.y + offsetY,
-                generation:    childGen,
-                hp:            Math.round(e.maxHp * mult),
-                speed:         e.speed * mult,
-                radius:        Math.round(e.radius * mult),
-                meleeDamage: Math.round(e.meleeDamage * mult),
-              })
-            }
-          }
-        }
-
-        // Track warlock deaths for Phase 2 transition (Level 4)
-        if (e.type === 'warlock') {
-          // warlockAliveCount will be recounted below
-        }
+        this.spawnSystem?.onEnemyDied(id)
+        this.buildingSpawnSystem?.onEnemyDied(id)
+        this.minionSpawnSystem?.onEnemyDied(id)
 
         // Flame of Azzinoth deaths → trigger Phase 3 (Level 5)
         this._illidanEncounter?.onEnemyDied(id)
@@ -1557,7 +1588,8 @@ export default class GameServer {
             if (meleeDmg <= 0) return
             e._lastContactDamage = now
             p.takeDamage(meleeDmg)
-            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: meleeDmg, type: meleeType, sourceSkill: 'Melee' })
+            const _meleeSourceSkill = e.type === 'leviathan' ? 'Leviathan Melee' : 'Melee'
+            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: meleeDmg, type: meleeType, sourceSkill: _meleeSourceSkill })
             if (!this.stats.deaths) this.stats.deaths = {}
             if (p.isDead) {
               this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
@@ -1575,25 +1607,6 @@ export default class GameServer {
         })
       }
     })
-
-    // Spawn split children
-    for (const child of pendingSplits) {
-      const id = ++this._enemyIdSeq.value
-      const enemy = new ServerEnemy({
-        id,
-        x:             child.x,
-        y:             child.y,
-        type:          child.type,
-        hp:            child.hp,
-        maxHp:         child.hp,
-        speed:         child.speed,
-        radius:        child.radius,
-        meleeDamage: child.meleeDamage,
-        generation:    child.generation,
-      })
-      enemy.setArenaSize(this.arenaWidth, this.arenaHeight)
-      this.enemies.set(id, enemy)
-    }
 
     // Wall collision for enemies
     if (this._wallSegments.length > 0) {
@@ -1664,6 +1677,7 @@ export default class GameServer {
         hit: hitSet,
         homingTargetId: action.homingTargetId ?? null,
         homingSpeed:    action.speed ?? null,
+        sourceSkill:    action.sourceSkill ?? null,
       })
     } else if (action.action === 'repair') {
       // Gate repairer heals the active gate
@@ -2130,10 +2144,11 @@ export default class GameServer {
           break
         }
         case 'killAll': {
-          // Complete when no enemies remain (including no pending splits)
-          const enemyCount = this.enemies.size
-          obj.current = enemyCount === 0 ? 1 : 0
-          if (enemyCount > 0) allComplete = false
+          // Count alive enemies + dead-but-splitting ones (pending children not yet spawned)
+          let aliveCount = 0
+          this.enemies.forEach(e => { if (!e.isDead || e._pendingChildren?.length) aliveCount++ })
+          obj.current = aliveCount === 0 ? 1 : 0
+          if (aliveCount > 0) allComplete = false
           break
         }
         case 'killBossProtectNPC': {

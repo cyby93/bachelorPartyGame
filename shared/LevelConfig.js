@@ -120,7 +120,7 @@ export const CAMPAIGN = [
     buildingSpawning: {
       baseInterval: 3000,          // ms between spawns per building
       countPerSpawn: [1, 2],       // min/max enemies per spawn event
-      maxAlivePerBuilding: 1,      // cap per building
+      maxTotalAlive: 8,            // total cap shared across alive buildings — redistributes on death
       buffFactor: 0.25,            // 25% faster spawns per destroyed building
       spawnRadius: 80,             // spawn distance from building center
       enemyTypes: [
@@ -140,7 +140,7 @@ export const CAMPAIGN = [
       mode: 'continuous',
       interval: 5000,
       countPerWave: [1, 2],
-      maxAliveAtOnce: 1,
+      maxAliveAtOnce: 2,
       spawnEdge: 'all',
       enemyTypes: [
         { type: 'felGuard',          weight: 3 },
@@ -212,24 +212,12 @@ export const CAMPAIGN = [
         { type: 'ashtonghueMystic',  weight: 1 },
         { type: 'ritualChanneler',   weight: 2 },
       ],
-      // Phase-gated spawn points — server switches activeSpawnPhase when gate1 is destroyed.
-      // phase 1: Gate 1 alive → spawn in Room 1 (left room) near gate1, top and bottom wall edges.
-      // phase 2: Gate 1 destroyed → spawn in Room 2 (right room) on the left side (near where gate1 was).
-      spawnPhases: [
-        {
-          phase: 1,
-          spawnPoints: [
-            { x: 690, y: 30  },   // Room 1, top wall edge, near gate1
-            { x: 690, y: 570 },   // Room 1, bottom wall edge, near gate1
-          ],
-        },
-        {
-          phase: 2,
-          spawnPoints: [
-            { x: 1060, y: 30  },   // Room 2, top edge, right side (near gate2)
-            { x: 1060, y: 570 },   // Room 2, bottom edge, right side (near gate2)
-          ],
-        },
+      // All 4 spawn points active simultaneously. maxAliveAtOnce is shared across all of them.
+      spawnPoints: [
+        { x: 690,  y: 30  },   // Room 1, top wall edge, near gate1
+        { x: 690,  y: 570 },   // Room 1, bottom wall edge, near gate1
+        { x: 1060, y: 30  },   // Room 2, top edge, right side (near gate2)
+        { x: 1060, y: 570 },   // Room 2, bottom edge, right side (near gate2)
       ],
     },
     difficulty: {
@@ -354,9 +342,10 @@ export const CAMPAIGN = [
     // delayAfter: ms to wait after this line before showing the next.
     // TODO(Cyby): Replace [PLACEHOLDER] lines with final text.
     dialog: [
-      { speaker: 'akama', text: '[PLACEHOLDER] Brothers, today we take back what was stolen from us.', voiceKey: 'voice_akama_shade_intro_01', delayAfter: 3500 },
-      // { speaker: 'akama', text: '[PLACEHOLDER] The Shade has drained this place long enough. Fight with me!', voiceKey: 'voice_akama_shade_intro_02', delayAfter: 3500 },
-      // { speaker: 'shade', text: '[PLACEHOLDER] You cannot kill what has already been consumed.', voiceKey: 'voice_shade_intro_01', delayAfter: 3000 },
+      { speaker: 'shade', text: 'I live again', voiceKey: 'voice_akama_shade_intro_01', delayAfter: 4000 },
+      { speaker: 'akama', text: 'Slay all who see us. Word must not get back to Illidan!', voiceKey: 'voice_akama_shade_intro_02', delayAfter: 6000 },
+      { speaker: 'shade', text: 'My soul consumed by hate!', voiceKey: 'voice_akama_shade_intro_03', delayAfter: 4500 },
+      { speaker: 'shade', text: 'Die!!', voiceKey: 'voice_akama_shade_intro_04', delayAfter: 3000 },
     ],
     transition: {
       opening: {

@@ -1,5 +1,6 @@
 import {
   AUDIO_STORAGE_KEYS,
+  CONTROLLER_AUDIO,
   createDefaultControllerAudioSettings,
 } from '../../shared/AudioConfig.js'
 
@@ -13,6 +14,7 @@ export default class ControllerAudio {
     this._enabled = true
     this._gain = null
     this._settings = createDefaultControllerAudioSettings()
+    this._levelUpBuffer = null
     this._loadSettings()
   }
 
@@ -29,9 +31,19 @@ export default class ControllerAudio {
       this._gain.connect(this._ctx.destination)
       this._applySettings()
       this._ctx.resume().catch(() => {})
+      this._preloadLevelUpBuffer()
     } catch {
       this._enabled = false
     }
+  }
+
+  _preloadLevelUpBuffer() {
+    if (!this._ctx) return
+    fetch(CONTROLLER_AUDIO.levelUp.src)
+      .then(r => { if (!r.ok) throw new Error(); return r.arrayBuffer() })
+      .then(ab => this._ctx.decodeAudioData(ab))
+      .then(buf => { this._levelUpBuffer = buf })
+      .catch(() => {})
   }
 
   handleJoin() {
@@ -46,9 +58,21 @@ export default class ControllerAudio {
 
   handleLevelUp() {
     this.init()
-    this._tone(523, 'triangle', 0.07, 0.01, 0.05, 0.10)
-    setTimeout(() => this._tone(659, 'triangle', 0.07, 0.01, 0.05, 0.10), 110)
-    setTimeout(() => this._tone(784, 'triangle', 0.10, 0.01, 0.10, 0.20), 220)
+    if (this._levelUpBuffer) {
+      this._playBuffer(this._levelUpBuffer)
+    } else {
+      this._tone(523, 'triangle', 0.07, 0.01, 0.05, 0.10)
+      setTimeout(() => this._tone(659, 'triangle', 0.07, 0.01, 0.05, 0.10), 110)
+      setTimeout(() => this._tone(784, 'triangle', 0.10, 0.01, 0.10, 0.20), 220)
+    }
+  }
+
+  _playBuffer(buffer) {
+    if (!this._ctx || !this._gain) return
+    const src = this._ctx.createBufferSource()
+    src.buffer = buffer
+    src.connect(this._gain)
+    src.start()
   }
 
   _loadSettings() {

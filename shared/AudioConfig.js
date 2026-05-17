@@ -25,6 +25,14 @@ export const CONTROLLER_AUDIO_BUS_DEFAULTS = {
   sfx: 0.65,
 }
 
+export const CONTROLLER_AUDIO = {
+  levelUp: { key: 'sfx_controller_level_up', src: '/assets/sounds/sfx_controller_level_up.ogg' },
+}
+
+export const SFX_VOLUME_SCALES = {
+  impact: 0.3,
+}
+
 export const AUDIO_DUCKING = {
   voiceMusicMultiplier: 0.45,
   voiceSfxMultiplier: 0.85,

@@ -327,7 +327,7 @@ const SkillDatabase = {
       damage:       8,
       healAmount:   12,
       speed:        600,
-      radius:       10,
+      radius:       14,
       range:        600,
       pierce:       false,
       canHitAllies: true,

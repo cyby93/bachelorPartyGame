@@ -5,6 +5,7 @@ import {
   AUDIO_DUCKING,
   HIT_FLESH_KEYS,
   SKILL_AUDIO_ONE_SHOTS,
+  SFX_VOLUME_SCALES,
   createDefaultAudioSettings,
   getDialogAudio,
   getLevelAudio,
@@ -23,6 +24,11 @@ function clamp01(value) {
 
 function nowMs() {
   return performance?.now?.() ?? Date.now()
+}
+
+function sfxCategoryScale(key) {
+  const m = String(key ?? '').match(/_([a-z]+)$/)
+  return m ? (SFX_VOLUME_SCALES[m[1]] ?? 1) : 1
 }
 
 function createWebAudioContext() {
@@ -431,13 +437,9 @@ export default class AudioManager {
       : withResolvedAudioPaths(getOneShotAudio(_key), options.bus === 'voice' ? 'voice' : 'sfx')
 
     if (asset?.src) {
-      this._playHtmlOneShot(asset.src, options.bus ?? 'sfx', options.volumeScale ?? 1)
-      return
+      const volumeScale = options.volumeScale ?? sfxCategoryScale(_key)
+      this._playHtmlOneShot(asset.src, options.bus ?? 'sfx', volumeScale)
     }
-
-    const bus = options.bus ?? 'sfx'
-    const pitch = options.fallbackPitch ?? this._pitchFromFamily(options.family)
-    this._tone(220 * pitch, 'square', 0.08 * (options.volumeScale ?? 1), 0, 0.05, 0.09, 18, bus)
   }
 
   _playHtmlOneShot(src, busName, volumeScale = 1) {
@@ -448,11 +450,7 @@ export default class AudioManager {
     el.volume = clamp01(this._settings.master) * busVolume * clamp01(volumeScale) * duckScale
     el.muted = !!this._settings.muted
     el.preload = 'auto'
-    el.play().catch(() => {
-      const family = busName === 'voice' ? 'voice_fallback' : 'sfx_fallback'
-      const fallbackPitch = busName === 'voice' ? 0.85 : undefined
-      this._tone(220 * (fallbackPitch ?? this._pitchFromFamily(family)), 'square', 0.08 * volumeScale, 0, 0.05, 0.09, 18, busName)
-    })
+    el.play().catch(() => {})
     return el
   }
 

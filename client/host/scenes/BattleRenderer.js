@@ -188,11 +188,11 @@ export default class BattleRenderer extends BaseRenderer {
   _onPlayerSync(p, sprite, pos, dt) {
     const prevHp = this._prevPlayerHp[p.id]
 
-    if (prevHp != null && p.hp < prevHp && !p.isDead) {
+    if (prevHp != null && p.hp < prevHp && !p.isDowned) {
       const color = CLASSES[p.className]?.color ?? '#ffffff'
       this.vfx?.particles.hitSpark(pos.x, pos.y, color)
     }
-    if (prevHp != null && prevHp > 0 && p.isDead) {
+    if (prevHp != null && prevHp > 0 && p.isDowned) {
       const color = CLASSES[p.className]?.color ?? '#ffffff'
       this.vfx?.triggerDeath(pos.x, pos.y, color)
     }

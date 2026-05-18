@@ -284,7 +284,7 @@ export default class AudioManager {
 
       this._channelPlayers.set(player.id, { castSkill, isChanneling, castSfxEl })
 
-      if (!player || player.isHost || !player.isDead) continue
+      if (!player || player.isHost || !player.isDowned) continue
       deadNow.add(player.id)
       if (!this._lastDownedPlayers.has(player.id)) {
         const t = nowMs()

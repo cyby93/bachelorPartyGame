@@ -17,7 +17,7 @@ function _nearestPlayer(players, x, y) {
   let nearest  = null
   let bestDist = 300
   players.forEach(p => {
-    if (p.isHost || p.isDead || p.isInvisible) return
+    if (p.isHost || p.isDowned || p.isInvisible) return
     const d = Math.hypot(p.x - x, p.y - y)
     if (d < bestDist) { bestDist = d; nearest = p }
   })

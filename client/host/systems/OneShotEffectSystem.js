@@ -47,6 +47,64 @@ export default class OneShotEffectSystem {
   }
 
   /**
+   * Melee rect thrust — 0.15s oriented rectangle that lunges forward and fades.
+   * Used for precise narrow attacks (Rogue Sinister Strike) where the hitbox is
+   * a rectangle aligned to the aim direction rather than a cone.
+   */
+  meleeRect(x, y, facing, range, width, color) {
+    const c = parseColor(color)
+    const duration = 0.15
+    const gfx = this._getGfx()
+    gfx.position.set(x, y)
+    gfx.alpha = 1
+    gfx.scale.set(1)
+
+    const fx = Math.cos(facing)    // forward axis
+    const fy = Math.sin(facing)
+    const lx = -Math.sin(facing)   // lateral axis (left perpendicular)
+    const ly = Math.cos(facing)
+    const hw = width / 2
+
+    this._active.push({
+      gfx,
+      elapsed: 0,
+      duration,
+      update: (progress) => {
+        gfx.clear()
+        const front = range * (0.6 + 0.4 * progress)
+        const fade  = 1 - progress
+
+        // Oriented rectangle in local space
+        const x0 =  lx * hw,              y0 =  ly * hw              // back-left
+        const x1 = -lx * hw,              y1 = -ly * hw              // back-right
+        const x2 = fx * front - lx * hw,  y2 = fy * front - ly * hw  // front-right
+        const x3 = fx * front + lx * hw,  y3 = fy * front + ly * hw  // front-left
+
+        // Filled body
+        gfx.moveTo(x0, y0)
+        gfx.lineTo(x1, y1)
+        gfx.lineTo(x2, y2)
+        gfx.lineTo(x3, y3)
+        gfx.closePath()
+        gfx.fill({ color: c, alpha: 0.30 * fade })
+
+        // Outer edge
+        gfx.moveTo(x0, y0)
+        gfx.lineTo(x1, y1)
+        gfx.lineTo(x2, y2)
+        gfx.lineTo(x3, y3)
+        gfx.closePath()
+        gfx.stroke({ color: 0xffffff, width: 1.5, alpha: 0.55 * fade })
+
+        // Bright leading edge — accentuates forward reach
+        gfx.moveTo(x3, y3)
+        gfx.lineTo(x2, y2)
+        gfx.stroke({ color: 0xffffff, width: 3, alpha: 0.80 * fade })
+      }
+    })
+  }
+
+  /**
    * AOE flash — 0.5s expanding ring that fades.
    */
   aoeFlash(x, y, radius, color) {

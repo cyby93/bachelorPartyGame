@@ -573,7 +573,7 @@ export default class GameServer {
           for (let i = 0; i < 4; i++) p.skillUpgrades[i] = skillTiers[i]
         }
         p.hp          = p.maxHp
-        p.isDead      = false
+        p.isDowned      = false
         p.activeCast  = null
         p.shieldActive = false
         p.activeEffects = []
@@ -666,7 +666,7 @@ export default class GameServer {
         for (let i = 0; i < 4; i++) p.skillUpgrades[i] = skillTiers[i]
       }
       p.hp              = p.maxHp   // full HP — set AFTER overrides so upgraded maxHp is used
-      p.isDead          = false
+      p.isDowned          = false
       p.activeCast      = null
       p.shieldActive    = false
       p.activeEffects   = []
@@ -1188,11 +1188,11 @@ export default class GameServer {
     // 2. Update players
     this.players.forEach(p => p.update(dt))
 
-    // 2b. Wall collision for players
+    // 2b. Wall collision for players (includes downed players who can now crawl)
     if (this._wallSegments.length > 0) {
       const isGateDead = (id) => this._isGateDead(id)
       this.players.forEach(p => {
-        if (p.isHost || p.isDead) return
+        if (p.isHost) return
         const resolved = resolveWallCollision(p.x, p.y, GAME_CONFIG.PLAYER_RADIUS_X, this._wallSegments, isGateDead)
         p.x = resolved.x
         p.y = resolved.y
@@ -1310,7 +1310,7 @@ export default class GameServer {
   // ── Skill processing ────────────────────────────────────────────────────────
 
   _processSkillInput(player, input) {
-    if (player.isDead) return
+    if (player.isDowned) return
     if (this.scene !== 'lobby' && this.scene !== 'trainingGrounds' && this.scene !== 'battle' && this.scene !== 'bossFight') return
 
     const { index, vector, action } = input
@@ -1433,6 +1433,7 @@ export default class GameServer {
       range:     config.range ?? 0,
       color:     classColor,
     }
+    if (config.width != null) _skillPayload.width = config.width
     if (_preDashX !== null && config.subtype === 'TELEPORT') {
       _skillPayload.srcX = _preDashX
       _skillPayload.srcY = _preDashY
@@ -1544,14 +1545,14 @@ export default class GameServer {
       // Shadow Demon: instant kill on contact (Level 5)
       if (e.type === 'shadowDemon' && now - (e._lastContactDamage ?? 0) > 1000) {
         this.players.forEach(p => {
-          if (p.isHost || p.isDead) return
+          if (p.isHost || p.isDowned) return
           if (playerHitsEntity(p.x, p.y, e)) {
             const { damage: shadowDmg } = p.shieldResult(e.x, e.y, p.maxHp * 10)
             if (shadowDmg <= 0) return
             e._lastContactDamage = now
             p.takeDamage(shadowDmg)
             this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: 9999, type: 'damage', sourceSkill: 'Shadow Demon' })
-            if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
+            if (p.isDowned) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
           }
         })
       }
@@ -1559,7 +1560,7 @@ export default class GameServer {
       // Shadowfiend: infects next player on contact (Level 6)
       if (e.type === 'shadowfiend' && !e._infectedTarget && now - e._lastContactDamage > 500) {
         this.players.forEach(p => {
-          if (p.isHost || p.isDead || p.id === e.sourcePlayerId) return
+          if (p.isHost || p.isDowned || p.id === e.sourcePlayerId) return
           if (playerHitsEntity(p.x, p.y, e)) {
             e._infectedTarget = true
             e._lastContactDamage = now
@@ -1582,7 +1583,7 @@ export default class GameServer {
 
       if (e.meleeDamage > 0 && now - e._lastContactDamage > e._attackCooldown) {
         this.players.forEach(p => {
-          if (p.isHost || p.isDead) return
+          if (p.isHost || p.isDowned) return
           if (playerHitsEntity(p.x, p.y, e)) {
             const { damage: meleeDmg, type: meleeType } = p.shieldResult(e.x, e.y, e.meleeDamage)
             if (meleeDmg <= 0) return
@@ -1591,7 +1592,7 @@ export default class GameServer {
             const _meleeSourceSkill = e.type === 'leviathan' ? 'Leviathan Melee' : 'Melee'
             this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: meleeDmg, type: meleeType, sourceSkill: _meleeSourceSkill })
             if (!this.stats.deaths) this.stats.deaths = {}
-            if (p.isDead) {
+            if (p.isDowned) {
               this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
             }
           }
@@ -1695,11 +1696,11 @@ export default class GameServer {
     } else if (action.action === 'burningAuraTick') {
       // Flame of Azzinoth burning aura — damage nearby players
       this.players.forEach(p => {
-        if (p.isHost || p.isDead) return
+        if (p.isHost || p.isDowned) return
         if (playerHitsCircle(p.x, p.y, action.x, action.y, action.radius)) {
           p.takeDamage(action.damage)
           this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: action.damage, type: 'damage', sourceSkill: 'Burning Aura' })
-          if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
+          if (p.isDowned) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
         }
       })
       // Visual pulse so players see the aura radius on each tick
@@ -1707,13 +1708,13 @@ export default class GameServer {
     } else if (action.action === 'berserkAoeTick') {
       // Bonechewer Blade Fury whirlwind spin — AoE damage around the enemy
       this.players.forEach(p => {
-        if (p.isHost || p.isDead) return
+        if (p.isHost || p.isDowned) return
         if (playerHitsCircle(p.x, p.y, action.x, action.y, action.radius)) {
           const { damage: whirlDmg, type: whirlType } = p.shieldResult(action.x, action.y, action.damage)
           if (whirlDmg <= 0) return
           p.takeDamage(whirlDmg)
           this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: whirlDmg, type: whirlType, sourceSkill: 'Whirlwind' })
-          if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
+          if (p.isDowned) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
         }
       })
     } else if (action.action === 'bloodProphetBuff') {
@@ -1837,7 +1838,7 @@ export default class GameServer {
       if (pylon.state === 'inactive') {
         // Charge accumulation — one charge per player per second of proximity
         this.players.forEach(p => {
-          if (p.isHost || p.isDead) return
+          if (p.isHost || p.isDowned) return
           const dist = Math.hypot(p.x - pylon.x, p.y - pylon.y)
           if (dist <= cfg.chargeRadius) {
             pylon._playerAccum[p.id] = (pylon._playerAccum[p.id] ?? 0) + dt
@@ -1914,12 +1915,12 @@ export default class GameServer {
       } else if (attack.type === 'aoe') {
         const r = attack.radius ?? 100
         this.players.forEach(p => {
-          if (p.isHost || p.isDead) return
+          if (p.isHost || p.isDowned) return
           if (playerHitsCircle(p.x, p.y, attack.bossX, attack.bossY, r)) {
             const { damage: aoeDmg } = p.shieldResult(attack.bossX, attack.bossY, attack.damage ?? 25)
             if (aoeDmg <= 0) return
             p.takeDamage(aoeDmg)
-            if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
+            if (p.isDowned) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
           }
         })
       } else if (attack.type === 'charge') {
@@ -1936,7 +1937,7 @@ export default class GameServer {
 
     // Contact damage: per-player rate-limited
     this.players.forEach(p => {
-      if (p.isHost || p.isDead) return
+      if (p.isHost || p.isDowned) return
       if (playerHitsEntity(p.x, p.y, this.boss, 5)) {
         const { damage: contactDmg } = p.shieldResult(this.boss.x, this.boss.y, 5)
         if (contactDmg <= 0) return
@@ -1944,7 +1945,7 @@ export default class GameServer {
         if (now - p._lastBossContact > 500) {
           p._lastBossContact = now
           p.takeDamage(contactDmg)
-          if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
+          if (p.isDowned) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
         }
       }
     })
@@ -1985,7 +1986,7 @@ export default class GameServer {
 
     // Contact damage to players who wander too close
     this.players.forEach(p => {
-      if (p.isHost || p.isDead) return
+      if (p.isHost || p.isDowned) return
       if (playerHitsEntity(p.x, p.y, this.boss, 5)) {
         const { damage: contactDmg } = p.shieldResult(this.boss.x, this.boss.y, 5)
         if (contactDmg <= 0) return
@@ -1993,7 +1994,7 @@ export default class GameServer {
         if (now - p._lastBossContact > 500) {
           p._lastBossContact = now
           p.takeDamage(contactDmg)
-          if (p.isDead) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
+          if (p.isDowned) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
         }
       }
     })
@@ -2045,16 +2046,16 @@ export default class GameServer {
   // ── Revive mechanic ─────────────────────────────────────────────────────────
 
   _checkRevive(now) {
-    const deadPlayers  = []
+    const downedPlayers  = []
     const alivePlayers = []
 
     this.players.forEach(p => {
       if (p.isHost) return
-      if (p.isDead) deadPlayers.push(p)
+      if (p.isDowned) downedPlayers.push(p)
       else          alivePlayers.push(p)
     })
 
-    deadPlayers.forEach(dead => {
+    downedPlayers.forEach(dead => {
       let reviver = null
       for (const alive of alivePlayers) {
         const d = Math.hypot(alive.x - dead.x, alive.y - dead.y)
@@ -2427,7 +2428,7 @@ export default class GameServer {
     if (this.currentLevel?.debugSandbox) return
     let livingCount = 0
     this.players.forEach(p => {
-      if (!p.isHost && !p.isDead) livingCount++
+      if (!p.isHost && !p.isDowned) livingCount++
     })
     if (livingCount === 0 && this.players.size > 0) {
       console.log('[~] All players dead — game over')

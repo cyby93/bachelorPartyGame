@@ -34,8 +34,8 @@
   $: maxDmg = dmgRows[0]?.total || 1;
   $: maxHeal = healRows[0]?.total || 1;
   $: sortedPlayers = [
-    ...players.filter((p) => !p.isDead),
-    ...players.filter((p) => p.isDead),
+    ...players.filter((p) => !p.isDowned),
+    ...players.filter((p) => p.isDowned),
   ];
   $: quizStats = stats?.quiz ?? {};
   $: hasQuiz = Object.keys(quizStats).length > 0;
@@ -114,7 +114,7 @@
         <span>Revives</span>
       </div>
       {#each sortedPlayers as p (p.id)}
-        {@const color = p.isDead
+        {@const color = p.isDowned
           ? "#663333"
           : (CLASSES[p.className]?.color ?? "#ffffff")}
         <div class="deaths-row">
@@ -135,7 +135,7 @@
           <span>Wrong</span>
         </div>
         {#each sortedPlayers as p (p.id)}
-          {@const color = p.isDead
+          {@const color = p.isDowned
             ? "#663333"
             : (CLASSES[p.className]?.color ?? "#ffffff")}
           {@const q = quizStats[p.id] ?? { correct: 0, wrong: 0 }}

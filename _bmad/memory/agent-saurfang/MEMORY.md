@@ -25,3 +25,16 @@ Always check `type` + `subtype` in SkillDatabase to know which server path owns 
 ## Zone DTO fields
 
 `getZonesDTO()` now includes `skillName: z.config?.name ?? null`. Thrall uses this to render Consecration differently from other ground zones.
+
+## Melee hitbox shapes — rect vs cone
+
+`_executeMelee()` in `SkillSystem.js` supports two hitbox shapes:
+
+- **Cone** (default): `config.angle` present → `inCone()`. Used by Warrior, Paladin, DK.
+- **Oriented rect**: `config.width` present → `inOrientedRect()`. Used by Rogue (Sinister Strike).
+
+Discriminator is `config.width != null`. No new type/subtype needed.
+
+`inOrientedRect()` in `CollisionSystem.js` takes an optional `targetRadius` for rect-vs-circle overlap (not point-in-rect). All four hit loops in `_executeMelee` pass the target's `.radius`. If `targetRadius = 0`, falls back to pure point-in-rect.
+
+SKILL_FIRED payload includes `width: config.width` when set — Thrall's VFX branches on `d.width != null` to call `meleeRect` vs `meleeArc`.

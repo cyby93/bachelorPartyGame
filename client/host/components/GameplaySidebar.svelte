@@ -109,12 +109,12 @@
         {@const color = CLASSES[player.className]?.color ?? '#ffffff'}
         {@const maxHp = Math.max(1, player.maxHp ?? player.hp ?? 1)}
         {@const hp = Math.max(0, Math.ceil(player.hp ?? 0))}
-        {@const hpPct = player.isDead ? 0 : Math.max(0, Math.min(1, hp / maxHp))}
+        {@const hpPct = player.isDowned ? 0 : Math.max(0, Math.min(1, hp / maxHp))}
         {@const iconFile = (player.className ?? '').toLowerCase()}
-        <div class="roster-row" class:dead={player.isDead} style="--hp-pct:{hpPct}">
+        <div class="roster-row" class:downed={player.isDowned} style="--hp-pct:{hpPct}">
           <img class="row-class-icon" src="/icons/classes/classicon_{iconFile}.jpg" alt={player.className} />
           <div class="roster-name" style="color:{color}">{player.name}</div>
-          <div class="roster-hp">{player.isDead ? 'Dead' : String(hp)}</div>
+          <div class="roster-hp">{player.isDowned ? 'Downed' : String(hp)}</div>
         </div>
       {/each}
     {/if}

@@ -34,7 +34,7 @@ export default class ServerPlayer {
     this.moveAngle = 0
     this.aimAngle  = 0
 
-    this.isDead = false
+    this.isDowned = false
 
     // Active timed effects
     this.activeEffects = []
@@ -91,7 +91,21 @@ export default class ServerPlayer {
   // ── Per-tick update ───────────────────────────────────────────────────
 
   update(dt) {
-    if (this.isDead || this.isRooted || this.isStunned) return
+    if (this.isDowned) {
+      // Downed players can crawl but cannot use abilities (gated in _processSkillInput).
+      const pps = GAME_CONFIG.CRAWL_SPEED * 60
+      this.x += this.moveX * pps * dt
+      this.y += this.moveY * pps * dt
+      const r = GAME_CONFIG.PLAYER_RADIUS
+      this.x = Math.max(r, Math.min(this.arenaWidth  - r, this.x))
+      this.y = Math.max(r, Math.min(this.arenaHeight - r, this.y))
+      if (this.moveX !== 0 || this.moveY !== 0) {
+        this.angle = this.moveAngle
+      }
+      return
+    }
+
+    if (this.isRooted || this.isStunned) return
 
     // Speed was originally tuned at 60 FPS (pixels per frame).
     // Multiply by 60 to convert to pixels-per-second, then scale by dt (seconds).
@@ -126,7 +140,7 @@ export default class ServerPlayer {
    * @returns {number}  Actual HP damage dealt (0 if fully absorbed by shield)
    */
   takeDamage(amount, minHp = 0) {
-    if (this.isDead) return 0
+    if (this.isDowned) return 0
     let remaining = amount
     if (this.shieldAbsorb > 0) {
       const absorbed = Math.min(this.shieldAbsorb, remaining)
@@ -144,19 +158,23 @@ export default class ServerPlayer {
     }
     const dealt = Math.round(remaining)
     this.hp = Math.max(minHp, this.hp - dealt)
-    if (minHp === 0 && this.hp === 0) this.isDead = true
+    if (minHp === 0 && this.hp === 0) this.isDowned = true
     return dealt
   }
 
   heal(amount) {
-    if (this.isDead) return
+    if (this.isDowned) return
     this.hp = Math.min(this.maxHp, this.hp + amount)
   }
 
   revive() {
-    this.isDead = false
+    this.isDowned = false
     this.hp     = Math.floor(this.maxHp * 0.4)
   }
+
+  // Alias so polymorphic damage code (which targets both players and enemies) works unchanged.
+  get isDead() { return this.isDowned }
+  set isDead(v) { this.isDowned = v }
 
   // ── Shield helpers ───────────────────────────────────────────────────
 
@@ -234,7 +252,7 @@ export default class ServerPlayer {
       aimAngle:  +this.aimAngle.toFixed(3),
       hp:        Math.ceil(this.hp),
       maxHp:     this.maxHp,
-      isDead:    this.isDead,
+      isDowned:    this.isDowned,
       speed:     this.speed,
       effects:   this.activeEffects.map(e => ({ src: e.source, params: e.params })),
     }
@@ -247,7 +265,7 @@ export default class ServerPlayer {
   toDeltaDTO() {
     const cur  = this._snapshot()
     const prev = this._prev
-    const delta = { id: this.id, isDead: cur.isDead }
+    const delta = { id: this.id, isDowned: cur.isDowned }
 
     if (cur.x      !== prev.x)      delta.x      = cur.x
     if (cur.y      !== prev.y)      delta.y      = cur.y
@@ -309,7 +327,7 @@ export default class ServerPlayer {
       aimAngle:    +this.aimAngle.toFixed(3),
       hp:          Math.ceil(this.hp),
       maxHp:       this.maxHp,
-      isDead:      this.isDead,
+      isDowned:      this.isDowned,
       isInvisible:  this.isInvisible,
       comboPoints:  this.comboPoints,
       isAiming:     this.isAiming,

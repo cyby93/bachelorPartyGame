@@ -129,7 +129,7 @@ export default class ServerBoss {
     let nearest = null
     let bestDist = Infinity
     players.forEach(p => {
-      if (p.isHost || p.isDead || p.isInvisible) return
+      if (p.isHost || p.isDowned || p.isInvisible) return
       const d = Math.hypot(p.x - this.x, p.y - this.y)
       if (d < bestDist) { bestDist = d; nearest = p }
     })
@@ -171,7 +171,7 @@ export default class ServerBoss {
       let nearest = null
       let bestDist = Infinity
       players.forEach(p => {
-        if (p.isHost || p.isDead || p.isInvisible) return
+        if (p.isHost || p.isDowned || p.isInvisible) return
         const d = Math.hypot(p.x - this.x, p.y - this.y)
         if (d < bestDist) { bestDist = d; nearest = p }
       })

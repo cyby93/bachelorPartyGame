@@ -549,8 +549,8 @@ const SkillDatabase = {
       inputType:      'DIRECTIONAL',
       cooldown:       500,
       damage:         7,
-      range:          100,
-      angle:          Math.PI / 3,   // 60° cone — very precise
+      range:          100,   // longer reach than cone peers — rewarded by precise aim
+      width:          10,    // 40px each side; rectangular hitbox aligned to aim direction
       addsComboPoint: true,
       icon:           '🗡️',
       iconFile:       'spell_shadow_ritualofsacrifice'

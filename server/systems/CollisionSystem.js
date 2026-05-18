@@ -65,6 +65,44 @@ export default class CollisionSystem {
   }
 
   /**
+   * Oriented rectangle check — used for narrow/precise melee attacks (e.g. Rogue).
+   * The rectangle extends from the attacker along the aim direction:
+   *   forward:  [0, range]
+   *   lateral:  [-halfWidth, halfWidth]
+   *
+   * When targetRadius > 0, uses a closest-point expansion: returns true if the
+   * nearest point on the rectangle to the target centre is within targetRadius.
+   * This makes the check rect-vs-circle rather than rect-contains-point, so hits
+   * register when the target body overlaps the rect edge (not just when the centre
+   * is inside).
+   *
+   * @param {object} origin       – { x, y } attacker position
+   * @param {object} dirVector    – { x, y } normalised aim direction
+   * @param {number} range        – length of the rectangle in pixels
+   * @param {number} halfWidth    – half the width of the rectangle in pixels
+   * @param {object} target       – { x, y } target position
+   * @param {number} targetRadius – collision radius of the target (default 0 = point check)
+   * @returns {boolean}
+   */
+  inOrientedRect(origin, dirVector, range, halfWidth, target, targetRadius = 0) {
+    const dx = target.x - origin.x
+    const dy = target.y - origin.y
+    const forward = dx * dirVector.x + dy * dirVector.y
+    const lateral = dx * (-dirVector.y) + dy * dirVector.x
+
+    if (targetRadius === 0) {
+      return forward >= 0 && forward <= range && Math.abs(lateral) <= halfWidth
+    }
+
+    // Closest point on the rect to the target centre (in local frame)
+    const clampedFwd = Math.max(0, Math.min(forward, range))
+    const clampedLat = Math.max(-halfWidth, Math.min(lateral, halfWidth))
+    const dFwd = forward - clampedFwd
+    const dLat = lateral - clampedLat
+    return (dFwd * dFwd + dLat * dLat) <= (targetRadius * targetRadius)
+  }
+
+  /**
    * True if a circle overlaps an axis-aligned rectangle.
    * @param {{ x, y, radius }} circle – circle centre + radius
    * @param {{ x, y, width, height }} rect – rect defined by centre + size

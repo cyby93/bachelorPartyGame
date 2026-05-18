@@ -46,7 +46,7 @@ export default class BotController {
 
     this.bots.forEach((botState, botId) => {
       const player = this.players.get(botId)
-      if (!player || player.isDead) return
+      if (!player || player.isDowned) return
 
       const queue = this.inputQueues.get(botId)
       if (!queue) return
@@ -67,7 +67,7 @@ export default class BotController {
       if (isHealer) {
         let worstRatio = 1
         this.players.forEach(p => {
-          if (p.id === botId || p.isDead || p.isHost) return
+          if (p.id === botId || p.isDowned || p.isHost) return
           const ratio = p.hp / p.maxHp
           if (ratio < worstRatio) { worstRatio = ratio; healTarget = p }
         })
@@ -118,7 +118,7 @@ export default class BotController {
           } else {
             let cx = 0, cy = 0, count = 0
             this.players.forEach(p => {
-              if (p.isHost || p.isDead) return
+              if (p.isHost || p.isDowned) return
               cx += p.x; cy += p.y; count++
             })
             if (count > 0) {

@@ -170,7 +170,7 @@ export default class PortalBeamSystem {
     const hw = this._beamWidth / 2
 
     players.forEach(p => {
-      if (p.isDead || p.isHost) return
+      if (p.isDowned || p.isHost) return
       if (segments.some(seg => this._pointNearSegment(p.x, p.y, seg.x1, seg.y1, seg.x2, seg.y2, hw))) {
         dealDmgFn(p, dmg)
       }

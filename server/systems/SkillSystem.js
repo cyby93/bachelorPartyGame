@@ -182,14 +182,21 @@ export default class SkillSystem {
   }
 
   _executeMelee(gs, player, config, v) {
-    const halfAngle = (config.angle ?? Math.PI / 3) / 2
+    const useRect = config.width != null
+    const halfAngle = useRect ? 0 : (config.angle ?? Math.PI / 3) / 2
+    const halfWidth = useRect ? config.width / 2 : 0
+
+    const _inHitbox = (tx, ty, tr = 0) => useRect
+      ? this._collision.inOrientedRect({ x: player.x, y: player.y }, v, config.range, halfWidth, { x: tx, y: ty }, tr)
+      : this._collision.inCone({ x: player.x, y: player.y }, v, halfAngle, config.range, { x: tx, y: ty })
+
     let hitCount = 0
     let totalDamageDealt = 0
 
     // Hit enemies
     gs.enemies.forEach(e => {
       if (e.isDead) return
-      if (this._collision.inCone({ x: player.x, y: player.y }, v, halfAngle, config.range, { x: e.x, y: e.y })) {
+      if (_inHitbox(e.x, e.y, e.radius)) {
         const dealt = this._dealDamage(gs, player, e, config.damage ?? 0, config.name)
         totalDamageDealt += dealt
         hitCount++
@@ -211,7 +218,7 @@ export default class SkillSystem {
 
     // Hit boss
     if (gs.boss && !gs.boss.isDead && !gs.boss.isImmune) {
-      if (this._collision.inCone({ x: player.x, y: player.y }, v, halfAngle, config.range, { x: gs.boss.x, y: gs.boss.y })) {
+      if (_inHitbox(gs.boss.x, gs.boss.y, gs.boss.radius)) {
         const dealt = this._dealDamage(gs, player, gs.boss, config.damage ?? 0, config.name)
         totalDamageDealt += dealt
         hitCount++
@@ -222,7 +229,7 @@ export default class SkillSystem {
     if (gs.gates) {
       gs.gates.forEach(gate => {
         if (gate.isDead || !gate.isActive) return
-        if (this._collision.inCone({ x: player.x, y: player.y }, v, halfAngle, config.range, { x: gate.x, y: gate.y })) {
+        if (_inHitbox(gate.x, gate.y, gate.radius)) {
           gate.takeDamage(Math.round((config.damage ?? 0) * (player.damageMult ?? 1)))
           hitCount++
         }
@@ -233,7 +240,7 @@ export default class SkillSystem {
     if (gs.buildings) {
       gs.buildings.forEach(building => {
         if (building.isDead) return
-        if (this._collision.inCone({ x: player.x, y: player.y }, v, halfAngle, config.range, { x: building.x, y: building.y })) {
+        if (_inHitbox(building.x, building.y, building.radius)) {
           building.takeDamage(Math.round((config.damage ?? 0) * (player.damageMult ?? 1)))
           hitCount++
         }
@@ -772,7 +779,7 @@ export default class SkillSystem {
     if (effectType === 'HEAL') {
       // Heal all living players in radius
       gs.players.forEach(p => {
-        if (p.isDead || p.isHost) return
+        if (p.isDowned || p.isHost) return
         if (this._collision.distance({ x: cx, y: cy }, { x: p.x, y: p.y }) <= radius) {
           const amount = config.healAmount ?? 0
           p.heal(amount)
@@ -799,7 +806,7 @@ export default class SkillSystem {
     if (effectType === 'BUFF') {
       // Buff all living players in radius
       gs.players.forEach(p => {
-        if (p.isDead || p.isHost) return
+        if (p.isDowned || p.isHost) return
         if (this._collision.distance({ x: cx, y: cy }, { x: p.x, y: p.y }) <= radius) {
           if (config.effectParams) {
             p.activeEffects.push({
@@ -818,7 +825,7 @@ export default class SkillSystem {
       // Damage enemies + heal players
       this._aoeHitEnemies(gs, player, config, cx, cy, radius)
       gs.players.forEach(p => {
-        if (p.isDead || p.isHost) return
+        if (p.isDowned || p.isHost) return
         if (this._collision.distance({ x: cx, y: cy }, { x: p.x, y: p.y }) <= radius) {
           const amount = config.healAmount ?? 0
           p.heal(amount)
@@ -845,7 +852,7 @@ export default class SkillSystem {
     if (effectType === 'REVIVE') {
       // Revive all dead players in radius
       gs.players.forEach(p => {
-        if (!p.isDead || p.isHost) return
+        if (!p.isDowned || p.isHost) return
         if (this._collision.distance({ x: cx, y: cy }, { x: p.x, y: p.y }) <= radius) {
           p.revive()
           if (player?.id) {
@@ -885,10 +892,10 @@ export default class SkillSystem {
     if (effectType === 'PLAYER_DAMAGE') {
       // Boss-owned zone that damages players (not enemies or boss itself)
       gs.players.forEach(p => {
-        if (p.isDead || p.isHost) return
+        if (p.isDowned || p.isHost) return
         if (this._collision.distance({ x: cx, y: cy }, { x: p.x, y: p.y }) <= radius + GAME_CONFIG.PLAYER_RADIUS_X) {
           this._dealDamage(gs, null, p, config.damage ?? 0, config.name)
-          if (p.isDead && gs.stats) gs.stats.deaths[p.id] = (gs.stats.deaths[p.id] ?? 0) + 1
+          if (p.isDowned && gs.stats) gs.stats.deaths[p.id] = (gs.stats.deaths[p.id] ?? 0) + 1
         }
       })
       return
@@ -1206,7 +1213,7 @@ export default class SkillSystem {
       // Collision check vs players — for canHitAllies projectiles (e.g. Penance heals allies)
       if (proj.isAlive && proj.canHitAllies) {
         gs.players.forEach(p => {
-          if (!proj.isAlive || p.isHost || p.isDead) return
+          if (!proj.isAlive || p.isHost || p.isDowned) return
           if (proj.hit.has(p.id)) return
           // Skip the caster unless this is a self-cast projectile
           if (p.id === proj.ownerId && !proj.selfCast) return
@@ -1244,7 +1251,7 @@ export default class SkillSystem {
       // Collision check vs players — for enemy-fired projectiles (e.g. RangedDummy)
       if (proj.isAlive && proj.isEnemyProj) {
         gs.players.forEach(p => {
-          if (!proj.isAlive || p.isHost || p.isDead) return
+          if (!proj.isAlive || p.isHost || p.isDowned) return
           if (proj.hit.has(p.id)) return
           const projCircle    = { x: proj.x, y: proj.y, radius: proj.radius }
           const playerEllipse = { x: p.x,    y: p.y,    rx: GAME_CONFIG.PLAYER_RADIUS_X, ry: GAME_CONFIG.PLAYER_RADIUS_Y }
@@ -1275,7 +1282,7 @@ export default class SkillSystem {
       const entry = this._pendingBursts[i]
       if (now < entry.spawnAt) continue
       const player = gs.players.get(entry.playerId)
-      if (!player || player.isDead) { this._pendingBursts.splice(i, 1); continue }
+      if (!player || player.isDowned) { this._pendingBursts.splice(i, 1); continue }
       this._spawnProjectile(gs, player, entry.config, {
         vx: entry.vx, vy: entry.vy, color: entry.color,
         selfCast: entry.selfCast,
@@ -1437,7 +1444,7 @@ export default class SkillSystem {
           if (!eff.lastHealTick) eff.lastHealTick = now
           if (now - eff.lastHealTick >= eff.params.tickRate) {
             eff.lastHealTick = now
-            if (!p.isDead) {
+            if (!p.isDowned) {
               p.heal(eff.params.healPerTick)
               this._trackHeal(gs, eff.ownerId, eff.params.healPerTick)
               if (gs.io) {
@@ -1604,7 +1611,7 @@ export default class SkillSystem {
       const elapsed = now - cast.startedAt
 
       // Player died — cancel silently
-      if (p.isDead) { p.activeCast = null; return }
+      if (p.isDowned) { p.activeCast = null; return }
 
       // Movement interrupt
       const moved = Math.hypot(p.x - cast.channelStartX, p.y - cast.channelStartY)
@@ -1832,7 +1839,7 @@ export default class SkillSystem {
     let best     = null
     let bestDist = Infinity
     gs.players.forEach(p => {
-      if (p.isDead || p.isHost || healedIds.has(p.id)) return
+      if (p.isDowned || p.isHost || healedIds.has(p.id)) return
       const dist = Math.hypot(p.x - pivotX, p.y - pivotY)
       if (dist > radius) return
       if (dist < bestDist) { bestDist = dist; best = p }
@@ -1850,7 +1857,7 @@ export default class SkillSystem {
   _findAllyForBuff(gs, player, v, range = 400) {
     let best = null, bestPerp = Infinity
     gs.players.forEach(p => {
-      if (p.isDead || p.isHost || p.id === player.id) return
+      if (p.isDowned || p.isHost || p.id === player.id) return
       const dx = p.x - player.x, dy = p.y - player.y
       const dist = Math.hypot(dx, dy)
       if (dist > range || dist < 5) return
@@ -1868,7 +1875,7 @@ export default class SkillSystem {
     let bestPerp = Infinity
 
     gs.players.forEach(p => {
-      if (p.isDead || p.isHost || p.id === player.id) return
+      if (p.isDowned || p.isHost || p.id === player.id) return
       const dx = p.x - player.x
       const dy = p.y - player.y
       const dist = Math.hypot(dx, dy)

@@ -96,7 +96,7 @@ export default class PlayerSprite {
     this._abilityTimer       = 0        // seconds remaining in one-shot ability animation
     this._currentAbilitySkill = null    // skillName being played in 'ability' state
     this._castSkill          = null     // skillName of the active cast (from STATE_DELTA.castSkill)
-    this._wasDead       = false    // previous isDead — detects death/resurrection transitions
+    this._wasDowned     = false    // previous isDowned — detects downed/resurrection transitions
 
     // ── Name label ───────────────────────────────────────────────────────
     this._nameText = new Text({
@@ -316,18 +316,18 @@ export default class PlayerSprite {
       if (this._animCfg) {
         // ── Animated directional sprite ──────────────────────────────────────
         // 1. Resolve animation state (downed > cast > ability > walk > idle)
-        const isDead = state.isDead ?? false
+        const isDowned = state.isDowned ?? false
 
-        if (isDead && !this._wasDead && this._animCfg?.downed) {
+        if (isDowned && !this._wasDowned && this._animCfg?.downed) {
           this._animState = 'downed'
           this._animFrame = 0
           this._animTimer = 0
-        } else if (!isDead && this._wasDead) {
+        } else if (!isDowned && this._wasDowned) {
           this._animState = 'idle'
           this._animFrame = 0
           this._animTimer = 0
         }
-        this._wasDead = isDead
+        this._wasDowned = isDowned
 
         const moved = this._lastRenderPos !== null &&
           (Math.abs(renderPos.x - this._lastRenderPos.x) > 0.3 ||
@@ -438,8 +438,8 @@ export default class PlayerSprite {
       this._flashGfx.alpha = 0
     }
 
-    // Dead: fade out — unless the downed animation is active (warlock has art for this)
-    this.container.alpha = (state.isDead && this._animState !== 'downed') ? 0.2 : 1.0
+    // Downed: fade out — unless the downed animation is active (warlock has art for this)
+    this.container.alpha = (state.isDowned && this._animState !== 'downed') ? 0.2 : 1.0
 
     // Shield arc
     const shieldOn = !!state.shieldActive

@@ -258,7 +258,7 @@ export default class BaseRenderer {
     this._beamGfx.clear()
 
     Object.values(state.players).forEach(p => {
-      if (p.isHost || p.isDead || !p.beamTargetId) return
+      if (p.isHost || p.isDowned || !p.beamTargetId) return
       const srcSprite = this.playerSprites.get(p.id)
       if (!srcSprite) return
 

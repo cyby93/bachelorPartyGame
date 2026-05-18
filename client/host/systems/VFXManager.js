@@ -71,7 +71,11 @@ export default class VFXManager {
 
     // ── Type-based fallbacks ─────────────────────────────────────────────────
     this._typeHandlers.set('MELEE', (d) => {
-      os.meleeArc(d.x, d.y, d.angle, d.range || 80, d.color)
+      if (d.width != null) {
+        os.meleeRect(d.x, d.y, d.angle, d.range || 160, d.width, d.color)
+      } else {
+        os.meleeArc(d.x, d.y, d.angle, d.range || 80, d.color)
+      }
     })
     this._typeHandlers.set('AOE', (d) => {
       if (d.subtype === 'AOE_LOBBED') { os.impactFlash(d.x, d.y, d.color); return }

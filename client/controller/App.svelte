@@ -28,7 +28,7 @@
   let myId        = $state(null)
   let playerName  = $state(sessionStorage.getItem('playerName') ?? '')
   let className   = $state('')
-  let isDead      = $state(false)
+  let isDowned    = $state(false)
   let cooldowns   = $state([0, 0, 0, 0])  // expiresAt timestamps per skill slot
   let lobbyReady  = $state(false)
 
@@ -193,9 +193,9 @@
       if (!myId) return
       const me = delta.players?.[myId]
       if (!me) return
-      const wasDead = isDead
-      if (me.isDead != null) isDead = me.isDead
-      if (!wasDead && isDead) {
+      const wasDowned = isDowned
+      if (me.isDowned != null) isDowned = me.isDowned
+      if (!wasDowned && isDowned) {
         controllerAudio.handlePlayerDown()
         navigator.vibrate?.([300, 100, 300])
       }
@@ -361,7 +361,7 @@
       <GameScreen
         {playerName}
         {className}
-        {isDead}
+        {isDowned}
         {cooldowns}
         lobbyMode={true}
         showFullscreenBtn={!isPortrait && !isIOS}
@@ -378,7 +378,7 @@
     <GameScreen
       {playerName}
       {className}
-      {isDead}
+      {isDowned}
       {cooldowns}
       showFullscreenBtn={!isPortrait && !isIOS}
       {isFullscreen}

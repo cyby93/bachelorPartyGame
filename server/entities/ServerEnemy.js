@@ -455,7 +455,7 @@ export default class ServerEnemy {
     if (now - this._lastTeleport >= this._teleportCooldown) {
       let tooClose = false
       players.forEach(p => {
-        if (p.isHost || p.isDead) return
+        if (p.isHost || p.isDowned) return
         if (Math.hypot(p.x - this.x, p.y - this.y) <= this._teleportRange) tooClose = true
       })
 
@@ -471,7 +471,7 @@ export default class ServerEnemy {
           const cy = Math.max(margin, Math.min(this.arenaHeight - margin, this.y + Math.sin(angle) * dist))
           let minDist = Infinity
           players.forEach(p => {
-            if (p.isHost || p.isDead) return
+            if (p.isHost || p.isDowned) return
             const d = Math.hypot(p.x - cx, p.y - cy)
             if (d < minDist) minDist = d
           })
@@ -541,7 +541,7 @@ export default class ServerEnemy {
     // Find all living, non-host, non-invisible players sorted by distance
     const candidates = []
     players.forEach(p => {
-      if (p.isHost || p.isDead || p.isInvisible) return
+      if (p.isHost || p.isDowned || p.isInvisible) return
       const d = Math.hypot(p.x - this.x, p.y - this.y)
       candidates.push({ player: p, dist: d })
     })
@@ -657,10 +657,10 @@ export default class ServerEnemy {
     }
 
     // Retarget if no valid target
-    if (!target || target.isDead || target.isHost) {
+    if (!target || target.isDowned || target.isHost) {
       let fallback = null
       players.forEach(p => {
-        if (p.isHost || p.isDead) return
+        if (p.isHost || p.isDowned) return
         if (!fallback) fallback = p
       })
       if (!fallback) return null
@@ -692,7 +692,7 @@ export default class ServerEnemy {
     let nearest = null
     let bestDist = Infinity
     players.forEach(p => {
-      if (p.isHost || p.isDead || p.id === this.sourcePlayerId) return
+      if (p.isHost || p.isDowned || p.id === this.sourcePlayerId) return
       const d = Math.hypot(p.x - this.x, p.y - this.y)
       if (d < bestDist) { bestDist = d; nearest = p }
     })
@@ -848,7 +848,7 @@ export default class ServerEnemy {
     let nearest = null
     let bestDist = Infinity
     players.forEach(p => {
-      if (p.isHost || p.isDead || p.isInvisible) return
+      if (p.isHost || p.isDowned || p.isInvisible) return
       const d = Math.hypot(p.x - this.x, p.y - this.y)
       if (d < bestDist) { bestDist = d; nearest = p }
     })

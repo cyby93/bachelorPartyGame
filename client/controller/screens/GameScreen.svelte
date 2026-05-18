@@ -3,7 +3,7 @@
   import MoveJoystick from '../components/MoveJoystick.svelte';
   import SkillButton from '../components/SkillButton.svelte';
 
-  let { playerName = '', className = '', isDead = false, cooldowns = [0,0,0,0], lobbyMode = false, isFullscreen = false, showFullscreenBtn = false, ontogglefullscreen, onrejoin, onmove, onskill, onaim, onhighlight } = $props()
+  let { playerName = '', className = '', isDowned = false, cooldowns = [0,0,0,0], lobbyMode = false, isFullscreen = false, showFullscreenBtn = false, ontogglefullscreen, onrejoin, onmove, onskill, onaim, onhighlight } = $props()
 
   // Grid order: SK2 SK4 / SK1 SK3  (2×2, top row = skills 1,3; bottom = 0,2)
   // Per PLAN layout:
@@ -46,27 +46,29 @@
     </div>
 
     {#if !lobbyMode}
-      <div class="skill-grid">
-        {#each GRID_ORDER as skillIdx}
-          <SkillButton
-            skill={skills[skillIdx] ?? null}
-            index={skillIdx}
-            expiresAt={cooldowns[skillIdx] ?? 0}
-            {onskill}
-            {onaim}
-          />
-        {/each}
+      <div class="skill-grid-wrapper">
+        <div class="skill-grid">
+          {#each GRID_ORDER as skillIdx}
+            <SkillButton
+              skill={skills[skillIdx] ?? null}
+              index={skillIdx}
+              expiresAt={cooldowns[skillIdx] ?? 0}
+              {onskill}
+              {onaim}
+            />
+          {/each}
+        </div>
+
+        <!-- ── Downed overlay — only covers the skill grid, joystick stays accessible ── -->
+        {#if isDowned}
+          <div class="downed-overlay">
+            <h2>You Are Downed</h2>
+            <p>Crawl near an ally to be revived.</p>
+          </div>
+        {/if}
       </div>
     {/if}
   </div>
-
-  <!-- ── Dead overlay ── -->
-  {#if isDead}
-    <div class="dead-overlay">
-      <h2>You Died</h2>
-      <p>Stand near an ally to be revived.</p>
-    </div>
-  {/if}
 
 </div>
 
@@ -211,8 +213,14 @@
     pointer-events: none;
   }
 
-  .skill-grid {
+  .skill-grid-wrapper {
     flex: 1;
+    position: relative;
+  }
+
+  .skill-grid {
+    width: 100%;
+    height: 100%;
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
@@ -220,7 +228,7 @@
     padding: 0;
   }
 
-  .dead-overlay {
+  .downed-overlay {
     position: absolute;
     inset: 0;
     background:
@@ -235,20 +243,21 @@
     z-index: 20;
     text-align: center;
     padding: 24px;
+    border-radius: var(--rn-radius-xl);
   }
 
-  .dead-overlay h2 {
+  .downed-overlay h2 {
     color: var(--rn-danger-dim);
-    font-size: 28px;
+    font-size: 22px;
     letter-spacing: 1px;
     text-transform: uppercase;
   }
 
-  .dead-overlay p  {
+  .downed-overlay p  {
     color: var(--rn-text-body);
-    font-size: 14px;
+    font-size: 13px;
     line-height: 1.4;
-    max-width: 22ch;
+    max-width: 18ch;
   }
 
   @media (max-height: 430px) {

@@ -20,6 +20,7 @@ export const GAME_CONFIG = {
   // Revive mechanic
   REVIVE_DISTANCE: 80,    // px — how close a reviver must stand
   REVIVE_TIME:     3000,  // ms — how long they must stand there
+  CRAWL_SPEED:     0.2,   // px-units per frame at 60 FPS — movement speed while downed
 
   // Game rules
   MAX_PLAYERS:    13,

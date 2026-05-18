@@ -177,7 +177,7 @@ export function buildDeltaState(gs) {
 
   const tombstones = []
   gs.players.forEach(p => {
-    if (!p.isDead || p.isHost) return
+    if (!p.isDowned || p.isHost) return
     const timer = gs.reviveTimers.get(p.id)
     tombstones.push({
       id:       p.id,

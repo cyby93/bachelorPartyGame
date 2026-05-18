@@ -262,6 +262,17 @@
     })
   }
 
+  function handleChangeClass() {
+    socket.emit(EVENTS.REJOIN)
+    sessionStorage.removeItem('sessionToken')
+    sessionStorage.setItem('sessionToken', generateUUID())
+    className     = ''
+    myId          = null
+    screen        = 'classSelect'
+    overlayScreen = null
+    overlayData   = null
+  }
+
   function handleVoluntaryRejoin() {
     socket.emit(EVENTS.REJOIN)
     sessionStorage.removeItem('sessionToken')
@@ -347,6 +358,7 @@
       {className}
       canReady={serverScene === 'lobby'}
       onready={handleLobbyReady}
+      onchangeclass={handleChangeClass}
     />
 
   {:else if screen === 'lobby'}
@@ -356,6 +368,7 @@
         {className}
         canReady={serverScene === 'lobby'}
         onready={handleLobbyReady}
+        onchangeclass={handleChangeClass}
       />
     {:else}
       <GameScreen

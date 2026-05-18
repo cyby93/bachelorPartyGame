@@ -5,16 +5,15 @@
  * Fields:
  *   name        – display name
  *   type        – server-side effect handler: PROJECTILE | MELEE | AOE | DASH | BUFF | SHIELD | CAST | CHANNEL | TARGETED | SPAWN
- *   subtype     – optional modifier for the handler (AOE_SELF, AOE_LOBBED, MULTI, BACKWARDS, TELEPORT, TOGGLE, TARGETED, CHANNELED,
- *                   BEAM, UNTARGETED, HEAL_ALLY, DAMAGE_ENEMY, TOTEM, TRAP, PET)
- *   inputType   – controller interaction: INSTANT | DIRECTIONAL | AIMED | TARGETED | SUSTAINED
+ *   subtype     – optional modifier for the handler (AOE_SELF, AOE_ADJACENT, BLADESTORM, BURST, BEAM, UNTARGETED,
+ *                   HEAL_ALLY, DAMAGE_ENEMY, TARGETED, TOTEM, TRAP, WILD_BEAST, STEALTH, TELEPORT, TELEPORT_BEHIND,
+ *                   GRIP)
+ *   inputType   – controller interaction: INSTANT | DIRECTIONAL | AIMED | TARGETED
  *                   INSTANT    = single tap, no direction needed
  *                   DIRECTIONAL= drag to aim direction, release to fire
  *                   AIMED      = drag to aim, then fire exactly once on release
  *                   TARGETED   = drag to aim a landing spot on the arena
- *                   SUSTAINED  = hold to maintain (e.g. shield direction)
  *   cooldown    – ms
- *   icon        – emoji shown on skill button
  */
 
 const SkillDatabase = {
@@ -29,7 +28,6 @@ const SkillDatabase = {
       damage:    8,
       range:     80,
       angle:     Math.PI,   // 180° cone
-      icon:      '⚔️',
       iconFile:  'ability_warrior_cleave'
     },
     {
@@ -42,7 +40,6 @@ const SkillDatabase = {
       radius:    120,
       effectType: 'DEBUFF',
       effectParams: { speedMultiplier: 0.5, duration: 2000 },
-      icon:      '🌀',
       iconFile:  'ability_thunderclap',
       dotColor:  0x4488ff,
     },
@@ -57,7 +54,6 @@ const SkillDatabase = {
       duration:  4000,          // 4 seconds of spinning
       tickRate:  200,           // hits every 200 ms
       effectType: 'DAMAGE',
-      icon:      '🌀',
       iconFile:  'ability_warrior_bladestorm',
       dotColor:  0xcc2200,
     },
@@ -69,7 +65,6 @@ const SkillDatabase = {
       arc:                 Math.PI,  // 180° block arc
       shieldReduction:     0.65,     // base 65% reduction on overflow damage; upgradeable to 90%
       shieldAbsorbThreshold: 10,     // flat damage fully absorbed before reduction; upgradeable to 25
-      icon:                '🛡️',
       iconFile:            'ability_defend',
       dotColor:            0xcccccc,
     }
@@ -85,7 +80,6 @@ const SkillDatabase = {
       damage:    10,
       range:     70,
       angle:     Math.PI  / 2,   // 90° cone
-      icon:      '🔨',
       iconFile:  'spell_paladin_hammerofwrath'
     },
     {
@@ -102,7 +96,6 @@ const SkillDatabase = {
       chainRange: 15000,
       onHitEffect: { speedMultiplier: 0.5, duration: 2000 },
       spriteKey:   'projectile_avengers_shield',
-      icon:      '🛡️',
       iconFile:  'spell_holy_avengersshield',
       dotColor:  0x88ccff,
     },
@@ -114,7 +107,6 @@ const SkillDatabase = {
       arc:                 Math.PI,  // 180° block arc
       shieldReduction:     0.65,     // base 65% reduction on overflow damage; upgradeable to 90%
       shieldAbsorbThreshold: 10,     // flat damage fully absorbed before reduction; upgradeable to 25
-      icon:                '🔆',
       iconFile:            'spell_holy_divineshield',
       dotColor:            0xffd700,
     },
@@ -130,7 +122,6 @@ const SkillDatabase = {
       tickRate:  700,
       effectType: 'DUAL',
       healAmount: 4,
-      icon:      '⭐',
       iconFile:  'spell_holy_innerfire',
       dotColor:  0xffaa33,
     }
@@ -154,7 +145,6 @@ const SkillDatabase = {
         pierce:    false,
         spriteKey: 'projectile_lightning_bolt',
       },
-      icon:      '⚡',
       iconFile:  'spell_nature_lightning'
     },
     {
@@ -170,7 +160,6 @@ const SkillDatabase = {
       maxChains:       2,
       chainRadius:     200,
       selfCastFallback: true,
-      icon:            '🌊',
       iconFile:        'spell_nature_healingwavegreater'
     },
     {
@@ -191,7 +180,6 @@ const SkillDatabase = {
         tickRate:  1000,
         spriteKey: 'projectile_fireball',
       },
-      icon:      '🔥',
       iconFile:  'spell_fire_searingtotem',
       dotColor:  0xff6600,
     },
@@ -205,7 +193,6 @@ const SkillDatabase = {
       duration:  7000,
       effectType: 'BUFF',
       effectParams: { speedMultiplier: 1.3, fireRateMultiplier: 1.3 },
-      icon:      '⛈️',
       iconFile:  'spell_nature_bloodlust',
       dotColor:  0xff2200,
     }
@@ -224,7 +211,6 @@ const SkillDatabase = {
       range:     800,
       pierce:    false,
       spriteKey: 'projectile_shoot_arrow',
-      icon:      '🏹',
       iconFile:  'ability_marksmanship'
     },
     {
@@ -244,7 +230,6 @@ const SkillDatabase = {
         onHitEffect: { speedMultiplier: 0.5, duration: 4000 },  // 50% slow for 3s
         spriteKey: 'projectile_aimed_shot',
       },
-      icon:      '🎯',
       iconFile:  'inv_spear_07',
       dotColor:  0x336600,
     },
@@ -290,7 +275,6 @@ const SkillDatabase = {
           attackRate:  800,
         },
       ],
-      icon:      '🐺',
       iconFile:  'ability_hunter_invigeration',
       dotColor:  0xaa6633,
     },
@@ -309,7 +293,6 @@ const SkillDatabase = {
         radius:     120,
         effectType: 'DAMAGE',
       },
-      icon:      '🪤',
       iconFile:  'spell_fire_selfdestruct',
       dotColor:  0xff5500,
     }
@@ -334,7 +317,6 @@ const SkillDatabase = {
       canHitAllies: true,
       selfCastFallback: true,
       spriteKey:    'projectile_penance',
-      icon:         '✝️',
       iconFile:     'spell_holy_penance',
       dotColor:     0xcc88ff,
     },
@@ -351,7 +333,6 @@ const SkillDatabase = {
       // damage:     4,
       // healAmount: 6,
       effectType: 'DUAL',
-      icon:       '💚',
       iconFile:   'spell_holy_holynova'
     },
     {
@@ -364,7 +345,6 @@ const SkillDatabase = {
       range:            600,
       selfCastFallback: true,
       effectParams:     { shield: 30 },
-      icon:             '🔮',
       iconFile:         'spell_holy_powerwordshield',
       dotColor:         0x4488ff,
     },
@@ -382,7 +362,6 @@ const SkillDatabase = {
         effectType: 'REVIVE',
         healPercent: 0.3
       },
-      icon:      '👼',
       iconFile:  'spell_holy_resurrection',
       dotColor:  0xffffaa,
     }
@@ -406,7 +385,6 @@ const SkillDatabase = {
         pierce:    false,
         spriteKey: 'projectile_fireball',
       },
-      icon:      '🔥',
       iconFile:  'spell_fire_firebolt'
     },
     {
@@ -418,7 +396,6 @@ const SkillDatabase = {
       radius:    180,
       effectType: 'DEBUFF',
       effectParams: { rooted: true, duration: 2000 },
-      icon:      '❄️',
       iconFile:  'spell_frost_frostnova',
       dotColor:  0x44eeff,
     },
@@ -429,7 +406,6 @@ const SkillDatabase = {
       inputType: 'DIRECTIONAL',
       cooldown:  5000,
       distance:  250,
-      icon:      '✨',
       iconFile:  'spell_arcane_blink',
       dotColor:  0xaa44ff,
     },
@@ -455,7 +431,6 @@ const SkillDatabase = {
           radius:  100
         }
       },
-      icon:      '☄️',
       iconFile:  'spell_fire_fireball02',
       dotColor:  0xff4400,
     }
@@ -479,7 +454,6 @@ const SkillDatabase = {
         pierce:    false,
         spriteKey: 'projectile_wrath',
       },
-      icon:      '☀',
       iconFile:  'spell_nature_wrathv2'
     },
     {
@@ -497,7 +471,6 @@ const SkillDatabase = {
         sourceSkill:   'Moonfire',
       },
       selfCastFallback: true,   // tap with no aim = closest enemy
-      icon:             '🌙',
       iconFile:         'spell_nature_starfall',
     },
     {
@@ -517,7 +490,6 @@ const SkillDatabase = {
         sourceSkill: 'Regrowth',
       },
       selfCastFallback: true,
-      icon:             '🌿',
       iconFile:         'spell_nature_resistnature'
     },
     {
@@ -535,7 +507,6 @@ const SkillDatabase = {
         effectType: 'HEAL',
         healAmount: 12,
       },
-      icon:      '⭐',
       iconFile:  'spell_nature_tranquility',
       dotColor:  0x44ff88,
     }
@@ -552,7 +523,6 @@ const SkillDatabase = {
       range:          100,   // longer reach than cone peers — rewarded by precise aim
       width:          10,    // 40px each side; rectangular hitbox aligned to aim direction
       addsComboPoint: true,
-      icon:           '🗡️',
       iconFile:       'spell_shadow_ritualofsacrifice'
     },
     {
@@ -568,7 +538,6 @@ const SkillDatabase = {
         breaksOnAttack:         true,
         shadowStrikeMultiplier: 1.5,
       },
-      icon:     '👤',
       iconFile: 'ability_vanish',
       dotColor: 0x9966ff,
     },
@@ -579,7 +548,6 @@ const SkillDatabase = {
       cooldown:  7000,
       duration:  4000,
       effectParams: { speedMultiplier: 2.0 },
-      icon:      '☠️',
       iconFile:  'ability_rogue_sprint',
       dotColor:  0xffdd00,
     },
@@ -592,7 +560,6 @@ const SkillDatabase = {
       range:       350,
       damage:      50,
       comboDamage: 20,
-      icon:        '💀',
       iconFile:    'ability_rogue_ambush',
       dotColor:    0x660099,
     }
@@ -616,7 +583,6 @@ const SkillDatabase = {
         pierce:    false,
         spriteKey: 'projectile_shadow_bolt',
       },
-      icon:      '🔮',
       iconFile:  'spell_shadow_shadowbolt'
     },
     {
@@ -636,7 +602,6 @@ const SkillDatabase = {
         sourceSkill:   'Corruption',
       },
       selfCastFallback: false,
-      icon:             '☠️',
       iconFile:         'spell_shadow_abominationexplosion'
     },
     {
@@ -650,7 +615,6 @@ const SkillDatabase = {
       tickRate:  500,
       damagePerTick: 4,
       healPerTick:   6,
-      icon:      '💜',
       iconFile:  'spell_shadow_lifedrain02',
       dotColor:  0xcc44ff,
     },
@@ -663,7 +627,6 @@ const SkillDatabase = {
       radius:    300,
       effectType: 'FEAR',
       fearDuration: 2500,
-      icon:      '😱',
       iconFile:  'spell_shadow_deathscream',
       dotColor:  0x660066,
     }
@@ -672,7 +635,7 @@ const SkillDatabase = {
   // ── DEATH KNIGHT ────────────────────────────────────────────────────────
   DeathKnight: [
     {
-      name:      'Obliterate',
+      name:      'Death Strike',
       type:      'MELEE',
       inputType: 'DIRECTIONAL',
       cooldown:  700,
@@ -680,9 +643,8 @@ const SkillDatabase = {
       range:     70,
       angle:     Math.PI / 3,   // 60° cone
       effectParams: { speedMultiplier: 0.6, duration: 1500 },
-      lifesteal: 1.2,           // 120% lifesteal — heals DK for full damage dealt
-      icon:      '❄️',
-      iconFile:  'spell_deathknight_classicon'
+      lifesteal: 0.8,           // 80% lifesteal
+      iconFile:  'spell_deathknight_deathstrike'
     },
     {
       name:             'Death Grip',
@@ -694,7 +656,6 @@ const SkillDatabase = {
       damage:           15,
       range:            350,
       effectType:       'GRIP',
-      icon:             '🪝',
       iconFile:         'spell_deathknight_strangulate',
       dotColor:         0x9900cc,
     },
@@ -709,7 +670,6 @@ const SkillDatabase = {
       duration:  7000,
       tickRate:  500,
       effectType: 'DAMAGE',
-      icon:      '💀',
       iconFile:  'spell_shadow_deathanddecay',
       dotColor:  0x66cc00,
     },
@@ -720,7 +680,6 @@ const SkillDatabase = {
       cooldown:  10000,
       duration:  7000,
       effectParams: { damageReduction: 0.6, shield: 60 },
-      icon:      '💎',
       iconFile:  'spell_deathknight_iceboundfortitude',
       dotColor:  0x00cccc,
     }

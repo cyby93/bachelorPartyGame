@@ -1,109 +1,129 @@
 <script>
-  import { CLASSES } from '../../../shared/ClassConfig.js';
+  import { CLASSES } from "../../../shared/ClassConfig.js";
+  import { ABILITY_LABEL, ABILITY_DETAIL } from "../../../shared/AbilityBriefing.js";
 
   // Must match GameScreen.svelte GRID_ORDER so the briefing positions match combat
-  const GRID_ORDER = [1, 3, 0, 2]
+  const GRID_ORDER = [1, 3, 0, 2];
 
-  let { playerName = '', className = '', canReady = false, onready } = $props()
+  let { playerName = "", className = "", canReady = false, onready, onchangeclass } = $props();
 
   const CLASS_ICONS = {
-    Warrior:     'classicon_warrior',
-    Paladin:     'classicon_paladin',
-    Shaman:      'classicon_shaman',
-    Hunter:      'classicon_hunter',
-    Priest:      'classicon_priest',
-    Mage:        'classicon_mage',
-    Druid:       'classicon_druid',
-    Rogue:       'classicon_rogue',
-    Warlock:     'classicon_warlock',
-    DeathKnight: 'classicon_deathknight',
-  }
+    Warrior: "classicon_warrior",
+    Paladin: "classicon_paladin",
+    Shaman: "classicon_shaman",
+    Hunter: "classicon_hunter",
+    Priest: "classicon_priest",
+    Mage: "classicon_mage",
+    Druid: "classicon_druid",
+    Rogue: "classicon_rogue",
+    Warlock: "classicon_warlock",
+    DeathKnight: "classicon_deathknight",
+  };
 
   const ROLES = {
-    Warrior:     'Tank',         Paladin:     'Tank / Heal',
-    Shaman:      'DPS / Heal',   Hunter:      'Ranged DPS',
-    Priest:      'Healer',       Mage:        'Glass Cannon',
-    Druid:       'Hybrid',       Rogue:       'Assassin',
-    Warlock:     'DoT Caster',   DeathKnight: 'Melee Tank',
-  }
+    Warrior: "Tank / DPS",
+    Paladin: "Tank / Heal / DPS",
+    Shaman: "Healer",
+    Hunter: "Ranged DPS",
+    Priest: "Healer",
+    Mage: "Caster DPS",
+    Druid: "Healer",
+    Rogue: "Melee DPS",
+    Warlock: "Caster DPS",
+    DeathKnight: "Tank / DPS",
+  };
 
-  const INPUT_LABELS = {
-    INSTANT: 'Tap',
-    DIRECTIONAL: 'Aim and release',
-    AIMED: 'Aim and release',
-    TARGETED: 'Aim and release',
-    SUSTAINED: 'Aim and hold',
-  }
-
-  const INPUT_HINTS = {
-    INSTANT: 'Fires instantly from the button position.',
-    DIRECTIONAL: 'Drag to set direction, then release to fire.',
-    AIMED: 'Drag to aim, then release at the final angle.',
-    TARGETED: 'Drag the button to line it up, then release.',
-    SUSTAINED: 'Hold to maintain the effect, release to end it.',
-  }
-
-  let cls        = $derived(CLASSES[className])
-  let skills     = $derived(cls?.skills ?? [])
-  let classColor = $derived(cls?.color ?? '#00d2ff')
-  let ready      = $state(false)
+  let cls = $derived(CLASSES[className]);
+  let skills = $derived(cls?.skills ?? []);
+  let classColor = $derived(cls?.color ?? "#00d2ff");
+  let ready = $state(false);
 
   function handleReady() {
-    if (ready) return
-    ready = true
-    onready?.()
+    if (ready) return;
+    ready = true;
+    onready?.();
   }
 </script>
 
 <div class="lobby" style="--class-color: {classColor}">
   <div class="briefing-head" style="--class-color: {classColor}">
     <div class="head-copy">
-      <img class="top-class-icon" src="/icons/classes/{CLASS_ICONS[className] ?? 'classicon_warrior'}.jpg" alt={className} />
+      <img
+        class="top-class-icon"
+        src="/icons/classes/{CLASS_ICONS[className] ?? 'classicon_warrior'}.jpg"
+        alt={className}
+      />
       <div>
         <h1>{cls?.name ?? className}</h1>
-        <p>Learn the layout now, then keep your eyes on the TV.</p>
       </div>
     </div>
     <div class="hero-chip">
       <div class="hero-info">
         <span class="hero-name" style="color: {classColor}">{playerName}</span>
-        <span class="class-tag">{cls?.name ?? className} · {ROLES[className]}</span>
+        <span class="class-tag"
+          >{ROLES[className]}</span
+        >
       </div>
     </div>
     <div class="stats">
-      <span>❤️ {cls?.hp ?? '—'} HP</span>
-      <span>⚡ {cls?.speed ?? '—'}x Spd</span>
+      <span>❤️ {cls?.hp ?? "—"} HP</span>
+      <span>⚡ {cls?.speed ?? "—"}x Spd</span>
     </div>
-    {#if canReady}
-      <button type="button" class="ready-btn" onclick={handleReady} disabled={ready}>
-        {ready ? 'READY ✓' : 'I am ready'}
-      </button>
-    {:else}
-      <div class="waiting-pill">Waiting for host…</div>
-    {/if}
+    <div class="head-actions">
+      {#if !ready && onchangeclass}
+        <button type="button" class="change-btn" onclick={onchangeclass}>
+          ← Change class
+        </button>
+      {/if}
+      {#if canReady}
+        <button
+          type="button"
+          class="ready-btn"
+          onclick={handleReady}
+          disabled={ready}
+        >
+          {ready ? "READY ✓" : "I am ready"}
+        </button>
+      {:else}
+        <div class="waiting-pill">Waiting for host…</div>
+      {/if}
+    </div>
   </div>
 
   <div class="skills-grid">
     {#each GRID_ORDER as skillIdx}
       {@const skill = skills[skillIdx]}
       {#if skill}
-      <div class="skill-card" style="--class-color: {classColor}">
-        <span class="skill-icon">
-          {#if skill.iconFile}
-            <img src="/icons/abilities/{skill.iconFile}.jpg" alt={skill.name} class="skill-icon-img" />
-          {:else}
-            {skill.icon}
-          {/if}
-        </span>
-        <div class="skill-details">
+        <div class="skill-card" style="--class-color: {classColor}">
+          <span class="skill-icon">
+            {#if skill.iconFile}
+              <img
+                src="/icons/abilities/{skill.iconFile}.jpg"
+                alt={skill.name}
+                class="skill-icon-img"
+              />
+            {:else}
+              {skill.icon}
+            {/if}
+          </span>
+          <div class="skill-details">
             <span class="skill-name">{skill.name}</span>
             {#if skill.cooldown > 0}
-              <span class="skill-meta">{(skill.cooldown / 1000).toFixed(1)}s cooldown</span>
+              <span class="skill-meta"
+                >{(skill.cooldown / 1000).toFixed(1)}s cooldown</span
+              >
             {/if}
-            <span class="skill-input-type">{INPUT_LABELS[skill.inputType] ?? skill.inputType}</span>
-            <span class="skill-hint">{INPUT_HINTS[skill.inputType] ?? 'Use this skill from the right-side grid.'}</span>
+            <span class="skill-input-type">
+              {ABILITY_LABEL[skill.name] ?? skill.inputType}
+            </span>
+            <!-- <span class="skill-hint">
+              {ABILITY_HINT[skill.name] ?? ""}
+            </span> -->
+            {#if ABILITY_DETAIL[skill.name]}
+              <span class="skill-detail">{ABILITY_DETAIL[skill.name]}</span>
+            {/if}
+          </div>
         </div>
-      </div>
       {/if}
     {/each}
   </div>
@@ -118,8 +138,16 @@
     gap: 10px;
     min-height: 0;
     overflow: hidden;
-    background:
-      radial-gradient(circle at top, color-mix(in srgb, var(--class-color, var(--rn-accent)) 16%, transparent) 0%, transparent 28%),
+    background: radial-gradient(
+        circle at top,
+        color-mix(
+            in srgb,
+            var(--class-color, var(--rn-accent)) 16%,
+            transparent
+          )
+          0%,
+        transparent 28%
+      ),
       var(--rn-gradient-bg);
   }
 
@@ -130,9 +158,13 @@
     align-items: center;
     padding: 14px;
     border-radius: var(--rn-radius-lg);
-    border: 1px solid color-mix(in srgb, var(--class-color) 30%, rgba(104, 130, 153, 0.24));
-    background:
-      linear-gradient(180deg, color-mix(in srgb, var(--class-color) 12%, rgba(255, 214, 143, 0.03)) 0%, rgba(255, 214, 143, 0) 34%),
+    border: 1px solid
+      color-mix(in srgb, var(--class-color) 30%, rgba(104, 130, 153, 0.24));
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--class-color) 12%, rgba(255, 214, 143, 0.03)) 0%,
+        rgba(255, 214, 143, 0) 34%
+      ),
       var(--rn-gradient-surface);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.04),
@@ -180,7 +212,7 @@
     min-width: 0;
   }
 
-  .hero-name  {
+  .hero-name {
     font-size: 15px;
     font-weight: bold;
     white-space: nowrap;
@@ -188,7 +220,7 @@
     text-overflow: ellipsis;
   }
 
-  .class-tag  {
+  .class-tag {
     font-size: 11px;
     color: var(--rn-text-dim);
     white-space: nowrap;
@@ -218,8 +250,11 @@
     flex-direction: row;
     align-items: center;
     gap: 10px;
-    background:
-      linear-gradient(180deg, color-mix(in srgb, var(--class-color) 10%, rgba(255, 214, 143, 0.03)) 0%, rgba(255, 214, 143, 0) 34%),
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--class-color) 10%, rgba(255, 214, 143, 0.03)) 0%,
+        rgba(255, 214, 143, 0) 34%
+      ),
       var(--rn-gradient-surface);
     border-radius: var(--rn-radius-lg);
     padding: 10px;
@@ -228,7 +263,7 @@
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
   }
 
-  .skill-icon  {
+  .skill-icon {
     font-size: 52px;
     line-height: 1;
     flex-shrink: 0;
@@ -254,7 +289,7 @@
     flex: 1;
   }
 
-  .skill-name  {
+  .skill-name {
     font-size: 13px;
     font-weight: bold;
     white-space: nowrap;
@@ -262,7 +297,7 @@
     text-overflow: ellipsis;
   }
 
-  .skill-meta  {
+  .skill-meta {
     font-size: 11px;
     color: var(--rn-text-label);
   }
@@ -279,6 +314,25 @@
     color: var(--rn-text-body);
   }
 
+  .skill-detail {
+    font-size: 10px;
+    line-height: 1.45;
+    color: var(--rn-text-secondary);
+    margin-top: 2px;
+  }
+
+  .head-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .head-actions > * {
+    flex: 1;
+  }
+
   .ready-btn {
     min-width: 100px;
     padding: 12px 14px;
@@ -290,8 +344,23 @@
     background: var(--rn-gradient-cta);
     color: var(--rn-gold);
     cursor: pointer;
-    flex-shrink: 0;
-    align-self: stretch;
+  }
+
+  .change-btn {
+    padding: 12px 14px;
+    border-radius: var(--rn-radius-md);
+    border: 1px solid var(--rn-border);
+    background: transparent;
+    color: var(--rn-text-dim);
+    font-size: 11px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    text-align: center;
+  }
+
+  .change-btn:hover {
+    border-color: var(--rn-border-btn);
+    color: var(--rn-text-body);
   }
 
   .waiting-pill {
@@ -312,7 +381,9 @@
     justify-content: center;
   }
 
-  .ready-btn:active { opacity: 0.9; }
+  .ready-btn:active {
+    opacity: 0.9;
+  }
   .ready-btn:disabled {
     background: var(--rn-gradient-surface);
     color: #4caf50;
@@ -374,7 +445,7 @@
 
     .skill-meta,
     .skill-input-type,
-    .skill-hint {
+    .skill-detail {
       font-size: 10px;
       line-height: 1.2;
     }
@@ -384,6 +455,11 @@
       padding: 10px 10px;
       font-size: 12px;
       letter-spacing: 1.2px;
+    }
+
+    .change-btn {
+      font-size: 10px;
+      padding: 10px 10px;
     }
   }
 </style>

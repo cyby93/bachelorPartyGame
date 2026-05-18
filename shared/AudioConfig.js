@@ -229,7 +229,7 @@ function buildExplicitSkillAudioMap() {
     'Drain Life': createSkillAudio('Warlock', 'sfx_family_drain_beam', 'sfx_skill_drain_life_cast', 'sfx_skill_drain_life_impact', null, null, 'sfx_skill_drain_life_channel'),
     Fear: createSkillAudio('Warlock', 'sfx_family_fear', 'sfx_skill_fear_cast', 'sfx_skill_fear_impact', null, 'sfx_skill_fear_precast'),
 
-    Obliterate: createSkillAudio('DeathKnight', 'sfx_family_frost_melee', 'sfx_skill_obliterate_cast', 'sfx_skill_obliterate_impact'),
+    'Death Strike': createSkillAudio('DeathKnight', 'sfx_family_frost_melee', 'sfx_skill_obliterate_cast', 'sfx_skill_obliterate_impact'),
     'Death Grip': createSkillAudio('DeathKnight', 'sfx_family_grip', 'sfx_skill_death_grip_cast', 'sfx_skill_death_grip_impact'),
     'Death and Decay': createSkillAudio('DeathKnight', 'sfx_family_death_decay', 'sfx_skill_death_and_decay_cast', 'sfx_skill_death_and_decay_impact', null, null, 'sfx_skill_death_and_decay_channel'),
     'Icebound Fortitude': createSkillAudio('DeathKnight', 'sfx_family_anti_magic_shell', 'sfx_skill_anti_magic_shell_cast', 'sfx_skill_anti_magic_shell_impact'),

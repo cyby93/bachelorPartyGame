@@ -267,11 +267,11 @@ export const UPGRADE_CONFIG = {
 
   // ── DEATH KNIGHT ────────────────────────────────────────────────────────
   DeathKnight: [
-    // S0: Obliterate (MELEE) — damage 7, range 70, cooldown 700ms → base DPS ~10.0
+    // S0: Death Strike (MELEE) — damage 7, range 70, cooldown 700ms → base DPS ~10.0
     [
-      { label: 'Obliterate +1', deltas: { damage: 1 } },
-      { label: 'Obliterate +2', deltas: { damage: 1, 'effectParams.duration': 500 } },
-      { label: 'Obliterate +3', deltas: { damage: 1, cooldown: -100 } },
+      { label: 'Death Strike +1', deltas: { damage: 1, lifesteal: 0.2 } },
+      { label: 'Death Strike +2', deltas: { damage: 1, lifesteal: 0.2, 'effectParams.duration': 500 } },
+      { label: 'Death Strike +3', deltas: { damage: 1, cooldown: -100 } },
     ],
     // S1: Death Grip (TARGETED/GRIP) — range 350, cooldown 6000ms — utility only
     [

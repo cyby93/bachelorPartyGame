@@ -467,7 +467,7 @@ export default class SkillSystem {
 
     // DIRECTIONAL casts were pre-cast on the controller — fire immediately
     if (config.inputType === 'DIRECTIONAL' && config.subtype !== 'CHANNELED') {
-      this._executeCastPayload(gs, player, config.payload, v)
+      this._executeCastPayload(gs, player, config.payload, v, config.name ?? null)
       return
     }
 
@@ -1561,7 +1561,7 @@ export default class SkillSystem {
         const tickRate = cast.effectiveTickRate ?? cast.config.payload?.tickRate ?? 500
         if (timeSinceLastTick >= tickRate) {
           cast.lastChannelTick = now
-          this._executeCastPayload(gs, p, cast.config.payload, cast.vector)
+          this._executeCastPayload(gs, p, cast.config.payload, cast.vector, cast.config.name ?? null)
         }
         // End channeling when castTime expires
         if (elapsed >= (cast.effectiveCastTime ?? cast.config.castTime)) {
@@ -1570,7 +1570,7 @@ export default class SkillSystem {
       } else {
         // Non-channeled: fire when castTime expires
         if (elapsed >= (cast.effectiveCastTime ?? cast.config.castTime)) {
-          this._executeCastPayload(gs, p, cast.config.payload, cast.vector)
+          this._executeCastPayload(gs, p, cast.config.payload, cast.vector, cast.config.name ?? null)
           // Emit SKILL_FIRED here (deferred from GameServer) so VFX fires on completion
           if (gs.io) {
             const color = CLASSES[p.className]?.color ?? '#ffffff'
@@ -1659,7 +1659,7 @@ export default class SkillSystem {
 
       // UNTARGETED: fire payload around caster each tick
       if (cast.config.subtype === 'UNTARGETED') {
-        this._executeCastPayload(gs, p, cast.config.payload, cast.vector)
+        this._executeCastPayload(gs, p, cast.config.payload, cast.vector, cast.config.name ?? null)
       }
     })
   }
@@ -1753,12 +1753,13 @@ export default class SkillSystem {
     }))
   }
 
-  _executeCastPayload(gs, player, payload, vector) {
+  _executeCastPayload(gs, player, payload, vector, skillName = null) {
     if (!payload) return
     if (payload.type === 'PROJECTILE') {
       const color = CLASSES[player.className]?.color ?? '#ffffff'
       const v = normalize(vector)
       this._spawnProjectile(gs, player, {
+        name:        skillName,
         speed:       payload.speed  ?? 300,
         radius:      payload.radius ?? 15,
         range:       payload.range  ?? 500,

@@ -549,7 +549,7 @@ const SkillDatabase = {
       inputType:      'DIRECTIONAL',
       cooldown:       500,
       damage:         7,
-      range:          70,
+      range:          100,
       angle:          Math.PI / 3,   // 60° cone — very precise
       addsComboPoint: true,
       icon:           '🗡️',

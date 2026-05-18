@@ -7,3 +7,11 @@ Each level i would like to setup how the currently active players enter the leve
 
 ## New mechanic
 I want to update the downed player state. I want to let the downed players to still move his character without using any abilities. So basically the players can play even after downed by crawling into a safe position in order to revive them more easily. The crawling speed must be some minimum value like 0.2 (i will tune it afterwards)
+
+## Melee attack upgrade
+I want the rogue to have a little different melee attack. As i know, the current melee attacks are hitting everyone in front of the character in a cone. so calculating the enemies inside that cone which arc and range is defined in the config. That is solid for a cleaving warrior and paladin which should hit in a larger area. 
+However, I'd like the Rogue to have somehat different melee attack. I want it to be more precise hit so it would hit enemies only in front of him in the direction of the aim with a specified width. So the rogue could reach further but only in that direction (it would require more precise aiming and positioning but more rewarding in term of damage). I would imagine the shape that used in finding melee hit targets as a rectangular (I would use the currently used 'range' config property with a new property that would hold it's width)
+
+## Classes
+Death Knight:
+    - I want to rename the Obliterate to 'Death strike'. Everything else would be the same. I will find a better image for it

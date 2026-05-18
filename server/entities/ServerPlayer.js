@@ -135,6 +135,7 @@ export default class ServerPlayer {
       // Shield fully depleted — remove the effect immediately so the visual clears
       if (this.shieldAbsorb === 0) {
         this.activeEffects = this.activeEffects.filter(e => e.params?.shield == null)
+        rebuildStats(this)
       }
       if (remaining <= 0) return 0
     }

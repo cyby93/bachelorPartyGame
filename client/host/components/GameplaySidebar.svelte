@@ -75,13 +75,16 @@
   $: maxHeal = healRows[0]?.total || 1
 </script>
 
-<!-- Level info card -->
+<!-- Level info + Objective card -->
 <div class="sidebar-card">
   <div class="gameplay-heading">
     <div id="gameplay-level-index">{levelDisplay}</div>
     <div id="gameplay-level-name">{meta?.levelName ?? 'Current level'}</div>
   </div>
   <div class="gameplay-rule"></div>
+  <div class="sidebar-card-header">Objective</div>
+  <div id="gameplay-objective-value">{objective.value || 'In progress'}</div>
+  <div id="gameplay-objective-label">{objective.label}</div>
 </div>
 
 <!-- Tutorial progress card -->
@@ -107,13 +110,6 @@
     {/if}
   </div>
 {/if}
-
-<!-- Objective card -->
-<div class="sidebar-card">
-  <div class="sidebar-card-header">Objective</div>
-  <div id="gameplay-objective-value">{objective.value || 'In progress'}</div>
-  <div id="gameplay-objective-label">{objective.label}</div>
-</div>
 
 <!-- Shade of Akama card — visible only during Level 4 Phase 1 -->
 {#if shadeVisible}

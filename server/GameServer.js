@@ -1,30 +1,31 @@
-import { EVENTS }          from '../shared/protocol.js'
-import { GAME_CONFIG }     from '../shared/GameConfig.js'
-import { CAMPAIGN, DEBUG_TEST_LEVEL, LEVEL_SELECT_OPTIONS } from '../shared/LevelConfig.js'
-import { ILLIDAN_CONFIG }        from '../shared/IllidanConfig.js'
-import { SHADE_OF_AKAMA_CONFIG } from '../shared/ShadeOfAkamaConfig.js'
-import DialogSystem        from './systems/DialogSystem.js'
 import { CLASSES, CLASS_NAMES, resolveClassName } from '../shared/ClassConfig.js'
-import ServerPlayer      from './entities/ServerPlayer.js'
-import ServerEnemy       from './entities/ServerEnemy.js'
-import ServerBoss        from './entities/ServerBoss.js'
-import ServerNPC         from './entities/ServerNPC.js'
-import ServerGate        from './entities/ServerGate.js'
-import ServerBuilding    from './entities/ServerBuilding.js'
+import { ENEMY_TYPES } from '../shared/EnemyTypeConfig.js'
+import { GAME_CONFIG } from '../shared/GameConfig.js'
+import { ILLIDAN_CONFIG } from '../shared/IllidanConfig.js'
+import { CAMPAIGN, DEBUG_TEST_LEVEL, LEVEL_SELECT_OPTIONS } from '../shared/LevelConfig.js'
+import { EVENTS } from '../shared/protocol.js'
+import { QUIZ_QUESTIONS } from '../shared/QuizQuestions.js'
+import { SHADE_OF_AKAMA_CONFIG } from '../shared/ShadeOfAkamaConfig.js'
+import { getMaxTier, getUpgradePreview } from '../shared/UpgradeUtils.js'
+import { buildWallSegments, resolveWallCollision } from '../shared/WallCollision.js'
+import ServerBoss from './entities/ServerBoss.js'
+import ServerBuilding from './entities/ServerBuilding.js'
+import ServerEnemy from './entities/ServerEnemy.js'
+import ServerGate from './entities/ServerGate.js'
+import ServerNPC from './entities/ServerNPC.js'
+import ServerPlayer from './entities/ServerPlayer.js'
+import TrainingDummy, { MeleeDummy, RangedDummy } from './entities/TrainingDummy.js'
+import BotController from './systems/BotController.js'
 import BuildingSpawnSystem from './systems/BuildingSpawnSystem.js'
-import PortalBeamSystem   from './systems/PortalBeamSystem.js'
-import IllidanEncounter   from './systems/IllidanEncounter.js'
-import BotController      from './systems/BotController.js'
-import { buildFullState, buildDeltaState, buildYouPayload, gatesDTO, buildingsDTO, npcsDTO } from './systems/StateSerializer.js'
-import TrainingDummy, { RangedDummy, MeleeDummy } from './entities/TrainingDummy.js'
-import CooldownSystem    from './systems/CooldownSystem.js'
-import SkillSystem       from './systems/SkillSystem.js'
-import SpawnSystem       from './systems/SpawnSystem.js'
-import TransitionRunner  from './TransitionRunner.js'
-import { ENEMY_TYPES }   from '../shared/EnemyTypeConfig.js'
-import { buildWallSegments, resolveWallCollision, hitsWall } from '../shared/WallCollision.js'
-import { QUIZ_QUESTIONS }  from '../shared/QuizQuestions.js'
-import { getUpgradePreview, getMaxTier } from '../shared/UpgradeUtils.js'
+import CinematicMovementSystem from './systems/CinematicMovementSystem.js'
+import CooldownSystem from './systems/CooldownSystem.js'
+import DialogSystem from './systems/DialogSystem.js'
+import IllidanEncounter from './systems/IllidanEncounter.js'
+import PortalBeamSystem from './systems/PortalBeamSystem.js'
+import SkillSystem from './systems/SkillSystem.js'
+import SpawnSystem from './systems/SpawnSystem.js'
+import { buildDeltaState, buildFullState, buildYouPayload, buildingsDTO, gatesDTO, npcsDTO } from './systems/StateSerializer.js'
+import TransitionRunner from './TransitionRunner.js'
 
 /**
  * Returns true if the point (cx, cy) with radius `otherRadius` overlaps the player's
@@ -113,6 +114,7 @@ export default class GameServer {
     this.minionSpawnSystem  = null   // ambient minions (activated after dialog)
     this._illidanEncounter  = null   // IllidanEncounter instance for Level 6
     this._dialogSystem      = null
+    this._cinematicSystem   = null   // walk-in / walk-out cinematic movement
 
     // Debug: skip entrance cinematic when testing boss mechanics
     this.skipDialog = false
@@ -198,6 +200,7 @@ export default class GameServer {
     socket.on(EVENTS.INPUT_SKILL,     data => this._onInputSkill(socket, data))
     socket.on(EVENTS.INPUT_HIGHLIGHT, ()   => this._onInputHighlight(socket))
     socket.on(EVENTS.INPUT_AIM,     ({ vector, selfZone }) => {
+      if (this._cinematicSystem?.isActive()) return
       const player = this.players.get(socket.id)
       if (player && vector) {
         player.aimAngle    = Math.atan2(vector.y, vector.x)
@@ -326,12 +329,14 @@ export default class GameServer {
   }
 
   _onInputMove(socket, data) {
+    if (this._cinematicSystem?.isActive()) return
     const queue = this.inputQueues.get(socket.id)
     if (!queue) return
     queue.push({ type: 'move', x: Number(data?.x) || 0, y: Number(data?.y) || 0 })
   }
 
   _onInputSkill(socket, data) {
+    if (this._cinematicSystem?.isActive()) return
     if (this.scene === 'lobby') return
     const queue = this.inputQueues.get(socket.id)
     if (!queue) return
@@ -683,36 +688,46 @@ export default class GameServer {
       p.bladestormActive = false
       p.rebuildStats()
       p.setArenaSize(this.arenaWidth, this.arenaHeight)
-      if (firstRoom) {
-        const pad = GAME_CONFIG.PLAYER_RADIUS + 10
-        p.x = firstRoom.x + pad + Math.random() * (firstRoom.width - pad * 2)
-        p.y = firstRoom.y + pad + Math.random() * (firstRoom.height - pad * 2)
-      } else {
-        const { x, y } = this._randomPointNearCenter(400, 250)
-        p.x = x
-        p.y = y
-      }
+      // Walk-in system sets positions — handled after this forEach
     })
 
     // Compute player count for difficulty scaling
     let playerCount = 0
     this.players.forEach(p => { if (!p.isHost) playerCount++ })
 
+    // Walk-in cinematic — spawn players off-screen left, walk them into the arena
+    const walkInMs = level.transition?.opening?.walkInMs ?? 0
+    if (walkInMs > 0 && !this.skipDialog) {
+      const targets = CinematicMovementSystem.buildWalkInTargets(this.players, this.arenaWidth, this.arenaHeight)
+      this._cinematicSystem = new CinematicMovementSystem({
+        targets,
+        durationMs: walkInMs,
+        onComplete: () => this._onWalkInComplete(level, playerCount),
+      })
+    } else {
+      this._placePlayersInFormation()
+    }
+
     const diff = level.difficulty ?? {}
     const hpMult     = (diff.hpMult?.base ?? 1)     + (diff.hpMult?.perPlayer ?? 0)     * (playerCount - 1)
     const damageMult = (diff.damageMult?.base ?? 1) + (diff.damageMult?.perPlayer ?? 0) * (playerCount - 1)
 
-    // Set up spawn system if level has spawning — delay start if opening transition requests it
+    // Set up spawn system if level has spawning.
+    // If walk-in is active, defer to _onWalkInComplete so enemies don't appear before players arrive.
     if (level.spawning) {
-      const spawnDelay = level.transition?.opening?.enemySpawnDelayMs ?? 0
-      if (spawnDelay > 0) {
-        this._spawnSystemTimer = setTimeout(() => {
-          if (this.currentLevel === level) this.spawnSystem = new SpawnSystem(level, playerCount)
-          this._spawnSystemTimer = null
-        }, spawnDelay)
-      } else {
-        this.spawnSystem = new SpawnSystem(level, playerCount)
+      const deferToWalkIn = walkInMs > 0 && !this.skipDialog
+      if (!deferToWalkIn) {
+        const spawnDelay = level.transition?.opening?.enemySpawnDelayMs ?? 0
+        if (spawnDelay > 0) {
+          this._spawnSystemTimer = setTimeout(() => {
+            if (this.currentLevel === level) this.spawnSystem = new SpawnSystem(level, playerCount)
+            this._spawnSystemTimer = null
+          }, spawnDelay)
+        } else {
+          this.spawnSystem = new SpawnSystem(level, playerCount)
+        }
       }
+      // else: _onWalkInComplete() creates the SpawnSystem after players have entered
     }
 
     // Set up boss if level has one
@@ -872,10 +887,15 @@ export default class GameServer {
           }
         },
       })
-      const fadeInMs = level.transition?.opening?.fadeInMs ?? 0
-      setTimeout(() => {
-        if (this._dialogSystem) this._dialogSystem.start((event, data) => this.io.emit(event, data))
-      }, fadeInMs)
+      // Dialog start is deferred to _onWalkInComplete (fires after players walk in).
+      // If walk-in is skipped (skipDialog=true or no walkInMs), start dialog after fadeInMs as before.
+      if (walkInMs === 0 || this.skipDialog) {
+        const fadeInMs = level.transition?.opening?.fadeInMs ?? 0
+        setTimeout(() => {
+          if (this._dialogSystem) this._dialogSystem.start((event, data) => this.io.emit(event, data))
+        }, fadeInMs)
+      }
+      // else: _onWalkInComplete() calls dialogSystem.start() directly
     } else if (level.boss && level.minionSpawning && !this.minionSpawnSystem) {
       // No dialog (skipDialog=true or no dialog array) — activate minion spawning immediately.
       this.minionSpawnSystem = new SpawnSystem(
@@ -966,7 +986,8 @@ export default class GameServer {
     // Encounter systems
     this.minionSpawnSystem = null
     this._illidanEncounter = null
-    if (this._dialogSystem) { this._dialogSystem.destroy(); this._dialogSystem = null }
+    if (this._dialogSystem)   { this._dialogSystem.destroy();   this._dialogSystem   = null }
+    if (this._cinematicSystem){ this._cinematicSystem.destroy(); this._cinematicSystem = null }
 
     // Transition state
     if (this._spawnSystemTimer) { clearTimeout(this._spawnSystemTimer); this._spawnSystemTimer = null }
@@ -1314,7 +1335,7 @@ export default class GameServer {
         }
       }
 
-      if (lastMove) {
+      if (lastMove && !this._cinematicSystem?.isActive()) {
         player.setMoveInput(lastMove.x, lastMove.y)
         if (this._tutorialActive && this._tutorialPhase === 1 && !player.isHost && !this._tutorialPhaseDone.has(player.id)) {
           const mag = Math.hypot(lastMove.x, lastMove.y)
@@ -1341,6 +1362,9 @@ export default class GameServer {
         p.y = resolved.y
       })
     }
+
+    // 2c. Cinematic movement — runs after p.update() and wall collision so lerp positions win
+    if (this._cinematicSystem) this._cinematicSystem.tick(dt)
 
     // 3. Scene-specific logic
     if (this.scene === 'lobby' || this.scene === 'trainingGrounds') {
@@ -1459,6 +1483,7 @@ export default class GameServer {
 
   _processSkillInput(player, input) {
     if (player.isDowned) return
+    if (this._cinematicSystem?.isActive()) return
     if (this.scene !== 'lobby' && this.scene !== 'trainingGrounds' && this.scene !== 'battle' && this.scene !== 'bossFight') return
 
     const { index, vector, action } = input
@@ -2349,6 +2374,27 @@ export default class GameServer {
     if (this._levelCompletePending) return
     this._levelCompletePending = true
 
+    // Walk-out cinematic: clear enemies and walk players off-screen right before victory fires
+    const walkOutMs = this.currentLevel?.transition?.closing?.walkOutMs ?? 0
+    if (walkOutMs > 0 && !this.skipDialog && !this.currentLevel?.debugSandbox) {
+      this.enemies.clear()
+      this.projectiles.clear()
+      const targets = CinematicMovementSystem.buildWalkOutTargets(this.players, this.arenaWidth)
+      this._cinematicSystem = new CinematicMovementSystem({
+        targets,
+        durationMs: walkOutMs,
+        onComplete: () => {
+          this._cinematicSystem = null
+          this._doLevelComplete()
+        },
+      })
+      return
+    }
+
+    await this._doLevelComplete()
+  }
+
+  async _doLevelComplete() {
     const levelIndex = this.currentLevelIndex
 
     // Run closing transition before advancing scene (skip for debug sandbox)
@@ -2381,6 +2427,64 @@ export default class GameServer {
       // Show level-complete screen and wait for host to advance
       this._showLevelComplete()
     }
+  }
+
+  // Called by CinematicMovementSystem when the walk-in finishes.
+  // Starts ambient spawn system (if any) and/or dialog (if any).
+  _onWalkInComplete(level, playerCount) {
+    this._cinematicSystem = null
+
+    // Restore zero move input on all players so they stop after the walk-in
+    this.players.forEach(p => { if (!p.isHost) p.setMoveInput(0, 0) })
+
+    // Start ambient spawn system for levels that have one, respecting any post-arrival delay
+    if (level.spawning && !this.spawnSystem) {
+      const spawnDelay = level.transition?.opening?.enemySpawnDelayMs ?? 0
+      if (spawnDelay > 0) {
+        this._spawnSystemTimer = setTimeout(() => {
+          if (this.currentLevel === level) this.spawnSystem = new SpawnSystem(level, playerCount)
+          this._spawnSystemTimer = null
+        }, spawnDelay)
+      } else {
+        this.spawnSystem = new SpawnSystem(level, playerCount)
+      }
+    }
+
+    // Start dialog (levels 5 & 6) — combat will begin when dialog completes
+    if (this._dialogSystem) {
+      this._dialogSystem.start((event, data) => this.io.emit(event, data))
+    }
+  }
+
+  // Teleports players directly to walk-in formation positions (no animation).
+  // Used when skipDialog=true or when the level has no walkInMs configured.
+  _placePlayersInFormation() {
+    const FORMATION = [
+      { xOffset:    0, yOffset:    0 },
+      { xOffset:  -40, yOffset:  -50 },
+      { xOffset:  -40, yOffset:   50 },
+      { xOffset:  -80, yOffset: -100 },
+      { xOffset:  -80, yOffset:  100 },
+      { xOffset:  -80, yOffset:    0 },
+      { xOffset: -120, yOffset: -150 },
+      { xOffset: -120, yOffset:  150 },
+      { xOffset: -120, yOffset:  -60 },
+      { xOffset: -120, yOffset:   60 },
+      { xOffset: -160, yOffset: -200 },
+      { xOffset: -160, yOffset:  200 },
+      { xOffset: -160, yOffset:    0 },
+    ]
+    const entryX  = this.arenaWidth * 0.15
+    const centerY = this.arenaHeight / 2
+    const pad     = GAME_CONFIG.PLAYER_RADIUS + 10
+    let slotIndex = 0
+    this.players.forEach(p => {
+      if (p.isHost) return
+      const slot = FORMATION[Math.min(slotIndex, FORMATION.length - 1)]
+      p.x = entryX + slot.xOffset
+      p.y = Math.max(pad, Math.min(this.arenaHeight - pad, centerY + slot.yOffset))
+      slotIndex++
+    })
   }
 
   _showLevelComplete() {

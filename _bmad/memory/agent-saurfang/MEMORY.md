@@ -22,6 +22,16 @@ Always check `type` + `subtype` in SkillDatabase to know which server path owns 
 
 `ServerEnemy.toDTO()` is the only window to client enemy state. Any new field on `ServerEnemy` (e.g. `isFeared`) is invisible to the client until explicitly added to `toDTO()`.
 
+## Mobile input: autoRefire / SUSTAINED cleanup
+
+`SkillButton.svelte` handles `autoRefire` (INSTANT) and SUSTAINED abilities via `onPointerDown` + `onPointerUp`/`onPointerCancel`. On mobile, if the user drags their finger off the button before releasing, `pointerup` may never fire on the button element — the browser hijacks the gesture as a scroll.
+
+Two required defenses:
+1. **`touch-action: none` on `.skill-btn`** — tells the browser not to scroll-hijack touches on ability buttons.
+2. **Window-level `pointerup`/`pointercancel` listeners** filtered by `e.pointerId`, registered in `onPointerDown` when starting a continuous interval. Use a `clearAutoRefire()` helper that clears both the interval and the window listeners atomically. Without this, dragging off the button leaves the interval running forever.
+
+This was applied for `autoRefire` in 2026-05-18. If any future SUSTAINED or autoRefire ability feels "sticky", check for missing `touch-action: none` or missing window-level cleanup.
+
 ## Zone DTO fields
 
 `getZonesDTO()` now includes `skillName: z.config?.name ?? null`. Thrall uses this to render Consecration differently from other ground zones.

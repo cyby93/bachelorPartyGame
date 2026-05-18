@@ -77,7 +77,17 @@
   // ── nipplejs for DIRECTIONAL / TARGETED ───────────────────────────────────
 
   let autoFireInterval = null
+  let stopAutoRefire   = null
   let aimHeartbeat = null
+
+  function clearAutoRefire() {
+    if (autoFireInterval) { clearInterval(autoFireInterval); autoFireInterval = null }
+    if (stopAutoRefire) {
+      window.removeEventListener('pointerup',     stopAutoRefire)
+      window.removeEventListener('pointercancel', stopAutoRefire)
+      stopAutoRefire = null
+    }
+  }
 
   $effect(() => {
     const type = skill?.inputType
@@ -195,6 +205,11 @@
         flashFired()
         onskill?.({ index, vector: { x: 1, y: 0 } })
         if (skill?.autoRefire) {
+          clearAutoRefire()
+          const pid = e.pointerId
+          stopAutoRefire = (ev) => { if (ev.pointerId === pid) clearAutoRefire() }
+          window.addEventListener('pointerup',     stopAutoRefire)
+          window.addEventListener('pointercancel', stopAutoRefire)
           autoFireInterval = setInterval(() => {
             if (expiresAt <= Date.now()) {
               flashFired()
@@ -223,7 +238,7 @@
       return
     }
     e.preventDefault()
-    if (autoFireInterval) { clearInterval(autoFireInterval); autoFireInterval = null }
+    clearAutoRefire()
     if (type === 'INSTANT' && isCastHold) {
       cancelCast()
     } else if (type === 'SUSTAINED' && held) {
@@ -240,7 +255,7 @@
       return
     }
     e.preventDefault()
-    if (autoFireInterval) { clearInterval(autoFireInterval); autoFireInterval = null }
+    clearAutoRefire()
     if (type === 'INSTANT' && isCastHold) {
       cancelCast()
     } else if (type === 'SUSTAINED' && held) {
@@ -250,7 +265,7 @@
   }
 
   onDestroy(() => {
-    if (autoFireInterval) { clearInterval(autoFireInterval); autoFireInterval = null }
+    clearAutoRefire()
     if (aimHeartbeat) { clearInterval(aimHeartbeat); aimHeartbeat = null }
     joystickHeld = false
     if (held) {
@@ -301,6 +316,7 @@
     gap: 6px;
     cursor: pointer;
     user-select: none;
+    touch-action: none;
     position: relative;
     overflow: hidden;
     box-shadow:

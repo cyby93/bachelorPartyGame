@@ -72,10 +72,12 @@ export const CAMPAIGN = [
     transition: {
       opening: {
         fadeInMs: 1200,
+        walkInMs: 2500,
         enemySpawnDelayMs: 2000,
       },
       closing: {
         fadeOutMs: 1500,
+        walkOutMs: 2000,
         steps: [
           { type: 'delay', ms: 2200 },
         ],
@@ -157,10 +159,12 @@ export const CAMPAIGN = [
     transition: {
       opening: {
         fadeInMs: 1200,
+        walkInMs: 2500,
         enemySpawnDelayMs: 2000,
       },
       closing: {
         fadeOutMs: 1500,
+        walkOutMs: 2000,
         steps: [
           { type: 'delay', ms: 2200 },
         ],
@@ -229,10 +233,12 @@ export const CAMPAIGN = [
     transition: {
       opening: {
         fadeInMs: 1500,
+        walkInMs: 2500,
         enemySpawnDelayMs: 2000,
       },
       closing: {
         fadeOutMs: 1500,
+        walkOutMs: 2000,
         steps: [
           { type: 'delay', ms: 2200 },
         ],
@@ -270,10 +276,11 @@ export const CAMPAIGN = [
     transition: {
       opening: {
         fadeInMs: 1500,
-        // no enemySpawnDelayMs — leviathan uses initialEnemies, not spawnSystem
+        walkInMs: 2500,
       },
       closing: {
         fadeOutMs: 1800,
+        walkOutMs: 2000,
         steps: [
           { type: 'delay', ms: 2500 },
         ],
@@ -350,10 +357,11 @@ export const CAMPAIGN = [
     transition: {
       opening: {
         fadeInMs: 2000,
-        // no enemySpawnDelayMs — dialog system gates the boss fight
+        walkInMs: 2500,
       },
       closing: {
         fadeOutMs: 2000,
+        walkOutMs: 2000,
         steps: [
           { type: 'delay', ms: 2800 },
         ],
@@ -442,10 +450,11 @@ export const CAMPAIGN = [
     transition: {
       opening: {
         fadeInMs: 2500,
-        // no enemySpawnDelayMs — Illidan dialog gates the fight
+        walkInMs: 2500,
       },
       closing: {
         fadeOutMs: 2500,
+        walkOutMs: 2000,
         steps: [
           { type: 'delay', ms: 3500 },
         ],

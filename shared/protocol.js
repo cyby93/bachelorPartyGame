@@ -88,4 +88,9 @@ export const EVENTS = {
 
   // ── Campaign entry ────────────────────────────────────────────────────────────
   HOST_ENTER_RAID: 'host:enterRaid',      // host→S: {} — from training grounds into level 1
+
+  // ── Training grounds tutorial ─────────────────────────────────────────────
+  TUTORIAL_START: 'tutorial:start',   // host→S: {}
+  TUTORIAL_QUIT:  'tutorial:quit',    // host→S: {}
+  TUTORIAL_STATE: 'tutorial:state',   // S→All: { active, phase, phaseName, completedCount, totalCount, enabledSkills, playerProgress, allComplete }
 }

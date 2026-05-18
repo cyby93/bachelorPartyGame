@@ -14,4 +14,5 @@ export const gameState = writable({
   loadingProgress:    0,          // 0–1 during asset load
   cumulativeStats:    null,   // result / gameover — { damage, heal, deaths, resurrections, quiz, startTime }
   levelCompleteStats: null,   // levelComplete     — { damage, heal, resurrections, startTime }
+  tutorial:           null,   // tutorial state from TUTORIAL_STATE event, or null when inactive
 })

@@ -26,16 +26,25 @@
     { label: 'Flame of Azzinoth', enemyType: 'flameOfAzzinoth' },
   ]
 
-  const scene        = $derived($gameState.serverScene)
-  const isCampaign   = $derived(['battle', 'bossFight', 'levelComplete', 'quiz'].includes(scene))
-  const isTraining   = $derived(scene === 'trainingGrounds')
-  const isSandbox    = $derived($gameState.levelMeta?.debugSandbox === true && (scene === 'battle' || scene === 'bossFight'))
+  const scene              = $derived($gameState.serverScene)
+  const isCampaign         = $derived(['battle', 'bossFight', 'levelComplete', 'quiz'].includes(scene))
+  const isTraining         = $derived(scene === 'trainingGrounds')
+  const isSandbox          = $derived($gameState.levelMeta?.debugSandbox === true && (scene === 'battle' || scene === 'bossFight'))
+  const isTutorialActive   = $derived($gameState.tutorial?.active === true)
 
   let sandboxStatus = $state('')
   let sandboxError = $state(false)
 
   function handleEnterRaid() {
     socket.emit(EVENTS.HOST_ENTER_RAID)
+  }
+
+  function handleStartTutorial() {
+    socket.emit(EVENTS.TUTORIAL_START)
+  }
+
+  function handleQuitTutorial() {
+    socket.emit(EVENTS.TUTORIAL_QUIT)
   }
 
   function handleQuit() {
@@ -81,8 +90,13 @@
     <GameplaySidebar />
 
     <div class="actions">
-      {#if isTraining}
-        <HostButton label="Enter Raid" variant="primary" onclick={handleEnterRaid} />
+      {#if isTraining && !isTutorialActive}
+        <HostButton label="Enter Raid"    variant="primary"   onclick={handleEnterRaid} />
+        <HostButton label="Play Tutorial" variant="secondary" onclick={handleStartTutorial} />
+      {/if}
+
+      {#if isTraining && isTutorialActive}
+        <HostButton label="Quit Tutorial" variant="danger" onclick={handleQuitTutorial} />
       {/if}
 
 

@@ -14,7 +14,7 @@
   import nipplejs from 'nipplejs'
   import CooldownOverlay from './CooldownOverlay.svelte'
 
-  let { skill = null, index = 0, expiresAt = 0, onskill, onaim } = $props()
+  let { skill = null, index = 0, expiresAt = 0, disabled = false, onskill, onaim } = $props()
 
   let btnEl        = null
   let lastVector   = { x: 1, y: 0 }
@@ -81,7 +81,7 @@
 
   $effect(() => {
     const type = skill?.inputType
-    if (!btnEl || (type !== 'DIRECTIONAL' && type !== 'TARGETED' && type !== 'AIMED')) return
+    if (disabled || !btnEl || (type !== 'DIRECTIONAL' && type !== 'TARGETED' && type !== 'AIMED')) return
 
     // AIMED = aim while held, fire on release (no auto-fire loop)
     const isFiller = (skill?.type === 'PROJECTILE' || skill?.type === 'MELEE') && type !== 'AIMED'
@@ -179,6 +179,7 @@
   // ── Pointer handlers for INSTANT / SUSTAINED ──────────────────────────────
 
   function onPointerDown(e) {
+    if (disabled) return
     const type = skill?.inputType
     if (type === 'DIRECTIONAL' || type === 'TARGETED' || type === 'AIMED') {
       if (skill?.selfCastFallback) selfCastTapStart = { x: e.clientX, y: e.clientY }
@@ -209,6 +210,7 @@
   }
 
   function onPointerUp(e) {
+    if (disabled) return
     const type = skill?.inputType
     if (type === 'DIRECTIONAL' || type === 'TARGETED' || type === 'AIMED') {
       if (skill?.selfCastFallback && selfCastTapStart !== null) {
@@ -231,6 +233,7 @@
   }
 
   function onPointerCancel(e) {
+    if (disabled) return
     const type = skill?.inputType
     if (type === 'DIRECTIONAL' || type === 'TARGETED' || type === 'AIMED') {
       selfCastTapStart = null
@@ -266,6 +269,7 @@
   class="skill-btn"
   class:held
   class:fired
+  class:is-disabled={disabled}
   bind:this={btnEl}
   onpointerdown={onPointerDown}
   onpointerup={onPointerUp}
@@ -380,5 +384,10 @@
       font-size: 10px;
       padding: 0 6px 2px;
     }
+  }
+
+  .skill-btn.is-disabled {
+    opacity: 0.20;
+    pointer-events: none;
   }
 </style>

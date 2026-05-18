@@ -297,6 +297,13 @@ socket.on(EVENTS.PORTAL_BEAM_END, data => {
   game.activeRenderer?.onPortalBeamEnd?.(data)
 })
 
+// ── Tutorial events ────────────────────────────────────────────
+
+socket.on(EVENTS.TUTORIAL_STATE, data => {
+  gameState.update(s => ({ ...s, tutorial: data?.active ? data : null }))
+  game.activeRenderer?.onTutorialState?.(data)
+})
+
 // ── Quiz events ────────────────────────────────────────────────
 
 socket.on(EVENTS.QUIZ_QUESTION, data => {

@@ -143,6 +143,14 @@ export default class GameServer {
     // Objective progress — synced to clients via OBJECTIVE_UPDATE
     this.objectiveProgress = []
 
+    // ── Tutorial ──────────────────────────────────────────────────────────
+    this._tutorialActive            = false
+    this._tutorialPhase             = 0          // 0 = inactive, 1–5 = active phase
+    this._tutorialPhaseDone         = new Set()  // player IDs that completed current phase
+    this._tutorialAbilityUses       = new Map()  // playerId → use-count for current phase
+    this._tutorialLastCooldownReset = 0
+    this._tutorialEndScheduled      = false
+
     // ── Quiz & Upgrade system ─────────────────────────────────────────────
     this._quizPhase         = null   // 'answering' | 'results' | 'upgrading'
     this._quizQuestion      = null
@@ -203,7 +211,9 @@ export default class GameServer {
       }
     })
     socket.on(EVENTS.START_GAME,    ()   => this._onStartGame(socket))
-    socket.on(EVENTS.HOST_ENTER_RAID, () => this._onEnterRaid(socket))
+    socket.on(EVENTS.HOST_ENTER_RAID,  () => this._onEnterRaid(socket))
+    socket.on(EVENTS.TUTORIAL_START,   () => this._onTutorialStart(socket))
+    socket.on(EVENTS.TUTORIAL_QUIT,    () => this._onTutorialQuit(socket))
     socket.on(EVENTS.RESTART_GAME,  ()   => this._onRestartGame(socket))
     socket.on(EVENTS.QUIT_CAMPAIGN, ()   => this._onRestartGame(socket))
     socket.on(EVENTS.HOST_ADVANCE,  ()   => this._onHostAdvance(socket))
@@ -1044,6 +1054,7 @@ export default class GameServer {
   // ── Scene management ───────────────────────────────────────────────────────
 
   _changeScene(name, extra = {}) {
+    const prevScene = this.scene
     this._resetPlayerInputs()
 
     if (name === 'lobby' || name === 'trainingGrounds') {
@@ -1091,6 +1102,14 @@ export default class GameServer {
       this._spawnTrainingDummy()
     }
 
+    if (prevScene === 'trainingGrounds' && name !== 'trainingGrounds') {
+      this._tutorialActive = false
+      this._tutorialPhase = 0
+      this._tutorialPhaseDone.clear()
+      this._tutorialAbilityUses.clear()
+      this._tutorialEndScheduled = false
+    }
+
   }
 
   _spawnTrainingDummy() {
@@ -1113,6 +1132,120 @@ export default class GameServer {
     this.arenaWidth = width
     this.arenaHeight = height
     this.players.forEach(p => p.setArenaSize(width, height))
+  }
+
+  // ── Tutorial ───────────────────────────────────────────────────────────────
+
+  _onTutorialStart(socket) {
+    if (!this.players.get(socket.id)?.isHost) return
+    if (this.scene !== 'trainingGrounds') return
+    if (this._tutorialActive) return
+
+    this._tutorialActive = true
+    this._tutorialPhase = 1
+    this._tutorialPhaseDone.clear()
+    this._tutorialAbilityUses.clear()
+    this._tutorialEndScheduled = false
+    this._tutorialLastCooldownReset = Date.now()
+    this._tutorialResetAllCooldowns()
+    this._tutorialBroadcastState()
+  }
+
+  _onTutorialQuit(socket) {
+    if (socket && !this.players.get(socket.id)?.isHost) return
+    this._tutorialEnd()
+  }
+
+  _tutorialEnd() {
+    if (!this._tutorialActive) return
+    this._tutorialActive = false
+    this._tutorialPhase = 0
+    this._tutorialPhaseDone.clear()
+    this._tutorialAbilityUses.clear()
+    this._tutorialEndScheduled = false
+    this._tutorialBroadcastState()
+  }
+
+  _tutorialGetEnabledSkills(phase) {
+    if (phase === 0) return [0, 1, 2, 3]
+    if (phase === 1) return []
+    return [phase - 2]
+  }
+
+  _tutorialBroadcastState() {
+    const phaseNames = ['', 'Movement', 'Ability 1', 'Ability 2', 'Ability 3', 'Ability 4']
+    const nonHostPlayers = [...this.players.values()].filter(p => !p.isHost && !p.isBot)
+    const totalCount = nonHostPlayers.length
+
+    const playerProgress = {}
+    nonHostPlayers.forEach(p => {
+      playerProgress[p.id] = {
+        name:      p.name,
+        className: p.className,
+        completed: this._tutorialPhaseDone.has(p.id),
+        count:     this._tutorialPhase >= 2 ? (this._tutorialAbilityUses.get(p.id) ?? 0) : undefined,
+      }
+    })
+
+    this.io.emit(EVENTS.TUTORIAL_STATE, {
+      active:         this._tutorialActive,
+      phase:          this._tutorialPhase,
+      phaseName:      phaseNames[this._tutorialPhase] ?? '',
+      completedCount: this._tutorialPhaseDone.size,
+      totalCount,
+      enabledSkills:  this._tutorialGetEnabledSkills(this._tutorialPhase),
+      playerProgress,
+      allComplete:    this._tutorialEndScheduled,
+    })
+  }
+
+  _tutorialRecordAbilityUse(player, skillIndex) {
+    if (!this._tutorialActive || this._tutorialPhase < 2 || player.isHost) return
+    const expectedIdx = this._tutorialPhase - 2
+    if (skillIndex !== expectedIdx) return
+    if (this._tutorialPhaseDone.has(player.id)) return
+
+    const count = (this._tutorialAbilityUses.get(player.id) ?? 0) + 1
+    this._tutorialAbilityUses.set(player.id, count)
+    this._tutorialBroadcastState()
+
+    if (count >= 3) {
+      this._tutorialPhaseDone.add(player.id)
+      this._tutorialBroadcastState()
+      this._tutorialCheckPhaseComplete()
+    }
+  }
+
+  _tutorialCheckPhaseComplete() {
+    const nonHostCount = [...this.players.values()].filter(p => !p.isHost && !p.isBot).length
+    if (nonHostCount === 0) return
+    if (this._tutorialPhaseDone.size >= nonHostCount) {
+      this._tutorialAdvanceOrEnd()
+    }
+  }
+
+  _tutorialAdvanceOrEnd() {
+    if (this._tutorialEndScheduled) return
+    if (this._tutorialPhase >= 5) {
+      this._tutorialEndScheduled = true
+      this._tutorialBroadcastState()
+      setTimeout(() => this._tutorialEnd(), 2000)
+      return
+    }
+    this._tutorialPhase++
+    this._tutorialPhaseDone.clear()
+    this._tutorialAbilityUses.clear()
+    this._tutorialBroadcastState()
+  }
+
+  _tutorialResetAllCooldowns() {
+    this.players.forEach(p => {
+      if (p.isHost || p.isDead) return
+      this.cooldowns.clearPlayer(p.id)
+      for (let i = 0; i < 4; i++) {
+        this.io.emit(EVENTS.COOLDOWN, { playerId: p.id, skillIndex: i, durationMs: 0 })
+      }
+    })
   }
 
   /** Returns true if the gate with the given id has been destroyed. */
@@ -1181,7 +1314,17 @@ export default class GameServer {
         }
       }
 
-      if (lastMove) player.setMoveInput(lastMove.x, lastMove.y)
+      if (lastMove) {
+        player.setMoveInput(lastMove.x, lastMove.y)
+        if (this._tutorialActive && this._tutorialPhase === 1 && !player.isHost && !this._tutorialPhaseDone.has(player.id)) {
+          const mag = Math.hypot(lastMove.x, lastMove.y)
+          if (mag > 0.1) {
+            this._tutorialPhaseDone.add(player.id)
+            this._tutorialBroadcastState()
+            this._tutorialCheckPhaseComplete()
+          }
+        }
+      }
       queue.length = 0
     })
 
@@ -1204,6 +1347,11 @@ export default class GameServer {
       const gs = this._gs()
       this.skillSystem.tick(gs, dt)
       this.enemies.forEach(dummy => dummy.update(dt, gs))
+
+      if (this._tutorialActive && now - this._tutorialLastCooldownReset > 3000) {
+        this._tutorialLastCooldownReset = now
+        this._tutorialResetAllCooldowns()
+      }
     }
 
     if (this.scene === 'battle' || this.scene === 'bossFight') {
@@ -1317,6 +1465,11 @@ export default class GameServer {
     const config = player.getSkillConfig(index)
     if (!config) return
 
+    if (this._tutorialActive) {
+      const allowed = this._tutorialGetEnabledSkills(this._tutorialPhase)
+      if (!allowed.includes(index)) return
+    }
+
     // Bladestorm suppresses Shield Block only — other skills remain usable
     if (player.bladestormActive && config.type === 'SHIELD') return
 
@@ -1345,6 +1498,7 @@ export default class GameServer {
         const effectiveCooldown = Math.round(config.cooldown / (player.fireRateMult ?? 1))
         this.cooldowns.start(player.id, index, effectiveCooldown)
         this.io.emit(EVENTS.COOLDOWN, { playerId: player.id, skillIndex: index, durationMs: effectiveCooldown })
+        this._tutorialRecordAbilityUse(player, index)
       }
       return
     }
@@ -1379,6 +1533,7 @@ export default class GameServer {
         const effectiveCooldown = Math.round(config.cooldown / (player.fireRateMult ?? 1))
         this.cooldowns.start(player.id, index, effectiveCooldown)
         this.io.emit(EVENTS.COOLDOWN, { playerId: player.id, skillIndex: index, durationMs: effectiveCooldown })
+        this._tutorialRecordAbilityUse(player, index)
         const classColor = CLASSES[player.className]?.color ?? '#ffffff'
         const v = vector ?? { x: 1, y: 0 }
         this.io.emit(EVENTS.SKILL_FIRED, { playerId: player.id, skillName: config.name, type: config.type, subtype: config.subtype ?? null, x: Math.round(player.x), y: Math.round(player.y), angle: Math.atan2(v.y, v.x), radius: 0, range: config.range ?? 0, color: classColor })
@@ -1395,6 +1550,7 @@ export default class GameServer {
         const effectiveCooldown = Math.round(config.cooldown / (player.fireRateMult ?? 1))
         this.cooldowns.start(player.id, index, effectiveCooldown)
         this.io.emit(EVENTS.COOLDOWN, { playerId: player.id, skillIndex: index, durationMs: effectiveCooldown })
+        this._tutorialRecordAbilityUse(player, index)
         const classColor = CLASSES[player.className]?.color ?? '#ffffff'
         const v = vector ?? { x: 1, y: 0 }
         this.io.emit(EVENTS.SKILL_FIRED, { playerId: player.id, skillName: config.name, type: config.type, subtype: config.subtype ?? null, x: Math.round(player.x), y: Math.round(player.y), angle: Math.atan2(v.y, v.x), radius: 0, range: config.range ?? 0, color: classColor })
@@ -1407,6 +1563,7 @@ export default class GameServer {
     this.cooldowns.start(player.id, index, effectiveCooldown)
 
     this.io.emit(EVENTS.COOLDOWN, { playerId: player.id, skillIndex: index, durationMs: effectiveCooldown })
+    this._tutorialRecordAbilityUse(player, index)
 
     const gs = this._gs()
     const _preDashX = config.type === 'DASH' ? Math.round(player.x) : null

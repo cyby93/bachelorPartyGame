@@ -1,15 +1,15 @@
 <script>
-  import { onMount, onDestroy } from 'svelte'
-  import { io } from 'socket.io-client'
-  import { EVENTS } from '../../shared/protocol.js'
-  import NameScreen        from './screens/NameScreen.svelte'
-  import ClassSelectScreen from './screens/ClassSelectScreen.svelte'
-  import LobbyScreen       from './screens/LobbyScreen.svelte'
-  import GameScreen        from './screens/GameScreen.svelte'
-  import QuizAnswerScreen  from './screens/QuizAnswerScreen.svelte'
-  import QuizResultScreen  from './screens/QuizResultScreen.svelte'
-  import UpgradeSelectScreen from './screens/UpgradeSelectScreen.svelte'
-  import ControllerAudio from './ControllerAudio.js'
+  import { io } from 'socket.io-client';
+  import { onDestroy, onMount } from 'svelte';
+  import { EVENTS } from '../../shared/protocol.js';
+  import ControllerAudio from './ControllerAudio.js';
+  import ClassSelectScreen from './screens/ClassSelectScreen.svelte';
+  import GameScreen from './screens/GameScreen.svelte';
+  import LobbyScreen from './screens/LobbyScreen.svelte';
+  import NameScreen from './screens/NameScreen.svelte';
+  import QuizAnswerScreen from './screens/QuizAnswerScreen.svelte';
+  import QuizResultScreen from './screens/QuizResultScreen.svelte';
+  import UpgradeSelectScreen from './screens/UpgradeSelectScreen.svelte';
 
   // ── Screens: 'name' | 'classSelect' | 'briefing' | 'lobby' | 'game' | 'levelComplete' | 'end' | 'quiz'
   let screen = $state('name')
@@ -31,6 +31,7 @@
   let isDowned    = $state(false)
   let cooldowns   = $state([0, 0, 0, 0])  // expiresAt timestamps per skill slot
   let lobbyReady  = $state(false)
+  let tutorialEnabledSkills = $state(null)  // null = all enabled; array during tutorial
 
   // ── End state
   let endMessage  = $state('')
@@ -207,6 +208,10 @@
       cooldowns = cooldowns.map((v, i) => i === data.skillIndex ? Date.now() + data.durationMs : v)
     })
 
+    socket.on(EVENTS.TUTORIAL_STATE, data => {
+      tutorialEnabledSkills = data?.active ? data.enabledSkills : null
+    })
+
     // ── Quiz events ─────────────────────────────────────────────────────
     socket.on(EVENTS.QUIZ_QUESTION, data => {
       if (!validate(EVENTS.QUIZ_QUESTION, data, ['question', 'options'])) return
@@ -379,6 +384,7 @@
         lobbyMode={true}
         showFullscreenBtn={!isPortrait && !isIOS}
         {isFullscreen}
+        {tutorialEnabledSkills}
         ontogglefullscreen={toggleFullscreen}
         onmove={handleMove}
         onskill={handleSkill}
@@ -395,6 +401,7 @@
       {cooldowns}
       showFullscreenBtn={!isPortrait && !isIOS}
       {isFullscreen}
+      {tutorialEnabledSkills}
       ontogglefullscreen={toggleFullscreen}
       onrejoin={handleVoluntaryRejoin}
       onmove={handleMove}

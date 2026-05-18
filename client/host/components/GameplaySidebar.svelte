@@ -54,6 +54,8 @@
   }
 
   $: state = $gameState
+  $: tutorial = state.tutorial
+  $: tutorialProgress = Object.values(tutorial?.playerProgress ?? {})
   $: raidPlayers = Object.values(state.players)
     .filter(p => !p.isHost)
     .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
@@ -81,6 +83,30 @@
   </div>
   <div class="gameplay-rule"></div>
 </div>
+
+<!-- Tutorial progress card -->
+{#if tutorial}
+  <div class="sidebar-card tutorial-card">
+    <div class="sidebar-card-header">
+      Tutorial &mdash; Phase {tutorial.phase} / 5: {tutorial.phaseName}
+    </div>
+    <div class="tutorial-summary">
+      {tutorial.completedCount} / {tutorial.totalCount} players done
+    </div>
+    {#each tutorialProgress as p (p.name)}
+      {@const color = CLASSES[p.className]?.color ?? '#ffffff'}
+      <div class="tutorial-row" class:done={p.completed}>
+        <span class="tutorial-name" style="color:{color}">{p.name}</span>
+        <span class="tutorial-status">
+          {#if p.completed}&#10003;{:else if tutorial.phase === 1}&hellip;{:else}{p.count ?? 0} / 3{/if}
+        </span>
+      </div>
+    {/each}
+    {#if tutorial.allComplete}
+      <div class="tutorial-complete-msg">All done! Returning&hellip;</div>
+    {/if}
+  </div>
+{/if}
 
 <!-- Objective card -->
 <div class="sidebar-card">
@@ -172,3 +198,55 @@
     </div>
   </div>
 </div>
+
+<style>
+  .tutorial-card {
+    border-color: rgba(120, 200, 80, 0.30);
+  }
+
+  .tutorial-summary {
+    font-size: 12px;
+    color: var(--rn-text-dim);
+    margin-bottom: 6px;
+  }
+
+  .tutorial-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 0;
+    font-size: 12px;
+    opacity: 0.65;
+    transition: opacity 0.2s;
+  }
+
+  .tutorial-row.done {
+    opacity: 1;
+  }
+
+  .tutorial-name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tutorial-status {
+    color: var(--rn-text-dim);
+    font-size: 11px;
+    margin-left: 8px;
+    min-width: 32px;
+    text-align: right;
+  }
+
+  .tutorial-row.done .tutorial-status {
+    color: #7ac860;
+  }
+
+  .tutorial-complete-msg {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #7ac860;
+    text-align: center;
+  }
+</style>

@@ -49,10 +49,10 @@ const SkillDatabase = {
       subtype:   'BLADESTORM',  // player-attached spinning AOE — follows caster, blocks other skills
       inputType: 'INSTANT',
       cooldown:  12000,
-      damage:    5,             // damage per tick — tune via BalanceConfig
+      damage:    6,             // damage per tick — tune via BalanceConfig
       radius:    70,           // slightly larger than Cleave range
       duration:  4000,          // 4 seconds of spinning
-      tickRate:  200,           // hits every 200 ms
+      tickRate:  400,           // hits every 400 ms
       effectType: 'DAMAGE',
       iconFile:  'ability_warrior_bladestorm',
       dotColor:  0xcc2200,

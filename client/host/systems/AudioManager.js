@@ -63,6 +63,8 @@ export default class AudioManager {
     this._activeVoiceEl = null
     this._reactiveVoiceEl = null
     this._voiceReleaseTimer = null
+    this._fadingOutEl = null
+    this._fadingOutTimer = null
   }
 
   init() {
@@ -314,6 +316,14 @@ export default class AudioManager {
     this._playArpeggio([440, 370, 294, 220], 'sawtooth', 0.18, 140)
   }
 
+  playPlayButton() {
+    this._playNamedSfx('ui_play_button')
+  }
+
+  playSimpleButton() {
+    this._playNamedSfx('ui_simple_button')
+  }
+
   _createBusGraph(ctx) {
     const master = ctx.createGain()
     const music = ctx.createGain()
@@ -378,8 +388,7 @@ export default class AudioManager {
     this._currentMusicKey = nextKey
 
     if (this._musicEl) {
-      this._musicEl.pause()
-      this._musicEl.src = ''
+      this._fadeOutMusic(this._musicEl, 10000)
       this._musicEl = null
     }
 
@@ -392,6 +401,35 @@ export default class AudioManager {
     audio.muted = !!this._settings.muted
     audio.play().catch(() => {})
     this._musicEl = audio
+  }
+
+  _fadeOutMusic(el, durationMs) {
+    // Drop any in-progress fade so we never have two ghosts running
+    if (this._fadingOutTimer) {
+      clearInterval(this._fadingOutTimer)
+      this._fadingOutTimer = null
+    }
+    if (this._fadingOutEl) {
+      this._fadingOutEl.pause()
+      this._fadingOutEl.src = ''
+    }
+
+    this._fadingOutEl = el
+    const startVolume = el.volume
+    const startTime = performance.now()
+
+    this._fadingOutTimer = setInterval(() => {
+      const progress = Math.min((performance.now() - startTime) / durationMs, 1)
+      el.volume = startVolume * (1 - progress)
+
+      if (progress >= 1) {
+        clearInterval(this._fadingOutTimer)
+        this._fadingOutTimer = null
+        el.pause()
+        el.src = ''
+        this._fadingOutEl = null
+      }
+    }, 50)
   }
 
   _duckForVoice(active, { duckSfx = false } = {}) {

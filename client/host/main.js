@@ -18,6 +18,7 @@ import AudioManager   from './systems/AudioManager.js'
 import { gameState }  from './stores/gameState.js'
 import { quizState }  from './stores/quizState.js'
 import { dialogLine } from './stores/dialogStore.js'
+import { audioStore } from './stores/audioStore.js'
 import HostApp        from './HostApp.svelte'
 import SceneOverlay   from './components/SceneOverlay.svelte'
 import DialogOverlay  from './components/DialogOverlay.svelte'
@@ -25,6 +26,7 @@ import DialogOverlay  from './components/DialogOverlay.svelte'
 // ── Core instances ──────────────────────────────────────────────
 const game  = new HostGame()
 const audio = new AudioManager()
+audioStore.set(audio)
 
 // Connection badge (global DOM element, managed directly for simplicity)
 const badge = document.getElementById('conn-badge')

@@ -1,5 +1,6 @@
 <script>
-  import { onMount } from 'svelte'
+  import { fade } from 'svelte/transition'
+  import { onMount, onDestroy } from 'svelte'
   import { EVENTS } from '../../../shared/protocol.js'
   import { gameState } from '../stores/gameState.js'
   import HostButton from '../components/HostButton.svelte'
@@ -8,6 +9,38 @@
 
   const isLoading       = $derived($gameState.isLoading)
   const loadingProgress = $derived($gameState.loadingProgress)
+
+  // 'loading' → 'waiting' (assets done, waiting for click) → 'ready' (show lobby)
+  let loadPhase = $state('loading')
+
+  $effect(() => {
+    if (!isLoading && loadPhase === 'loading') {
+      loadPhase = 'waiting'
+    }
+  })
+
+  function advance() {
+    if (loadPhase !== 'waiting') return
+    loadPhase = 'ready'
+    if (audio) {
+      audio.init()
+      audio.setScene('staging')
+    }
+  }
+
+  function onKeyDown(e) {
+    if (loadPhase === 'waiting') advance()
+  }
+
+  onMount(() => {
+    window.addEventListener('keydown', onKeyDown)
+  })
+
+  onDestroy(() => {
+    window.removeEventListener('keydown', onKeyDown)
+  })
+
+  let isLeaving = $state(false)
 
   let qrEl = $state()
   let audioOpen = $state(false)
@@ -42,8 +75,10 @@
   })
 
   function handlePlay() {
-    if (audio) audio.init()
-    socket.emit(EVENTS.START_GAME)
+    if (isLeaving) return
+    isLeaving = true
+    if (audio) audio.playPlayButton()
+    setTimeout(() => socket.emit(EVENTS.START_GAME), 2000)
   }
 
   function applyAudio() {
@@ -66,18 +101,23 @@
   }
 </script>
 
-<div class="creation-screen">
-  {#if isLoading}
-    <div class="loading-view">
+<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+<div class="creation-screen" onclick={loadPhase === 'waiting' ? advance : null}>
+  {#if loadPhase !== 'ready'}
+    <div class="loading-view" out:fade={{ duration: 2000 }}>
       <h1 class="game-title">RAID NIGHT</h1>
       <p class="game-subtitle">Bachelor Party Edition</p>
       <div class="progress-track">
-        <div class="progress-fill" style="width: {Math.round(loadingProgress * 100)}%"></div>
+        <div class="progress-fill" style="width: {loadPhase === 'loading' ? Math.round(loadingProgress * 100) : 100}%"></div>
       </div>
-      <p class="loading-label">Loading assets… {Math.round(loadingProgress * 100)}%</p>
+      {#if loadPhase === 'waiting'}
+        <p class="click-to-continue">Click anywhere to continue…</p>
+      {:else}
+        <p class="loading-label">Loading assets… {Math.round(loadingProgress * 100)}%</p>
+      {/if}
     </div>
   {:else}
-    <div class="creation-inner">
+    <div class="creation-inner" class:is-leaving={isLeaving} in:fade={{ duration: 1200, delay: 2000 }}>
       <div class="crest">
         <h1 class="game-title">RAID NIGHT</h1>
         <p class="game-subtitle">Bachelor Party Edition</p>
@@ -96,7 +136,7 @@
       </div>
 
       <div class="play-area">
-        <HostButton label="▶  PLAY" variant="large" onclick={handlePlay} />
+        <HostButton label="▶  PLAY" variant="large" sound={false} onclick={handlePlay} />
       </div>
 
       <div class="footer-controls">
@@ -132,17 +172,17 @@
     position: fixed;
     inset: 0;
     z-index: 50;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     background:
       radial-gradient(circle at 50% 20%, rgba(200, 148, 40, 0.12) 0%, rgba(200, 148, 40, 0) 26%),
       radial-gradient(circle at 50% -6%, rgba(255, 200, 80, 0.07) 0%, rgba(255, 200, 80, 0) 32%),
       linear-gradient(180deg, #1E1208 0%, #120A04 52%, #080402 100%);
-    overflow-y: auto;
   }
 
   .loading-view {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -172,13 +212,40 @@
     letter-spacing: 0.5px;
   }
 
+  .click-to-continue {
+    font-size: 14px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--rn-gold);
+    animation: ctc-pulse 1.6s ease-in-out infinite;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  @keyframes ctc-pulse {
+    0%, 100% { opacity: 0.25; }
+    50%       { opacity: 1; }
+  }
+
   .creation-inner {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 32px;
     width: min(640px, 92vw);
     padding: 40px 24px;
+    max-height: 100dvh;
+    overflow-y: auto;
+    transition: opacity 2s ease-in-out;
+  }
+
+  .creation-inner.is-leaving {
+    opacity: 0;
+    pointer-events: none;
   }
 
   /* Title */

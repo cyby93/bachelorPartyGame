@@ -1,11 +1,19 @@
 <script>
-  let { label, variant = 'primary', disabled = false, onclick } = $props()
+  import { get } from 'svelte/store'
+  import { audioStore } from '../stores/audioStore.js'
+
+  let { label, variant = 'primary', disabled = false, sound = true, onclick } = $props()
+
+  function handleClick(e) {
+    if (!disabled && sound) get(audioStore)?.playSimpleButton()
+    onclick?.(e)
+  }
 </script>
 
 <button
   class="host-btn host-btn--{variant}"
   {disabled}
-  {onclick}
+  onclick={handleClick}
 >
   {label}
 </button>

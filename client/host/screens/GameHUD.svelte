@@ -1,7 +1,9 @@
 <script>
   import { onMount } from 'svelte'
+  import { get } from 'svelte/store'
   import { EVENTS } from '../../../shared/protocol.js'
   import { gameState } from '../stores/gameState.js'
+  import { audioStore } from '../stores/audioStore.js'
   import HostButton from '../components/HostButton.svelte'
   import GameplaySidebar from '../components/GameplaySidebar.svelte'
   import DebugOptions from '../components/DebugOptions.svelte'
@@ -54,6 +56,7 @@
   }
 
   function handleSessionReset() {
+    get(audioStore)?.playSimpleButton()
     if (confirm('Exit game? All players will be kicked.')) {
       socket.emit(EVENTS.SESSION_RESET)
     }
@@ -76,6 +79,7 @@
   }
 
   function toggleFullscreen() {
+    get(audioStore)?.playSimpleButton()
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {})
     } else {

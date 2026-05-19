@@ -41,6 +41,9 @@ export const AUDIO_DUCKING = {
 }
 
 export const LEVEL_AUDIO = {
+  staging: {
+    music: { key: 'music_main_theme_burning_crusade', src: '/assets/audio/music/main_theme_burning_crusade.ogg', loop: true },
+  },
   lobby: {
     music: { key: 'music_lobby_gathering', src: '/assets/audio/music/music_lobby_gathering.mp3', loop: true },
   },
@@ -87,6 +90,8 @@ export const AUDIO_STINGERS = {
 export const HIT_FLESH_KEYS = ['fx_hit_flesh_01', 'fx_hit_flesh_02', 'fx_hit_flesh_03']
 
 export const AUDIO_ONE_SHOTS = {
+  ui_play_button:    { key: 'ui_play_button',    src: '/assets/audio/sfx/UserInterface/PlayButton.ogg' },
+  ui_simple_button:  { key: 'ui_simple_button',  src: '/assets/audio/sfx/UserInterface/simple_button.ogg' },
   combat_targeted_hit: { key: 'combat_targeted_hit', src: '/assets/audio/sfx/combat_targeted_hit.mp3' },
   portal_beam_warning: { key: 'portal_beam_warning', src: '/assets/audio/sfx/portal_beam_warning.mp3' },
   portal_beam_damage: { key: 'portal_beam_damage', src: '/assets/audio/sfx/portal_beam_damage.mp3' },
@@ -434,6 +439,7 @@ export const ENEMY_AUDIO = {
 }
 
 export function getLevelAudio(levelId, scene) {
+  if (scene === 'staging') return LEVEL_AUDIO.staging
   if (scene === 'lobby') return LEVEL_AUDIO.lobby
   if (scene === 'result') return LEVEL_AUDIO.result
   if (scene === 'gameover') return LEVEL_AUDIO.gameover

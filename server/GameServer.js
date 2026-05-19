@@ -135,8 +135,9 @@ export default class GameServer {
     this.currentLevel      = null
     this.spawnSystem       = null
     this._levelStartTime   = 0
-    this._spawnSystemTimer     = null   // delayed spawn init during opening transition
-    this._levelCompletePending = false  // guard against double-fire of _onLevelComplete
+    this._spawnSystemTimer       = null   // delayed spawn init during opening transition
+    this._initialEnemiesReady    = false  // true once initialEnemies have been spawned
+    this._levelCompletePending   = false  // guard against double-fire of _onLevelComplete
     this._closingRunner        = null   // TransitionRunner for closing sequence
     this.arenaWidth        = GAME_CONFIG.CANVAS_WIDTH
     this.arenaHeight       = GAME_CONFIG.CANVAS_HEIGHT
@@ -815,6 +816,8 @@ export default class GameServer {
         warlock.setArenaSize(this.arenaWidth, this.arenaHeight)
         warlock._channelTarget = this.boss.id
         warlock._facingAngle = angle + Math.PI  // face toward boss (inward)
+        // Channelers are immune during the opening dialog so the cinematic plays uninterrupted
+        if (level.dialog?.length && !this.skipDialog) warlock.isImmune = true
         this.enemies.set(id, warlock)
         this._warlockCount++
       }
@@ -822,27 +825,13 @@ export default class GameServer {
       this.boss.isImmune = true
     }
 
-    // Spawn initial enemies (Level 3 — Leviathan)
-    if (level.initialEnemies?.length) {
-      for (const entry of level.initialEnemies) {
-        const base = ENEMY_TYPES[entry.type]
-        if (!base) continue
-        const id = ++this._enemyIdSeq.value
-        const enemy = new ServerEnemy({
-          id,
-          x: entry.x,
-          y: entry.y,
-          type: entry.type,
-          hp: Math.round(base.hp * hpMult),
-          maxHp: Math.round(base.hp * hpMult),
-          speed: base.speed,
-          radius: base.radius,
-          meleeDamage: Math.round(base.meleeDamage * damageMult),
-          generation: entry.generation ?? 0,
-        })
-        enemy.setArenaSize(this.arenaWidth, this.arenaHeight)
-        this.enemies.set(id, enemy)
-      }
+    // Spawn initial enemies (e.g. Leviathan in Level 4).
+    // When walk-in is active, defer to _onWalkInComplete so the enemy doesn't appear
+    // before players arrive. The opening config may also add an extra delay via
+    // initialEnemyDelayMs applied on top of the walk-in.
+    const deferInitialEnemies = walkInMs > 0 && !this.skipDialog
+    if (level.initialEnemies?.length && !deferInitialEnemies) {
+      this._spawnInitialEnemies(level, hpMult, damageMult)
     }
 
     // Illidan encounter setup (Level 6)
@@ -877,6 +866,10 @@ export default class GameServer {
           // If this level has warlocks, immunity is held until all warlocks die — don't release it here.
           // For boss levels without warlocks (Illidan included), dialog end = boss becomes vulnerable.
           if (this.boss && !level.warlocks) this.boss.isImmune = false
+          // Lift channeler immunity now that the cinematic is over (Level 5)
+          if (level.warlocks) {
+            this.enemies.forEach(e => { if (e.type === 'warlock') e.isImmune = false })
+          }
           // Activate ambient minion spawning now that dialog is done (used by Shade Phase 2).
           // Illidan's minionSpawning is null so this is a safe no-op for Level 6.
           if (level.minionSpawning && !this.minionSpawnSystem) {
@@ -993,6 +986,7 @@ export default class GameServer {
     if (this._spawnSystemTimer) { clearTimeout(this._spawnSystemTimer); this._spawnSystemTimer = null }
     if (this._closingRunner)    { this._closingRunner.abort(); this._closingRunner = null }
     this._levelCompletePending = false
+    this._initialEnemiesReady  = false
   }
 
   _resetPlayerInputs() {
@@ -1808,8 +1802,8 @@ export default class GameServer {
     }
     this._warlockCount = warlockAliveCount
 
-    // Warlock channeling buff application (continuous while alive)
-    if (this.boss && this.boss.isImmune) {
+    // Warlock channeling buff application (continuous while alive, paused during opening dialog)
+    if (this.boss && this.boss.isImmune && !this._dialogSystem) {
       this.enemies.forEach(e => {
         if (e.type !== 'warlock' || e.isDead) return
         // Each warlock buffs the boss HP and damage per second
@@ -2327,6 +2321,12 @@ export default class GameServer {
           break
         }
         case 'killAll': {
+          // Wait for deferred initial enemies (e.g. Leviathan) before allowing completion
+          const level = this.currentLevel
+          if (level?.initialEnemies?.length && !this._initialEnemiesReady) {
+            allComplete = false
+            break
+          }
           // Count alive enemies + dead-but-splitting ones (pending children not yet spawned)
           let aliveCount = 0
           this.enemies.forEach(e => { if (!e.isDead || e._pendingChildren?.length) aliveCount++ })
@@ -2450,9 +2450,48 @@ export default class GameServer {
       }
     }
 
+    // Spawn deferred initial enemies (e.g. Leviathan), optionally with an extra delay
+    if (level.initialEnemies?.length) {
+      const diff = level.difficulty ?? {}
+      const hpMult     = (diff.hpMult?.base ?? 1)     + (diff.hpMult?.perPlayer ?? 0)     * (playerCount - 1)
+      const damageMult = (diff.damageMult?.base ?? 1) + (diff.damageMult?.perPlayer ?? 0) * (playerCount - 1)
+      const extraDelay = level.transition?.opening?.initialEnemyDelayMs ?? 0
+      if (extraDelay > 0) {
+        setTimeout(() => {
+          if (this.currentLevel === level) this._spawnInitialEnemies(level, hpMult, damageMult)
+        }, extraDelay)
+      } else {
+        this._spawnInitialEnemies(level, hpMult, damageMult)
+      }
+    }
+
     // Start dialog (levels 5 & 6) — combat will begin when dialog completes
     if (this._dialogSystem) {
       this._dialogSystem.start((event, data) => this.io.emit(event, data))
+    }
+  }
+
+  /** Spawn all entries in level.initialEnemies into the enemies map. */
+  _spawnInitialEnemies(level, hpMult, damageMult) {
+    this._initialEnemiesReady = true
+    for (const entry of level.initialEnemies) {
+      const base = ENEMY_TYPES[entry.type]
+      if (!base) continue
+      const id = ++this._enemyIdSeq.value
+      const enemy = new ServerEnemy({
+        id,
+        x: entry.x,
+        y: entry.y,
+        type: entry.type,
+        hp: Math.round(base.hp * hpMult),
+        maxHp: Math.round(base.hp * hpMult),
+        speed: base.speed,
+        radius: base.radius,
+        meleeDamage: Math.round(base.meleeDamage * damageMult),
+        generation: entry.generation ?? 0,
+      })
+      enemy.setArenaSize(this.arenaWidth, this.arenaHeight)
+      this.enemies.set(id, enemy)
     }
   }
 

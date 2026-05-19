@@ -216,12 +216,19 @@ export const CAMPAIGN = [
         { type: 'ashtonghueMystic',  weight: 1 },
         { type: 'ritualChanneler',   weight: 2 },
       ],
-      // All 4 spawn points active simultaneously. maxAliveAtOnce is shared across all of them.
-      spawnPoints: [
-        { x: 690,  y: 30  },   // Room 1, top wall edge, near gate1
-        { x: 690,  y: 570 },   // Room 1, bottom wall edge, near gate1
-        { x: 1060, y: 30  },   // Room 2, top edge, right side (near gate2)
-        { x: 1060, y: 570 },   // Room 2, bottom edge, right side (near gate2)
+      // Phase 1: only the two left spawn points (Room 1). After gate1 is destroyed,
+      // SpawnSystem advances to phase 2 and all 4 points become active.
+      spawnPhases: [
+        { phase: 1, spawnPoints: [
+          { x: 690, y: 30  },   // Room 1, top wall edge, near gate1
+          { x: 690, y: 570 },   // Room 1, bottom wall edge, near gate1
+        ]},
+        { phase: 2, spawnPoints: [
+          { x: 690, y: 30  },   // Room 1, top
+          { x: 690, y: 570 },   // Room 1, bottom
+          { x: 1060, y: 30  },  // Room 2, top
+          { x: 1060, y: 570 },  // Room 2, bottom
+        ]},
       ],
     },
     difficulty: {
@@ -277,6 +284,8 @@ export const CAMPAIGN = [
       opening: {
         fadeInMs: 1500,
         walkInMs: 2500,
+        // Leviathan activates 2s after players finish walking in
+        initialEnemyDelayMs: 2000,
       },
       closing: {
         fadeOutMs: 1800,
@@ -323,8 +332,9 @@ export const CAMPAIGN = [
       centerEntityId: 'shade',
       hp: Math.round(2.20 * X * R),   // tunable per-level warlock HP (falls back to EnemyTypeConfig if omitted)
     },
-    // Ambient spawning throughout the encounter — active from phase 1
-    spawning: {
+    // Ambient spawning — deferred until the opening dialog completes so the
+    // cinematic plays uninterrupted. Activated by GameServer when dialog ends.
+    minionSpawning: {
       mode: 'continuous',
       interval: 3000,
       countPerWave: [1, 2],

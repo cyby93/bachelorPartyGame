@@ -29,6 +29,7 @@ export default class ServerEnemy {
     this.speed         = speed  ?? base.speed
     this.meleeDamage   = meleeDamage ?? base.meleeDamage ?? 0
     this.isDead        = false
+    this.isImmune      = false
     this.isPlayer      = false
     this.arenaWidth    = GAME_CONFIG.CANVAS_WIDTH
     this.arenaHeight   = GAME_CONFIG.CANVAS_HEIGHT
@@ -139,7 +140,7 @@ export default class ServerEnemy {
   }
 
   takeDamage(amount) {
-    if (this.isDead) return
+    if (this.isDead || this.isImmune) return
     this.hp = Math.max(0, this.hp - amount)
     if (this.hp === 0) this.isDead = true
   }

@@ -36,7 +36,7 @@ export const SFX_VOLUME_SCALES = {
 export const AUDIO_DUCKING = {
   voiceMusicMultiplier: 0.45,
   voiceSfxMultiplier: 0.85,
-  voiceSfxDialogMultiplier: 0.20,
+  voiceSfxDialogMultiplier: 0.10,
   releaseMs: 220,
 }
 

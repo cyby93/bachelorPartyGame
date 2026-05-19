@@ -161,7 +161,7 @@ export const ILLIDAN_CONFIG = {
         cooldown: 12000,
         type: "agonizingFlames",
         damage: Math.round(1.5 * Y * R), // 60 at defaults
-        splashRadius: 100,
+        splashRadius: 120,
         dotDamage: Math.round(0.25 * Y * R), // 10 at defaults
         dotInterval: 1000,
         dotDuration: 10000,
@@ -171,7 +171,7 @@ export const ILLIDAN_CONFIG = {
         name: "Shadow Blast",
         cooldown: 1000,
         type: "shadowBlast",
-        castTime: 3500,
+        castTime: 2500,
         damage: Math.round(1 * Y * R), // 40 at defaults
         splashRadius: 80,
       },
@@ -208,11 +208,14 @@ export const ILLIDAN_CONFIG = {
    */
   phases: [
     { threshold: 1.0, speed: 1.5, name: ILLIDAN_PHASE.HUNT },
-    { threshold: 0.95, speed: 0, name: ILLIDAN_PHASE.AZZINOTH },
+    { threshold: 0.6, speed: 0, name: ILLIDAN_PHASE.AZZINOTH },
   ],
 
   /** Where Illidan teleports during Phase 2 — above the top edge. */
   phase2Position: { x: 720, y: -80 },
+
+  /** How long the warglaive throw animation lasts before enemies spawn (ms). */
+  warglaiveFlightMs: 3000,
 
   /** Adds spawned when Phase 2 begins. */
   phase2Adds: [
@@ -266,17 +269,17 @@ export const ILLIDAN_CONFIG = {
   reactiveVo: {
     killTaunt: {
       keys: ['voice_illidan_player_dies_01', 'voice_illidan_player_dies_02'],
-      cooldownMs: 20000,
+      cooldownMs: 10000,
     },
     attackCry: {
       keys: ['vo_illidan_attack_01', 'vo_illidan_attack_02'],
-      cooldownMinMs: 1000,
-      cooldownMaxMs: 3000,
+      cooldownMinMs: 2000,
+      cooldownMaxMs: 4000,
     },
     woundCry: {
       keys: ['vo_illidan_wound_01', 'vo_illidan_wound_02'],
-      cooldownMinMs: 1000,
-      cooldownMaxMs: 3000,
+      cooldownMinMs: 2000,
+      cooldownMaxMs: 4000,
     },
   },
 };

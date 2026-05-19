@@ -321,7 +321,7 @@ export const CAMPAIGN = [
         attackRange: 50,
         target: 'shade',
         idleUntilPhase: 2,
-        spawnPosition: { x: 250, y: 450 },
+        spawnPosition: { x: 350, y: 450 },
       },
     ],
     boss: 'SHADE_OF_AKAMA',
@@ -417,7 +417,7 @@ export const CAMPAIGN = [
         attackRange:    50,
         target:         null,     // decorative — does not attack Illidan
         initialAngle:   0,        // face east (toward Illidan)
-        spawnPosition:  { x: 220, y: 450 },
+        spawnPosition:  { x: 320, y: 450 },
       },
     ],
 
@@ -425,30 +425,30 @@ export const CAMPAIGN = [
     // After dialog completes, boss becomes vulnerable.
     // TODO(Cyby): Replace [PLACEHOLDER] lines with final Illidan text.
     dialog: [
-      // { 
-      //   speaker: 'illidan', 
-      //   text: 'Akama. Your duplicity is hardly surprising. I should have slaughtered you and your malformed brethren long ago.', 
-      //   voiceKey: 'voice_illidan_intro_01', 
-      //   delayAfter: 14000 
-      // },
-      // { 
-      //   speaker: 'akama', 
-      //   text: 'We"ve come to end your reign, Illidan. My people and all of Outland shall be free!', 
-      //   voiceKey: 'voice_akama_intro_02', 
-      //   delayAfter: 10000 
-      // },
-      // { 
-      //   speaker: 'illidan', 
-      //   text: 'Boldly said. But I remain...unconvinced.', 
-      //   voiceKey: 'voice_illidan_intro_03', 
-      //   delayAfter: 8000 
-      // },
-      // { 
-      //   speaker: 'akama', 
-      //   text: 'The time has come! The moment is at hand!', 
-      //   voiceKey: 'voice_akama_intro_04', 
-      //   delayAfter: 4000 
-      // },
+      { 
+        speaker: 'illidan', 
+        text: 'Akama. Your duplicity is hardly surprising. I should have slaughtered you and your malformed brethren long ago.', 
+        voiceKey: 'voice_illidan_intro_01', 
+        delayAfter: 14000 
+      },
+      { 
+        speaker: 'akama', 
+        text: 'We"ve come to end your reign, Illidan. My people and all of Outland shall be free!', 
+        voiceKey: 'voice_akama_intro_02', 
+        delayAfter: 10000 
+      },
+      { 
+        speaker: 'illidan', 
+        text: 'Boldly said. But I remain...unconvinced.', 
+        voiceKey: 'voice_illidan_intro_03', 
+        delayAfter: 8000 
+      },
+      { 
+        speaker: 'akama', 
+        text: 'The time has come! The moment is at hand!', 
+        voiceKey: 'voice_akama_intro_04', 
+        delayAfter: 4000 
+      },
       { 
         speaker: 'illidan', 
         text: 'You are not prepared!', 

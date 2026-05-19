@@ -191,17 +191,26 @@ export default class BossSprite {
     }
 
     if (this._animState !== 'transition') {
-      const moved = this._lastRenderX !== null &&
-        (Math.abs(state.x - this._lastRenderX) > 0.3 ||
-         Math.abs(state.y - this._lastRenderY) > 0.3)
-      if (moved) this._walkLinger = 0.15
-      else        this._walkLinger = Math.max(0, this._walkLinger - dt)
+      const isFlying = state.phase === 'azzinoth' && animCfg.flying
+      if (isFlying) {
+        if (this._animState !== 'flying') {
+          this._animState = 'flying'
+          this._animFrame = 0
+          this._animTimer = 0
+        }
+      } else {
+        const moved = this._lastRenderX !== null &&
+          (Math.abs(state.x - this._lastRenderX) > 0.3 ||
+           Math.abs(state.y - this._lastRenderY) > 0.3)
+        if (moved) this._walkLinger = 0.15
+        else        this._walkLinger = Math.max(0, this._walkLinger - dt)
 
-      const newState = this._walkLinger > 0 ? 'walk' : 'idle'
-      if (newState !== this._animState) {
-        this._animState = newState
-        this._animFrame = 0
-        this._animTimer = 0
+        const newState = this._walkLinger > 0 ? 'walk' : 'idle'
+        if (newState !== this._animState) {
+          this._animState = newState
+          this._animFrame = 0
+          this._animTimer = 0
+        }
       }
     }
     this._lastRenderX = state.x

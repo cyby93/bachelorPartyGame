@@ -266,6 +266,10 @@ socket.on(EVENTS.ILLIDAN_PHASE_TRANSITION, data => {
   }
 })
 
+socket.on(EVENTS.ILLIDAN_WARGLAIVE_THROW, data => {
+  game.activeRenderer?.onWarglaiveThrow?.(data)
+})
+
 socket.on(EVENTS.ILLIDAN_AURA_PULSE, data => {
   audio.handleAuraPulse(data)
   game.activeRenderer?.onIllidanAuraPulse?.(data)

@@ -43,6 +43,7 @@ export default class IllidanEncounter {
 
     this._state = {
       phase2AddsSpawned:    false,
+      _phase2Pending:       false,
       flameOfAzzinothIds:   new Set(),
       phase3Entered:        false,
       phase4Entered:        false,
@@ -225,36 +226,53 @@ export default class IllidanEncounter {
   }
 
   _onPhase2() {
-    if (this._state.phase2AddsSpawned) return
-    this._state.phase2AddsSpawned = true
+    if (this._state.phase2AddsSpawned || this._state._phase2Pending) return
+    this._state._phase2Pending = true
 
-    console.log('[Illidan] Phase 2 — flying outside map')
+    console.log('[Illidan] Phase 2 — flying outside map, throwing warglaives')
 
     this.boss.isImmune = true
     this.boss.x = ILLIDAN_CONFIG.phase2Position.x
     this.boss.y = ILLIDAN_CONFIG.phase2Position.y
 
+    const FLIGHT_MS = ILLIDAN_CONFIG.warglaiveFlightMs ?? 2000
+
+    this.io.emit(EVENTS.ILLIDAN_WARGLAIVE_THROW, {
+      fromX:    this.boss.x,
+      fromY:    this.boss.y,
+      blades:   ILLIDAN_CONFIG.phase2Adds.map((cfg, i) => ({ id: i, targetX: cfg.x, targetY: cfg.y })),
+      flightMs: FLIGHT_MS,
+    })
+
+    // Pre-calculate HP multiplier before the timeout — player count won't change mid-transition
     let playerCount = 0
     this.players.forEach(p => { if (!p.isHost) playerCount++ })
     const hpMult = (this._difficulty.hpMult?.base ?? 1) + (this._difficulty.hpMult?.perPlayer ?? 0) * (playerCount - 1)
 
-    for (const addCfg of ILLIDAN_CONFIG.phase2Adds) {
-      const base = ENEMY_TYPES[addCfg.type]
-      if (!base) continue
-      const id = ++this._enemyIdSeq.value
-      const add = new ServerEnemy({
-        id,
-        x: addCfg.x, y: addCfg.y,
-        type: addCfg.type,
-        hp: Math.round(base.hp * hpMult), maxHp: Math.round(base.hp * hpMult),
-        speed: base.speed,
-        radius: base.radius,
-        meleeDamage: 0,
-      })
-      add.setArenaSize(this.arenaWidth, this.arenaHeight)
-      this.enemies.set(id, add)
-      this._state.flameOfAzzinothIds.add(id)
-    }
+    setTimeout(() => {
+      if (!this.boss || this.boss.isDead) return
+
+      for (const addCfg of ILLIDAN_CONFIG.phase2Adds) {
+        const base = ENEMY_TYPES[addCfg.type]
+        if (!base) continue
+        const id = ++this._enemyIdSeq.value
+        const add = new ServerEnemy({
+          id,
+          x: addCfg.x, y: addCfg.y,
+          type: addCfg.type,
+          hp: Math.round(base.hp * hpMult), maxHp: Math.round(base.hp * hpMult),
+          speed: base.speed,
+          radius: base.radius,
+          meleeDamage: 0,
+        })
+        add.setArenaSize(this.arenaWidth, this.arenaHeight)
+        this.enemies.set(id, add)
+        this._state.flameOfAzzinothIds.add(id)
+      }
+
+      // Set flag after spawn — this opens the fireball gate in update()
+      this._state.phase2AddsSpawned = true
+    }, FLIGHT_MS)
   }
 
   _onPhase3() {

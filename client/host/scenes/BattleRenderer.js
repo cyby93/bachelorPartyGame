@@ -66,6 +66,9 @@ export default class BattleRenderer extends BaseRenderer {
     this._eyeBeamGfx   = new Graphics()
     this._entityRoot.addChild(this._eyeBeamGfx)
 
+    // Warglaive throw sprites (Illidan Phase 2 transition)
+    this._warglaiveSprites = []
+
     // Warlock channeling beams (Level 5 Phase 1: warlocks → Shade)
     this._warlockBeamGfx = new Graphics()
     this._entityRoot.addChild(this._warlockBeamGfx)
@@ -158,6 +161,13 @@ export default class BattleRenderer extends BaseRenderer {
     // Transition overlay
     this._fadeState       = null
     this._transitionAlpha = 0
+
+    // Warglaive throw sprites
+    for (const s of this._warglaiveSprites) {
+      if (s.parent) s.parent.removeChild(s)
+      s.destroy({ children: true })
+    }
+    this._warglaiveSprites = []
 
     // Eye beams
     this._eyeBeamGfx.clear()
@@ -733,6 +743,69 @@ export default class BattleRenderer extends BaseRenderer {
     }
     requestAnimationFrame(fade)
 
+  }
+
+  /** Animate both warglaives flying from Illidan's airborne position to the Flame of Azzinoth spawn points. */
+  onWarglaiveThrow({ fromX, fromY, blades, flightMs }) {
+    if (!this._entityRoot) return
+
+    const durationMs = flightMs ?? 2000
+
+    blades.forEach((blade, i) => {
+      const container = new Container()
+
+      const tex = Assets.get('warglaives_of_azzinoth')
+      let bladeGfx
+      if (tex) {
+        bladeGfx = new Sprite(tex)
+        bladeGfx.anchor.set(0.5)
+        bladeGfx.width  = 80
+        bladeGfx.height = 32
+      } else {
+        bladeGfx = new Graphics()
+        bladeGfx.poly([-40, 0, -8, -14, 40, 0, -8, 14])
+        bladeGfx.fill({ color: 0xff6600, alpha: 0.95 })
+        bladeGfx.poly([-40, 0, -8, -14, 40, 0, -8, 14])
+        bladeGfx.stroke({ color: 0xffcc44, width: 1.5, alpha: 0.9 })
+      }
+      container.addChild(bladeGfx)
+
+      container.position.set(fromX, fromY)
+      this._entityRoot.addChild(container)
+      this._warglaiveSprites.push(container)
+
+      const staggerMs = i * 120
+      const startTime = performance.now() + staggerMs
+      const dx        = blade.targetX - fromX
+      const dy        = blade.targetY - fromY
+      const spinDir   = i === 0 ? 1 : -1
+      const spinRate  = (Math.PI * 2 * 3) / (durationMs / 1000)
+
+      const tick = () => {
+        if (!container.parent) return
+
+        const elapsed = performance.now() - startTime
+        if (elapsed < 0) { requestAnimationFrame(tick); return }
+
+        const t     = Math.min(elapsed / durationMs, 1)
+        const eased = 1 - Math.pow(1 - t, 3)
+
+        container.position.set(fromX + dx * eased, fromY + dy * eased)
+        container.rotation += spinDir * spinRate * (1 / 60)
+        container.alpha = t > 0.8 ? 1 - (t - 0.8) / 0.2 : 1
+
+        if (t < 1) {
+          requestAnimationFrame(tick)
+        } else {
+          if (container.parent) this._entityRoot.removeChild(container)
+          const idx = this._warglaiveSprites.indexOf(container)
+          if (idx !== -1) this._warglaiveSprites.splice(idx, 1)
+          container.destroy({ children: true })
+        }
+      }
+
+      requestAnimationFrame(tick)
+    })
   }
 
   // ── Portal Beam rendering (Level 2) ──────────────────────────────────────

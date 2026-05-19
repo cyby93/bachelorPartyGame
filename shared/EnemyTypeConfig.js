@@ -202,17 +202,17 @@ export const ENEMY_TYPES = {
   // Phase 2 adds — must be kited to avoid Blaze zones; burning aura damages nearby players
   flameOfAzzinoth: {
     hp: Math.round(10.00 * HP_MULT * BASE_DPS),
-    speed: 0.5,
+    speed: 0.6,
     radius: 60,
     hitboxShape: 'oval',
-    meleeDamage: 0,     // dealt via aura tick, not contact
+    meleeDamage: 20,     // dealt via aura tick, not contact
     spriteSize: 240,
     color: '#ff5500',
     shape: 'circle',
     ai: 'flameOfAzzinoth',
-    blazeInterval: 4000,  // ms between leaving a Blaze ground zone
+    blazeInterval: 6000,  // ms between leaving a Blaze ground zone
     blazeRadius:   80,
-    auraRadius:    100,    // burning aura — damages players every 2 s
+    auraRadius:    300,    // burning aura — damages players every 2 s
     auraDamage:    10,
     auraTickRate:  2000,
   },

@@ -60,7 +60,7 @@ export const DIRECTIONAL_BOSSES = new Set(['illidan', 'illidan_demon'])
 
 export const DIRECTIONAL_BOSS_ANIMATIONS = {
   // transition: one-shot played during phase freeze window. Add once sprites are generated.
-  illidan:       { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  illidan:       { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, flying: { frames: 4, fps: 7 } },
   illidan_demon: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
   // Shade of Akama reuses NPC akama sprites — already loaded by DIRECTIONAL_NPC_ANIMATIONS
   akama:         { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
@@ -426,6 +426,7 @@ export default class HostGame {
       'dummy_training',
       'dummy_ranged',
       'dummy_tank',
+      'warglaives_of_azzinoth',
     ]
     const manifest = SPRITE_KEYS.map(k => ({ alias: k, src: `/assets/sprites/${k}.png` }))
 

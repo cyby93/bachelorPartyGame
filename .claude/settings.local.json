@@ -100,7 +100,10 @@
       "Bash(file *)",
       "Bash(wait)",
       "Bash(cd /d \"D:\\\\Games\\\\bachelorPartyGame\")",
-      "Skill(agent-voljin)"
+      "Skill(agent-voljin)",
+      "Skill(bmad-party-mode)",
+      "mcp__pixellab__get_balance",
+      "mcp__pixellab__dismiss_review"
     ]
   },
   "enableAllProjectMcpServers": true,

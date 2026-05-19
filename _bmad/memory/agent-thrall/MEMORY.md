@@ -2,6 +2,15 @@
 
 _Curated long-term knowledge. Every token here loads every session — keep it tight._
 
+## Enemy Walk Animation Debounce (2026-05-19)
+
+`EnemySprite.update()` is called at 60fps but server STATE_DELTA arrives at 20Hz. For 2 of 3 frames,
+`state.x/y` is unchanged → delta = 0 → the walk→idle state check trips and resets `_animFrame` to 0.
+Fix: `_lastMoveTime` timestamp + `recentlyMoved = moved || (Date.now() - _lastMoveTime) < 150`.
+150ms covers ~3 server ticks — enemy stays in walk animation as long as it's actually moving server-side.
+Was visibly broken on `flameOfAzzinoth` (large 240px sprite, slow 30pps), but the fix applies to all
+directional enemies. If a future enemy has snappy start/stop that 150ms overshoots, reduce the threshold.
+
 ## Leviathan Visual System (2026-04-21)
 
 PixelLab animations fail for multi-headed characters — skeleton deformation collapses extra heads.
@@ -31,6 +40,7 @@ Leviathan PixelLab ID: `a7aab6e3-b4d3-4d32-9fc4-b58acf24d572`.
 | Lightning Bolt (Shaman) | `projectile_lightning_bolt` | `public/assets/sprites/projectile_lightning_bolt.png` | `lightning` |
 | Wrath (Druid) | `projectile_wrath` | `public/assets/sprites/projectile_wrath.png` | `nature` |
 | Searing Totem fireball | `projectile_fireball` | shared with Fireball | `fire` |
+| Hawk pet (Hunter) | `sharp_feather` | `public/assets/sprites/sharp_feather.png` | `wind`, faceDirection, angleOffset=π/4 |
 
 All sprites live in the flat `public/assets/sprites/` directory. To add a new projectile: drop `{spriteKey}.png` there and add the key to `SPRITE_KEYS` in `HostGame.js`. No separate manifest entry or subdirectory needed.
 

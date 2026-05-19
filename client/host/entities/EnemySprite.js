@@ -67,6 +67,7 @@ export default class EnemySprite {
     this._forcedAnimation    = data.forcedAnimation ?? null
     this._moonfireParticles  = null
     this._moonfireLastTime   = 0
+    this._lastMoveTime       = 0
 
     this.container = new Container()
 
@@ -220,6 +221,13 @@ export default class EnemySprite {
       this._lastRenderX = state.x
       this._lastRenderY = state.y
 
+      // Debounce: server ticks at 20 Hz but update() runs at 60 fps. For 2 of every 3
+      // frames state.x/y is unchanged, so delta = 0 and the walk anim would flicker to
+      // idle every tick. Keep the walk state alive for 150 ms after the last detected move
+      // (≈ 3 server ticks) so slow enemies like flameOfAzzinoth animate correctly.
+      if (moved) this._lastMoveTime = Date.now()
+      const recentlyMoved = moved || (Date.now() - this._lastMoveTime) < 150
+
       if (this._forcedAnimation && this._animCfg[this._forcedAnimation]) {
         if (this._animState !== this._forcedAnimation) {
           this._animState = this._forcedAnimation
@@ -235,7 +243,7 @@ export default class EnemySprite {
           this._animTimer   = 0
         }
       } else {
-        const newState = moved ? 'walk' : 'idle'
+        const newState = recentlyMoved ? 'walk' : 'idle'
         if (newState !== this._animState) {
           this._animState = newState
           this._animFrame = 0

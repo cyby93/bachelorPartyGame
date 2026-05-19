@@ -422,6 +422,7 @@ export default class HostGame {
       'minion_bear',
       'minion_hawk',
       'minion_panther',
+      'sharp_feather',
       'dummy_training',
       'dummy_ranged',
       'dummy_tank',

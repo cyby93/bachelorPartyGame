@@ -211,6 +211,7 @@ export default class ServerMinion {
             healAmount: 0,
             effectType: 'DAMAGE',
             pierce:     false,
+            spriteKey:  'sharp_feather',
           }, {
             vx:      (dx / dist) * speed,
             vy:      (dy / dist) * speed,

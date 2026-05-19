@@ -724,21 +724,30 @@ export default class IllidanEncounter {
         fb.x += fb.vx * dt
         fb.y += fb.vy * dt
 
-        let hit = false
+        // Contact detection uses the projectile's own radius — splashRadius is for AoE on impact.
+        let contact = false
         this.players.forEach(p => {
           if (p.isHost || p.isDowned) return
-          if (!playerHitsCircle(p.x, p.y, fb.x, fb.y, fb.splashRadius)) return
-          hit = true
-          const { damage: fbDmg, type: fbType } = p.shieldResult(fb.x, fb.y, fb.damage)
-          if (fbDmg <= 0) return
-          p.takeDamage(fbDmg)
-          this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: fbDmg, type: fbType, sourceSkill: fb.sourceSkill ?? 'Shadow Blast' })
-          if (p.isDowned) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
+          if (playerHitsCircle(p.x, p.y, fb.x, fb.y, fb.radius)) contact = true
         })
+
+        if (contact) {
+          this.players.forEach(p => {
+            if (p.isHost || p.isDowned) return
+            if (!playerHitsCircle(p.x, p.y, fb.x, fb.y, fb.splashRadius)) return
+            const { damage: fbDmg, type: fbType } = p.shieldResult(fb.x, fb.y, fb.damage)
+            if (fbDmg <= 0) return
+            p.takeDamage(fbDmg)
+            this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: fbDmg, type: fbType, sourceSkill: fb.sourceSkill ?? 'Shadow Blast' })
+            if (p.isDowned) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
+          })
+          this._illidanFireballs.splice(i, 1)
+          continue
+        }
 
         const oob = fb.x < -margin || fb.x > this.arenaWidth + margin
                  || fb.y < -margin || fb.y > this.arenaHeight + margin
-        if (hit || oob) this._illidanFireballs.splice(i, 1)
+        if (oob) this._illidanFireballs.splice(i, 1)
         continue
       }
 

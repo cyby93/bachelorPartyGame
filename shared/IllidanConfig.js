@@ -245,7 +245,7 @@ export const ILLIDAN_CONFIG = {
     [ILLIDAN_PHASE.HUNT_2]: [
       {
         speaker: "illidan",
-        text: "I will not be touched by rabble such as you!",
+        text: "Is this it mortals? Is this all the fury you can muster?",
         voiceKey: "voice_illidan_phase_3",
         delayAfter: 4000,
       },

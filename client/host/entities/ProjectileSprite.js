@@ -25,6 +25,7 @@ const PROJECTILE_CONFIG = {
   'projectile_aimed_shot':       { trailStyle: 'wind',      bodyScale: 2.2, faceDirection: true, angleOffset: Math.PI / 4, trailLength: 12 },
   'projectile_lightning_bolt':   { trailStyle: 'lightning', faceDirection: true, angleOffset: Math.PI / 4, bodyScale: 1.1, trailLength: 8 },
   'projectile_wrath':            { trailStyle: 'nature',    spinSpeed: 0.08, bodyScale: 1.1, trailLength: 7 },
+  'sharp_feather':               { trailStyle: 'wind',      faceDirection: true, angleOffset: Math.PI / 4, bodyScale: 2.0, trailLength: 6 },
 }
 
 const DIVINE_COLORS     = [0xfffbe0, 0xffeeaa, 0xffd966]

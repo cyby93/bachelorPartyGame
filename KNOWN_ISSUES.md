@@ -1,0 +1,1 @@
+- Illidan's Shadow Blast is hitting when its not even close to the target -> can you check on its range please?

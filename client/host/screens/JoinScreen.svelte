@@ -4,6 +4,7 @@
   import HostButton from '../components/HostButton.svelte'
   import LobbyPlayerList from '../components/LobbyPlayerList.svelte'
   import DebugOptions from '../components/DebugOptions.svelte'
+  import { IS_PROD } from '../../../shared/BuildConfig.js'
 
   let { socket } = $props()
 
@@ -47,7 +48,7 @@
     />
   </div>
 
-  <DebugOptions {socket} />
+  {#if !IS_PROD}<DebugOptions {socket} />{/if}
 
   <div class="footer-actions">
     <HostButton label="Exit Game" variant="danger" onclick={handleSessionReset} />

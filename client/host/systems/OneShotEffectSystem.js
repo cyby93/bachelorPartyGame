@@ -336,6 +336,96 @@ export default class OneShotEffectSystem {
   }
 
   /**
+   * Fire Nova ring — 0.38s expanding fire ring for Agonizing Flames / Pyroblast AOE splash.
+   * Orange inner ring + dark-red outer edge that expands to full splash radius.
+   */
+  fireNovaRing(x, y, radius) {
+    const duration = 0.38
+    const gfx = this._getGfx()
+    gfx.position.set(x, y)
+    gfx.alpha = 1
+    gfx.scale.set(1)
+
+    this._active.push({
+      gfx,
+      elapsed: 0,
+      duration,
+      update: (progress) => {
+        gfx.clear()
+        const r    = radius * progress
+        const fade = 1 - progress
+        const strokeW = Math.max(1, 4 * (1 - progress * 0.6))
+
+        // Subtle inner heat fill — first 35% only
+        if (progress < 0.35) {
+          const bp = progress / 0.35
+          gfx.circle(0, 0, r)
+          gfx.fill({ color: 0xff6600, alpha: 0.08 * (1 - bp) })
+        }
+
+        // Ember inner ring — slightly tighter, deep orange
+        if (r > 6) {
+          gfx.circle(0, 0, r - 6)
+          gfx.stroke({ color: 0xff4400, width: strokeW, alpha: 0.70 * fade })
+        }
+
+        // Bright orange-white outer ring — crisp leading edge
+        gfx.circle(0, 0, r)
+        gfx.stroke({ color: 0xff8800, width: strokeW + 2, alpha: 0.90 * fade })
+
+        // Static boundary at full radius — shows exact splash edge throughout
+        gfx.circle(0, 0, radius)
+        gfx.stroke({ color: 0xff8800, width: 3, alpha: 0.75 * fade })
+      }
+    })
+  }
+
+  /**
+   * Shadow Nova ring — 0.38s expanding void ring for Shadow Blast AOE splash.
+   * Deep purple inner ring + violet outer edge that expands to full splash radius.
+   */
+  shadowNovaRing(x, y, radius) {
+    const duration = 0.38
+    const gfx = this._getGfx()
+    gfx.position.set(x, y)
+    gfx.alpha = 1
+    gfx.scale.set(1)
+
+    this._active.push({
+      gfx,
+      elapsed: 0,
+      duration,
+      update: (progress) => {
+        gfx.clear()
+        const r    = radius * progress
+        const fade = 1 - progress
+        const strokeW = Math.max(1, 4 * (1 - progress * 0.6))
+
+        // Subtle void fill — first 35% only
+        if (progress < 0.35) {
+          const bp = progress / 0.35
+          gfx.circle(0, 0, r)
+          gfx.fill({ color: 0x330044, alpha: 0.10 * (1 - bp) })
+        }
+
+        // Deep purple inner ring
+        if (r > 6) {
+          gfx.circle(0, 0, r - 6)
+          gfx.stroke({ color: 0x6600aa, width: strokeW, alpha: 0.65 * fade })
+        }
+
+        // Violet outer ring — sharp leading edge
+        gfx.circle(0, 0, r)
+        gfx.stroke({ color: 0xaa44ff, width: strokeW + 2, alpha: 0.85 * fade })
+
+        // Static boundary at full radius — shows exact splash edge throughout
+        gfx.circle(0, 0, radius)
+        gfx.stroke({ color: 0xaa44ff, width: 3, alpha: 0.70 * fade })
+      }
+    })
+  }
+
+  /**
    * Explosion burst — 0.3s sharp fire ring for trap detonations.
    */
   explosionBurst(x, y, radius) {

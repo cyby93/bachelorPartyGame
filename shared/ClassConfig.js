@@ -5,6 +5,7 @@
  */
 
 import SkillDatabase from './SkillDatabase.js'
+import { IS_TEST, TEST_OVERRIDES } from './BuildConfig.js'
 
 export const CLASS_NAMES = [
   'Warrior', 'Paladin', 'Shaman', 'Hunter',  'Priest',
@@ -28,7 +29,24 @@ const _BUFFED_CLASSES = Object.entries(_CLASSES).reduce((buffed, [key, cls]) => 
   return buffed
 }, {})
 
-export const CLASSES = _CLASSES;
+function _applyPriestMultipliers(skill) {
+  return {
+    ...skill,
+    ...(skill.damage     != null ? { damage:     Math.round(skill.damage     * TEST_OVERRIDES.PRIEST_DAMAGE_MULT) } : {}),
+    ...(skill.healAmount != null ? { healAmount: Math.round(skill.healAmount * TEST_OVERRIDES.PRIEST_HEAL_MULT)   } : {}),
+  }
+}
+
+const _TEST_CLASSES = IS_TEST ? {
+  ..._CLASSES,
+  Priest: {
+    ..._CLASSES.Priest,
+    hp:     _CLASSES.Priest.hp * TEST_OVERRIDES.PRIEST_HP_MULT,
+    skills: SkillDatabase.Priest.map(_applyPriestMultipliers),
+  }
+} : null
+
+export const CLASSES = IS_TEST ? _TEST_CLASSES : _CLASSES;
 // export const CLASSES = _BUFFED_CLASSES;
 
 /**

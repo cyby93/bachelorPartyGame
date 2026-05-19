@@ -168,20 +168,20 @@ export const ILLIDAN_CONFIG = {
         dotRadius: 100,
       },
       {
-        name: "Shadow Blast",
-        cooldown: 1000,
-        type: "shadowBlast",
-        castTime: 2500,
-        damage: Math.round(1 * Y * R), // 40 at defaults
-        splashRadius: 80,
-      },
-      {
         name: "Summon Shadow Demons",
         cooldown: 12000,
         type: "summonShadowDemons",
         count: 2,
         hp: Math.round(10 * X * R), // 500 at defaults — tanky, requires focused fire
         speed: 0.6, // slow crawl — kill it before it reaches the player
+      },
+      {
+        name: "Shadow Blast",
+        cooldown: 1000,
+        type: "shadowBlast",
+        castTime: 2500,
+        damage: Math.round(1 * Y * R), // 40 at defaults
+        splashRadius: 80,
       },
     ],
   },
@@ -250,7 +250,7 @@ export const ILLIDAN_CONFIG = {
         speaker: "illidan",
         text: "Is this it mortals? Is this all the fury you can muster?",
         voiceKey: "voice_illidan_phase_3",
-        delayAfter: 4000,
+        delayAfter: 6000,
       },
     ],
     [ILLIDAN_PHASE.DEMON_FORM]: {

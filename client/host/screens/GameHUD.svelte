@@ -7,6 +7,7 @@
   import HostButton from '../components/HostButton.svelte'
   import GameplaySidebar from '../components/GameplaySidebar.svelte'
   import DebugOptions from '../components/DebugOptions.svelte'
+  import { IS_PROD } from '../../../shared/BuildConfig.js'
 
   let { socket } = $props()
 
@@ -90,7 +91,7 @@
 
 <div class="game-hud">
   <div class="sidebar-inner">
-    <DebugOptions {socket} />
+    {#if !IS_PROD}<DebugOptions {socket} />{/if}
     <GameplaySidebar />
 
     <div class="actions">

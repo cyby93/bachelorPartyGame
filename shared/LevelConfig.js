@@ -31,6 +31,16 @@ import { BALANCE } from './BalanceConfig.js'
 const R = BALANCE.RANGED_BASE_DPS
 const X = BALANCE.ENEMY_HP_MULT
 
+const L2_BUILDING_SIZE = 60
+const L2_MAP_WIDTH = 1400
+const L2_MAP_HEIGHT = 1000
+const L2_MAP_PADDING = 130
+const L2_BUILDING_POSITIONS = [
+  { x: L2_MAP_PADDING, y: L2_MAP_PADDING },
+  { x: L2_MAP_WIDTH - L2_MAP_PADDING, y: L2_MAP_PADDING },
+  { x: L2_MAP_PADDING, y: L2_MAP_HEIGHT - L2_MAP_PADDING },
+  { x: L2_MAP_WIDTH - L2_MAP_PADDING, y: L2_MAP_HEIGHT - L2_MAP_PADDING },
+]
 export const CAMPAIGN = [
   // ── Level 1: Survive the Waves ────────────────────────────────────────
   {
@@ -57,9 +67,7 @@ export const CAMPAIGN = [
           countRange: [3, 4] },
         { fromWave: 2, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic'],
           countRange: [5, 6] },
-        { fromWave: 3, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic'],
-          countRange: [7, 8] },
-        { fromWave: 4, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic', 'coilskarSerpentGuard', 'bloodProphet', 'illidariCenturion'],
+        { fromWave: 3, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic', 'coilskarSerpentGuard', 'bloodProphet', 'illidariCenturion'],
           countRange: [9, 10] },
       ],
     },
@@ -93,15 +101,15 @@ export const CAMPAIGN = [
     audio: {
       music: 'music_level_2_siege',
     },
-    arena: { width: 1400, height: 1000 },
+    arena: { width: L2_MAP_WIDTH, height: L2_MAP_HEIGHT },
     objectives: [
       { type: 'destroyBuildings' },
     ],
     buildings: [
-      { id: 'b1', position: { x: 80, y: 80 }, hp: Math.round(12 * X * R), width: 60, height: 60, spriteKey: 'portal_building' },
-      { id: 'b2', position: { x: 1320, y: 80 }, hp: Math.round(12 * X * R), width: 60, height: 60, spriteKey: 'portal_building' },
-      { id: 'b3', position: { x: 80, y: 920 }, hp: Math.round(12 * X * R), width: 60, height: 60, spriteKey: 'portal_building' },
-      { id: 'b4', position: { x: 1320, y: 920 }, hp: Math.round(12 * X * R), width: 60, height: 60, spriteKey: 'portal_building' },
+      { id: 'b1', position: L2_BUILDING_POSITIONS[0], hp: Math.round(8 * X * R), width: L2_BUILDING_SIZE, height: L2_BUILDING_SIZE, spriteKey: 'portal_building' },
+      { id: 'b2', position: L2_BUILDING_POSITIONS[1], hp: Math.round(8 * X * R), width: L2_BUILDING_SIZE, height: L2_BUILDING_SIZE, spriteKey: 'portal_building' },
+      { id: 'b3', position: L2_BUILDING_POSITIONS[2], hp: Math.round(8 * X * R), width: L2_BUILDING_SIZE, height: L2_BUILDING_SIZE, spriteKey: 'portal_building' },
+      { id: 'b4', position: L2_BUILDING_POSITIONS[3], hp: Math.round(8 * X * R), width: L2_BUILDING_SIZE, height: L2_BUILDING_SIZE, spriteKey: 'portal_building' },
     ],
     // Portal beam mechanic: two buildings link via a mirror every 10 seconds.
     // 3-second warning phase, then damage phase. Cyby will tune damage values.
@@ -120,11 +128,11 @@ export const CAMPAIGN = [
       beamWidth:       60,     // half-width of each beam rectangle
     },
     buildingSpawning: {
-      baseInterval: 3000,          // ms between spawns per building
-      countPerSpawn: [1, 2],       // min/max enemies per spawn event
+      baseInterval: 6000,          // ms between spawns per building
+      countPerSpawn: [1, 3],       // min/max enemies per spawn event
       maxTotalAlive: 8,            // total cap shared across alive buildings — redistributes on death
-      buffFactor: 0.25,            // 25% faster spawns per destroyed building
-      spawnRadius: 80,             // spawn distance from building center
+      buffFactor: 0.10,            // 25% faster spawns per destroyed building
+      spawnRadius: 120,             // spawn distance from building center
       enemyTypes: [
         { type: 'felGuard',   weight: 4 },
         { type: 'bonechewerBrute',   weight: 2 },
@@ -140,14 +148,14 @@ export const CAMPAIGN = [
     // spawning and reinforces the "surrounded siege" feeling
     spawning: {
       mode: 'continuous',
-      interval: 5000,
+      interval: 4000,
       countPerWave: [1, 2],
-      maxAliveAtOnce: 2,
+      maxAliveAtOnce: 3,
       spawnEdge: 'all',
       enemyTypes: [
-        { type: 'felGuard',          weight: 3 },
-        { type: 'coilskarHarpooner', weight: 2 },
-        { type: 'bonechewerBrute',   weight: 2 },
+        { type: 'felGuard',          weight: 4 },
+        { type: 'coilskarHarpooner', weight: 1 },
+        { type: 'bonechewerBrute',   weight: 1 },
 ],
     },
     difficulty: {
@@ -199,20 +207,20 @@ export const CAMPAIGN = [
     ],
     gates: [
       // Gate1 blocks passage1 — x=750 is center of 40px gap (730+20), y=300 is center of passage (210..390)
-      { id: 'gate1', passageId: 'passage1', hp: Math.round(5 * X * R), position: { x: 750, y: 300 }, width: 40, height: 180 },
+      { id: 'gate1', passageId: 'passage1', hp: Math.round(4 * X * R), position: { x: 750, y: 300 }, width: 40, height: 180 },
       // Gate2 at the far right edge of the right room — x=1062 center, y=300 matches gate1
-      { id: 'gate2', passageId: null,       hp: Math.round(15 * X * R), position: { x: 1062, y: 300 }, width: 48, height: 180 },
+      { id: 'gate2', passageId: null,       hp: Math.round(8 * X * R), position: { x: 1062, y: 300 }, width: 48, height: 180 },
     ],
     spawning: {
       mode: 'continuous',
-      interval: 3000,
+      interval: 6000,
       countPerWave: [1, 3],
-      maxAliveAtOnce: 10,
-      spawnRadius: 60,
+      maxAliveAtOnce: 6,
+      spawnRadius: 50,
       enemyTypes: [
         { type: 'felGuard',          weight: 3 },
         { type: 'bonechewerBrute',   weight: 1 },
-        { type: 'coilskarHarpooner', weight: 1 },
+        { type: 'coilskarHarpooner', weight: 2 },
         { type: 'ashtonghueMystic',  weight: 1 },
         { type: 'ritualChanneler',   weight: 2 },
       ],
@@ -314,11 +322,11 @@ export const CAMPAIGN = [
         id: 'akama',
         name: 'Akama',
         hp: Math.round(40 * X * R),   // 2000 at defaults — scales with R
-        speed: 0.8,
+        speed: 0.5,
         radius: 62,
-        meleeDamage: 80,
-        attackCooldown: 1500,
-        attackRange: 50,
+        meleeDamage: 40,
+        attackCooldown: 1000,
+        attackRange: 200,
         target: 'shade',
         idleUntilPhase: 2,
         spawnPosition: { x: 350, y: 450 },
@@ -414,7 +422,7 @@ export const CAMPAIGN = [
         radius:         62,
         meleeDamage:    15,
         attackCooldown: 1500,
-        attackRange:    50,
+        attackRange:    200,
         target:         null,     // decorative — does not attack Illidan
         initialAngle:   0,        // face east (toward Illidan)
         spawnPosition:  { x: 320, y: 450 },

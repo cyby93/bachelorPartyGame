@@ -43,7 +43,7 @@ export const ENEMY_TYPES = {
   // ── Bonechewer Brute — slow tanky fel orc ───────────────────────────────
   bonechewerBrute: {
     hp: Math.round(2.00 * HP_MULT * BASE_DPS),
-    speed: 0.8, 
+    speed: 0.6, 
     radius: 24, 
     meleeDamage: Math.round(0.875 * DAMAGE_MULT * BASE_DPS),
     radius: 45,

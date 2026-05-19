@@ -1368,6 +1368,14 @@ export default class SkillSystem {
           radius: proj.onImpact.radius,
           effectType: 'DAMAGE',
         }, proj.x, proj.y)
+        if (gs.io) gs.io.emit('skill:fired', {
+          type:      'EXPLOSION',
+          skillName: proj.sourceSkill ?? null,
+          x:         Math.round(proj.x),
+          y:         Math.round(proj.y),
+          radius:    proj.onImpact.radius,
+          color:     proj.color ?? '#ff4400',
+        })
       }
 
       // Chain/ricochet — spawn a new projectile aimed at the next target

@@ -4,6 +4,10 @@ import { svelte } from '@sveltejs/vite-plugin-svelte'
 export default defineConfig({
   plugins: [svelte()],
 
+  define: {
+    'process.env.BUILD_MODE': JSON.stringify(process.env.BUILD_MODE || 'dev')
+  },
+
   build: {
     outDir: 'dist',
     target: 'esnext',

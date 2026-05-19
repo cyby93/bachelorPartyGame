@@ -66,6 +66,22 @@ export default class VFXManager {
         os.aoeFlash(d.x, d.y, 35, d.color)
         ps.blinkArrive(d.x, d.y)
       }],
+      // ── Splash-damage abilities: AOE ring shows impact radius clearly ─────────
+      ['Agonizing Flames', (d) => {
+        os.fireNovaRing(d.x, d.y, d.radius || 120)
+        ps.hitSpark(d.x, d.y, d.color || '#ff6600')
+        os.impactFlash(d.x, d.y, d.color || '#ff8800')
+      }],
+      ['Pyroblast',        (d) => {
+        os.explosionBurst(d.x, d.y, d.radius || 140)
+        os.fireNovaRing(d.x, d.y, d.radius || 140)
+        ps.hitSpark(d.x, d.y, d.color || '#ff8800')
+      }],
+      ['Shadow Blast',     (d) => {
+        os.shadowNovaRing(d.x, d.y, d.radius || 120)
+        ps.hitSpark(d.x, d.y, d.color || '#8800cc')
+        os.impactFlash(d.x, d.y, d.color || '#8800cc')
+      }],
     ]
     for (const [name, fn] of skills) this._skillHandlers.set(name, fn)
 

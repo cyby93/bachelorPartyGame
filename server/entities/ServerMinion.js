@@ -275,7 +275,7 @@ export default class ServerMinion {
     }
 
     gs.enemies.forEach(check)
-    if (gs.boss && !gs.boss.isDead) check(gs.boss)
+    if (gs.boss && !gs.boss.isDead && !gs.boss.isImmune) check(gs.boss)
     gs.buildings?.forEach(b => { if (!b.isDead) check(b) })
 
     return best
@@ -292,7 +292,7 @@ export default class ServerMinion {
     }
 
     gs.enemies.forEach(check)
-    if (gs.boss && !gs.boss.isDead) check(gs.boss)
+    if (gs.boss && !gs.boss.isDead && !gs.boss.isImmune) check(gs.boss)
     gs.buildings?.forEach(b => { if (!b.isDead) check(b) })
 
     return best

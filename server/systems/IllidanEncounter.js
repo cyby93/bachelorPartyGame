@@ -496,6 +496,14 @@ export default class IllidanEncounter {
             applyDeath(p)
           }
         })
+        this.io.emit(EVENTS.SKILL_FIRED, {
+          type: 'EXPLOSION',
+          skillName: 'Agonizing Flames',
+          x: Math.round(primary.x),
+          y: Math.round(primary.y),
+          radius: attack.splashRadius,
+          color: '#ff8800',
+        })
         primary.activeEffects = primary.activeEffects ?? []
         primary.activeEffects = primary.activeEffects.filter(e => e.source !== 'illidan:agonizingFlames')
         primary.activeEffects.push({
@@ -758,6 +766,14 @@ export default class IllidanEncounter {
             p.takeDamage(fbDmg)
             this.io.emit(EVENTS.EFFECT_DAMAGE, { targetId: p.id, amount: fbDmg, type: fbType, sourceSkill: fb.sourceSkill ?? 'Shadow Blast' })
             if (p.isDowned) this.stats.deaths[p.id] = (this.stats.deaths[p.id] ?? 0) + 1
+          })
+          this.io.emit(EVENTS.SKILL_FIRED, {
+            type: 'EXPLOSION',
+            skillName: fb.sourceSkill ?? 'Shadow Blast',
+            x: Math.round(fb.x),
+            y: Math.round(fb.y),
+            radius: fb.splashRadius,
+            color: fb.color ?? '#8800cc',
           })
           this._illidanFireballs.splice(i, 1)
           continue

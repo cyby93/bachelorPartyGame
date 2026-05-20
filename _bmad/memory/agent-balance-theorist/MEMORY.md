@@ -54,15 +54,15 @@ Both calculators use a tick-based greedy simulation (50ms ticks, 5-min fight).
 
 **Multi-target mode:** `--targets=N` flag on both calculators. Scales DoTs, AOE, SPAWN/TOTEM, HoTs, and Chain Heal chains by N. Single-target abilities unchanged.
 
-## Class Balance Snapshot (R=10, 2026-05-20 — current SkillDatabase)
+## Class Balance Snapshot (R=10, 2026-05-20 — post SkillDatabase patch)
 
 **Single-target DPS (base, no upgrades):**
 
 | Class | Role | DPS | Note |
 |-------|------|-----|------|
-| Hunter | ranged | 32.5 | Call of the Wild (11.2) + Shoot Bow (7.5) + Aimed Shot (7.5) + Explosive Trap (6.3) |
-| Rogue | ranged | 29.1 | Vanish fix: Ambush gets ×1.5 bonus per 7s CD cycle |
-| Mage | ranged | 21.2 | |
+| Hunter | ranged | 29.3 | Call of the Wild (8.0) + Shoot Bow (7.5) + Aimed Shot (7.5) + Explosive Trap (6.3) — SkillDatabase patched |
+| Rogue | ranged | 24.4 | Vanish fix: Ambush gets ×1.5 bonus per 7s CD cycle |
+| Mage | ranged | 22.8 | Pyroblast splash now scales by TARGET_COUNT in multi-target mode |
 | Warlock | ranged | 18.7 | |
 | Paladin | melee | 18.7 | |
 | Warrior | melee | 18.0 | |
@@ -78,7 +78,9 @@ Both calculators use a tick-based greedy simulation (50ms ticks, 5-min fight).
 - Spread 2+2+1+1: ×1.37 avg → ~5.9 min (⚠SPREAD on Mage still active — real spread higher once Fireball T2 tuned)
 - Focus 3+3: ×1.67 avg → ~4.8 min
 
-**⚠ Balance note:** Hunter is top-DPS class (32.5 vs Rogue 29.1, 11.7% gap). Acceptable in a cooperative raid. Lever: beast variant `damage` values or `cooldown` on Call of the Wild.
+**⚠ Balance note:** Hunter was top-DPS class (previously 32.5). After SkillDatabase patch it dropped to 29.3; gap vs Rogue (24.4) is now 20%. Still cooperative-raid acceptable.
+
+**Multi-target note (Pyroblast):** At N=3, Mage climbs to 30.8 DPS (Pyroblast splash hits all targets: 72 direct + 30×N). Warlock also scales strongly via DoT (34.0 at N=3).
 
 ---
 

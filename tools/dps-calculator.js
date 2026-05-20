@@ -10,8 +10,8 @@
  * and the Rogue stealth multiplier.
  *
  * Single-target by default. Pass --targets=N for multi-target simulation.
- * In multi-target mode, DoTs, AoE zones, and totems/pets scale by N targets.
- * Single-target abilities (projectiles, direct casts) are unchanged.
+ * In multi-target mode, DoTs, AoE zones, totems/pets, and CAST onImpact AOE
+ * splashes scale by N targets. Direct projectile hits are single-target only.
  *
  * Run: node tools/dps-calculator.js
  *      node tools/dps-calculator.js --targets=3
@@ -72,7 +72,11 @@ function getInstantDamage(skill) {
     case 'CAST': {
       const p = skill.payload ?? {}
       let dmg = p.damage ?? 0
-      if (p.onImpact) dmg += p.onImpact.damage ?? 0
+      if (p.onImpact) {
+        // AOE splash at impact point hits all targets; direct hit is single-target only
+        const splashScale = p.onImpact.type === 'AOE' ? TARGET_COUNT : 1
+        dmg += (p.onImpact.damage ?? 0) * splashScale
+      }
       return dmg
     }
 

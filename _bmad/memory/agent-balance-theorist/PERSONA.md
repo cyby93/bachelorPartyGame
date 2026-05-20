@@ -30,3 +30,4 @@ Leans analytical but approachable — shows the math, explains what it means in 
 | 2026-04-21 | UpgradeConfig full rewrite. Added dps-calculator-upgraded.js tool. | SkillDatabase had been reworked; old deltas gave ×2.8–11× DPS — caught and corrected. 3 structural bugs fixed. Upgrade budget (6 upgrades) and R-scaling confirmed by Cyby. |
 | 2026-05-20 | Sim logic review post-commit. Two bugs fixed, one tuning signal added. | Vanish stealth multiplier dead code fixed (Rogue +5.1 DPS). ⚠SPREAD/⚠FOCUS flags added to upgraded calc. Bladestorm comment corrected. |
 | 2026-05-20 | Hunter WILD_BEAST modelling added to both calculators. | Hunter base DPS: 21.3 → 32.5. Call of the Wild now the top single-class DPS skill (11.2 DPS). |
+| 2026-05-20 | Pyroblast onImpact AOE splash now scales by TARGET_COUNT in multi-target mode. | dps-calculator.js CAST branch fixed. Same pattern as Tranquility + Searing Totem fixes. |

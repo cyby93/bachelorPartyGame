@@ -54,36 +54,40 @@ Both calculators use a tick-based greedy simulation (50ms ticks, 5-min fight).
 
 **Multi-target mode:** `--targets=N` flag on both calculators. Scales DoTs, AOE, SPAWN/TOTEM, HoTs, and Chain Heal chains by N. Single-target abilities unchanged.
 
-## Class Balance Snapshot (R=10, 2026-04-21 — current SkillDatabase)
-
-SkillDatabase was reworked between 2026-04-17 and 2026-04-21 (values significantly reduced). These numbers supersede the 2026-04-17 snapshot.
+## Class Balance Snapshot (R=10, 2026-05-20 — current SkillDatabase)
 
 **Single-target DPS (base, no upgrades):**
 
-| Class | Role | DPS | vs target |
-|-------|------|-----|-----------|
-| Mage | ranged | 28.3 | ×2.8 |
-| Rogue | ranged | 25.5 | ×2.5 |
-| Hunter | ranged | 21.9 | ×2.2 |
-| Warrior | melee | 19.5 | ×2.8 |
-| Paladin | melee | 17.5 | ×2.5 |
-| Warlock | ranged | 17.4 | ×1.7 |
-| DeathKnight | melee | 14.7 | ×2.1 |
-| Shaman | healer | 8.6 | ×2.9 |
-| Priest | healer | 7.3 | ×2.4 |
-| Druid | healer | 7.3 | ×2.4 |
+| Class | Role | DPS | Note |
+|-------|------|-----|------|
+| Rogue | ranged | 29.1 | Vanish fix: Ambush gets ×1.5 bonus per 7s CD cycle |
+| Hunter | ranged | 21.3 | ⚠ Call of the Wild not modelled |
+| Mage | ranged | 21.2 | |
+| Warlock | ranged | 18.7 | |
+| Paladin | melee | 18.7 | |
+| Warrior | melee | 18.0 | |
+| DeathKnight | melee | 15.6 | |
+| Shaman | healer | 11.8 | combat DPS only |
+| Druid | healer | 8.7 | combat DPS only |
+| Priest | healer | 8.0 | combat DPS only |
 
-**Single-target HPS:** Priest 11.3, Shaman 10.0, Druid 9.7 — tightly balanced.
-**3-target HPS:** Shaman 30.0, Priest 17.3, Druid 16.7 — Shaman is the raid healer by design (Chain Heal hits all 3 chains).
+**Single-target HPS:** Priest 20.8, Shaman 17.3, Druid 17.1 — Priest leads single-target; Shaman leads multi-target.
+**3-target HPS:** Shaman 52.0, Druid 46.8, Priest 32.8 — Shaman dominant raid healer by design.
+
+**Upgrade projection (Illidan, 6 upgrades — after Vanish fix):**
+- Spread 2+2+1+1: ×1.37 avg → ~5.9 min (⚠SPREAD on Mage still active — real spread higher once Fireball T2 tuned)
+- Focus 3+3: ×1.67 avg → ~4.8 min
 
 ---
 
-## Open Questions
+## Open Questions / Known Sim Bugs
 
-- **Hunter S2 (Call of the Wild) beast damage:** Solved. Added `damageBonus: 0` scalar to SkillDatabase; SkillSystem.js applies it at spawn (`chosen.damage + (config.damageBonus ?? 0)`). UpgradeConfig tiers: +1/+1/+2 = +4 at T3. Sim still shows ⚠ (WILD_BEAST not modelled), but in-game it works.
-- **Paladin outlier (×2.5 DPS):** Not addressed. Explicitly deferred by Cyby — fine-tuning pass later.
-- **Tranquility (Druid) multi-target:** Currently doesn't scale in HPS multi-target mode — CHANNEL heals excluded. Would need an AOE flag in SkillDatabase to get the multiplier.
+- **✅ FIXED: Vanish stealth multiplier** (2026-05-20). Both DPS calculators now fire Vanish in a utility pre-pass. When stealthMult > 1.0, instants sort by raw damage (not priority) so Ambush gets the ×1.5 bonus, not Sinister Strike. Engine confirmed: one hit per Vanish gets the bonus (shadowStrikeUsed flag). Rogue base DPS: 24.0 → 29.1.
+- **BY DESIGN: Mage Spread ⚠SPREAD flag** (2026-05-20). Fireball T2 `castTime: -80` flips priority above Pyroblast T2 → Pyroblast never fires → DPS < base. Cyby chose to keep the delta as a tuning signal, not a bug. `⚠SPREAD` flag now appears in upgraded calc output. Fix by adjusting Fireball T2 deltas until flag clears.
+- **🟡 CONCERN: Bladestorm opportunity cost** (2026-05-20). SkillDatabase comment says "blocks other skills" 4000ms but `getCastTime=0`. Sim treats as free instant. If engine locks player, Warrior DPS overstated. Verify engine behavior.
+- **Hunter S2 (Call of the Wild) beast damage:** Solved. Added `damageBonus: 0` scalar to SkillDatabase. Sim still shows ⚠ (WILD_BEAST not modelled), but in-game it works.
+- **Paladin outlier (×2.7 DPS):** Not addressed. Deferred by Cyby.
+- **Tranquility (Druid) multi-target:** ✅ Fixed 2026-05-20.
 - **L5 Phase 1 warlock defenders:** Requires engine support for dual-phase spawning per level. Deferred.
-- **Draw Soul cooldown = 8000:** Set by Cyby. Verify it feels right in practice.
-- **'random2' edge:** Implemented but untested. Confirm it creates the intended "grouped horde from 2 sides" feeling.
-- **All balance is theoretical.** First playtest will be the real calibration point. Expect to retune R and individual ability values afterward.
+- **'random2' edge:** Implemented but untested.
+- **All balance is theoretical.** First playtest will be the real calibration point.

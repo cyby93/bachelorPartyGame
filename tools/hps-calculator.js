@@ -67,9 +67,10 @@ function getInstantHeal(skill) {
       if (skill.healPerTick && skill.castTime && skill.tickRate) {
         return Math.floor(skill.castTime / skill.tickRate) * skill.healPerTick
       }
-      // healAmount in payload (e.g. Tranquility)
+      // healAmount in payload (e.g. Tranquility — AOE channel scales with targets)
       if (skill.payload?.healAmount && skill.castTime && skill.tickRate) {
-        return Math.floor(skill.castTime / skill.tickRate) * skill.payload.healAmount
+        const targets = skill.payload.type === 'AOE' ? TARGET_COUNT : 1
+        return Math.floor(skill.castTime / skill.tickRate) * skill.payload.healAmount * targets
       }
       return 0
 

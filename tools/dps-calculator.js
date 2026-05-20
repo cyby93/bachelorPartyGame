@@ -189,6 +189,14 @@ function simulate(className, skills) {
     // ── Player action ─────────────────────────────────────────────────────────
     if (t < playerFreeAt) continue
 
+    // ── Utility instants (stealth) — fire before damage rotation ──────────────
+    for (const skill of skills) {
+      if (skill.subtype !== 'STEALTH') continue
+      if ((cdReady.get(skill.name) ?? 0) > t) continue
+      cdReady.set(skill.name, t + (skill.cooldown ?? 0))
+      stealthMult = skill.effectParams?.shadowStrikeMultiplier ?? 1.5
+    }
+
     // Skills available this tick (off CD, deals damage)
     const available = dmgSkills.filter(s => {
       if ((cdReady.get(s.name) ?? 0) > t) return false
@@ -204,8 +212,13 @@ function simulate(className, skills) {
 
     // ── Phase 1: weave in all available instant-cast abilities ─────────────────
     // Instants don't block the player — fire them all before starting the next cast.
+    // When stealth is active, sort by raw damage so the highest-value hit consumes the multiplier.
     const instants = available.filter(s => getCastTime(s) === 0)
-    instants.sort((a, b) => priorityScore(b, dotExpiry, t) - priorityScore(a, dotExpiry, t))
+    if (stealthMult > 1.0) {
+      instants.sort((a, b) => getInstantDamage(b) - getInstantDamage(a))
+    } else {
+      instants.sort((a, b) => priorityScore(b, dotExpiry, t) - priorityScore(a, dotExpiry, t))
+    }
     for (const instant of instants) {
       cdReady.set(instant.name, t + (instant.cooldown ?? 0))
       if (instant.subtype === 'STEALTH') {

@@ -46,7 +46,7 @@ const SkillDatabase = {
     {
       name:      'Bladestorm',
       type:      'AOE',
-      subtype:   'BLADESTORM',  // player-attached spinning AOE — follows caster, blocks other skills
+      subtype:   'BLADESTORM',  // player-attached spinning AOE — follows caster, blocks Shield Block only
       inputType: 'INSTANT',
       cooldown:  12000,
       damage:    6,             // damage per tick — tune via BalanceConfig

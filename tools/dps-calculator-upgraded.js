@@ -178,6 +178,14 @@ function simulate(skills) {
 
     if (t < playerFreeAt) continue
 
+    // Utility instants (stealth) — fire before damage rotation
+    for (const skill of skills) {
+      if (skill.subtype !== 'STEALTH') continue
+      if ((cdReady.get(skill.name) ?? 0) > t) continue
+      cdReady.set(skill.name, t + (skill.cooldown ?? 0))
+      stealthMult = skill.effectParams?.shadowStrikeMultiplier ?? 1.5
+    }
+
     const available = dmgSkills.filter(s => {
       if ((cdReady.get(s.name) ?? 0) > t) return false
       if (s.dot && dotExpiry.has(s.name)) {
@@ -188,7 +196,11 @@ function simulate(skills) {
     if (available.length === 0) continue
 
     const instants = available.filter(s => getCastTime(s) === 0)
-    instants.sort((a, b) => priorityScore(b, dotExpiry) - priorityScore(a, dotExpiry))
+    if (stealthMult > 1.0) {
+      instants.sort((a, b) => getInstantDamage(b) - getInstantDamage(a))
+    } else {
+      instants.sort((a, b) => priorityScore(b, dotExpiry) - priorityScore(a, dotExpiry))
+    }
     for (const instant of instants) {
       cdReady.set(instant.name, t + (instant.cooldown ?? 0))
       if (instant.subtype === 'STEALTH') { stealthMult = instant.effectParams?.shadowStrikeMultiplier ?? 1.5; continue }
@@ -258,19 +270,27 @@ for (const className of classOrder) {
   const [p, s]   = DAMAGE_FOCUS[className]
   const focusNames = [baseSkills[p].name, baseSkills[s].name].join(' + ')
 
-  const bugMark = BUGS[className] ? ' ⚠' : ''
+  // Detect priority displacement: upgraded DPS below base means a high-damage skill
+  // is being crowded out by the upgrade (e.g. cast-time reduction flipping priority).
+  const spreadFlag = spreadDps < baseDps ? ' ⚠SPREAD' : ''
+  const focusFlag  = focusDps  < baseDps ? ' ⚠FOCUS'  : ''
+  const bugMark    = BUGS[className] ? ' ⚠' : ''
+
   console.log(
     '  ' + (className + bugMark).padEnd(W.cls) +
     '│' + baseDps.toFixed(1).padStart(W.dps) +
-    '│' + focusDps.toFixed(1).padStart(W.dps) + ` ×${focusMult}` +
-    '│' + spreadDps.toFixed(1).padStart(W.dps) + ` ×${spreadMult}` +
+    '│' + focusDps.toFixed(1).padStart(W.dps) + ` ×${focusMult}${focusFlag}` +
+    '│' + spreadDps.toFixed(1).padStart(W.dps) + ` ×${spreadMult}${spreadFlag}` +
     '  ' + focusNames
   )
 }
 
+console.log()
+console.log('  ─── Notes ───────────────────────────────────────────────────────────────')
+console.log('  ⚠SPREAD / ⚠FOCUS  Upgraded DPS < base — a high-damage skill is being crowded out by')
+console.log('                     the upgrade (priority displacement). Review cast-time or cooldown deltas')
+console.log('                     on the filler spell for this class.')
 if (Object.keys(BUGS).length > 0) {
-  console.log()
-  console.log('  ─── Notes ───────────────────────────────────────────────────────────────')
   for (const [cls, note] of Object.entries(BUGS)) {
     console.log(`  ⚠ ${cls}: ${note}`)
   }

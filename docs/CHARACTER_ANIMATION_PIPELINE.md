@@ -88,6 +88,7 @@ and the client animation last. Currently: HUNT_2 = 2500 ms, DEMON_FORM = 3500 ms
 | `coilskarSerpentGuard` | `af274f5c-2bbe-4030-b55b-f485fa69b31a` | ✅ done (idle, walk) |
 | `ritualChanneler` | `63b488b6-86a9-4388-b339-8acfbadd5395` | ✅ done (idle, walk, channel) |
 | `flameOfAzzinoth` | `d0a0159f-619d-45a9-bdcb-38486caf3af4` | ✅ done (idle, walk) |
+| `shadowDemon` | `4b74b6ba-fa92-4632-a5c3-84647add30a0` | ✅ done (static rotations only — directional-static mode, object type 132×132) |
 
 Enemy sprites extract to: `public/assets/sprites/{typeKey}/{dir}.png` (static rotations)
 and `public/assets/sprites/{typeKey}/{idle|walk}/{dir}/{frame}.png` (animations).

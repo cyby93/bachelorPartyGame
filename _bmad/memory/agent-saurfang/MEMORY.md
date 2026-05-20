@@ -32,6 +32,18 @@ Two required defenses:
 
 This was applied for `autoRefire` in 2026-05-18. If any future SUSTAINED or autoRefire ability feels "sticky", check for missing `touch-action: none` or missing window-level cleanup.
 
+## Mobile input: DIRECTIONAL/AIMED/TARGETED pointercancel cleanup
+
+`onPointerCancel` in `SkillButton.svelte` returns early for DIRECTIONAL/AIMED/TARGETED types — nipplejs owns those touches. **But iOS can fire `pointercancel` when a touch leaves the zone during rapid double-tap + drag sequences, and nipplejs may not fire its own `end` in that case.**
+
+Defense added (2026-05-20): when `joystickHeld` is true inside `onPointerCancel`, perform the same cleanup that `j.on('end', ...)` does — clear `aimHeartbeat`, `autoFireInterval`, emit SHIELD END or cancelCast as appropriate, reset `lastDistance`. The double-cleanup is safe (idempotent).
+
+Also: `MoveJoystick.svelte` now has `touch-action: none` on `.move-zone`. Without it, iOS can hijack movement touches as scroll gestures, preventing nipplejs from receiving `touchend`.
+
+## Self-cast BURST projectiles (e.g. Penance self-heal)
+
+Self-cast BURST projectiles spawn with `vx=0, vy=0, selfCast=true`. `_tickProjectiles` has an early-return guard for these to avoid them freezing in place. **The guard must apply the heal before deleting the projectile.** Currently it checks `canHitAllies && healAmount > 0` and heals the owner directly. Each burst projectile in the 3-shot fires the full `healAmount` independently.
+
 ## Zone DTO fields
 
 `getZonesDTO()` now includes `skillName: z.config?.name ?? null`. Thrall uses this to render Consecration differently from other ground zones.

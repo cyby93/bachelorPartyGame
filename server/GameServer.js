@@ -1492,16 +1492,22 @@ export default class GameServer {
     // Bladestorm suppresses Shield Block only — other skills remain usable
     if (player.bladestormActive && config.type === 'SHIELD') return
 
-    // Vanish/stealth breaks when any ability other than the stealth skill itself is used
+    // Stealth break / shadow strike handling on ability use
     if (player.isInvisible) {
-      const stealthIdx = player.activeEffects.findIndex(
-        e => e.params?.invisible && e.params?.breaksOnAttack
-      )
+      const stealthIdx = player.activeEffects.findIndex(e => e.params?.invisible)
       if (stealthIdx !== -1 && player.activeEffects[stealthIdx].source !== `skill:${index}`) {
-        const shadowMult = player.activeEffects[stealthIdx].params?.shadowStrikeMultiplier
-        if (shadowMult) player.shadowStrikeMult = shadowMult
-        player.activeEffects.splice(stealthIdx, 1)
-        player.rebuildStats()
+        const stealthEffect = player.activeEffects[stealthIdx]
+        const shadowMult = stealthEffect.params?.shadowStrikeMultiplier
+        if (stealthEffect.params?.breaksOnAttack !== false) {
+          // Breakable stealth: stamp shadow strike bonus and remove stealth
+          if (shadowMult) player.shadowStrikeMult = shadowMult
+          player.activeEffects.splice(stealthIdx, 1)
+          player.rebuildStats()
+        } else if (shadowMult && !stealthEffect.shadowStrikeUsed) {
+          // Unbreakable stealth: grant shadow strike bonus on first ability use only
+          player.shadowStrikeMult = shadowMult
+          stealthEffect.shadowStrikeUsed = true
+        }
       }
     }
 
@@ -2222,32 +2228,52 @@ export default class GameServer {
   // ── Revive mechanic ─────────────────────────────────────────────────────────
 
   _checkRevive(now) {
-    const downedPlayers  = []
-    const alivePlayers = []
+    const downedPlayers = []
+    const alivePlayers  = []
 
     this.players.forEach(p => {
       if (p.isHost) return
       if (p.isDowned) downedPlayers.push(p)
-      else          alivePlayers.push(p)
+      else            alivePlayers.push(p)
     })
 
     downedPlayers.forEach(dead => {
+      const existing = this.reviveTimers.get(dead.id)
+
+      // Prefer the current reviver if still in range — prevents timer reset churn when
+      // iteration order shifts or another player briefly enters range alongside them.
       let reviver = null
-      for (const alive of alivePlayers) {
-        const d = Math.hypot(alive.x - dead.x, alive.y - dead.y)
-        if (d <= GAME_CONFIG.REVIVE_DISTANCE) { reviver = alive; break }
+      if (existing) {
+        const prev = alivePlayers.find(p => p.id === existing.reviverId)
+        if (prev && Math.hypot(prev.x - dead.x, prev.y - dead.y) <= GAME_CONFIG.REVIVE_DISTANCE) {
+          reviver = prev
+        }
+      }
+
+      // Fall back to any nearby alive player
+      if (!reviver) {
+        for (const alive of alivePlayers) {
+          if (Math.hypot(alive.x - dead.x, alive.y - dead.y) <= GAME_CONFIG.REVIVE_DISTANCE) {
+            reviver = alive
+            break
+          }
+        }
       }
 
       if (!reviver) {
+        // Grace period: brief movement out of range (e.g. casting / input jitter) should
+        // not reset the revive. Only clear after 300ms of confirmed absence.
+        if (existing && now - (existing.lastSeenAt ?? existing.startedAt) < 300) return
         this.reviveTimers.delete(dead.id)
         return
       }
 
-      const existing = this.reviveTimers.get(dead.id)
       if (!existing || existing.reviverId !== reviver.id) {
-        this.reviveTimers.set(dead.id, { reviverId: reviver.id, startedAt: now })
+        this.reviveTimers.set(dead.id, { reviverId: reviver.id, startedAt: now, lastSeenAt: now })
         return
       }
+
+      existing.lastSeenAt = now
 
       const elapsed = now - existing.startedAt
       if (elapsed >= GAME_CONFIG.REVIVE_TIME) {
@@ -2255,7 +2281,7 @@ export default class GameServer {
         this.reviveTimers.delete(dead.id)
         console.log(`[~] revived ${dead.name}`)
         const reviverId = existing.reviverId
-        this.stats.resurrections[reviverId]     = (this.stats.resurrections[reviverId]     ?? 0) + 1
+        this.stats.resurrections[reviverId]      = (this.stats.resurrections[reviverId]      ?? 0) + 1
         this.levelStats.resurrections[reviverId] = (this.levelStats.resurrections[reviverId] ?? 0) + 1
       }
     })

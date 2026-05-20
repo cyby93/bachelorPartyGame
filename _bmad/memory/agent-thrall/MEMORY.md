@@ -50,6 +50,15 @@ Level 2 portal buildings use `spriteKey: 'portal_building'` threaded through Lev
 `buildingGfx` now stores `{ container, hpGfx, bW, bH }` objects (not raw Graphics). Container holds Sprite body + separate hpGfx child.
 PixelLab object ID: `b05d5cd3-503c-4ef2-90e1-3077156d46b6` (56×56, 1 dir). File: `public/assets/sprites/portal_building.png`.
 
+## Shadow Demon — Directional Static (2026-05-20)
+
+`shadowDemon` added to `DIRECTIONAL_STATIC_ENEMIES` in HostGame.js (same pattern as shadowfiend/leviathan).
+8 direction sprites at `public/assets/sprites/shadowDemon/{dir}.png`. Key format: `enemy_shadowDemon_{dir}`.
+PixelLab object ID: `4b74b6ba-fa92-4632-a5c3-84647add30a0` (132×132, 8 dirs, object type).
+Dark void spider-demon with swirling purple/black body and glowing blue eyes.
+NOTE: set key must match renderType exactly — `shadowDemon` (camelCase) not `shadowdemon`.
+`STATIC_SPRITE_KEY['shadowDemon']` entry in EnemySprite.js still exists as unreachable fallback (harmless).
+
 ## Shadowfiend — Directional Static (2026-05-17)
 
 `shadowfiend` added to `DIRECTIONAL_STATIC_ENEMIES` in HostGame.js (same pattern as leviathan).

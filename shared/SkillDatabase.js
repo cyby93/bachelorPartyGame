@@ -535,8 +535,9 @@ const SkillDatabase = {
       effectParams: {
         invisible:              true,
         opacity:                0.15,
-        breaksOnAttack:         true,
+        breaksOnAttack:         false,
         shadowStrikeMultiplier: 1.5,
+        immunityDuration:       2000,
       },
       iconFile: 'ability_vanish',
       dotColor: 0x9966ff,

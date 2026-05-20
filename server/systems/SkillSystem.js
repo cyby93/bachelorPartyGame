@@ -425,11 +425,15 @@ export default class SkillSystem {
       if (existing !== -1) player.activeEffects.splice(existing, 1)
     }
 
-    player.activeEffects.push({
+    const entry = {
       source,
-      params: config.effectParams ?? {},
+      params:    config.effectParams ?? {},
       expiresAt: config.duration === -1 ? Infinity : Date.now() + (config.duration ?? 0),
-    })
+    }
+    if (config.effectParams?.immunityDuration) {
+      entry.immunityUntil = Date.now() + config.effectParams.immunityDuration
+    }
+    player.activeEffects.push(entry)
     rebuildStats(player)
     return true
   }
@@ -966,6 +970,10 @@ export default class SkillSystem {
   _dealDamage(gs, attacker, target, amount, sourceSkill) {
     if (amount <= 0) return 0
     if (target.isDead) return 0
+    if (target.isImmune) {
+      if (gs.io) gs.io.emit('effect:damage', { targetId: target.id, amount: 0, type: 'immune', sourceSkill: sourceSkill ?? null })
+      return 0
+    }
 
     let remaining = amount
 
@@ -996,14 +1004,15 @@ export default class SkillSystem {
     if (finalAmount <= 0) return 0
 
     const wasDead = target.isDead
-    target.takeDamage(finalAmount)
+    const returnedDealt = target.takeDamage(finalAmount)
+    const actualDealt = returnedDealt ?? finalAmount
 
     // Emit damage event for VFX
     if (gs.io) {
       gs.io.emit('effect:damage', {
-        targetId: target.id,
-        amount: finalAmount,
-        type: 'damage',
+        targetId:    target.id,
+        amount:      actualDealt,
+        type:        returnedDealt === 0 ? 'immune' : 'damage',
         sourceSkill: sourceSkill ?? null,
       })
     }
@@ -1025,10 +1034,15 @@ export default class SkillSystem {
       }
     }
 
-    // Break stealth on attack
+    // Break stealth on attack (only if breaksOnAttack is not explicitly false)
     if (attacker?.isInvisible) {
-      attacker.activeEffects = attacker.activeEffects.filter(e => !(e.params?.invisible))
-      rebuildStats(attacker)
+      const shouldBreak = attacker.activeEffects.some(
+        e => e.params?.invisible && e.params?.breaksOnAttack !== false
+      )
+      if (shouldBreak) {
+        attacker.activeEffects = attacker.activeEffects.filter(e => !e.params?.invisible)
+        rebuildStats(attacker)
+      }
     }
 
     return finalAmount
@@ -1051,8 +1065,16 @@ export default class SkillSystem {
       }
 
       // Self-cast BURST projectiles have vx=0,vy=0 — they can never travel or expire
-      // naturally, so clean them up immediately rather than letting them freeze in place.
+      // naturally. Apply their effect to the owner directly, then clean them up.
       if (proj.selfCast && proj.vx === 0 && proj.vy === 0) {
+        if (proj.canHitAllies && proj.healAmount > 0) {
+          const owner = gs.players.get(proj.ownerId)
+          if (owner && !owner.isDowned) {
+            owner.heal(proj.healAmount)
+            this._trackHeal(gs, proj.ownerId, proj.healAmount)
+            if (gs.io) gs.io.emit('effect:damage', { targetId: owner.id, amount: proj.healAmount, type: 'heal', sourceSkill: proj.sourceSkill ?? null })
+          }
+        }
         gs.projectiles.delete(id)
         return
       }
@@ -1264,7 +1286,7 @@ export default class SkillSystem {
           } else {
             const minHp = gs.scene === 'lobby' ? 1 : 0
             const dealt  = p.takeDamage(damage, minHp)
-            if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount: dealt, type: dmgType, sourceSkill: proj.sourceSkill ?? null })
+            if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount: dealt, type: dealt === 0 ? 'immune' : dmgType, sourceSkill: proj.sourceSkill ?? null })
           }
           if (!proj.pierce) proj.isAlive = false
         })

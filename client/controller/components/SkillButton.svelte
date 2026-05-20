@@ -252,6 +252,20 @@
     const type = skill?.inputType
     if (type === 'DIRECTIONAL' || type === 'TARGETED' || type === 'AIMED') {
       selfCastTapStart = null
+      // iOS cancels pointer events when a touch leaves the zone or during rapid double-tap
+      // sequences. nipplejs may not fire its own 'end' in this case, so force cleanup here.
+      if (joystickHeld) {
+        joystickHeld = false
+        if (aimHeartbeat)    { clearInterval(aimHeartbeat);    aimHeartbeat    = null }
+        if (autoFireInterval) { clearInterval(autoFireInterval); autoFireInterval = null }
+        if (isShieldHold && held) {
+          held = false
+          onskill?.({ index, vector: lastVector, action: 'END' })
+        } else if (isCastHold) {
+          cancelCast()
+        }
+        lastDistance = 0
+      }
       return
     }
     e.preventDefault()

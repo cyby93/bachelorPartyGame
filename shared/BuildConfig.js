@@ -6,6 +6,6 @@ export const IS_PROD    = BUILD_MODE === 'prod';
 // Tune test-mode Priest overrides here
 export const TEST_OVERRIDES = {
   PRIEST_HP_MULT:     10, // 80 → 800
-  PRIEST_DAMAGE_MULT: 10, 
-  PRIEST_HEAL_MULT:   10,  
+  PRIEST_DAMAGE_MULT: 50, 
+  PRIEST_HEAL_MULT:   20,  
 };

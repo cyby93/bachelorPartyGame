@@ -1,5 +1,8 @@
-- Level 6:
-    - need sprites for the summoned demon hounds
+## Classes
+Priest: Cannot heal himself with penance
 
 ## Balance
 Need to balance skills
+
+## Audio
+Not always starts at main menu

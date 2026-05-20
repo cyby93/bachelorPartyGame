@@ -41,7 +41,7 @@ export default class FloatingTextPool {
    * @param {number} x
    * @param {number} y
    * @param {number} amount
-   * @param {'damage'|'heal'} type
+   * @param {'damage'|'heal'|'blocked'|'reduced'|'immune'|'warlockBuff'|'playerDamage'} type
    */
   spawn(x, y, amount, type = 'damage') {
     let t = this._pool.pop()
@@ -55,7 +55,16 @@ export default class FloatingTextPool {
     }
 
     const displayAmount = Math.round(amount)
-    if (type === 'blocked') {
+    let lifetime  = LIFETIME
+    let floatDist = FLOAT_DIST
+
+    if (type === 'immune') {
+      t.text = 'IMMUNE'
+      t.style.fill = '#b0c8e8'
+      t.scale.set(0.9)
+      lifetime  = LIFETIME * 1.4
+      floatDist = FLOAT_DIST * 0.85
+    } else if (type === 'blocked') {
       t.text = 'Blocked'
       t.style.fill = '#aaaaaa'
       t.scale.set(0.85)
@@ -70,7 +79,7 @@ export default class FloatingTextPool {
     } else if (type === 'warlockBuff') {
       t.text = '+'
       t.style.fill = '#9b59b6'
-      t.scale.set(1.5)
+      t.scale.set(1.3)
     } else if (type === 'playerDamage') {
       t.text = `${displayAmount}`
       t.style.fill = '#ffaa00'
@@ -85,11 +94,13 @@ export default class FloatingTextPool {
     t.visible = true
 
     this._active.push({
-      text: t,
-      startX: t.x,
-      startY: t.y,
+      text:      t,
+      startX:    t.x,
+      startY:    t.y,
       baseScale: t.scale.x,
-      elapsed: 0,
+      elapsed:   0,
+      lifetime,
+      floatDist,
     })
   }
 
@@ -97,7 +108,7 @@ export default class FloatingTextPool {
     for (let i = this._active.length - 1; i >= 0; i--) {
       const entry = this._active[i]
       entry.elapsed += dt
-      const progress = entry.elapsed / LIFETIME
+      const progress = entry.elapsed / entry.lifetime
 
       if (progress >= 1) {
         entry.text.visible = false
@@ -107,7 +118,7 @@ export default class FloatingTextPool {
       }
 
       // Float upward
-      entry.text.y = entry.startY - FLOAT_DIST * progress
+      entry.text.y = entry.startY - entry.floatDist * progress
       // Fade out in last 40%
       entry.text.alpha = progress > 0.6 ? 1 - (progress - 0.6) / 0.4 : 1
       // Scale pop at start

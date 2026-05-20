@@ -35,6 +35,7 @@ export default class ServerPlayer {
     this.aimAngle  = 0
 
     this.isDowned = false
+    this.reviveImmunityUntil = 0
 
     // Active timed effects
     this.activeEffects = []
@@ -141,6 +142,9 @@ export default class ServerPlayer {
    */
   takeDamage(amount, minHp = 0) {
     if (this.isDowned) return 0
+    const now = Date.now()
+    if (this.reviveImmunityUntil && now < this.reviveImmunityUntil) return 0
+    if (this.activeEffects?.some(e => e.immunityUntil && now < e.immunityUntil)) return 0
     let remaining = amount
     if (this.shieldAbsorb > 0) {
       const absorbed = Math.min(this.shieldAbsorb, remaining)
@@ -170,6 +174,7 @@ export default class ServerPlayer {
   revive() {
     this.isDowned = false
     this.hp     = Math.floor(this.maxHp * 0.4)
+    this.reviveImmunityUntil = Date.now() + 1000
   }
 
   // Alias so polymorphic damage code (which targets both players and enemies) works unchanged.

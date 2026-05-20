@@ -251,8 +251,8 @@ export default class SkillSystem {
     if (config.lifesteal && totalDamageDealt > 0) {
       const healAmt = Math.round(totalDamageDealt * config.lifesteal)
       if (healAmt > 0) {
-        player.heal(healAmt)
-        this._trackHeal(gs, player.id, healAmt)
+        const healedAmt = player.heal(healAmt)
+        this._trackHeal(gs, player.id, healedAmt)
         if (gs.io) gs.io.emit('effect:damage', { targetId: player.id, amount: healAmt, type: 'heal', sourceSkill: config.name })
       }
     }
@@ -566,8 +566,8 @@ export default class SkillSystem {
       let current = primaryTarget
 
       for (let i = 0; i <= maxChains; i++) {
-        current.heal(amount)
-        this._trackHeal(gs, player.id, amount)
+        const chainHealed = current.heal(amount)
+        this._trackHeal(gs, player.id, chainHealed)
         if (gs.io && amount > 0) {
           gs.io.emit('effect:damage', { targetId: current.id, amount, type: 'heal', sourceSkill: config.name })
         }
@@ -786,8 +786,8 @@ export default class SkillSystem {
         if (p.isDowned || p.isHost) return
         if (this._collision.distance({ x: cx, y: cy }, { x: p.x, y: p.y }) <= radius) {
           const amount = config.healAmount ?? 0
-          p.heal(amount)
-          this._trackHeal(gs, player.id, amount)
+          const aoeHealed = p.heal(amount)
+          this._trackHeal(gs, player.id, aoeHealed)
           if (gs.io && amount > 0) {
             gs.io.emit('effect:damage', { targetId: p.id, amount, type: 'heal', sourceSkill: config.name ?? null })
           }
@@ -832,8 +832,8 @@ export default class SkillSystem {
         if (p.isDowned || p.isHost) return
         if (this._collision.distance({ x: cx, y: cy }, { x: p.x, y: p.y }) <= radius) {
           const amount = config.healAmount ?? 0
-          p.heal(amount)
-          this._trackHeal(gs, player.id, amount)
+          const comboHealed = p.heal(amount)
+          this._trackHeal(gs, player.id, comboHealed)
           if (gs.io && amount > 0) {
             gs.io.emit('effect:damage', { targetId: p.id, amount, type: 'heal', sourceSkill: config.name ?? null })
           }
@@ -1007,20 +1007,20 @@ export default class SkillSystem {
     const returnedDealt = target.takeDamage(finalAmount)
     const actualDealt = returnedDealt ?? finalAmount
 
-    // Emit damage event for VFX
+    // Emit damage event for VFX — shows ability damage (pre-HP-cap)
     if (gs.io) {
       gs.io.emit('effect:damage', {
         targetId:    target.id,
-        amount:      actualDealt,
+        amount:      finalAmount,
         type:        returnedDealt === 0 ? 'immune' : 'damage',
         sourceSkill: sourceSkill ?? null,
       })
     }
 
-    // Track damage dealt (cumulative + per-level)
+    // Track damage dealt (cumulative + per-level) — actual HP taken
     if (attacker) {
-      gs.stats.damage[attacker.id] = (gs.stats.damage[attacker.id] ?? 0) + finalAmount
-      if (gs.levelStats) gs.levelStats.damage[attacker.id] = (gs.levelStats.damage[attacker.id] ?? 0) + finalAmount
+      gs.stats.damage[attacker.id] = (gs.stats.damage[attacker.id] ?? 0) + actualDealt
+      if (gs.levelStats) gs.levelStats.damage[attacker.id] = (gs.levelStats.damage[attacker.id] ?? 0) + actualDealt
     }
 
     // Check death
@@ -1045,7 +1045,7 @@ export default class SkillSystem {
       }
     }
 
-    return finalAmount
+    return actualDealt
   }
 
   // Track healing done by a caster (cumulative + per-level)
@@ -1070,8 +1070,8 @@ export default class SkillSystem {
         if (proj.canHitAllies && proj.healAmount > 0) {
           const owner = gs.players.get(proj.ownerId)
           if (owner && !owner.isDowned) {
-            owner.heal(proj.healAmount)
-            this._trackHeal(gs, proj.ownerId, proj.healAmount)
+            const selfHealed = owner.heal(proj.healAmount)
+            this._trackHeal(gs, proj.ownerId, selfHealed)
             if (gs.io) gs.io.emit('effect:damage', { targetId: owner.id, amount: proj.healAmount, type: 'heal', sourceSkill: proj.sourceSkill ?? null })
           }
         }
@@ -1245,8 +1245,8 @@ export default class SkillSystem {
           proj.hit.add(p.id)
           const amount = proj.healAmount ?? 0
           if (amount > 0) {
-            p.heal(amount)
-            this._trackHeal(gs, proj.ownerId, amount)
+            const projHealed = p.heal(amount)
+            this._trackHeal(gs, proj.ownerId, projHealed)
             if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount, type: 'heal', sourceSkill: null })
           }
           if (!proj.pierce) proj.isAlive = false
@@ -1319,8 +1319,8 @@ export default class SkillSystem {
       // Heal projectile — only hits players
       if (target.isPlayer) {
         const amount = proj.healAmount ?? 0
-        target.heal(amount)
-        this._trackHeal(gs, proj.ownerId, amount)
+        const targetHealed = target.heal(amount)
+        this._trackHeal(gs, proj.ownerId, targetHealed)
         if (gs.io && amount > 0) {
           gs.io.emit('effect:damage', { targetId: target.id, amount, type: 'heal', sourceSkill: null })
         }
@@ -1475,8 +1475,8 @@ export default class SkillSystem {
           if (now - eff.lastHealTick >= eff.params.tickRate) {
             eff.lastHealTick = now
             if (!p.isDowned) {
-              p.heal(eff.params.healPerTick)
-              this._trackHeal(gs, eff.ownerId, eff.params.healPerTick)
+              const dotHealed = p.heal(eff.params.healPerTick)
+              this._trackHeal(gs, eff.ownerId, dotHealed)
               if (gs.io) {
                 gs.io.emit('effect:damage', { targetId: p.id, amount: eff.params.healPerTick, type: 'heal', sourceSkill: eff.params.sourceSkill ?? null })
               }
@@ -1581,8 +1581,8 @@ export default class SkillSystem {
           const heal = cast.config.healPerTick ?? 0
           if (dmg > 0) this._dealDamage(gs, p, target, dmg, cast.config.name)
           if (heal > 0) {
-            p.heal(heal)
-            this._trackHeal(gs, p.id, heal)
+            const castHealed = p.heal(heal)
+            this._trackHeal(gs, p.id, castHealed)
             if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount: heal, type: 'heal', sourceSkill: cast.config.name })
           }
         }
@@ -1687,8 +1687,8 @@ export default class SkillSystem {
         const heal = cast.config.healPerTick ?? 0
         if (dmg > 0) this._dealDamage(gs, p, target, dmg, cast.config.name)
         if (heal > 0) {
-          p.heal(heal)
-          this._trackHeal(gs, p.id, heal)
+          const castHealed2 = p.heal(heal)
+          this._trackHeal(gs, p.id, castHealed2)
           if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount: heal, type: 'heal', sourceSkill: cast.config.name })
         }
         return

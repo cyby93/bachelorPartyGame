@@ -245,7 +245,7 @@ const SkillDatabase = {
       beastVariants: [
         {
           beast:       'bear',
-          hp:          100,
+          hp:          230,
           speed:       1.6,
           radius:      22,
           damage:      8,
@@ -258,19 +258,19 @@ const SkillDatabase = {
           beast:       'hawk',
           hp:          Infinity, // invincible — cannot be targeted or damaged
           invincible:  true,
-          speed:       3.5,
+          speed:       2.2,
           radius:      10,
           damage:      3,
           attackRange: 400,
-          attackRate:  400,
+          attackRate:  600,
           ranged:      true,
         },
         {
           beast:       'panther',
           hp:          60,
-          speed:       2.8,
+          speed:       2.2,
           radius:      14,
-          damage:      12,
+          damage:      8,
           attackRange: 45,
           attackRate:  800,
         },
@@ -418,7 +418,7 @@ const SkillDatabase = {
       castTime:  2000,
       payload: {
         type:    'PROJECTILE',
-        damage:  60,
+        damage:  72,
         speed:   300,
         radius:  20,
         range:   600,
@@ -559,8 +559,8 @@ const SkillDatabase = {
       inputType:   'TARGETED',
       cooldown:    7000,
       range:       350,
-      damage:      50,
-      comboDamage: 20,
+      damage:      40,
+      comboDamage: 25,
       iconFile:    'ability_rogue_ambush',
       dotColor:    0x660099,
     }

@@ -60,8 +60,8 @@ Both calculators use a tick-based greedy simulation (50ms ticks, 5-min fight).
 
 | Class | Role | DPS | Note |
 |-------|------|-----|------|
+| Hunter | ranged | 32.5 | Call of the Wild (11.2) + Shoot Bow (7.5) + Aimed Shot (7.5) + Explosive Trap (6.3) |
 | Rogue | ranged | 29.1 | Vanish fix: Ambush gets ×1.5 bonus per 7s CD cycle |
-| Hunter | ranged | 21.3 | ⚠ Call of the Wild not modelled |
 | Mage | ranged | 21.2 | |
 | Warlock | ranged | 18.7 | |
 | Paladin | melee | 18.7 | |
@@ -74,9 +74,11 @@ Both calculators use a tick-based greedy simulation (50ms ticks, 5-min fight).
 **Single-target HPS:** Priest 20.8, Shaman 17.3, Druid 17.1 — Priest leads single-target; Shaman leads multi-target.
 **3-target HPS:** Shaman 52.0, Druid 46.8, Priest 32.8 — Shaman dominant raid healer by design.
 
-**Upgrade projection (Illidan, 6 upgrades — after Vanish fix):**
+**Upgrade projection (Illidan, 6 upgrades):**
 - Spread 2+2+1+1: ×1.37 avg → ~5.9 min (⚠SPREAD on Mage still active — real spread higher once Fireball T2 tuned)
 - Focus 3+3: ×1.67 avg → ~4.8 min
+
+**⚠ Balance note:** Hunter is top-DPS class (32.5 vs Rogue 29.1, 11.7% gap). Acceptable in a cooperative raid. Lever: beast variant `damage` values or `cooldown` on Call of the Wild.
 
 ---
 
@@ -85,7 +87,7 @@ Both calculators use a tick-based greedy simulation (50ms ticks, 5-min fight).
 - **✅ FIXED: Vanish stealth multiplier** (2026-05-20). Both DPS calculators now fire Vanish in a utility pre-pass. When stealthMult > 1.0, instants sort by raw damage (not priority) so Ambush gets the ×1.5 bonus, not Sinister Strike. Engine confirmed: one hit per Vanish gets the bonus (shadowStrikeUsed flag). Rogue base DPS: 24.0 → 29.1.
 - **BY DESIGN: Mage Spread ⚠SPREAD flag** (2026-05-20). Fireball T2 `castTime: -80` flips priority above Pyroblast T2 → Pyroblast never fires → DPS < base. Cyby chose to keep the delta as a tuning signal, not a bug. `⚠SPREAD` flag now appears in upgraded calc output. Fix by adjusting Fireball T2 deltas until flag clears.
 - **🟡 CONCERN: Bladestorm opportunity cost** (2026-05-20). SkillDatabase comment says "blocks other skills" 4000ms but `getCastTime=0`. Sim treats as free instant. If engine locks player, Warrior DPS overstated. Verify engine behavior.
-- **Hunter S2 (Call of the Wild) beast damage:** Solved. Added `damageBonus: 0` scalar to SkillDatabase. Sim still shows ⚠ (WILD_BEAST not modelled), but in-game it works.
+- **✅ FIXED: Hunter S2 (Call of the Wild) WILD_BEAST modelling** (2026-05-20). Both calculators now average beast damage across all 3 variants. `getInstantDamage` formula: `avg(floor(duration/v.attackRate) * (v.damage + damageBonus))`. No TARGET_COUNT scaling (beasts are single-target attackers). Hunter base DPS: 21.3 → 32.5.
 - **Paladin outlier (×2.7 DPS):** Not addressed. Deferred by Cyby.
 - **Tranquility (Druid) multi-target:** ✅ Fixed 2026-05-20.
 - **L5 Phase 1 warlock defenders:** Requires engine support for dual-phase spawning per level. Deferred.

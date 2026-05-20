@@ -25,6 +25,7 @@ import PortalBeamSystem from './systems/PortalBeamSystem.js'
 import SkillSystem from './systems/SkillSystem.js'
 import SpawnSystem from './systems/SpawnSystem.js'
 import { buildDeltaState, buildFullState, buildYouPayload, buildingsDTO, gatesDTO, npcsDTO } from './systems/StateSerializer.js'
+import RunHistory from './RunHistory.js'
 import TransitionRunner from './TransitionRunner.js'
 
 /**
@@ -126,6 +127,8 @@ export default class GameServer {
     this.stats     = { damage: {}, heal: {}, deaths: {}, resurrections: {}, quiz: {}, kills: 0, startTime: 0 }
     // Per-level stats — reset at the start of each level
     this.levelStats = { damage: {}, heal: {}, resurrections: {}, kills: 0, startTime: 0 }
+    // Run history — keyed by player name for cross-session stability
+    this.runHistory = new RunHistory()
 
     // Revive tracking: deadPlayerId → { reviverId, startedAt }
     this.reviveTimers = new Map()
@@ -264,6 +267,21 @@ export default class GameServer {
 
   _reclaimPlayer(socket, player) {
     const oldId = player.id
+
+    // Re-key stat maps so accumulated data follows the player to their new socket ID
+    const rekey = (map) => {
+      if (map && oldId in map) {
+        map[socket.id] = (map[socket.id] ?? 0) + map[oldId]
+        delete map[oldId]
+      }
+    }
+    rekey(this.stats.damage)
+    rekey(this.stats.heal)
+    rekey(this.stats.deaths)
+    rekey(this.stats.resurrections)
+    rekey(this.levelStats.damage)
+    rekey(this.levelStats.heal)
+    rekey(this.levelStats.resurrections)
 
     player.id    = socket.id
     player.isBot = false
@@ -623,7 +641,8 @@ export default class GameServer {
 
     const nextIndex = this.currentLevelIndex + 1
     if (nextIndex >= CAMPAIGN.length) {
-      this._changeScene('result')
+      const snapshot = this._buildPlayerSnapshot()
+      this._changeScene('result', { cumulativeStats: { ...this.stats, playerSnapshot: snapshot } })
     } else {
       this._startLevel(nextIndex)
     }
@@ -1067,6 +1086,15 @@ export default class GameServer {
   }
 
   // ── Scene management ───────────────────────────────────────────────────────
+
+  _buildPlayerSnapshot() {
+    const snapshot = []
+    this.players.forEach(p => {
+      if (p.isHost) return
+      snapshot.push({ id: p.id, name: p.name, className: p.className, isDowned: p.isDowned })
+    })
+    return snapshot
+  }
 
   _changeScene(name, extra = {}) {
     const prevScene = this.scene
@@ -2385,9 +2413,11 @@ export default class GameServer {
     // NPC death = game over (Level 4 loss condition)
     if (npcDied) {
       console.log('[~] NPC died — game over')
+      const snapshot = this._buildPlayerSnapshot()
+      this.runHistory.recordLevel(this.currentLevelIndex, this.currentLevel?.name ?? `Level ${this.currentLevelIndex + 1}`, 'defeat', { ...this.levelStats }, snapshot)
       this.currentLevelIndex = -1
       this.currentLevel      = null
-      this._changeScene('gameover', { cumulativeStats: { ...this.stats } })
+      this._changeScene('gameover', { cumulativeStats: { ...this.stats, playerSnapshot: snapshot } })
       return
     }
 
@@ -2443,9 +2473,13 @@ export default class GameServer {
 
     console.log(`[~] Level ${levelIndex + 1} complete! ${isLastLevel ? '(final)' : ''}`)
 
+    // Snapshot players and record level history before levelStats is reset by _startLevel
+    const snapshot = this._buildPlayerSnapshot()
+    this.runHistory.recordLevel(levelIndex, this.currentLevel?.name ?? `Level ${levelIndex + 1}`, 'victory', { ...this.levelStats }, snapshot)
+
     if (isLastLevel) {
       // Campaign complete — final victory!
-      this._changeScene('result', { cumulativeStats: { ...this.stats } })
+      this._changeScene('result', { cumulativeStats: { ...this.stats, playerSnapshot: snapshot } })
     } else if (GAME_CONFIG.QUIZ_BETWEEN_LEVELS) {
       // Start quiz phase before showing level-complete
       this._startQuiz()
@@ -2758,9 +2792,11 @@ export default class GameServer {
     })
     if (livingCount === 0 && this.players.size > 0) {
       console.log('[~] All players dead — game over')
+      const snapshot = this._buildPlayerSnapshot()
+      this.runHistory.recordLevel(this.currentLevelIndex, this.currentLevel?.name ?? `Level ${this.currentLevelIndex + 1}`, 'defeat', { ...this.levelStats }, snapshot)
       this.currentLevelIndex = -1
       this.currentLevel      = null
-      this._changeScene('gameover', { cumulativeStats: { ...this.stats } })
+      this._changeScene('gameover', { cumulativeStats: { ...this.stats, playerSnapshot: snapshot } })
     }
   }
 

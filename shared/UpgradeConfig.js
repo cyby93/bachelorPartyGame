@@ -110,8 +110,8 @@ export const UPGRADE_CONFIG = {
       { label: 'Aimed Shot +2', deltas: { 'payload.damage': 8, castTime: -500 } },
       { label: 'Aimed Shot +3', deltas: { 'payload.damage': 9, cooldown: -500 } },
     ],
-    // S2: Call of the Wild (SPAWN/WILD_BEAST) — damageBonus 0 (added to all variants at spawn), duration 20000ms, cooldown 2000ms
-    // damageBonus is applied server-side in SkillSystem when flattening beastVariants → petStats.
+    // S2: Call of the Wild (SPAWN/WILD_BEAST) — damageBonus 0 (added to all variants at spawn), duration 20000ms, cooldown 15000ms
+    // damageBonus is applied to each beastVariant's damage at spawn time (server-side).
     [
       { label: 'Call of the Wild +1', deltas: { damageBonus: 1, duration: 2000 } },
       { label: 'Call of the Wild +2', deltas: { damageBonus: 1, cooldown: -500 } },

@@ -140,9 +140,11 @@ export default class ServerEnemy {
   }
 
   takeDamage(amount) {
-    if (this.isDead || this.isImmune) return
+    if (this.isDead || this.isImmune) return 0
+    const actual = Math.min(amount, this.hp)
     this.hp = Math.max(0, this.hp - amount)
     if (this.hp === 0) this.isDead = true
+    return actual
   }
 
   /**

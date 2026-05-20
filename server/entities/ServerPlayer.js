@@ -167,8 +167,10 @@ export default class ServerPlayer {
   }
 
   heal(amount) {
-    if (this.isDowned) return
+    if (this.isDowned) return 0
+    const before = this.hp
     this.hp = Math.min(this.maxHp, this.hp + amount)
+    return this.hp - before
   }
 
   revive() {

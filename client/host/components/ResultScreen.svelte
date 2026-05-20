@@ -24,7 +24,7 @@
   $: state = $gameState;
   $: isVictory = state.scene === "result";
   $: stats = state.cumulativeStats;
-  $: players = Object.values(state.players).filter((p) => !p.isHost);
+  $: players = stats?.playerSnapshot ?? Object.values(state.players).filter((p) => !p.isHost);
   $: elapsed = Math.max(
     1,
     (Date.now() - (stats?.startTime ?? Date.now())) / 1000,

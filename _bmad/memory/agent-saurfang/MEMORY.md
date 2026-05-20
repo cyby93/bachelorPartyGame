@@ -48,6 +48,18 @@ Self-cast BURST projectiles spawn with `vx=0, vy=0, selfCast=true`. `_tickProjec
 
 `getZonesDTO()` now includes `skillName: z.config?.name ?? null`. Thrall uses this to render Consecration differently from other ground zones.
 
+## Entity takeDamage / heal return contracts
+
+- `ServerPlayer.takeDamage(amount)` → returns actual HP damage dealt (capped, 0 if immune/absorbed)
+- `ServerEnemy.takeDamage(amount)` → returns actual HP taken (`Math.min(amount, this.hp)`), 0 if dead/immune
+- `ServerBoss.takeDamage(amount)` → same as enemy
+- `ServerPlayer.heal(amount)` → returns actual HP gained (`this.hp - before`), 0 if downed or already full
+
+**Floating text vs meters split (2026-05-20):**
+- `_dealDamage` VFX emit uses `finalAmount` — ability damage pre-HP-cap
+- `_dealDamage` meter tracking uses `actualDealt` — real HP removed
+- All `_trackHeal` calls pass the return value of `heal()` — real HP restored only
+
 ## Melee hitbox shapes — rect vs cone
 
 `_executeMelee()` in `SkillSystem.js` supports two hitbox shapes:
@@ -60,3 +72,21 @@ Discriminator is `config.width != null`. No new type/subtype needed.
 `inOrientedRect()` in `CollisionSystem.js` takes an optional `targetRadius` for rect-vs-circle overlap (not point-in-rect). All four hit loops in `_executeMelee` pass the target's `.radius`. If `targetRadius = 0`, falls back to pure point-in-rect.
 
 SKILL_FIRED payload includes `width: config.width` when set — Thrall's VFX branches on `d.width != null` to call `meleeRect` vs `meleeArc`.
+
+## Stats are keyed by socket ID (unstable) — player.id === socket.id
+
+`this.stats.damage`, `this.stats.heal`, etc. in `GameServer.js` use socket ID as key. Socket ID changes on reconnect. Two defenses exist:
+
+1. **`_reclaimPlayer()` re-keys all stat maps** (both cumulative and levelStats) from `oldId → socket.id` the moment a player reconnects. Stats follow the player.
+2. **`_buildPlayerSnapshot()` captures a frozen array** `{ id, name, className, isDowned }` at level-end and embeds it in `cumulativeStats` payload. `ResultScreen.svelte` renders from this snapshot, not from live `state.players`. Disconnect-immune.
+
+`RunHistory` (`server/RunHistory.js`) re-keys stats further to **player name** for cross-session stability. Only the history archive uses name keys; in-flight game stats still use socket ID.
+
+## RunHistory — where level data is recorded
+
+`this.runHistory.recordLevel(levelIndex, levelName, outcome, { ...this.levelStats }, snapshot)` is called:
+- `_doLevelComplete()` — victory path, before `_startLevel` resets `levelStats`
+- NPC-died gameover block — before `currentLevel = null`
+- `_checkAllDead()` gameover — before `currentLevel = null`
+
+**Critical ordering**: always call `recordLevel` and `_buildPlayerSnapshot()` BEFORE nulling `this.currentLevel` or `this.currentLevelIndex` — those values are used in the call.

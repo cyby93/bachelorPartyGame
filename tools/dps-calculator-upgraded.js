@@ -47,7 +47,7 @@ const DPS_TARGETS = {
 const DAMAGE_FOCUS = {
   Mage:        [3, 0],  // Pyroblast, Fireball
   Rogue:       [0, 3],  // Sinister Strike, Ambush
-  Hunter:      [1, 0],  // Aimed Shot, Shoot Bow  ← S1 upgrade config BUG (see below)
+  Hunter:      [2, 1],  // Call of the Wild, Aimed Shot
   Warrior:     [0, 2],  // Cleave, Bladestorm     ← S2 upgrade config BUG (distance delta is dead)
   Paladin:     [0, 1],  // Hammer Swing, Avenger's Shield
   Warlock:     [0, 1],  // Shadow Bolt, Corruption
@@ -125,11 +125,18 @@ function getInstantDamage(skill) {
         return skill.trapEffect.damage ?? 0
       if (skill.subtype === 'TOTEM' && skill.totemAbility) {
         const ta = skill.totemAbility
-        return Math.floor(skill.duration / ta.tickRate) * (ta.damage ?? 0)
+        return Math.floor(skill.duration / ta.tickRate) * (ta.damage ?? 0)  // no TARGET_COUNT: totem fires at one enemy per tick
       }
       if (skill.subtype === 'PET' && skill.petStats) {
         const p = skill.petStats
         return (skill.duration / p.attackRate) * p.damage
+      }
+      if (skill.subtype === 'WILD_BEAST' && skill.beastVariants) {
+        const bonus  = skill.damageBonus ?? 0
+        const avgDmg = skill.beastVariants.reduce((sum, v) => {
+          return sum + Math.floor(skill.duration / v.attackRate) * (v.damage + bonus)
+        }, 0) / skill.beastVariants.length
+        return avgDmg
       }
       return 0
     default:
@@ -228,9 +235,6 @@ function simulate(skills) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 const BUGS = {
-  // Hunter S2: Call of the Wild spawns beastVariants — the simulator models subtype=PET (petStats),
-  // not WILD_BEAST. damageBonus upgrades do apply in-game but won't show in this sim.
-  Hunter: 'S2 (Call of the Wild) — damageBonus upgrade not reflected in sim (WILD_BEAST not modelled)',
 }
 
 console.log()

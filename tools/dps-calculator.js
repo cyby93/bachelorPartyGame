@@ -95,12 +95,20 @@ function getInstantDamage(skill) {
       if (skill.subtype === 'TRAP' && skill.trapEffect)
         return (skill.trapEffect.damage ?? 0) * TARGET_COUNT
       if (skill.subtype === 'TOTEM' && skill.totemAbility) {
-        const ta = skill.totemAbility
-        return Math.floor(skill.duration / ta.tickRate) * (ta.damage ?? 0) * TARGET_COUNT
+        const ta    = skill.totemAbility
+        const scale = ta.type === 'AOE' ? TARGET_COUNT : 1
+        return Math.floor(skill.duration / ta.tickRate) * (ta.damage ?? 0) * scale
       }
       if (skill.subtype === 'PET' && skill.petStats) {
         const p = skill.petStats
         return (skill.duration / p.attackRate) * p.damage * TARGET_COUNT
+      }
+      if (skill.subtype === 'WILD_BEAST' && skill.beastVariants) {
+        const bonus  = skill.damageBonus ?? 0
+        const avgDmg = skill.beastVariants.reduce((sum, v) => {
+          return sum + Math.floor(skill.duration / v.attackRate) * (v.damage + bonus)
+        }, 0) / skill.beastVariants.length
+        return avgDmg
       }
       return 0
 
@@ -274,7 +282,8 @@ function simulate(className, skills) {
 // ── Output formatting ─────────────────────────────────────────────────────────
 
 function bar(ratio, width = 20) {
-  const filled = Math.round(Math.min(ratio, 3) * (width / 3))  // cap at 3× for display
+  const cap    = 3 * TARGET_COUNT
+  const filled = Math.round(Math.min(ratio, cap) * (width / cap))
   return '█'.repeat(filled) + '░'.repeat(width - filled)
 }
 
@@ -315,7 +324,7 @@ function run() {
   results.sort((a, b) => b.dps - a.dps)
 
   for (const r of results) {
-    const flag    = r.ratio > 5 ? ' ⚠' : r.ratio < 0.3 ? ' ↓' : ''
+    const flag    = r.ratio > 5 * TARGET_COUNT ? ' ⚠' : r.ratio < 0.3 ? ' ↓' : ''
     const dpsStr  = r.dps.toFixed(1).padStart(W_DPS)
     const vsStr   = r.vsStr.padStart(W_VS)
     const barStr  = bar(r.ratio, W_BAR)
@@ -326,7 +335,7 @@ function run() {
   console.log('  Notes:')
   console.log('  ⚠  DPS is >5× target — ability values almost certainly need scaling down')
   console.log('  ↓  DPS is <0.3× target — class will feel useless, check ability values')
-  console.log('  Bar fills to 3× target. AoE abilities counted as single-target (1 enemy hit).')
+  console.log(`  Bar fills to ${3 * TARGET_COUNT}× target. In multi-target mode, AoE abilities scale; single-target abilities do not.`)
   console.log('  Buffs with no damage (Charge, Shield Wall, Sprint, Bloodlust…) not counted.')
   console.log()
 

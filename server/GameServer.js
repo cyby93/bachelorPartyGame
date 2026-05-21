@@ -2857,10 +2857,11 @@ export default class GameServer {
   // ── Zone selector (training grounds, multi-level unlock) ──────────────────
 
   _tickZoneSelector(dt) {
-    const ZONE_HEIGHT = 72
-    const zoneWidth   = this.arenaWidth / this.unlockedLevelCount
-    const counts      = new Array(this.unlockedLevelCount).fill(0)
-    let totalPlayers  = 0
+    const ZONE_HEIGHT  = 110  // 30px container offset + 80px portal sprite height
+    const totalZones   = CAMPAIGN.length
+    const zoneWidth    = this.arenaWidth / totalZones
+    const counts       = new Array(totalZones).fill(0)
+    let totalPlayers   = 0
 
     this.players.forEach(p => {
       if (p.isHost || p.isDowned) return

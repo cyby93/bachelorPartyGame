@@ -5,10 +5,25 @@
  * Full abilities active — players can attack training dummies to warm up.
  */
 
-import { Container, Graphics, Text } from 'pixi.js'
+import { Assets, Container, Graphics, Sprite, Text } from 'pixi.js'
 import BaseRenderer from './BaseRenderer.js'
 
-const ZONE_HEIGHT = 72
+const ZONE_HEIGHT = 110  // matches server: 30px container offset + 80px sprite
+const PORTAL_W    = 80   // sprite width
+const PORTAL_H    = 80   // sprite height
+const GLOW_CY     = 32   // y-center of portal opening within sprite
+const GLOW_RX     = 28   // glow ellipse half-width
+const GLOW_RY     = 22   // glow ellipse half-height
+
+const LEVEL_PORTAL_COLORS = [
+  0x2255cc,  // L1 The Courtyard      — Arcane blue
+  0xcc5511,  // L2 The Siege          — War fire orange
+  0x22aa33,  // L3 Black Temple Gates — Fel green
+  0x009988,  // L4 Serpentshrine      — Naga teal
+  0x7722bb,  // L5 The Refectory      — Shadow violet
+  0x330066,  // L6 Illidan's Sanctum  — Void purple
+  0x555555,  // Fallback
+]
 
 const PHASE_INSTRUCTIONS = [
   '',
@@ -78,95 +93,143 @@ export default class TrainingGroundsRenderer extends BaseRenderer {
       return
     }
 
-    const arenaWidth = this.game.currentArena.width
-    const zoneWidth  = arenaWidth / unlockedLevelCount
+    const arenaWidth  = this.game.currentArena.width
+    const totalPortals = levelZoneState.counts.length
+    const zoneWidth   = arenaWidth / totalPortals
 
-    // Build once when first non-null state arrives or count changes
-    if (!this._zoneContainer || this._zoneContainer._zoneCount !== unlockedLevelCount) {
-      if (this._zoneContainer) {
-        this._zoneContainer.destroy({ children: true })
-        this._zoneContainer = null
-      }
-      this._buildZoneContainer(unlockedLevelCount, zoneWidth)
+    // Build once on first non-null state (total portal count never changes mid-session)
+    if (!this._zoneContainer) {
+      this._buildZoneContainer(totalPortals, zoneWidth)
     }
 
     // Mutate each zone to reflect current state
     const { counts, pendingIndex, countdownMs, committedIndex } = levelZoneState
 
-    for (let i = 0; i < unlockedLevelCount; i++) {
-      const zc           = this._zoneContainer.getChildAt(i)
-      const fill         = zc._fill
-      const border       = zc._border
-      const label        = zc._label
-      const countLabel   = zc._countLabel
-      const progressBar  = zc._progressBar
+    for (let i = 0; i < totalPortals; i++) {
+      const zc         = this._zoneContainer.getChildAt(i)
+      const label      = zc._label
+      const countLabel = zc._countLabel
 
+      const isLocked     = i >= unlockedLevelCount
       const playerCount  = counts?.[i] ?? 0
       const isCommitted  = committedIndex === i
       const isPending    = pendingIndex === i && committedIndex == null
       const anyCommitted = committedIndex != null
       const isOther      = anyCommitted && !isCommitted
 
-      // ── Fill ──
-      fill.clear()
-      if (isCommitted) {
-        fill.rect(0, 0, zoneWidth, ZONE_HEIGHT)
-        fill.fill({ color: 0x332800, alpha: 0.55 })
-      } else if (isPending) {
-        fill.rect(0, 0, zoneWidth, ZONE_HEIGHT)
-        fill.fill({ color: 0x1a3040, alpha: 0.5 })
-      } else if (isOther) {
-        fill.rect(0, 0, zoneWidth, ZONE_HEIGHT)
-        fill.fill({ color: 0x1a2a3a, alpha: 0.15 })
-      } else if (playerCount > 0) {
-        fill.rect(0, 0, zoneWidth, ZONE_HEIGHT)
-        fill.fill({ color: 0x1a2a3a, alpha: 0.5 })
-      } else {
-        fill.rect(0, 0, zoneWidth, ZONE_HEIGHT)
-        fill.fill({ color: 0x1a2a3a, alpha: 0.35 })
+      const levelColor = LEVEL_PORTAL_COLORS[Math.min(i, LEVEL_PORTAL_COLORS.length - 1)]
+      const spriteX    = zoneWidth / 2
+      const spriteLeft = spriteX - PORTAL_W / 2
+
+      // ── Locked portal — dim and no interaction ──
+      if (isLocked) {
+        const portal = zc._portalSprite
+        if (portal) { portal.alpha = 0.40; portal.tint = 0x666666 }
+        zc._glowGfx.clear()
+        zc._runeGfx.clear()
+        zc._groundGfx.clear()
+        label.text       = `LEVEL ${i + 1}`
+        label.style.fill = '#2a3a44'
+        label.alpha      = 0.6
+        countLabel.visible = false
+        continue
       }
 
-      // ── Border ──
-      border.clear()
-      if (isCommitted) {
-        border.rect(0, 0, zoneWidth, ZONE_HEIGHT)
-        border.stroke({ color: 0xf0c040, alpha: 1.0, width: 2 })
-      } else if (isPending) {
-        const pulse = 0.6 + 0.4 * (0.5 + 0.5 * Math.sin(this._zoneTime * (2 * Math.PI / 1.2)))
-        border.rect(0, 0, zoneWidth, ZONE_HEIGHT)
-        border.stroke({ color: 0x7ac8e8, alpha: pulse, width: 1 })
-      } else if (isOther) {
-        border.rect(0, 0, zoneWidth, ZONE_HEIGHT)
-        border.stroke({ color: 0x4a7090, alpha: 0.25, width: 1 })
-      } else if (playerCount > 0) {
-        border.rect(0, 0, zoneWidth, ZONE_HEIGHT)
-        border.stroke({ color: 0x4a7090, alpha: 0.8, width: 1 })
-      } else {
-        border.rect(0, 0, zoneWidth, ZONE_HEIGHT)
-        border.stroke({ color: 0x4a7090, alpha: 0.5, width: 1 })
+      // ── Portal sprite ──
+      const portal = zc._portalSprite
+      if (portal) {
+        if (isCommitted) {
+          portal.alpha = 1.0
+          portal.tint  = 0xf0c040
+        } else if (isOther) {
+          portal.alpha = 0.18
+          portal.tint  = 0x888888
+        } else if (isPending || playerCount > 0) {
+          portal.alpha = 1.0
+          portal.tint  = 0xffffff
+        } else {
+          portal.alpha = 0.45
+          portal.tint  = 0xffffff
+        }
+      }
+
+      // ── Glow overlay ──
+      const glow = zc._glowGfx
+      glow.clear()
+      if (!isOther) {
+        let glowAlpha = 0
+        let glowColor = levelColor
+        if (isCommitted) {
+          glowAlpha = 0.75
+          glowColor = 0xf0c040
+        } else if (isPending) {
+          glowAlpha = 0.42 + 0.3 * Math.sin(this._zoneTime * (2 * Math.PI / 1.0))
+          glowColor = levelColor
+        } else if (playerCount > 0) {
+          glowAlpha = 0.28
+        }
+        if (glowAlpha > 0) {
+          glow.ellipse(spriteX, GLOW_CY, GLOW_RX, GLOW_RY)
+          glow.fill({ color: glowColor, alpha: glowAlpha })
+          glow.ellipse(spriteX, GLOW_CY, GLOW_RX * 0.45, GLOW_RY * 0.45)
+          glow.fill({ color: 0xffffff, alpha: glowAlpha * 0.22 })
+        }
+      }
+
+      // ── Rune dots (3 per pillar, sequential during countdown) ──
+      const runes = zc._runeGfx
+      runes.clear()
+      if (!isOther) {
+        let litCount
+        if (isCommitted) {
+          litCount = 6
+        } else if (isPending && countdownMs != null) {
+          litCount = Math.floor((1 - countdownMs / 4000) * 6)
+        } else if (playerCount > 0) {
+          litCount = 3
+        } else {
+          litCount = 0
+        }
+
+        // Rune order: left-top, right-top, left-mid, right-mid, left-bot, right-bot
+        const runePos = [
+          [spriteLeft + 10, 20], [spriteLeft + PORTAL_W - 10, 20],
+          [spriteLeft + 10, 36], [spriteLeft + PORTAL_W - 10, 36],
+          [spriteLeft + 10, 52], [spriteLeft + PORTAL_W - 10, 52],
+        ]
+        for (let r = 0; r < 6; r++) {
+          const [rx, ry]   = runePos[r]
+          const lit        = r < litCount
+          const runeColor  = isCommitted ? 0xf0c040 : levelColor
+          const runeAlpha  = lit ? (isCommitted ? 1.0 : 0.85) : 0.13
+          runes.circle(rx, ry, 2.5)
+          runes.fill({ color: runeColor, alpha: runeAlpha })
+        }
+      }
+
+      // ── Ground boundary line ──
+      const ground = zc._groundGfx
+      ground.clear()
+      if (!isOther) {
+        const lineAlpha = isCommitted ? 0.9 : (isPending ? 0.7 : (playerCount > 0 ? 0.5 : 0.18))
+        const lineColor = isCommitted ? 0xf0c040 : levelColor
+        ground.rect(spriteLeft, PORTAL_H - 2, PORTAL_W, 2)
+        ground.fill({ color: lineColor, alpha: lineAlpha })
       }
 
       // ── Label ──
       if (isCommitted) {
-        label.text  = `✓ LEVEL ${i + 1}`
-        label.style.fill       = '#f0c040'
-        label.style.fontWeight = 'bold'
-        label.alpha = 1
+        label.text       = `✓ LEVEL ${i + 1}`
+        label.style.fill = '#f0c040'
+        label.alpha      = 1.0
       } else if (isOther) {
-        label.text  = `LEVEL ${i + 1}`
-        label.style.fill       = '#4a7090'
-        label.style.fontWeight = 'normal'
-        label.alpha = 0.4
-      } else if (playerCount > 0) {
-        label.text  = `LEVEL ${i + 1}`
-        label.style.fill       = '#7ac8e8'
-        label.style.fontWeight = 'normal'
-        label.alpha = 1
+        label.text       = `LEVEL ${i + 1}`
+        label.style.fill = '#445566'
+        label.alpha      = 0.35
       } else {
-        label.text  = `LEVEL ${i + 1}`
-        label.style.fill       = '#4a7090'
-        label.style.fontWeight = 'normal'
-        label.alpha = 1
+        label.text       = `LEVEL ${i + 1}`
+        label.style.fill = '#7ac8e8'
+        label.alpha      = 1.0
       }
 
       // ── Player count ──
@@ -177,21 +240,10 @@ export default class TrainingGroundsRenderer extends BaseRenderer {
       } else {
         countLabel.visible = false
       }
-
-      // ── Progress bar ──
-      progressBar.clear()
-      if (isPending && countdownMs != null) {
-        const fillFraction = 1 - (countdownMs / 4000)
-        const barWidth     = Math.max(0, Math.min(1, fillFraction)) * zoneWidth
-        if (barWidth > 0) {
-          progressBar.rect(0, ZONE_HEIGHT - 4, barWidth, 4)
-          progressBar.fill({ color: 0x7ac8e8, alpha: 0.9 })
-        }
-      }
     }
   }
 
-  /** Build the zone container with one child Container per zone. */
+  /** Build the zone container with one portal archway per zone. */
   _buildZoneContainer(count, zoneWidth) {
     const container = new Container()
     container._zoneCount = count
@@ -200,52 +252,71 @@ export default class TrainingGroundsRenderer extends BaseRenderer {
       const zc = new Container()
       zc.position.set(i * zoneWidth, 0)
 
-      const fill = new Graphics()
-      zc._fill = fill
-      zc.addChild(fill)
+      // Portal archway sprite (centered horizontally in zone)
+      const tex    = Assets.get(`portal_gate_${i + 1}`)
+      const portal = tex ? new Sprite(tex) : null
+      if (portal) {
+        portal.width  = PORTAL_W
+        portal.height = PORTAL_H
+        portal.anchor.set(0.5, 0)
+        portal.position.set(zoneWidth / 2, 0)
+      }
+      zc._portalSprite = portal
+      if (portal) zc.addChild(portal)
 
-      const border = new Graphics()
-      zc._border = border
-      zc.addChild(border)
+      // Animated glow overlay on portal opening (per-frame)
+      const glowGfx = new Graphics()
+      zc._glowGfx = glowGfx
+      zc.addChild(glowGfx)
 
+      // Rune dots on pillars (per-frame)
+      const runeGfx = new Graphics()
+      zc._runeGfx = runeGfx
+      zc.addChild(runeGfx)
+
+      // Ground boundary line (per-frame)
+      const groundGfx = new Graphics()
+      zc._groundGfx = groundGfx
+      zc.addChild(groundGfx)
+
+      // Level name label below portal
       const label = new Text({
         text:  `LEVEL ${i + 1}`,
         style: {
-          fontFamily: 'Trebuchet MS',
-          fontSize:   13,
-          fontWeight: 'normal',
-          fill:       '#4a7090',
-          align:      'center',
+          fontFamily:    'Trebuchet MS',
+          fontSize:      11,
+          fontWeight:    'bold',
+          fill:          '#7ac8e8',
+          align:         'center',
+          letterSpacing: 1,
         },
       })
-      label.anchor.set(0.5, 0.5)
-      label.position.set(zoneWidth / 2, ZONE_HEIGHT / 2 - 8)
+      label.anchor.set(0.5, 0)
+      label.position.set(zoneWidth / 2, PORTAL_H + 2)
       zc._label = label
       zc.addChild(label)
 
+      // Player count inside portal opening
       const countLabel = new Text({
         text:  '',
         style: {
           fontFamily: 'Trebuchet MS',
-          fontSize:   16,
+          fontSize:   14,
           fontWeight: 'bold',
           fill:       '#ffffff',
           align:      'center',
         },
       })
-      countLabel.anchor.set(0.5, 0)
-      countLabel.position.set(zoneWidth / 2, ZONE_HEIGHT / 2 + 4)
+      countLabel.anchor.set(0.5, 0.5)
+      countLabel.position.set(zoneWidth / 2, GLOW_CY + 8)
       countLabel.visible = false
       zc._countLabel = countLabel
       zc.addChild(countLabel)
 
-      const progressBar = new Graphics()
-      zc._progressBar = progressBar
-      zc.addChild(progressBar)
-
       container.addChild(zc)
     }
 
+    container.y = 30
     this.game.layers.bg.addChild(container)
     this._zoneContainer = container
   }

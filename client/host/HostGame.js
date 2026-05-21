@@ -408,6 +408,8 @@ export default class HostGame {
       'enemy_gaterepairer', 'enemy_leviathan', 'enemy_warlock',
       'enemy_flameofazzinoth', 'enemy_shadowdemon',
       'portal_building',
+      'portal_gate_1', 'portal_gate_2', 'portal_gate_3',
+      'portal_gate_4', 'portal_gate_5', 'portal_gate_6',
       'boss_akama',
       'pylon_inactive',
       'pylon_active',

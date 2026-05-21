@@ -2,6 +2,18 @@
 
 _Curated long-term knowledge. Every token here loads every session — keep it tight._
 
+## Portal Gate Sprites — Level Selector (2026-05-21)
+
+Training Grounds level selector redesigned as stone portal archways (80×80px, `low top-down`).
+Sprite keys: `portal_gate_1` through `portal_gate_6`. Files: `public/assets/sprites/portal_gate_N.png`.
+Registered in `HostGame.js` `SPRITE_KEYS`. Rendering in `TrainingGroundsRenderer.js`:
+- `_portalSprite`: Sprite, centered horizontally in zone, alpha/tint for state
+- `_glowGfx`: ellipse glow on portal opening, pulsing when pending
+- `_runeGfx`: 6 rune dots sequential-lighting during countdown (0→6 over 4s)
+- `_groundGfx`: colored ground line at y=70
+
+PixelLab concurrency limit: **5 concurrent jobs max** — 6th returns 429. Queue ≤5 at a time.
+
 ## Enemy Walk Animation Debounce (2026-05-19)
 
 `EnemySprite.update()` is called at 60fps but server STATE_DELTA arrives at 20Hz. For 2 of 3 frames,

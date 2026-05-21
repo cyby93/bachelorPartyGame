@@ -231,7 +231,8 @@ export default class HostGame {
    * @param {object} [meta] – level metadata from SCENE_CHANGE payload
    */
   switchScene(name, meta) {
-    // Store meta before setArenaSize so _rebuildBackground can draw walls
+    // Store meta and scene name before setArenaSize so _rebuildBackground can use them
+    this._activeSceneName = name
     this._levelMeta = meta ?? {}
     this.setArenaSize(meta?.arenaWidth, meta?.arenaHeight)
     this.activeRenderer?.exit()
@@ -436,6 +437,13 @@ export default class HostGame {
     ]
     const manifest = SPRITE_KEYS.map(k => ({ alias: k, src: `/assets/sprites/${k}.png` }))
 
+    // Load portal gate animation frames (7 frames per gate, activated state)
+    for (let n = 1; n <= 6; n++) {
+      for (let f = 0; f < 7; f++) {
+        manifest.push({ alias: `portal_gate_${n}_anim_${f}`, src: `/assets/sprites/portal_gate_${n}_anim/${f}.png` })
+      }
+    }
+
     // Load 8 directional static sprites
     for (const cls of DIRECTIONAL_CLASSES) {
       for (const dir of DIRECTIONS) {
@@ -595,7 +603,12 @@ export default class HostGame {
     bgGfx.rect(0, 0, W, H)
     bgGfx.stroke({ color: 0x09121a, alpha: 0.95, width: 10 })
 
-    bgGfx.rect(0, 0, W, H)
+    if (this._activeSceneName === 'trainingGrounds') {
+      // Skip the top edge — portals overflow out of it
+      bgGfx.moveTo(0, 0).lineTo(0, H).lineTo(W, H).lineTo(W, 0)
+    } else {
+      bgGfx.rect(0, 0, W, H)
+    }
     bgGfx.stroke({ color: 0xb7c4cf, alpha: 0.9, width: 3 })
 
     // Draw wall segments between rooms

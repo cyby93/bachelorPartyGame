@@ -1,6 +1,6 @@
 <script>
   import { EVENTS } from '../../../shared/protocol.js'
-  import { LEVEL_SELECT_OPTIONS } from '../../../shared/LevelConfig.js'
+  import { CAMPAIGN, LEVEL_SELECT_OPTIONS } from '../../../shared/LevelConfig.js'
   import { gameState } from '../stores/gameState.js'
 
   let { socket } = $props()
@@ -9,7 +9,8 @@
   let selectedLevel = $state(0)
   let skipDialog    = $state(false)
   let skillTiers    = $state([0, 0, 0, 0])
-  let playerLevel   = $state(0)
+  let playerLevel      = $state(0)
+  let unlockedLevels   = $state(1)
 
   const botCount = $derived(Object.values($gameState.players).filter(p => p.isBot).length)
 
@@ -47,6 +48,10 @@
 
   function onPlayerLevelChange() {
     socket.emit(EVENTS.DEBUG_SET_PLAYER_LEVEL, { level: playerLevel })
+  }
+
+  function onUnlockedLevelsChange() {
+    socket.emit(EVENTS.DEBUG_SET_UNLOCKED_LEVELS, { count: unlockedLevels })
   }
 
   function handleForceEnterRaid() {
@@ -100,6 +105,14 @@
     </div>
 
     <h3 style="margin-top:10px">Campaign</h3>
+    <div class="slider-row">
+      <span class="slider-label">1</span>
+      <input type="range" min="1" max={CAMPAIGN.length} step="1"
+        bind:value={unlockedLevels}
+        oninput={onUnlockedLevelsChange}
+        class="slider" />
+      <span class="slider-label">{unlockedLevels}</span>
+    </div>
     <button class="util-btn force-raid-btn" onclick={handleForceEnterRaid}>⚡ Force Enter Raid</button>
   </div>
 {/if}

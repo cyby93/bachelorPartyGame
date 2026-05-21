@@ -4,15 +4,33 @@ _Curated long-term knowledge. Every token here loads every session — keep it t
 
 ## Portal Gate Sprites — Level Selector (2026-05-21)
 
-Training Grounds level selector redesigned as stone portal archways (80×80px, `low top-down`).
-Sprite keys: `portal_gate_1` through `portal_gate_6`. Files: `public/assets/sprites/portal_gate_N.png`.
-Registered in `HostGame.js` `SPRITE_KEYS`. Rendering in `TrainingGroundsRenderer.js`:
-- `_portalSprite`: Sprite, centered horizontally in zone, alpha/tint for state
-- `_glowGfx`: ellipse glow on portal opening, pulsing when pending
-- `_runeGfx`: 6 rune dots sequential-lighting during countdown (0→6 over 4s)
-- `_groundGfx`: colored ground line at y=70
+Training Grounds level selector redesigned as stone portal archways.
+Sprite keys: `portal_gate_1` through `portal_gate_6` (80×80px source, rendered 120×120). Files: `public/assets/sprites/portal_gate_N.png`. Registered in `HostGame.js` `SPRITE_KEYS`.
+
+**Layout:** `container.y = -30` — portals overflow out of the arena top edge. Players activate by standing in the visible bottom half. Server `ZONE_HEIGHT = 90` (= -30 + 120). Zone grid always `CAMPAIGN.length` = 6 wide regardless of `unlockedLevelCount`; locked zones detected but not counted.
+
+**Renderer (`TrainingGroundsRenderer.js`) key constants:**
+`PORTAL_W = PORTAL_H = 120`, `GLOW_CY = 48`, `GLOW_RX = 42`, `GLOW_RY = 33`, `ZONE_HEIGHT = 90`
+
+**Per-zone graphics:** `_portalSprite` (static, hidden during countdown), `_animSprite` (AnimatedSprite, 7 frames, shown + playing during countdown), `_glowGfx` (ellipse, committed/idle only), `_groundGfx` (progress bar during countdown, ground line otherwise). `_runeGfx` removed — replaced by animation + progress bar.
+
+**Countdown state:** `isPending` → hide `_portalSprite`, show `_animSprite` (loop), draw progress bar in `_groundGfx` (`progress = 1 - countdownMs/4000`, fills left→right, 5px tall, levelColor). All other states use static sprite + ground line. Glow pulse removed from countdown — animation carries the energy signal.
+
+**Animation assets:** frames at `public/assets/sprites/portal_gate_N_anim/{0..6}.png`. Registered in `HostGame.js` manifest loop (`portal_gate_N_anim_F` aliases). `animationSpeed = 0.15` (~9fps at 60fps ticker).
+
+**Silver border:** `HostGame._rebuildBackground` skips the top edge stroke when `_activeSceneName === 'trainingGrounds'` (draws 3 sides only).
 
 PixelLab concurrency limit: **5 concurrent jobs max** — 6th returns 429. Queue ≤5 at a time.
+
+**PixelLab IDs (portal_entrance tag, 2026-05-21 replacement):**
+| File | Level | Sprite name | PixelLab ID |
+|---|---|---|---|
+| portal_gate_1 | L1 Courtyard (Arcane blue) | Warcraft cave entrance archway | ac08bf73-03ab-443a-964d-cf996278ca16 |
+| portal_gate_2 | L2 Siege (War fire orange) | yellow glowing energy | fd9850f4-3a65-4dad-bb66-1162d05c5baf |
+| portal_gate_3 | L3 Black Temple (Fel green) | black and green glowing energy | de9d059c-c7c8-489b-8d49-a62e6a08e00f |
+| portal_gate_4 | L4 Serpentshrine (Naga teal) | teal glowing energy | 5e66f44d-eaf7-4fc9-a653-95fb8ad544d3 |
+| portal_gate_5 | L5 Refectory (Shadow violet) | purple glowing energy | f4cc75aa-ab54-41a1-b28a-a9bd1d59ca2a |
+| portal_gate_6 | L6 Illidan (Void purple) | green glowing energy | 0b9eb654-ab2a-496c-80c2-52931a8a58e2 |
 
 ## Enemy Walk Animation Debounce (2026-05-19)
 

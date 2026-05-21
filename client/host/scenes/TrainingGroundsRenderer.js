@@ -5,15 +5,15 @@
  * Full abilities active — players can attack training dummies to warm up.
  */
 
-import { Assets, Container, Graphics, Sprite, Text } from 'pixi.js'
+import { AnimatedSprite, Assets, Container, Graphics, Sprite, Text } from 'pixi.js'
 import BaseRenderer from './BaseRenderer.js'
 
-const ZONE_HEIGHT = 110  // matches server: 30px container offset + 80px sprite
-const PORTAL_W    = 80   // sprite width
-const PORTAL_H    = 80   // sprite height
-const GLOW_CY     = 32   // y-center of portal opening within sprite
-const GLOW_RX     = 28   // glow ellipse half-width
-const GLOW_RY     = 22   // glow ellipse half-height
+const ZONE_HEIGHT = 90   // matches server: container y=-30 + sprite height 120
+const PORTAL_W    = 120  // sprite rendered width (1.5× source)
+const PORTAL_H    = 120  // sprite rendered height (1.5× source)
+const GLOW_CY     = 48   // y-center of portal opening within sprite
+const GLOW_RX     = 42   // glow ellipse half-width
+const GLOW_RY     = 33   // glow ellipse half-height
 
 const LEVEL_PORTAL_COLORS = [
   0x2255cc,  // L1 The Courtyard      — Arcane blue
@@ -107,8 +107,7 @@ export default class TrainingGroundsRenderer extends BaseRenderer {
 
     for (let i = 0; i < totalPortals; i++) {
       const zc         = this._zoneContainer.getChildAt(i)
-      const label      = zc._label
-      const countLabel = zc._countLabel
+      const label = zc._label
 
       const isLocked     = i >= unlockedLevelCount
       const playerCount  = counts?.[i] ?? 0
@@ -125,46 +124,54 @@ export default class TrainingGroundsRenderer extends BaseRenderer {
       if (isLocked) {
         const portal = zc._portalSprite
         if (portal) { portal.alpha = 0.40; portal.tint = 0x666666 }
+        if (zc._animSprite) { zc._animSprite.visible = false; zc._animSprite.stop() }
         zc._glowGfx.clear()
-        zc._runeGfx.clear()
         zc._groundGfx.clear()
         label.text       = `LEVEL ${i + 1}`
         label.style.fill = '#2a3a44'
         label.alpha      = 0.6
-        countLabel.visible = false
         continue
       }
 
-      // ── Portal sprite ──
+      // ── Animation vs static sprite ──
+      const anim   = zc._animSprite
       const portal = zc._portalSprite
-      if (portal) {
-        if (isCommitted) {
-          portal.alpha = 1.0
-          portal.tint  = 0xf0c040
-        } else if (isOther) {
-          portal.alpha = 0.18
-          portal.tint  = 0x888888
-        } else if (isPending || playerCount > 0) {
-          portal.alpha = 1.0
-          portal.tint  = 0xffffff
-        } else {
-          portal.alpha = 0.45
-          portal.tint  = 0xffffff
+      if (isPending) {
+        if (portal) portal.visible = false
+        if (anim) {
+          anim.visible = true
+          anim.tint    = 0xffffff
+          if (!anim.playing) anim.play()
+        }
+      } else {
+        if (anim) { anim.visible = false; anim.stop() }
+        if (portal) {
+          portal.visible = true
+          if (isCommitted) {
+            portal.alpha = 1.0
+            portal.tint  = 0xf0c040
+          } else if (isOther) {
+            portal.alpha = 0.18
+            portal.tint  = 0x888888
+          } else if (playerCount > 0) {
+            portal.alpha = 1.0
+            portal.tint  = 0xffffff
+          } else {
+            portal.alpha = 0.45
+            portal.tint  = 0xffffff
+          }
         }
       }
 
-      // ── Glow overlay ──
+      // ── Glow overlay (committed + idle only — not during countdown) ──
       const glow = zc._glowGfx
       glow.clear()
-      if (!isOther) {
+      if (!isOther && !isPending) {
         let glowAlpha = 0
         let glowColor = levelColor
         if (isCommitted) {
           glowAlpha = 0.75
           glowColor = 0xf0c040
-        } else if (isPending) {
-          glowAlpha = 0.42 + 0.3 * Math.sin(this._zoneTime * (2 * Math.PI / 1.0))
-          glowColor = levelColor
         } else if (playerCount > 0) {
           glowAlpha = 0.28
         }
@@ -176,69 +183,40 @@ export default class TrainingGroundsRenderer extends BaseRenderer {
         }
       }
 
-      // ── Rune dots (3 per pillar, sequential during countdown) ──
-      const runes = zc._runeGfx
-      runes.clear()
-      if (!isOther) {
-        let litCount
-        if (isCommitted) {
-          litCount = 6
-        } else if (isPending && countdownMs != null) {
-          litCount = Math.floor((1 - countdownMs / 4000) * 6)
-        } else if (playerCount > 0) {
-          litCount = 3
-        } else {
-          litCount = 0
-        }
-
-        // Rune order: left-top, right-top, left-mid, right-mid, left-bot, right-bot
-        const runePos = [
-          [spriteLeft + 10, 20], [spriteLeft + PORTAL_W - 10, 20],
-          [spriteLeft + 10, 36], [spriteLeft + PORTAL_W - 10, 36],
-          [spriteLeft + 10, 52], [spriteLeft + PORTAL_W - 10, 52],
-        ]
-        for (let r = 0; r < 6; r++) {
-          const [rx, ry]   = runePos[r]
-          const lit        = r < litCount
-          const runeColor  = isCommitted ? 0xf0c040 : levelColor
-          const runeAlpha  = lit ? (isCommitted ? 1.0 : 0.85) : 0.13
-          runes.circle(rx, ry, 2.5)
-          runes.fill({ color: runeColor, alpha: runeAlpha })
-        }
-      }
-
-      // ── Ground boundary line ──
+      // ── Progress bar (countdown) / ground line (other states) ──
       const ground = zc._groundGfx
       ground.clear()
       if (!isOther) {
-        const lineAlpha = isCommitted ? 0.9 : (isPending ? 0.7 : (playerCount > 0 ? 0.5 : 0.18))
-        const lineColor = isCommitted ? 0xf0c040 : levelColor
-        ground.rect(spriteLeft, PORTAL_H - 2, PORTAL_W, 2)
-        ground.fill({ color: lineColor, alpha: lineAlpha })
+        if (isPending && countdownMs != null) {
+          const progress = Math.max(0, Math.min(1, 1 - countdownMs / 4000))
+          ground.rect(spriteLeft, PORTAL_H - 7, PORTAL_W, 5)
+          ground.fill({ color: 0x112233, alpha: 0.7 })
+          if (progress > 0) {
+            ground.rect(spriteLeft, PORTAL_H - 7, PORTAL_W * progress, 5)
+            ground.fill({ color: levelColor, alpha: 0.95 })
+          }
+        } else {
+          const lineAlpha = isCommitted ? 0.9 : (playerCount > 0 ? 0.5 : 0.18)
+          const lineColor = isCommitted ? 0xf0c040 : levelColor
+          ground.rect(spriteLeft, PORTAL_H - 2, PORTAL_W, 2)
+          ground.fill({ color: lineColor, alpha: lineAlpha })
+        }
       }
 
-      // ── Label ──
+      // ── Label (with inline player count) ──
+      const countSuffix = playerCount > 0 && !isCommitted ? ` (${playerCount})` : ''
       if (isCommitted) {
         label.text       = `✓ LEVEL ${i + 1}`
         label.style.fill = '#f0c040'
         label.alpha      = 1.0
       } else if (isOther) {
-        label.text       = `LEVEL ${i + 1}`
+        label.text       = `LEVEL ${i + 1}${countSuffix}`
         label.style.fill = '#445566'
         label.alpha      = 0.35
       } else {
-        label.text       = `LEVEL ${i + 1}`
+        label.text       = `LEVEL ${i + 1}${countSuffix}`
         label.style.fill = '#7ac8e8'
         label.alpha      = 1.0
-      }
-
-      // ── Player count ──
-      if (playerCount > 0 && !isCommitted) {
-        countLabel.text    = String(playerCount)
-        countLabel.alpha   = isOther ? 0.4 : 1
-        countLabel.visible = true
-      } else {
-        countLabel.visible = false
       }
     }
   }
@@ -264,17 +242,27 @@ export default class TrainingGroundsRenderer extends BaseRenderer {
       zc._portalSprite = portal
       if (portal) zc.addChild(portal)
 
-      // Animated glow overlay on portal opening (per-frame)
+      // Activated animation sprite (swaps in during countdown)
+      const animFrames = Array.from({ length: 7 }, (_, f) => Assets.get(`portal_gate_${i + 1}_anim_${f}`)).filter(Boolean)
+      const animSprite = animFrames.length > 0 ? new AnimatedSprite(animFrames) : null
+      if (animSprite) {
+        animSprite.width          = PORTAL_W
+        animSprite.height         = PORTAL_H
+        animSprite.anchor.set(0.5, 0)
+        animSprite.position.set(zoneWidth / 2, 0)
+        animSprite.animationSpeed = 0.15  // ~9fps at 60fps ticker
+        animSprite.loop           = true
+        animSprite.visible        = false
+      }
+      zc._animSprite = animSprite
+      if (animSprite) zc.addChild(animSprite)
+
+      // Glow overlay (per-frame)
       const glowGfx = new Graphics()
       zc._glowGfx = glowGfx
       zc.addChild(glowGfx)
 
-      // Rune dots on pillars (per-frame)
-      const runeGfx = new Graphics()
-      zc._runeGfx = runeGfx
-      zc.addChild(runeGfx)
-
-      // Ground boundary line (per-frame)
+      // Ground line / progress bar (per-frame)
       const groundGfx = new Graphics()
       zc._groundGfx = groundGfx
       zc.addChild(groundGfx)
@@ -296,27 +284,10 @@ export default class TrainingGroundsRenderer extends BaseRenderer {
       zc._label = label
       zc.addChild(label)
 
-      // Player count inside portal opening
-      const countLabel = new Text({
-        text:  '',
-        style: {
-          fontFamily: 'Trebuchet MS',
-          fontSize:   14,
-          fontWeight: 'bold',
-          fill:       '#ffffff',
-          align:      'center',
-        },
-      })
-      countLabel.anchor.set(0.5, 0.5)
-      countLabel.position.set(zoneWidth / 2, GLOW_CY + 8)
-      countLabel.visible = false
-      zc._countLabel = countLabel
-      zc.addChild(countLabel)
-
       container.addChild(zc)
     }
 
-    container.y = 30
+    container.y = -30
     this.game.layers.bg.addChild(container)
     this._zoneContainer = container
   }

@@ -86,6 +86,8 @@ Both calculators use a tick-based greedy simulation (50ms ticks, 5-min fight).
 
 ## Open Questions / Known Sim Bugs
 
+- **✅ FIXED: MELEE cone scaling** (2026-05-21). Cleave, Hammer Swing, Death Strike now scale by TARGET_COUNT in multi-target mode. Fix: `skill.angle ? TARGET_COUNT : 1` in MELEE case of `getInstantDamage`. Sinister Strike (no angle) correctly stays single-target.
+- **✅ IMPLEMENTED: Geometric expected-hit-count model** (2026-05-21). Flat ×N replaced with three formulas: cone `N×angle/(2π)`, AOE_SELF `N×(r/zone)²`, placed circle `1+(N-1)×(r/spread)²`. DoT coverage: `1+(N-1)×0.5`. CLI: `--density=tight|normal|loose` (zone/spread/dotCoverage presets), or `--zone --spread --dot-coverage` for raw params. Default: normal (zone=200px, spread=100px). Single-target output unchanged. File: `tools/dps-calculator.js`.
 - **✅ FIXED: Vanish stealth multiplier** (2026-05-20). Both DPS calculators now fire Vanish in a utility pre-pass. When stealthMult > 1.0, instants sort by raw damage (not priority) so Ambush gets the ×1.5 bonus, not Sinister Strike. Engine confirmed: one hit per Vanish gets the bonus (shadowStrikeUsed flag). Rogue base DPS: 24.0 → 29.1.
 - **BY DESIGN: Mage Spread ⚠SPREAD flag** (2026-05-20). Fireball T2 `castTime: -80` flips priority above Pyroblast T2 → Pyroblast never fires → DPS < base. Cyby chose to keep the delta as a tuning signal, not a bug. `⚠SPREAD` flag now appears in upgraded calc output. Fix by adjusting Fireball T2 deltas until flag clears.
 - **🟡 CONCERN: Bladestorm opportunity cost** (2026-05-20). SkillDatabase comment says "blocks other skills" 4000ms but `getCastTime=0`. Sim treats as free instant. If engine locks player, Warrior DPS overstated. Verify engine behavior.

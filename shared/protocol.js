@@ -22,6 +22,7 @@ export const EVENTS = {
   BOT_REMOVE:    'host:botRemove',  // remove all bots
   DEBUG_SET_SKILL_TIER: 'host:debugSetSkillTier', // { skillIndex: 0-3, tier: 0-3 } — debug: set all players' upgrade tier
   DEBUG_SET_PLAYER_LEVEL: 'host:debugSetPlayerLevel', // { level: 0-10 } — debug: set all players' hp upgrade count
+  DEBUG_SET_UNLOCKED_LEVELS: 'host:debugSetUnlockedLevels', // { count: 1-N } — debug: set unlockedLevelCount for level gate testing
   DEBUG_SPAWN_ENEMY: 'host:debugSpawnEnemy', // { enemyType } — sandbox-only: spawn one enemy archetype
   DEBUG_CLEAR_ENEMIES: 'host:debugClearEnemies', // {} — sandbox-only: remove all active enemies
 

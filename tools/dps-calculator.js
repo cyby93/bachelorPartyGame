@@ -28,6 +28,24 @@ const TICK_MS  = 50               // simulation tick granularity (ms)
 const targetsArg  = process.argv.find(a => a.startsWith('--targets='))
 const TARGET_COUNT = targetsArg ? Math.max(1, parseInt(targetsArg.split('=')[1], 10)) : 1
 
+// Encounter density model — controls expected-hit-count geometry
+const DENSITY_PRESETS = {
+  tight:  { zone: 150, spread:  80, dotCoverage: 0.65 },
+  normal: { zone: 200, spread: 100, dotCoverage: 0.50 },
+  loose:  { zone: 280, spread: 140, dotCoverage: 0.35 },
+}
+const densityArg = process.argv.find(a => a.startsWith('--density='))
+const densityKey = densityArg ? densityArg.split('=')[1] : 'normal'
+const preset     = DENSITY_PRESETS[densityKey] ?? DENSITY_PRESETS.normal
+
+const zoneArg   = process.argv.find(a => a.startsWith('--zone='))
+const spreadArg = process.argv.find(a => a.startsWith('--spread='))
+const dotCovArg = process.argv.find(a => a.startsWith('--dot-coverage='))
+
+const COMBAT_ZONE_RADIUS = zoneArg   ? parseFloat(zoneArg.split('=')[1])   : preset.zone
+const CLUSTER_SPREAD     = spreadArg ? parseFloat(spreadArg.split('=')[1]) : preset.spread
+const DOT_COVERAGE       = dotCovArg ? parseFloat(dotCovArg.split('=')[1]) : preset.dotCoverage
+
 const R = BALANCE.RANGED_BASE_DPS
 const DPS_TARGETS = {
   ranged: R * 1.0,
@@ -48,6 +66,56 @@ const CLASS_ROLE = {
   Priest:     'healer',
 }
 
+// ── Encounter geometry helpers ────────────────────────────────────────────────
+
+/**
+ * Expected number of enemies hit by one use of `skill` given N active targets.
+ *
+ * Three geometric models:
+ *   Cone (MELEE + angle)   — N × angle/(2π)            enemies surround caster uniformly
+ *   AOE_SELF circle        — N × min(1, (r/zone)²)     caster-centered, zone-density model
+ *   Placed circle          — 1 + (N-1) × min(1,(r/spread)²)  aimed at one enemy, rest by cluster
+ *   DoT: see dotExpectedHits()
+ *   Everything else: 1
+ */
+function expectedHits(skill, N) {
+  if (N <= 1) return 1
+  const zoneOverlap    = r => Math.min(1, (r / COMBAT_ZONE_RADIUS) ** 2)
+  const clusterOverlap = r => Math.min(1, (r / CLUSTER_SPREAD) ** 2)
+
+  switch (skill.type) {
+    case 'MELEE':
+      return skill.angle ? N * skill.angle / (2 * Math.PI) : 1
+
+    case 'AOE': {
+      const r = skill.radius ?? 0
+      if (skill.subtype === 'AOE_ADJACENT') return 1 + (N - 1) * clusterOverlap(r)
+      return N * zoneOverlap(r)
+    }
+
+    case 'CAST': {
+      const p = skill.payload ?? {}
+      if (p.onImpact?.type === 'AOE')
+        return 1 + (N - 1) * clusterOverlap(p.onImpact.radius ?? 0)
+      return 1
+    }
+
+    case 'SPAWN':
+      if (skill.subtype === 'TRAP' && skill.trapEffect)
+        return 1 + (N - 1) * clusterOverlap(skill.trapEffect.radius ?? 0)
+      return 1
+
+    default:
+      return 1
+  }
+}
+
+/** DoT spread: one cast = one target, but skilled play maintains DoT on ~DOT_COVERAGE of extras. */
+function dotExpectedHits(N) {
+  if (N <= 1) return 1
+  return Math.min(N, 1 + (N - 1) * DOT_COVERAGE)
+}
+
 // ── Damage extraction helpers ─────────────────────────────────────────────────
 
 /**
@@ -59,23 +127,21 @@ function getInstantDamage(skill) {
   switch (skill.type) {
     case 'MELEE':
     case 'PROJECTILE':
-      // MULTI and chain abilities: single-target sim counts 1 hit
-      return skill.damage ?? 0
+      return (skill.damage ?? 0) * expectedHits(skill, TARGET_COUNT)
 
     case 'AOE':
       if (skill.duration && skill.tickRate) {
         const ticks = Math.floor(skill.duration / skill.tickRate)
-        return (skill.damage ?? 0) * ticks * TARGET_COUNT
+        return (skill.damage ?? 0) * ticks * expectedHits(skill, TARGET_COUNT)
       }
-      return (skill.damage ?? 0) * TARGET_COUNT
+      return (skill.damage ?? 0) * expectedHits(skill, TARGET_COUNT)
 
     case 'CAST': {
       const p = skill.payload ?? {}
       let dmg = p.damage ?? 0
       if (p.onImpact) {
-        // AOE splash at impact point hits all targets; direct hit is single-target only
-        const splashScale = p.onImpact.type === 'AOE' ? TARGET_COUNT : 1
-        dmg += (p.onImpact.damage ?? 0) * splashScale
+        // AOE splash at impact point — expectedHits handles placed-circle model
+        dmg += (p.onImpact.damage ?? 0) * expectedHits(skill, TARGET_COUNT)
       }
       return dmg
     }
@@ -97,15 +163,15 @@ function getInstantDamage(skill) {
 
     case 'SPAWN':
       if (skill.subtype === 'TRAP' && skill.trapEffect)
-        return (skill.trapEffect.damage ?? 0) * TARGET_COUNT
+        return (skill.trapEffect.damage ?? 0) * expectedHits(skill, TARGET_COUNT)
       if (skill.subtype === 'TOTEM' && skill.totemAbility) {
-        const ta    = skill.totemAbility
-        const scale = ta.type === 'AOE' ? TARGET_COUNT : 1
-        return Math.floor(skill.duration / ta.tickRate) * (ta.damage ?? 0) * scale
+        const ta = skill.totemAbility
+        // totemAbility.type is PROJECTILE — fires at one enemy per tick (single-target)
+        return Math.floor(skill.duration / ta.tickRate) * (ta.damage ?? 0)
       }
       if (skill.subtype === 'PET' && skill.petStats) {
         const p = skill.petStats
-        return (skill.duration / p.attackRate) * p.damage * TARGET_COUNT
+        return (skill.duration / p.attackRate) * p.damage  // pets attack single targets
       }
       if (skill.subtype === 'WILD_BEAST' && skill.beastVariants) {
         const bonus  = skill.damageBonus ?? 0
@@ -155,9 +221,8 @@ function priorityScore(skill, dotExpiry, t) {
 
   if (skill.dot && !dotExpiry.has(skill.name)) {
     // DoT not active: factor in the full DoT value as incremental gain.
-    // In multi-target mode, one cast applies the DoT to all targets.
     const dotTicks    = Math.floor(skill.dot.duration / skill.dot.tickRate)
-    const dotTotal    = skill.dot.damagePerTick * dotTicks * TARGET_COUNT
+    const dotTotal    = skill.dot.damagePerTick * dotTicks * dotExpectedHits(TARGET_COUNT)
     const totalDmg    = getInstantDamage(skill) + dotTotal
     const costMs      = Math.max(castTime, 1)   // opportunity cost = time player is blocked
     return totalDmg / costMs
@@ -193,9 +258,8 @@ function simulate(className, skills) {
       if (t >= expiry) { dotExpiry.delete(name); continue }
       const skill = skills.find(s => s.name === name)
       if (!skill?.dot) continue
-      // Accumulate proportional tick damage each simulation tick
       const dot = skill.dot
-      skillDmg.set(name, skillDmg.get(name) + dot.damagePerTick * (TICK_MS / dot.tickRate) * TARGET_COUNT)
+      skillDmg.set(name, skillDmg.get(name) + dot.damagePerTick * (TICK_MS / dot.tickRate) * dotExpectedHits(TARGET_COUNT))
     }
 
     // ── Player action ─────────────────────────────────────────────────────────
@@ -302,7 +366,7 @@ function run() {
   const W_BAR   = 22
 
   console.log()
-  const modeLabel = TARGET_COUNT === 1 ? 'single-target' : `${TARGET_COUNT} targets`
+  const modeLabel = TARGET_COUNT === 1 ? 'single-target' : `${TARGET_COUNT} targets, ${densityKey} density (zone ${COMBAT_ZONE_RADIUS}px, spread ${CLUSTER_SPREAD}px, dot ×${DOT_COVERAGE})`
   console.log(`  DPS Calculator — 5-minute target dummy (${modeLabel}, greedy rotation)`)
   console.log(`  BalanceConfig: R=${R}  Targets → ranged: ${DPS_TARGETS.ranged} | melee: ${DPS_TARGETS.melee.toFixed(1)} | healer: ${DPS_TARGETS.healer.toFixed(1)}`)
   console.log()
@@ -339,7 +403,11 @@ function run() {
   console.log('  Notes:')
   console.log('  ⚠  DPS is >5× target — ability values almost certainly need scaling down')
   console.log('  ↓  DPS is <0.3× target — class will feel useless, check ability values')
-  console.log(`  Bar fills to ${3 * TARGET_COUNT}× target. In multi-target mode, AoE abilities scale; single-target abilities do not.`)
+  console.log(`  Bar fills to ${3 * TARGET_COUNT}× target.`)
+  if (TARGET_COUNT > 1) {
+    console.log(`  Multi-target model: cone N×angle/(2π) | AOE_SELF N×(r/zone)² | placed 1+(N-1)×(r/spread)² | DoT 1+(N-1)×${DOT_COVERAGE}`)
+    console.log(`  --density=tight|normal|loose  --zone=N  --spread=N  --dot-coverage=F`)
+  }
   console.log('  Buffs with no damage (Charge, Shield Wall, Sprint, Bloodlust…) not counted.')
   console.log()
 

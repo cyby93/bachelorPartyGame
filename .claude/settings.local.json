@@ -103,7 +103,10 @@
       "Skill(agent-voljin)",
       "Skill(bmad-party-mode)",
       "mcp__pixellab__get_balance",
-      "mcp__pixellab__dismiss_review"
+      "mcp__pixellab__dismiss_review",
+      "Bash(cp -r /mnt/c/Workspace/bachelorPartyGame/public/assets/sprites/portal_gate_3_anim /mnt/c/Workspace/bachelorPartyGame/public/assets/sprites/portal_gate_tmp_anim)",
+      "Bash(cp -r /mnt/c/Workspace/bachelorPartyGame/public/assets/sprites/portal_gate_6_anim/. /mnt/c/Workspace/bachelorPartyGame/public/assets/sprites/portal_gate_3_anim/)",
+      "Bash(cp -r /mnt/c/Workspace/bachelorPartyGame/public/assets/sprites/portal_gate_tmp_anim/. /mnt/c/Workspace/bachelorPartyGame/public/assets/sprites/portal_gate_6_anim/)"
     ]
   },
   "enableAllProjectMcpServers": true,

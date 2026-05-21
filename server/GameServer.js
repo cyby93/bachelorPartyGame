@@ -237,7 +237,8 @@ export default class GameServer {
     socket.on(EVENTS.BOT_ADD,              data => this._onBotAdd(socket, data))
     socket.on(EVENTS.BOT_REMOVE,           ()   => this._onBotRemove(socket))
     socket.on(EVENTS.DEBUG_SET_SKILL_TIER,    data => this._onDebugSetSkillTier(socket, data))
-    socket.on(EVENTS.DEBUG_SET_PLAYER_LEVEL,  data => this._onDebugSetPlayerLevel(socket, data))
+    socket.on(EVENTS.DEBUG_SET_PLAYER_LEVEL,    data => this._onDebugSetPlayerLevel(socket, data))
+    socket.on(EVENTS.DEBUG_SET_UNLOCKED_LEVELS, data => this._onDebugSetUnlockedLevels(socket, data))
     socket.on(EVENTS.DEBUG_SPAWN_ENEMY,       data => this._onDebugSpawnEnemy(socket, data))
     socket.on(EVENTS.DEBUG_CLEAR_ENEMIES,  ()   => this._onDebugClearEnemies(socket))
     socket.on(EVENTS.QUIZ_ANSWER,  data => this._onQuizAnswer(socket, data))
@@ -441,6 +442,13 @@ export default class GameServer {
       player.hp         = Math.min(player.hp, player.maxHp)
       for (let i = 0; i < level; i++) player.applyHpUpgrade()
     }
+  }
+
+  _onDebugSetUnlockedLevels(socket, data) {
+    if (!this.players.get(socket.id)?.isHost) return
+    const { count } = data ?? {}
+    if (typeof count !== 'number') return
+    this.unlockedLevelCount = Math.max(1, Math.min(count, CAMPAIGN.length))
   }
 
   _isDebugSandboxLevel(level = this.currentLevel) {
@@ -2857,7 +2865,7 @@ export default class GameServer {
   // ── Zone selector (training grounds, multi-level unlock) ──────────────────
 
   _tickZoneSelector(dt) {
-    const ZONE_HEIGHT  = 110  // 30px container offset + 80px portal sprite height
+    const ZONE_HEIGHT  = 90   // container y=-30 + portal sprite height 120
     const totalZones   = CAMPAIGN.length
     const zoneWidth    = this.arenaWidth / totalZones
     const counts       = new Array(totalZones).fill(0)

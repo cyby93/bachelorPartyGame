@@ -35,11 +35,11 @@ const SkillDatabase = {
       type:      'AOE',
       subtype:   'AOE_SELF',
       inputType: 'INSTANT',
-      cooldown:  3000,
+      cooldown:  4000,
       damage:    15,
       radius:    120,
       effectType: 'DEBUFF',
-      effectParams: { speedMultiplier: 0.5, duration: 2000 },
+      effectParams: { speedMultiplier: 0.3, duration: 3500 },
       iconFile:  'ability_thunderclap',
       dotColor:  0x4488ff,
     },
@@ -49,8 +49,8 @@ const SkillDatabase = {
       subtype:   'BLADESTORM',  // player-attached spinning AOE — follows caster, blocks Shield Block only
       inputType: 'INSTANT',
       cooldown:  12000,
-      damage:    6,             // damage per tick — tune via BalanceConfig
-      radius:    70,           // slightly larger than Cleave range
+      damage:    10,             // damage per tick — tune via BalanceConfig
+      radius:    90,           // slightly larger than Cleave range
       duration:  4000,          // 4 seconds of spinning
       tickRate:  400,           // hits every 400 ms
       effectType: 'DAMAGE',
@@ -222,7 +222,7 @@ const SkillDatabase = {
       castTime:  1500,          // noticeable cast time
       payload: {
         type:     'PROJECTILE',
-        damage:   30,           // greatly more than Shoot Bow (5)
+        damage:   40,           // greatly more than Shoot Bow (5)
         speed:    800,
         radius:   10,
         range:    1200,
@@ -239,7 +239,7 @@ const SkillDatabase = {
       subtype:     'WILD_BEAST',  // randomly picks bear / hawk / panther at cast time
       inputType:   'INSTANT',
       cooldown:    15000,
-      duration:    20000,
+      duration:    15000,
       damageBonus: 0,             // added to all beast variants' damage at spawn time
       // Beast variants — server picks one at random each cast
       beastVariants: [
@@ -262,7 +262,7 @@ const SkillDatabase = {
           radius:      10,
           damage:      3,
           attackRange: 400,
-          attackRate:  600,
+          attackRate:  700,
           ranged:      true,
         },
         {
@@ -270,7 +270,7 @@ const SkillDatabase = {
           hp:          60,
           speed:       2.2,
           radius:      14,
-          damage:      8,
+          damage:      7,
           attackRange: 45,
           attackRate:  800,
         },
@@ -289,7 +289,7 @@ const SkillDatabase = {
       spriteKey: 'trap_explosive',
       trapEffect: {
         type:       'AOE',
-        damage:     50,
+        damage:     35,
         radius:     120,
         effectType: 'DAMAGE',
       },
@@ -378,9 +378,9 @@ const SkillDatabase = {
       castTime:  800,
       payload: {
         type:      'PROJECTILE',
-        damage:    10,
+        damage:    11,
         speed:     500,
-        radius:    10,
+        radius:    12,
         range:     550,
         pierce:    false,
         spriteKey: 'projectile_fireball',
@@ -420,7 +420,7 @@ const SkillDatabase = {
         type:    'PROJECTILE',
         damage:  72,
         speed:   300,
-        radius:  20,
+        radius:  22,
         range:   600,
         pierce:    false,
         spriteKey: 'projectile_fireball',
@@ -557,10 +557,10 @@ const SkillDatabase = {
       type:        'TARGETED',
       subtype:     'TELEPORT_BEHIND',
       inputType:   'TARGETED',
-      cooldown:    7000,
+      cooldown:    5000,
       range:       350,
-      damage:      40,
-      comboDamage: 25,
+      damage:      34,
+      comboDamage: 12,
       iconFile:    'ability_rogue_ambush',
       dotColor:    0x660099,
     }

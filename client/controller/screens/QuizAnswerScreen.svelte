@@ -3,7 +3,7 @@
 
   const LABELS = ['A', 'B', 'C', 'D', 'E', 'F']
 
-  let { options = [], onanswer } = $props()
+  let { options = [], preLevel = false, questionIndex = 0, totalQuestions = 0, onanswer } = $props()
 
   let disabled      = $state(true)
   let selectedIndex = $state(null)
@@ -26,6 +26,9 @@
 
 <div class="quiz-answer">
   {#if !confirmed}
+    {#if preLevel}
+      <p class="pre-level-label">Pre-Raid Challenge {questionIndex}/{totalQuestions}</p>
+    {/if}
     <p class="title">Choose your answer!</p>
     {#if disabled}
       <p class="countdown">Get ready…</p>
@@ -66,6 +69,13 @@
     justify-content: center;
     padding: 12px;
     gap: 10px;
+  }
+
+  .pre-level-label {
+    font-size: 0.8em;
+    color: var(--rn-text-dim);
+    letter-spacing: 0.5px;
+    margin: 0;
   }
 
   .title {

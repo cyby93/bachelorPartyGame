@@ -113,6 +113,10 @@ export function buildFullState(gs) {
     waveInfo: waveInfoDTO(gs),
     stats:    gs.levelStats,
     pylons:   pylonsDTO(gs),
+
+    // Level unlock & zone selector
+    levelZoneState:     gs.scene === 'trainingGrounds' ? (gs._levelZoneState ?? null) : null,
+    unlockedLevelCount: gs.unlockedLevelCount,
   }
 }
 
@@ -210,5 +214,9 @@ export function buildDeltaState(gs) {
     eyeBeams:         eyeBeamsDTO(gs),
     illidanFireballs: gs._illidanEncounter?.getFireballsDTO() ?? [],
     pylons:           pylonsDTO(gs),
+
+    // Level unlock & zone selector
+    levelZoneState:     gs.scene === 'trainingGrounds' ? (gs._levelZoneState ?? null) : null,
+    unlockedLevelCount: gs.unlockedLevelCount,
   }
 }

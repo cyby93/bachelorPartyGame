@@ -267,6 +267,7 @@ export default class HostGame {
     if (state.buildings) this.knownState.buildings = state.buildings
     if (state.npcs) this.knownState.npcs = state.npcs
     if (state.pylons) this.knownState.pylons = state.pylons
+    if (state.unlockedLevelCount != null) this.knownState.unlockedLevelCount = state.unlockedLevelCount
   }
 
   /** Incremental delta received every server tick. */
@@ -306,6 +307,9 @@ export default class HostGame {
     if (delta.aoeZones    != null) this.knownState.aoeZones    = delta.aoeZones
     if (delta.minions          != null) this.knownState.minions          = delta.minions
     if (delta.illidanFireballs != null) this.knownState.illidanFireballs = delta.illidanFireballs
+    // levelZoneState: null means "only 1 level unlocked — render nothing"
+    if ('levelZoneState'    in delta) this.knownState.levelZoneState    = delta.levelZoneState    ?? null
+    if ('unlockedLevelCount' in delta) this.knownState.unlockedLevelCount = delta.unlockedLevelCount ?? 1
     // gates/buildings/npcs: null means "none this level" — must clear stale data from previous levels
     if ('gates'     in delta)      this.knownState.gates       = delta.gates     ?? []
     if ('buildings' in delta)      this.knownState.buildings   = delta.buildings ?? []
@@ -586,11 +590,11 @@ export default class HostGame {
     for (let y = 0; y <= H; y += TILE) bgGfx.moveTo(0, y).lineTo(W, y)
     bgGfx.stroke({ color: 0x000000, alpha: 0.4, width: 1 })
 
-    bgGfx.rect(16, 16, W - 32, H - 32)
-    bgGfx.stroke({ color: 0xb7c4cf, alpha: 0.9, width: 3 })
-
     bgGfx.rect(0, 0, W, H)
     bgGfx.stroke({ color: 0x09121a, alpha: 0.95, width: 10 })
+
+    bgGfx.rect(0, 0, W, H)
+    bgGfx.stroke({ color: 0xb7c4cf, alpha: 0.9, width: 3 })
 
     // Draw wall segments between rooms
     const rooms = this._levelMeta?.rooms

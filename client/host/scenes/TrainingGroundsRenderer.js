@@ -8,6 +8,8 @@
 import { Container, Graphics, Text } from 'pixi.js'
 import BaseRenderer from './BaseRenderer.js'
 
+const ZONE_HEIGHT = 72
+
 const PHASE_INSTRUCTIONS = [
   '',
   'Move your joystick to get started',
@@ -32,9 +34,18 @@ export default class TrainingGroundsRenderer extends BaseRenderer {
   }
 
   _resetUIRefs() {
-    this._countText       = null
-    this._phaseOverlay    = null
+    this._countText         = null
+    this._phaseOverlay      = null
     this._lastTutorialPhase = 0
+    this._zoneContainer     = null
+    this._zoneTime          = 0
+  }
+
+  _onBeforeExit() {
+    if (this._zoneContainer) {
+      this._zoneContainer.destroy({ children: true })
+      this._zoneContainer = null
+    }
   }
 
   _updateUI(dt, activePlayerIds) {
@@ -43,6 +54,200 @@ export default class TrainingGroundsRenderer extends BaseRenderer {
     this._countText.text = n === 0
       ? 'Waiting for raiders…'
       : `${n} raider${n !== 1 ? 's' : ''} warming up`
+
+    this._zoneTime += dt
+    const levelZoneState    = this.game.knownState.levelZoneState    ?? null
+    const unlockedLevelCount = this.game.knownState.unlockedLevelCount ?? 1
+    this._updateZones(levelZoneState, unlockedLevelCount)
+  }
+
+  // ── Zone selector rendering ────────────────────────────────────────────────
+
+  /**
+   * Build or tear down the zone container based on levelZoneState.
+   * Called every frame from _updateUI — mutates existing Graphics/Text without
+   * destroy/recreate once the container is built.
+   */
+  _updateZones(levelZoneState, unlockedLevelCount) {
+    // Null state: scene exit — tear down zone container
+    if (!levelZoneState) {
+      if (this._zoneContainer) {
+        this._zoneContainer.destroy({ children: true })
+        this._zoneContainer = null
+      }
+      return
+    }
+
+    const arenaWidth = this.game.currentArena.width
+    const zoneWidth  = arenaWidth / unlockedLevelCount
+
+    // Build once when first non-null state arrives or count changes
+    if (!this._zoneContainer || this._zoneContainer._zoneCount !== unlockedLevelCount) {
+      if (this._zoneContainer) {
+        this._zoneContainer.destroy({ children: true })
+        this._zoneContainer = null
+      }
+      this._buildZoneContainer(unlockedLevelCount, zoneWidth)
+    }
+
+    // Mutate each zone to reflect current state
+    const { counts, pendingIndex, countdownMs, committedIndex } = levelZoneState
+
+    for (let i = 0; i < unlockedLevelCount; i++) {
+      const zc           = this._zoneContainer.getChildAt(i)
+      const fill         = zc._fill
+      const border       = zc._border
+      const label        = zc._label
+      const countLabel   = zc._countLabel
+      const progressBar  = zc._progressBar
+
+      const playerCount  = counts?.[i] ?? 0
+      const isCommitted  = committedIndex === i
+      const isPending    = pendingIndex === i && committedIndex == null
+      const anyCommitted = committedIndex != null
+      const isOther      = anyCommitted && !isCommitted
+
+      // ── Fill ──
+      fill.clear()
+      if (isCommitted) {
+        fill.rect(0, 0, zoneWidth, ZONE_HEIGHT)
+        fill.fill({ color: 0x332800, alpha: 0.55 })
+      } else if (isPending) {
+        fill.rect(0, 0, zoneWidth, ZONE_HEIGHT)
+        fill.fill({ color: 0x1a3040, alpha: 0.5 })
+      } else if (isOther) {
+        fill.rect(0, 0, zoneWidth, ZONE_HEIGHT)
+        fill.fill({ color: 0x1a2a3a, alpha: 0.15 })
+      } else if (playerCount > 0) {
+        fill.rect(0, 0, zoneWidth, ZONE_HEIGHT)
+        fill.fill({ color: 0x1a2a3a, alpha: 0.5 })
+      } else {
+        fill.rect(0, 0, zoneWidth, ZONE_HEIGHT)
+        fill.fill({ color: 0x1a2a3a, alpha: 0.35 })
+      }
+
+      // ── Border ──
+      border.clear()
+      if (isCommitted) {
+        border.rect(0, 0, zoneWidth, ZONE_HEIGHT)
+        border.stroke({ color: 0xf0c040, alpha: 1.0, width: 2 })
+      } else if (isPending) {
+        const pulse = 0.6 + 0.4 * (0.5 + 0.5 * Math.sin(this._zoneTime * (2 * Math.PI / 1.2)))
+        border.rect(0, 0, zoneWidth, ZONE_HEIGHT)
+        border.stroke({ color: 0x7ac8e8, alpha: pulse, width: 1 })
+      } else if (isOther) {
+        border.rect(0, 0, zoneWidth, ZONE_HEIGHT)
+        border.stroke({ color: 0x4a7090, alpha: 0.25, width: 1 })
+      } else if (playerCount > 0) {
+        border.rect(0, 0, zoneWidth, ZONE_HEIGHT)
+        border.stroke({ color: 0x4a7090, alpha: 0.8, width: 1 })
+      } else {
+        border.rect(0, 0, zoneWidth, ZONE_HEIGHT)
+        border.stroke({ color: 0x4a7090, alpha: 0.5, width: 1 })
+      }
+
+      // ── Label ──
+      if (isCommitted) {
+        label.text  = `✓ LEVEL ${i + 1}`
+        label.style.fill       = '#f0c040'
+        label.style.fontWeight = 'bold'
+        label.alpha = 1
+      } else if (isOther) {
+        label.text  = `LEVEL ${i + 1}`
+        label.style.fill       = '#4a7090'
+        label.style.fontWeight = 'normal'
+        label.alpha = 0.4
+      } else if (playerCount > 0) {
+        label.text  = `LEVEL ${i + 1}`
+        label.style.fill       = '#7ac8e8'
+        label.style.fontWeight = 'normal'
+        label.alpha = 1
+      } else {
+        label.text  = `LEVEL ${i + 1}`
+        label.style.fill       = '#4a7090'
+        label.style.fontWeight = 'normal'
+        label.alpha = 1
+      }
+
+      // ── Player count ──
+      if (playerCount > 0 && !isCommitted) {
+        countLabel.text    = String(playerCount)
+        countLabel.alpha   = isOther ? 0.4 : 1
+        countLabel.visible = true
+      } else {
+        countLabel.visible = false
+      }
+
+      // ── Progress bar ──
+      progressBar.clear()
+      if (isPending && countdownMs != null) {
+        const fillFraction = 1 - (countdownMs / 4000)
+        const barWidth     = Math.max(0, Math.min(1, fillFraction)) * zoneWidth
+        if (barWidth > 0) {
+          progressBar.rect(0, ZONE_HEIGHT - 4, barWidth, 4)
+          progressBar.fill({ color: 0x7ac8e8, alpha: 0.9 })
+        }
+      }
+    }
+  }
+
+  /** Build the zone container with one child Container per zone. */
+  _buildZoneContainer(count, zoneWidth) {
+    const container = new Container()
+    container._zoneCount = count
+
+    for (let i = 0; i < count; i++) {
+      const zc = new Container()
+      zc.position.set(i * zoneWidth, 0)
+
+      const fill = new Graphics()
+      zc._fill = fill
+      zc.addChild(fill)
+
+      const border = new Graphics()
+      zc._border = border
+      zc.addChild(border)
+
+      const label = new Text({
+        text:  `LEVEL ${i + 1}`,
+        style: {
+          fontFamily: 'Trebuchet MS',
+          fontSize:   13,
+          fontWeight: 'normal',
+          fill:       '#4a7090',
+          align:      'center',
+        },
+      })
+      label.anchor.set(0.5, 0.5)
+      label.position.set(zoneWidth / 2, ZONE_HEIGHT / 2 - 8)
+      zc._label = label
+      zc.addChild(label)
+
+      const countLabel = new Text({
+        text:  '',
+        style: {
+          fontFamily: 'Trebuchet MS',
+          fontSize:   16,
+          fontWeight: 'bold',
+          fill:       '#ffffff',
+          align:      'center',
+        },
+      })
+      countLabel.anchor.set(0.5, 0)
+      countLabel.position.set(zoneWidth / 2, ZONE_HEIGHT / 2 + 4)
+      countLabel.visible = false
+      zc._countLabel = countLabel
+      zc.addChild(countLabel)
+
+      const progressBar = new Graphics()
+      zc._progressBar = progressBar
+      zc.addChild(progressBar)
+
+      container.addChild(zc)
+    }
+
+    this.game.layers.bg.addChild(container)
+    this._zoneContainer = container
   }
 
   // ── Tutorial phase overlay ─────────────────────────────────────────────────

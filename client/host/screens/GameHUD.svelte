@@ -38,10 +38,6 @@
   let sandboxStatus = $state('')
   let sandboxError = $state(false)
 
-  function handleEnterRaid() {
-    socket.emit(EVENTS.HOST_ENTER_RAID)
-  }
-
   function handleStartTutorial() {
     socket.emit(EVENTS.TUTORIAL_START)
   }
@@ -96,7 +92,6 @@
 
     <div class="actions">
       {#if isTraining && !isTutorialActive}
-        <HostButton label="Enter Raid"    variant="primary"   onclick={handleEnterRaid} />
         <HostButton label="Play Tutorial" variant="secondary" onclick={handleStartTutorial} />
       {/if}
 

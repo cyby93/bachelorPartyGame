@@ -21,6 +21,12 @@
   let overlayScreen = $state(null)   // null | 'quiz' | …
   let overlayData   = $state(null)
 
+  // ── Pre-level quiz context — set from SCENE_CHANGE when preLevel === true.
+  // Absent (false/0) for normal between-level quizzes.
+  let quizPreLevel       = $state(false)
+  let quizQuestionIndex  = $state(0)
+  let quizTotalQuestions = $state(0)
+
   // ── Orientation
   let isPortrait = $state(false)
 
@@ -175,6 +181,9 @@
         screen = 'quiz'
         overlayScreen = 'quizWaiting'
         overlayData = null
+        quizPreLevel       = data.preLevel       ?? false
+        quizQuestionIndex  = data.questionIndex  ?? 0
+        quizTotalQuestions = data.totalQuestions ?? 0
       } else if (scene === 'levelComplete') {
         screen = 'levelComplete'
         endMessage = debugSandbox ? 'Debug sandbox complete!' : `Level ${levelNumber ?? ((levelIndex ?? 0) + 1)} complete!`
@@ -414,6 +423,9 @@
     {#if overlayScreen === 'quizAnswer'}
       <QuizAnswerScreen
         options={overlayData?.options ?? []}
+        preLevel={quizPreLevel}
+        questionIndex={quizQuestionIndex}
+        totalQuestions={quizTotalQuestions}
         onanswer={handleQuizAnswer}
       />
     {:else if overlayScreen === 'quizResult'}

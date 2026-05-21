@@ -165,6 +165,13 @@ export default class GameServer {
     this._quizUpgradesDone  = new Set()
     this._usedQuestionIds   = new Set()
 
+    // ── Level unlock & zone selector ──────────────────────────────────────
+    this.unlockedLevelCount   = 1
+    this._levelZoneState      = null   // null when only 1 level unlocked
+    this._preLevelQuizQueue   = 0
+    this._preLevelTargetIndex = 0
+    this._zoneCountdownMs     = 4000   // used internally by _tickZoneSelector
+
     // Bot players (server-side fake players for solo testing)
     this.bots    = new Map()   // botId → { socket (stub), wanderAngle, wanderTimer }
 
@@ -562,6 +569,9 @@ export default class GameServer {
     }
     this.disconnectedPlayers.clear()
 
+    this.unlockedLevelCount = 1
+    this._levelZoneState    = null
+
     this.scene = 'staging'
     this.io.to(socket.id).emit(EVENTS.SCENE_CHANGE, { scene: 'menu' })
     console.log(`[!] session reset — returning host to menu`)
@@ -630,10 +640,18 @@ export default class GameServer {
     if (!this.players.get(socket.id)?.isHost) return
 
     if (this.scene === 'quiz' && this._quizPhase === 'done') {
-      // Quiz resolved — move to level-complete screen
-      this._quizPhase = null
+      this._quizPhase    = null
       this._quizQuestion = null
-      this._showLevelComplete()
+      if (this._preLevelQuizQueue > 0) {
+        this._preLevelQuizQueue--
+        if (this._preLevelQuizQueue > 0) {
+          this._startPreLevelQuiz()
+        } else {
+          this._startLevel(this._preLevelTargetIndex)
+        }
+      } else {
+        this._showLevelComplete()
+      }
       return
     }
 
@@ -652,12 +670,30 @@ export default class GameServer {
     this.stats     = { damage: {}, heal: {}, deaths: {}, resurrections: {}, quiz: {}, kills: 0, startTime: Date.now() }
     this.levelStats = { damage: {}, heal: {}, resurrections: {}, kills: 0, startTime: Date.now() }
     this._clearCombatState()
+
+    // Always reset HP and upgrades to class baseline at campaign start
+    this.players.forEach(p => {
+      if (p.isHost) return
+      p.hpUpgrades    = 0
+      p.baseMaxHp     = CLASSES[p.className].hp
+      p.maxHp         = p.baseMaxHp
+      p.skillUpgrades = [0, 0, 0, 0]
+    })
+
     const selected = this._getLevelBySelectionIndex(this.startingLevelIndex ?? 0)
     if (selected.id === DEBUG_TEST_LEVEL.id) {
       this._startLevel(selected)
       return
     }
-    this._startLevel(this.startingLevelIndex ?? 0)
+
+    const startIdx = this.startingLevelIndex ?? 0
+    if (startIdx > 0) {
+      this._preLevelQuizQueue   = startIdx
+      this._preLevelTargetIndex = startIdx
+      this._startPreLevelQuiz()
+    } else {
+      this._startLevel(0)
+    }
   }
 
   _startLevel(indexOrLevel) {
@@ -683,12 +719,6 @@ export default class GameServer {
     const firstRoom = level.arena?.rooms?.[0]
     this.players.forEach(p => {
       if (p.isHost) return
-      // On fresh campaign start reset HP to class baseline first
-      if (campaignIndex === 0) {
-        p.hpUpgrades = 0
-        p.baseMaxHp  = CLASSES[p.className].hp
-        p.maxHp      = p.baseMaxHp
-      }
       // Re-apply persistent debug overrides (survive deaths/restarts — host sets once, plays many times)
       const { playerLevel, skillTiers } = this._debugOverrides
       if (playerLevel > 0 && playerLevel !== p.hpUpgrades) {
@@ -1100,6 +1130,11 @@ export default class GameServer {
     const prevScene = this.scene
     this._resetPlayerInputs()
 
+    if (this.scene === 'trainingGrounds' && name !== 'trainingGrounds') {
+      this._levelZoneState  = null
+      this._zoneCountdownMs = 4000
+    }
+
     if (name === 'lobby' || name === 'trainingGrounds') {
       this._setArenaSize(GAME_CONFIG.CANVAS_WIDTH, GAME_CONFIG.CANVAS_HEIGHT)
       this._wallSegments = []
@@ -1397,6 +1432,10 @@ export default class GameServer {
       if (this._tutorialActive && now - this._tutorialLastCooldownReset > 3000) {
         this._tutorialLastCooldownReset = now
         this._tutorialResetAllCooldowns()
+      }
+
+      if (this.scene === 'trainingGrounds' && !this._tutorialActive) {
+        this._tickZoneSelector(dt)
       }
     }
 
@@ -2471,6 +2510,10 @@ export default class GameServer {
 
     const isLastLevel = levelIndex >= CAMPAIGN.length - 1
 
+    if (!this.currentLevel?.debugSandbox && !isLastLevel) {
+      this.unlockedLevelCount = Math.max(this.unlockedLevelCount, this.currentLevelIndex + 2)
+    }
+
     console.log(`[~] Level ${levelIndex + 1} complete! ${isLastLevel ? '(final)' : ''}`)
 
     // Snapshot players and record level history before levelStats is reset by _startLevel
@@ -2631,6 +2674,35 @@ export default class GameServer {
     })
   }
 
+  _startPreLevelQuiz() {
+    const available = QUIZ_QUESTIONS.filter(q => !this._usedQuestionIds.has(q.id))
+    if (available.length === 0) {
+      // No questions left — skip remaining and start the level
+      this._preLevelQuizQueue = 0
+      this._startLevel(this._preLevelTargetIndex)
+      return
+    }
+    const question = available[Math.floor(Math.random() * available.length)]
+    this._usedQuestionIds.add(question.id)
+    this._quizQuestion = question
+    this._quizAnswers.clear()
+    this._quizResults.clear()
+    this._quizUpgradesDone.clear()
+    this._quizPhase = 'answering'
+
+    const questionIndex  = this._preLevelTargetIndex - this._preLevelQuizQueue + 1
+    const totalQuestions = this._preLevelTargetIndex
+
+    this._changeScene('quiz', {
+      question:       question.question,
+      options:        question.options,
+      preLevel:       true,
+      questionIndex,
+      totalQuestions,
+    })
+    this.io.emit(EVENTS.QUIZ_QUESTION, { question: question.question, options: question.options })
+  }
+
   _getQuizParticipants() {
     const participants = []
     this.players.forEach(p => { if (!p.isHost && !p.isBot) participants.push(p) })
@@ -2780,6 +2852,69 @@ export default class GameServer {
     this._quizPhase = 'done'
     this.io.emit(EVENTS.QUIZ_DONE)
     // Stay on quiz scene — host must press CONTINUE to proceed
+  }
+
+  // ── Zone selector (training grounds, multi-level unlock) ──────────────────
+
+  _tickZoneSelector(dt) {
+    const ZONE_HEIGHT = 72
+    const zoneWidth   = this.arenaWidth / this.unlockedLevelCount
+    const counts      = new Array(this.unlockedLevelCount).fill(0)
+    let totalPlayers  = 0
+
+    this.players.forEach(p => {
+      if (p.isHost || p.isDowned) return
+      totalPlayers++
+      if (p.y <= ZONE_HEIGHT) {
+        const zoneIdx = Math.floor(p.x / zoneWidth)
+        if (zoneIdx >= 0 && zoneIdx < this.unlockedLevelCount) {
+          counts[zoneIdx]++
+        }
+      }
+    })
+
+    const threshold   = Math.ceil(totalPlayers / 2)
+    let pendingIndex  = null
+    let maxCount      = 0
+
+    for (let i = 0; i < counts.length; i++) {
+      if (counts[i] > maxCount) {
+        maxCount = counts[i]
+        if (counts[i] >= threshold && threshold > 0) pendingIndex = i
+      }
+    }
+
+    const prev = this._levelZoneState
+
+    // Countdown logic
+    if (pendingIndex !== null) {
+      if (prev?.pendingIndex === pendingIndex) {
+        // Same zone still majority — tick down
+        this._zoneCountdownMs = Math.max(0, (prev.countdownMs ?? 4000) - dt * 1000)
+      } else {
+        // New majority zone — reset countdown
+        this._zoneCountdownMs = 4000
+      }
+    } else {
+      this._zoneCountdownMs = 4000
+    }
+
+    // Commit when countdown reaches zero
+    let committedIndex = prev?.committedIndex ?? null
+    if (pendingIndex !== null && this._zoneCountdownMs === 0 && prev?.committedIndex === null) {
+      committedIndex = pendingIndex
+      this.startingLevelIndex = committedIndex
+      this._levelZoneState = { counts, pendingIndex, countdownMs: 0, committedIndex }
+      this._startCampaign()
+      return
+    }
+
+    this._levelZoneState = {
+      counts,
+      pendingIndex,
+      countdownMs:    this._zoneCountdownMs,
+      committedIndex,
+    }
   }
 
   // ── Win / lose conditions ───────────────────────────────────────────────────

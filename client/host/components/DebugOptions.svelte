@@ -48,6 +48,10 @@
   function onPlayerLevelChange() {
     socket.emit(EVENTS.DEBUG_SET_PLAYER_LEVEL, { level: playerLevel })
   }
+
+  function handleForceEnterRaid() {
+    socket.emit(EVENTS.HOST_ENTER_RAID)
+  }
 </script>
 
 <button class="debug-toggle util-btn" onclick={() => debugOpen = !debugOpen}>
@@ -94,6 +98,9 @@
       <button class="util-btn" onclick={handleBotAdd}>+ Add Bot</button>
       <button class="util-btn" onclick={handleBotRemove}>Remove All</button>
     </div>
+
+    <h3 style="margin-top:10px">Campaign</h3>
+    <button class="util-btn force-raid-btn" onclick={handleForceEnterRaid}>⚡ Force Enter Raid</button>
   </div>
 {/if}
 
@@ -203,4 +210,11 @@
     cursor: pointer;
   }
   .util-btn:hover { color: var(--rn-text-body); border-color: var(--rn-border); }
+
+  .force-raid-btn {
+    width: 100%;
+    color: var(--rn-gold);
+    border-color: rgba(180, 130, 30, 0.50);
+  }
+  .force-raid-btn:hover { color: #ffe080; border-color: var(--rn-gold); }
 </style>

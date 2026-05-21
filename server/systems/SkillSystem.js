@@ -809,6 +809,8 @@ export default class SkillSystem {
 
     if (effectType === 'BUFF') {
       // Buff all living players in radius
+      const haste = config.effectParams?.fireRateMultiplier ?? 1
+      const buffDuration = config.effectParams?.duration ?? config.duration ?? 3000
       gs.players.forEach(p => {
         if (p.isDowned || p.isHost) return
         if (this._collision.distance({ x: cx, y: cy }, { x: p.x, y: p.y }) <= radius) {
@@ -816,9 +818,20 @@ export default class SkillSystem {
             p.activeEffects.push({
               source: 'aoe_buff',
               params: config.effectParams,
-              expiresAt: Date.now() + (config.effectParams.duration ?? config.duration ?? 3000),
+              expiresAt: Date.now() + buffDuration,
             })
             rebuildStats(p)
+            gs.cooldowns?.compressPlayer(p.id, haste)
+            // Apply haste to minions owned by this player
+            if (haste > 1 && gs.minions) {
+              const hasteExpiry = Date.now() + buffDuration
+              gs.minions.forEach(m => {
+                if (m.ownerId === p.id) {
+                  m.hasteMultiplier = haste
+                  m._hasteExpiresAt = hasteExpiry
+                }
+              })
+            }
           }
         }
       })
@@ -1714,8 +1727,13 @@ export default class SkillSystem {
 
   _tickMinions(gs, dt) {
     if (!gs.minions) return
+    const now = Date.now()
     gs.minions.forEach((m, id) => {
       if (m.isDead) { gs.minions.delete(id); return }
+      if (m._hasteExpiresAt && now >= m._hasteExpiresAt) {
+        m.hasteMultiplier = 1
+        m._hasteExpiresAt = 0
+      }
       m.update(dt, gs, this)
     })
   }

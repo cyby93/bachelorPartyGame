@@ -34,7 +34,8 @@
   let myId        = $state(null)
   let playerName  = $state(sessionStorage.getItem('playerName') ?? '')
   let className   = $state('')
-  let isDowned    = $state(false)
+  let isDowned      = $state(false)
+  let fireRateMult  = $state(1)
   let cooldowns   = $state([0, 0, 0, 0])  // expiresAt timestamps per skill slot
   let lobbyReady  = $state(false)
   let tutorialEnabledSkills = $state(null)  // null = all enabled; array during tutorial
@@ -205,6 +206,7 @@
       if (!me) return
       const wasDowned = isDowned
       if (me.isDowned != null) isDowned = me.isDowned
+      if (me.fireRateMult != null) fireRateMult = me.fireRateMult
       if (!wasDowned && isDowned) {
         controllerAudio.handlePlayerDown()
         navigator.vibrate?.([300, 100, 300])
@@ -390,6 +392,7 @@
         {className}
         {isDowned}
         {cooldowns}
+        {fireRateMult}
         lobbyMode={true}
         showFullscreenBtn={!isPortrait && !isIOS}
         {isFullscreen}
@@ -408,6 +411,7 @@
       {className}
       {isDowned}
       {cooldowns}
+      {fireRateMult}
       showFullscreenBtn={!isPortrait && !isIOS}
       {isFullscreen}
       {tutorialEnabledSkills}

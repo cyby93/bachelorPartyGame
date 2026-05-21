@@ -3,7 +3,7 @@
   import MoveJoystick from '../components/MoveJoystick.svelte';
   import SkillButton from '../components/SkillButton.svelte';
 
-  let { playerName = '', className = '', isDowned = false, cooldowns = [0,0,0,0], lobbyMode = false, isFullscreen = false, showFullscreenBtn = false, tutorialEnabledSkills = null, ontogglefullscreen, onrejoin, onmove, onskill, onaim, onhighlight } = $props()
+  let { playerName = '', className = '', isDowned = false, cooldowns = [0,0,0,0], fireRateMult = 1, lobbyMode = false, isFullscreen = false, showFullscreenBtn = false, tutorialEnabledSkills = null, ontogglefullscreen, onrejoin, onmove, onskill, onaim, onhighlight } = $props()
 
   // Grid order: SK2 SK4 / SK1 SK3  (2×2, top row = skills 1,3; bottom = 0,2)
   // Per PLAN layout:
@@ -54,6 +54,7 @@
             index={skillIdx}
             expiresAt={cooldowns[skillIdx] ?? 0}
             disabled={tutorialEnabledSkills !== null && !tutorialEnabledSkills.includes(skillIdx)}
+            {fireRateMult}
             {onskill}
             {onaim}
           />

@@ -51,6 +51,8 @@ export default class BaseRenderer {
 
     this.minionGfx = new Map()   // minionId → Container (drawn shapes)
 
+    this._prevBloodlustSet = new Set()  // player IDs that had bloodlust last frame
+
     this.vfx = null
   }
 
@@ -138,11 +140,13 @@ export default class BaseRenderer {
       const sprite = this.playerSprites.get(p.id)
       sprite.update(p, pos, dt)
       this._onPlayerSync(p, sprite, pos, dt)
+      this._syncBloodlust(p, sprite, pos)
     })
 
     this.playerSprites.forEach((sprite, id) => {
       if (!activeIds.has(id)) {
         this._onPlayerRemoved(id)
+        this._removeBloodlust(id)
         this._entityRoot.removeChild(sprite.container)
         sprite.destroy()
         this.playerSprites.delete(id)
@@ -401,6 +405,32 @@ export default class BaseRenderer {
    * @param {string} id
    */
   _onPlayerRemoved(id) {}
+
+  /** Detect Bloodlust buff gain/loss and trigger the spirit roar + periodic pulse aura. */
+  _syncBloodlust(p, sprite, pos) {
+    const hasBloodlust = (p.effects ?? []).some(e => e.params?.fireRateMultiplier > 1)
+    const hadBloodlust = this._prevBloodlustSet.has(p.id)
+    if (hasBloodlust && !hadBloodlust) {
+      this._prevBloodlustSet.add(p.id)
+      const texture = sprite._shapeSprite?.texture
+      this.vfx?.triggerBloodlustReceive(pos.x, pos.y, texture)
+      const id = p.id
+      this.vfx?.attachBloodlustAura(
+        id,
+        () => { const s = this.playerSprites.get(id); return s ? { x: s.container.x, y: s.container.y } : null },
+        () => this.playerSprites.get(id)?._shapeSprite?.texture ?? null
+      )
+    } else if (!hasBloodlust && hadBloodlust) {
+      this._prevBloodlustSet.delete(p.id)
+      this.vfx?.detachBloodlustAura(p.id)
+    }
+  }
+
+  _removeBloodlust(id) {
+    if (this._prevBloodlustSet.delete(id)) {
+      this.vfx?.detachBloodlustAura(id)
+    }
+  }
 
   /**
    * Called after a new EnemySprite is created and added to _enemyContainer.

@@ -17,11 +17,13 @@
         return { label: 'Survive', value: `${Math.ceil(remaining / 1000)}s remaining` }
       }
       case 'surviveWaves':
-        return { label: 'Survive the waves', value: `${objective.current ?? 0} / ${objective.target ?? '?'}` }
+        return { label: 'Clear all waves', value: `${objective.current ?? 0} / ${objective.target ?? '?'}` }
+      case 'destroyBuildings':
+        return { label: 'Destroy the portals', value: `${objective.current ?? 0} / ${objective.target ?? 4}` }
       case 'destroyGates':
         return { label: 'Destroy the gates', value: `${objective.current ?? 0} / ${objective.target ?? '?'}` }
       case 'killAll':
-        return { label: 'Defeat all enemies', value: objective.current === 1 ? 'Complete' : 'In progress' }
+        return { label: 'Defeat all enemies', value: objective.current === 1 ? 'Complete' : '' }
       case 'killBoss': {
         const boss = state?.boss
         if (boss) {
@@ -65,9 +67,11 @@
   $: shadeVisible = !!(boss && boss.isImmune && !boss.isDead)
   $: shadeHp = Math.ceil(boss?.hp ?? 0)
   $: shadeDmgPct = Math.round(((boss?.damageMult ?? 1) - 1) * 100)
+  $: isTraining = state.serverScene === 'trainingGrounds'
+  $: hideInfoCard = isTraining || !!(meta?.debugSandbox)
   $: levelDisplay = meta?.debugSandbox
     ? 'Debug Sandbox'
-    : `Level ${meta?.levelNumber ?? ((meta?.levelIndex ?? 0) + 1)} / ${meta?.totalLevels ?? '?'}`
+    : `Level ${meta?.levelNumber ?? ((meta?.levelIndex ?? 0) + 1)}`
   $: nonHostPlayers = Object.values(state.players).filter(p => !p.isHost)
   $: dmgRows = buildMeterRows(nonHostPlayers, state.stats?.damage, state.stats)
   $: healRows = buildMeterRows(nonHostPlayers, state.stats?.heal, state.stats)
@@ -76,6 +80,7 @@
 </script>
 
 <!-- Level info + Objective card -->
+{#if !hideInfoCard}
 <div class="sidebar-card">
   <div class="gameplay-heading">
     <div id="gameplay-level-index">{levelDisplay}</div>
@@ -86,6 +91,7 @@
   <div id="gameplay-objective-value">{objective.value || 'In progress'}</div>
   <div id="gameplay-objective-label">{objective.label}</div>
 </div>
+{/if}
 
 <!-- Tutorial progress card -->
 {#if tutorial}

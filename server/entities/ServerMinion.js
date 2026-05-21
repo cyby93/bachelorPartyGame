@@ -32,6 +32,10 @@ export default class ServerMinion {
     this._lastAttack = 0
     this._lastTauntPulse = 0
 
+    // Haste — set by Bloodlust, expires after duration
+    this.hasteMultiplier = 1
+    this._hasteExpiresAt = 0
+
     // TRAP arm delay — prevents instant trigger on spawn
     this._armedAt    = Date.now() + 300
   }
@@ -62,7 +66,7 @@ export default class ServerMinion {
     const ability = this.config.totemAbility
     if (!ability) return
     const now = Date.now()
-    const tickRate = ability.tickRate ?? 1500
+    const tickRate = (ability.tickRate ?? 1500) / (this.hasteMultiplier ?? 1)
     if (now - this._lastAttack < tickRate) return
 
     const target = this._findNearest(gs)
@@ -141,7 +145,7 @@ export default class ServerMinion {
   _updatePet(dt, gs, skillSystem) {
     const petStats   = this.config.petStats ?? {}
     const attackRange = petStats.attackRange ?? 45
-    const attackRate  = petStats.attackRate  ?? 1000
+    const attackRate  = (petStats.attackRate  ?? 1000) / (this.hasteMultiplier ?? 1)
     const damage      = petStats.damage      ?? 25
 
     const target = this._findNearest(gs)
@@ -172,7 +176,7 @@ export default class ServerMinion {
   _updateWildBeast(dt, gs, skillSystem) {
     const petStats    = this.config.petStats ?? {}
     const attackRange = petStats.attackRange ?? 45
-    const attackRate  = petStats.attackRate  ?? 1000
+    const attackRate  = (petStats.attackRate  ?? 1000) / (this.hasteMultiplier ?? 1)
     const damage      = petStats.damage      ?? 5
 
     const now = Date.now()

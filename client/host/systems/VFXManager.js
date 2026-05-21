@@ -4,7 +4,7 @@
  * Created by BattleRenderer in enter(), destroyed in exit().
  */
 
-import { Graphics }         from 'pixi.js'
+import { Graphics, Sprite } from 'pixi.js'
 import ParticleSystem       from './ParticleSystem.js'
 import OneShotEffectSystem  from './OneShotEffectSystem.js'
 import GroundEffectSystem   from './GroundEffectSystem.js'
@@ -22,8 +22,10 @@ export default class VFXManager {
     this.auras     = new AuraSystem()
     this.floatingText = new FloatingTextPool(layers.worldUi)
 
-    this._fxLayer    = layers.fx
-    this._bladestorms = []   // { gfx, born, duration, angle, getPos }
+    this._fxLayer          = layers.fx
+    this._bladestorms      = []         // { gfx, born, duration, angle, getPos }
+    this._bloodlustSpirits = []         // { sprite, born, duration, startX, startY }
+    this._bloodlustAuras   = new Map()  // playerId → { getPos, timer }
 
     this._skillHandlers = new Map()
     this._typeHandlers  = new Map()
@@ -56,6 +58,8 @@ export default class VFXManager {
       ['Mass Resurrection',   (d) => { os.massResurrectionRing(d.x, d.y); ps.massResurrectionBurst(d.x, d.y) }],
       ['Tranquility',         (d) => { os.tranquilityField(d.x, d.y, d.radius || 700, () => ps.tranquilityAmbient(d.x, d.y, d.radius || 700)); ps.tranquilityBurst(d.x, d.y) }],
       ['Icebound Fortitude',  (d) => { os.iceboundFortitude(d.x, d.y); ps.iceShards(d.x, d.y) }],
+      // Thunder Clap: instant full-radius stamp (Frost Nova pattern) — earth shockwave aesthetic
+      ['Thunder Clap',        (d) => { os.thunderClapRing(d.x, d.y, d.radius || 120); ps.hitSpark(d.x, d.y, d.color || '#ffcc00') }],
       // Bladestorm: persistent visual attached via attachBladestorm — fire cast flash only
       ['Bladestorm',          (d) => { os.aoeFlash(d.x, d.y, d.radius || 70, d.color) }],
       ['Blink', (d) => {
@@ -150,6 +154,8 @@ export default class VFXManager {
     this.auras.update(dt)
     this.floatingText.update(dt)
     this._tickBladestorms(dt)
+    this._tickBloodlustAuras(dt)
+    this._tickBloodlustSpirits()
   }
 
   /**
@@ -189,36 +195,128 @@ export default class VFXManager {
           ? (b.duration - age) / 400
           : 1.0
 
-      const r = b.radius
-      const r1 = r * 0.45   // blade root — just outside player body
-      const r2 = r * 1.25   // blade tip — extends past hit zone edge so damage range is clearly covered
-      const crossLen = r * 0.20
+      const r        = b.radius
+      const rHandle  = r * 0.28    // pommel end
+      const rGuard   = r * 0.50    // crossguard position
+      const rRoot    = r * 0.52    // blade root (just past guard)
+      const rTip     = r * 1.22    // blade tip
+      const bladeHW  = r * 0.065   // blade half-width at root
+      const guardLen = r * 0.14    // crossguard half-length
 
       b.gfx.clear()
       b.gfx.position.set(x, y)
 
       for (let j = 0; j < 6; j++) {
         const a  = b.angle + j * (Math.PI / 3)
-        const x1 = Math.cos(a) * r1, y1 = Math.sin(a) * r1
-        const x2 = Math.cos(a) * r2, y2 = Math.sin(a) * r2
+        const ca = Math.cos(a), sa = Math.sin(a)
+        // perpendicular axis (blade width direction)
+        const px = -sa, py = ca
 
-        b.gfx.moveTo(x1, y1)
-        b.gfx.lineTo(x2, y2)
-        b.gfx.stroke({ color: 0xff3300, width: 4, alpha: 0.85 * alpha })
+        // ── Handle ────────────────────────────────────────────────────────
+        b.gfx.moveTo(ca * rHandle, sa * rHandle)
+        b.gfx.lineTo(ca * rGuard,  sa * rGuard)
+        b.gfx.stroke({ color: 0x8b6340, width: 3.5, alpha: 0.9 * alpha })
 
-        const perp = a + Math.PI / 5
-        const mx = Math.cos(a) * ((r1 + r2) / 2)
-        const my = Math.sin(a) * ((r1 + r2) / 2)
-        b.gfx.moveTo(mx - Math.cos(perp) * crossLen, my - Math.sin(perp) * crossLen)
-        b.gfx.lineTo(mx + Math.cos(perp) * crossLen, my + Math.sin(perp) * crossLen)
-        b.gfx.stroke({ color: 0xff7700, width: 2, alpha: 0.65 * alpha })
+        // ── Crossguard ────────────────────────────────────────────────────
+        b.gfx.moveTo(ca * rGuard + px * guardLen, sa * rGuard + py * guardLen)
+        b.gfx.lineTo(ca * rGuard - px * guardLen, sa * rGuard - py * guardLen)
+        b.gfx.stroke({ color: 0xccaa55, width: 3, alpha: 0.95 * alpha })
+
+        // ── Blade (tapered triangle) ──────────────────────────────────────
+        const bRx = ca * rRoot, bRy = sa * rRoot
+        const bTx = ca * rTip,  bTy = sa * rTip
+        const sxL = px * bladeHW, syL = py * bladeHW
+
+        // Blade fill — steel blue-white
+        b.gfx.moveTo(bRx + sxL, bRy + syL)
+        b.gfx.lineTo(bRx - sxL, bRy - syL)
+        b.gfx.lineTo(bTx, bTy)
+        b.gfx.closePath()
+        b.gfx.fill({ color: 0xddeeff, alpha: 0.88 * alpha })
+
+        // Bright edge highlight along one side
+        b.gfx.moveTo(bRx + sxL, bRy + syL)
+        b.gfx.lineTo(bTx, bTy)
+        b.gfx.stroke({ color: 0xffffff, width: 1.5, alpha: 0.75 * alpha })
       }
+    }
+  }
 
-      const ringR = r * 1.0
-      b.gfx.circle(0, 0, ringR)
-      b.gfx.stroke({ color: 0xcc2200, width: 2, alpha: 0.35 * alpha })
-      b.gfx.circle(0, 0, ringR)
-      b.gfx.fill({ color: 0xff4400, alpha: 0.06 * alpha })
+  /**
+   * Fire spirit-roar effect when a player receives Bloodlust.
+   * Clones the player's current sprite texture, tints it red, and expands it outward as it fades.
+   * @param {number}  x        world x of the player
+   * @param {number}  y        world y of the player
+   * @param {Texture} texture  current texture of the player's body sprite
+   */
+  triggerBloodlustReceive(x, y, texture) {
+    if (!texture) return
+    const s = new Sprite(texture)
+    s.anchor.set(0.5)
+    s.width  = 124
+    s.height = 124
+    s.tint   = 0xff2200
+    s.position.set(x, y)
+    s.alpha  = 0.80
+    this._fxLayer.addChild(s)
+    this._bloodlustSpirits.push({ sprite: s, born: Date.now(), duration: 650 })
+  }
+
+  /**
+   * Start tracking a player for periodic Bloodlust spirit pulses.
+   * @param {string}   playerId
+   * @param {Function} getPos     — () => { x, y } | null
+   * @param {Function} getTexture — () => Texture | null  (current body sprite texture)
+   */
+  attachBloodlustAura(playerId, getPos, getTexture) {
+    this._bloodlustAuras.set(playerId, { getPos, getTexture, timer: 1.0 })
+  }
+
+  /** Stop tracking a player's Bloodlust aura. */
+  detachBloodlustAura(playerId) {
+    this._bloodlustAuras.delete(playerId)
+  }
+
+  _tickBloodlustAuras(dt) {
+    for (const entry of this._bloodlustAuras.values()) {
+      entry.timer += dt
+      if (entry.timer >= 1.1) {
+        entry.timer = 0
+        const pos     = entry.getPos()
+        const texture = entry.getTexture?.()
+        if (pos && texture) this._spawnBloodlustPulse(pos.x, pos.y, texture)
+      }
+    }
+  }
+
+  /** Weaker repeating spirit flash — same sprite clone but lower alpha and less scale. */
+  _spawnBloodlustPulse(x, y, texture) {
+    const s = new Sprite(texture)
+    s.anchor.set(0.5)
+    s.width  = 124
+    s.height = 124
+    s.tint   = 0xff2200
+    s.position.set(x, y)
+    s.alpha  = 0.45
+    this._fxLayer.addChild(s)
+    this._bloodlustSpirits.push({ sprite: s, born: Date.now(), duration: 700, isPulse: true })
+  }
+
+  _tickBloodlustSpirits() {
+    const now = Date.now()
+    for (let i = this._bloodlustSpirits.length - 1; i >= 0; i--) {
+      const b = this._bloodlustSpirits[i]
+      const t = (now - b.born) / b.duration
+      if (t >= 1) {
+        b.sprite.destroy()
+        this._bloodlustSpirits.splice(i, 1)
+        continue
+      }
+      const ease     = 1 - Math.pow(1 - t, 2)
+      const maxScale = b.isPulse ? 1.6 : 2.4
+      const startA   = b.isPulse ? 0.45 : 0.80
+      b.sprite.scale.set(1 + ease * (maxScale - 1))
+      b.sprite.alpha = startA * (1 - t)
     }
   }
 
@@ -257,6 +355,9 @@ export default class VFXManager {
   destroy() {
     for (const b of this._bladestorms) b.gfx.destroy()
     this._bladestorms.length = 0
+    for (const b of this._bloodlustSpirits) b.sprite.destroy()
+    this._bloodlustSpirits.length = 0
+    this._bloodlustAuras.clear()
     this.particles.destroy()
     this.oneShot.destroy()
     this.ground.destroy()

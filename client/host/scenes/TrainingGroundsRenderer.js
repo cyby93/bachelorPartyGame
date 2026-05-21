@@ -49,7 +49,7 @@ export default class TrainingGroundsRenderer extends BaseRenderer {
   }
 
   _resetUIRefs() {
-    this._countText         = null
+    this._countText         = null  // kept for safety; no longer rendered
     this._phaseOverlay      = null
     this._lastTutorialPhase = 0
     this._zoneContainer     = null
@@ -64,12 +64,6 @@ export default class TrainingGroundsRenderer extends BaseRenderer {
   }
 
   _updateUI(dt, activePlayerIds) {
-    if (!this._countText) return
-    const n = activePlayerIds.size
-    this._countText.text = n === 0
-      ? 'Waiting for raiders…'
-      : `${n} raider${n !== 1 ? 's' : ''} warming up`
-
     this._zoneTime += dt
     const levelZoneState    = this.game.knownState.levelZoneState    ?? null
     const unlockedLevelCount = this.game.knownState.unlockedLevelCount ?? 1
@@ -438,20 +432,5 @@ export default class TrainingGroundsRenderer extends BaseRenderer {
     title.position.set(W / 2, 14)
     this._uiRoot.addChild(title)
 
-    this._countText = new Text({
-      text:  'Waiting for raiders…',
-      style: { fontFamily: 'Trebuchet MS', fontSize: 15, fill: '#6a98b8', align: 'center' },
-    })
-    this._countText.anchor.set(0.5, 0)
-    this._countText.position.set(W / 2, 52)
-    this._uiRoot.addChild(this._countText)
-
-    const hint = new Text({
-      text:  'Hit the dummies to warm up. All abilities active.',
-      style: { fontFamily: 'Trebuchet MS', fontSize: 13, fill: '#4a7090', align: 'center' },
-    })
-    hint.anchor.set(0.5, 1)
-    hint.position.set(W / 2, H - 14)
-    this._uiRoot.addChild(hint)
   }
 }

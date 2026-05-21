@@ -67,10 +67,12 @@ export default class AuraSystem {
     const entry = this._entityAuras.get(entityId)
     entry.container = entityContainer
 
-    // Filter to effects that should show aura rings
+    // Filter to effects that should show aura rings.
+    // Bloodlust (has fireRateMultiplier) is excluded — VFXManager handles it with spirit/pulse.
     const auraEffects = (effects ?? []).filter(e => {
       const p = e.params ?? {}
-      return p.speedMultiplier || p.fireRateMultiplier || p.damageMultiplier || p.damageReduction
+      if (p.fireRateMultiplier) return false   // bloodlust — skip entire effect entry
+      return p.speedMultiplier || p.damageMultiplier || p.damageReduction
         || p.shield || p.transformSprite || p.feared
         || p.shear || p.parasitic || p.darkBarrage || p.agonizingFlames
     })

@@ -4,6 +4,4 @@ Need to balance skills
 ## Audio
 Not always starts at main menu
 
-## Classes
-Shaman:
-    - Bloodlust does not reduces cast speed of players -> The proper bloodlust effect should: make ability cooldowns refresh faster (the instant fast cooldown abilities woudl look like faster), reduces the cast time of abilities, reduces the channel duration of abilities BUT increase the tick rate as well (so the same number of tick would happen in less time) and the bloodlust also should affect totems and pets
+- There are two sound fx in the assets/audio/sfx directory. Please wire it into the level selector gate feature -> i want theloop to be heard when the portal is swirling (so enough player stands on it to activate) and the 'end' sfx when the level selection is completed and the level transition start (so when the level entrance progress bar is done)

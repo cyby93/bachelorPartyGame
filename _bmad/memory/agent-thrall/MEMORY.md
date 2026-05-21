@@ -185,12 +185,13 @@ Rule: sprites are wrong for burst effects — shapes + particles only.
 | Frost Nova | AOE_SELF | `frostNovaRing` (0.4s, white+cyan, ice spikes) | `frostNovaBurst` (gravity 0) | |
 | Fear | AOE_SELF | `fearRing` (0.45s, violet+dark fill) | `fearBurst` (gravity 30) | No impactFlash — void feel |
 | Consecration | AOE_SELF | `consecrationBurst` (0.4s, gold) | `consecrationSparkle` (rises, gravity -80) | Persistent zone from GroundEffectSystem |
-| Bloodlust | AOE_SELF | `bloodlustWave` (0.55s, 3 staggered rings) | `bloodlustBurst` (30 particles, massive) | Fixed radii (80/160/280px), not game radius 2500 |
+| Bloodlust | AOE_SELF | `bloodlustWave` (0.55s, 3 staggered rings) | `bloodlustBurst` (30 particles, massive) | Fixed radii (80/160/280px), not game radius 2500. **On receive:** `triggerBloodlustReceive` clones player texture as red-tinted Sprite, scales 1→2.4 / fade 650ms. **Persistent:** `attachBloodlustAura` in `_bloodlustAuras` Map fires `bloodlustPulseRing` (28→100px red ring) every 1.5s. Orange AuraSystem ring replaced. Gain/loss detected via `_prevBloodlustSet` in BattleRenderer. |
 | Mass Resurrection | CAST | `massResurrectionRing` (2.0s = castTime) | `massResurrectionBurst` (gravity -150, souls) | Ring duration matches castTime — peaks on revive |
 | Tranquility | CHANNEL | `tranquilityField` (4.0s persistent ring, `OneShotEffectSystem`) | `tranquilityBurst` + `tranquilityAmbient` per-frame | `tranquilityField` accepts `emitFn` callback; VFXManager passes `() => ps.tranquilityAmbient(...)` |
 | Explosive Trap | EXPLOSION | `explosionBurst` (0.3s, fire) | `explosionBurst` | Emission live in `ServerMinion._updateTrap()`. Payload: `{ type, skillName, x, y, radius, color: '#ff6600' }` |
 | Icebound Fortitude | BUFF | `iceboundFortitude` (0.55s, 8 ice spikes + crystal ring) | `iceShards` (20 blue-white, gravity -20) | |
-| Bladestorm | AOE/BLADESTORM | `aoeFlash` on cast + `attachBladestorm` persistent | — | `attachBladestorm(getPos, 4000)` called from `BaseRenderer.onSkillFired`; VFXManager ticks spinning blades on fx layer |
+| Thunder Clap | AOE_SELF | `thunderClapRing` (0.4s, gold instant stamp) | `hitSpark` (gold) | Frost Nova pattern — full-radius at t=0, no expansion. 8 crack radials first 25%, golden fill + double ring. |
+| Bladestorm | AOE/BLADESTORM | `aoeFlash` on cast + `attachBladestorm` persistent | — | `attachBladestorm(getPos, 4000)` called from `BaseRenderer.onSkillFired`; VFXManager ticks 6 sword shapes (handle/crossguard/blade, steel blue-white, no ring) |
 
 ## Debuff Rendering Patterns (2026-05-14)
 

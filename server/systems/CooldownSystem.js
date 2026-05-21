@@ -45,6 +45,20 @@ export default class CooldownSystem {
     }
   }
 
+  /** Compress remaining cooldown time for all 4 skill slots (called when haste buffs land mid-cooldown). */
+  compressPlayer(playerId, factor) {
+    if (!factor || factor <= 1) return
+    const now = Date.now()
+    for (let i = 0; i < 4; i++) {
+      const key = `${playerId}:${i}`
+      const exp = this._cd.get(key)
+      if (exp == null) continue
+      const remaining = exp - now
+      if (remaining > 0)
+        this._cd.set(key, now + Math.round(remaining / factor))
+    }
+  }
+
   /** Move all cooldown entries from oldId to newId (called on reconnect). */
   transferPlayer(oldId, newId) {
     for (let i = 0; i < 4; i++) {

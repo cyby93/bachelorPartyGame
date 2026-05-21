@@ -281,6 +281,7 @@ export default class ServerPlayer {
     if (cur.hp           !== prev.hp)           delta.hp           = cur.hp
     if (cur.maxHp        !== prev.maxHp)        delta.maxHp        = cur.maxHp
     if (cur.shieldAbsorb !== prev.shieldAbsorb) delta.shieldAbsorb = cur.shieldAbsorb
+    if (cur.fireRateMult !== prev.fireRateMult) delta.fireRateMult = cur.fireRateMult
 
     // Visibility state change
     if (cur.isInvisible  !== prev.isInvisible)  delta.isInvisible  = cur.isInvisible
@@ -299,7 +300,8 @@ export default class ServerPlayer {
     // Cast progress (0-1), only if actively casting
     if (this.activeCast) {
       const elapsed = Date.now() - this.activeCast.startedAt
-      delta.castProgress   = Math.min(1, elapsed / (this.activeCast.config.castTime ?? 1000))
+      const effectiveDuration = this.activeCast.effectiveCastTime ?? this.activeCast.config.castTime ?? 1000
+      delta.castProgress   = Math.min(1, elapsed / effectiveDuration)
       delta.castSkill      = this.activeCast.config.name ?? null
       delta.isChanneling   = this.activeCast.config.type === 'CHANNEL'
       // Beam target for VFX
@@ -343,6 +345,7 @@ export default class ServerPlayer {
       shieldAngle:  +this.shieldAngle.toFixed(3),
       shieldArc:    +this.shieldArc.toFixed(3),
       shieldAbsorb:  this.shieldAbsorb ?? 0,
+      fireRateMult: +this.fireRateMult.toFixed(3),
     }
   }
 

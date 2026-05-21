@@ -53,6 +53,7 @@ export default class BattleRenderer extends BaseRenderer {
     // Previous-frame HP tracking for hit sparks and death bursts
     this._prevPlayerHp = {}
 
+
     // Per-player cooldown tracking for the self-highlight feature
     this._highlightCooldowns = new Map()   // playerId → last trigger timestamp
 
@@ -211,6 +212,7 @@ export default class BattleRenderer extends BaseRenderer {
     if (this.vfx && p.effects) {
       this.vfx.auras.sync(p.id, sprite.container, p.effects, this.game.getPlayerRadius())
     }
+
   }
 
   _onPlayerRemoved(id) {

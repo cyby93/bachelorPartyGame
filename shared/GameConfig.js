@@ -26,7 +26,7 @@ export const GAME_CONFIG = {
   MAX_PLAYERS:    13,
 
   // Quiz & upgrade system (between levels)
-  QUIZ_BETWEEN_LEVELS: true,
+  QUIZ_BETWEEN_LEVELS: false,
 
   // Debug flags — set to true locally to aid development, never commit as true
   DEBUG_HITBOXES: false,

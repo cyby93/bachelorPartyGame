@@ -14,7 +14,7 @@
   import nipplejs from 'nipplejs'
   import CooldownOverlay from './CooldownOverlay.svelte'
 
-  let { skill = null, index = 0, expiresAt = 0, disabled = false, onskill, onaim } = $props()
+  let { skill = null, index = 0, expiresAt = 0, disabled = false, fireRateMult = 1, onskill, onaim } = $props()
 
   let btnEl        = null
   let lastVector   = { x: 1, y: 0 }
@@ -38,7 +38,7 @@
 
   const isCastHold   = $derived(skill?.castBar === true)
   const isShieldHold = $derived(skill?.type === 'SHIELD' && skill?.inputType === 'DIRECTIONAL')
-  const castTime     = $derived(skill?.castTime ?? 1500)
+  const castTime     = $derived(Math.round((skill?.castTime ?? 1500) / (fireRateMult ?? 1)))
 
   function startCast() {
     if (isCasting) return

@@ -8,6 +8,7 @@
   let debugOpen     = $state(false)
   let selectedLevel = $state(0)
   let skipDialog    = $state(false)
+  let disableQuiz   = $state(false)
   let skillTiers    = $state([0, 0, 0, 0])
   let playerLevel      = $state(0)
   let unlockedLevels   = $state(1)
@@ -31,7 +32,7 @@
   }
 
   function emitSetLevel() {
-    socket.emit(EVENTS.SET_LEVEL, { levelIndex: selectedLevel, skipDialog })
+    socket.emit(EVENTS.SET_LEVEL, { levelIndex: selectedLevel, skipDialog, disableQuiz })
   }
 
   function handleBotAdd() {
@@ -74,6 +75,10 @@
     <label class="skip-label">
       <input type="checkbox" bind:checked={skipDialog} onchange={emitSetLevel} />
       Skip opening dialog
+    </label>
+    <label class="skip-label">
+      <input type="checkbox" bind:checked={disableQuiz} onchange={emitSetLevel} />
+      Disable quiz feature
     </label>
 
     <h3 style="margin-top:10px">Player Level (quiz answers: {playerLevel})</h3>

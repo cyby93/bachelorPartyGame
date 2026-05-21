@@ -674,6 +674,73 @@ export default class OneShotEffectSystem {
   }
 
   /**
+   * Thunder Clap stamp — full-size golden circle that appears instantly and fades over 0.4s.
+   * Models Frost Nova pattern: instant stamp at radius, no expansion.
+   */
+  thunderClapRing(x, y, radius) {
+    const duration = 0.4
+    const gfx = this._getGfx()
+    gfx.position.set(x, y)
+    gfx.alpha = 1; gfx.scale.set(1)
+    this._active.push({ gfx, elapsed: 0, duration, update: (progress) => {
+      gfx.clear()
+      const fade = 1 - progress
+
+      // Ground crack radials — first 25% only
+      if (progress < 0.25) {
+        const crackAlpha = 0.7 * (1 - progress / 0.25)
+        for (let i = 0; i < 8; i++) {
+          const a = (i / 8) * Math.PI * 2
+          gfx.moveTo(Math.cos(a) * radius * 0.55, Math.sin(a) * radius * 0.55)
+          gfx.lineTo(Math.cos(a) * radius, Math.sin(a) * radius)
+        }
+        gfx.stroke({ color: 0xffee00, width: 1.5, alpha: crackAlpha })
+      }
+
+      // Filled golden circle — full size, fades out
+      gfx.circle(0, 0, radius)
+      gfx.fill({ color: 0xffcc00, alpha: 0.18 * fade })
+
+      // Inner ring
+      gfx.circle(0, 0, radius - 5)
+      gfx.stroke({ color: 0xffaa00, width: 2, alpha: 0.55 * fade })
+
+      // White-gold outer ring — crisp edge
+      gfx.circle(0, 0, radius)
+      gfx.stroke({ color: 0xffee00, width: 3, alpha: 0.95 * fade })
+    }})
+  }
+
+  /**
+   * Bloodlust periodic pulse — 0.6s red ring that expands from player body, signals active buff.
+   */
+  bloodlustPulseRing(x, y) {
+    const duration = 0.7
+    const minR = 30, maxR = 140
+    const gfx = this._getGfx()
+    gfx.position.set(x, y)
+    gfx.alpha = 1; gfx.scale.set(1)
+    this._active.push({ gfx, elapsed: 0, duration, update: (progress) => {
+      gfx.clear()
+      const ease = 1 - Math.pow(1 - progress, 2)  // ease-out
+      const r    = minR + (maxR - minR) * ease
+      const fade = 1 - progress
+
+      // Warm fill at the start
+      if (progress < 0.3) {
+        const fp = progress / 0.3
+        gfx.circle(0, 0, r)
+        gfx.fill({ color: 0xff2200, alpha: 0.12 * (1 - fp) })
+      }
+
+      gfx.circle(0, 0, r)
+      gfx.stroke({ color: 0xff2200, width: 4, alpha: 0.85 * fade })
+      gfx.circle(0, 0, r + 5)
+      gfx.stroke({ color: 0xff6600, width: 1.5, alpha: 0.45 * fade })
+    }})
+  }
+
+  /**
    * Icebound Fortitude — 0.55s DK ice crystal burst.
    * 8 ice spikes radiate outward, crystal ring forms, then fades.
    */

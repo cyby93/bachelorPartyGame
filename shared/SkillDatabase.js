@@ -380,7 +380,7 @@ const SkillDatabase = {
         type:      'PROJECTILE',
         damage:    11,
         speed:     500,
-        radius:    12,
+        radius:    9,
         range:     550,
         pierce:    false,
         spriteKey: 'projectile_fireball',

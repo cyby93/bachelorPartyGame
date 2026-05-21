@@ -119,6 +119,7 @@ export default class GameServer {
 
     // Debug: skip entrance cinematic when testing boss mechanics
     this.skipDialog = false
+    this.disableQuiz = false
 
     // Debug overrides — persist across deaths/restarts so the host doesn't have to re-set sliders
     this._debugOverrides = { playerLevel: 0, skillTiers: [0, 0, 0, 0] }
@@ -519,13 +520,14 @@ export default class GameServer {
 
   // ── Campaign flow ──────────────────────────────────────────────────────────
 
-  _onSetLevel(socket, { levelIndex, skipDialog }) {
+  _onSetLevel(socket, { levelIndex, skipDialog, disableQuiz }) {
     if (!this.players.get(socket.id)?.isHost) return
     if (this.scene !== 'lobby' && this.scene !== 'trainingGrounds') return
     const idx = Math.max(0, Math.min(levelIndex ?? 0, LEVEL_SELECT_OPTIONS.length - 1))
     const level = this._getLevelBySelectionIndex(idx)
     this.startingLevelIndex = idx
     if (skipDialog !== undefined) this.skipDialog = !!skipDialog
+    if (disableQuiz !== undefined) this.disableQuiz = !!disableQuiz
     this.io.emit(EVENTS.SET_LEVEL, { levelIndex: idx, levelName: level.name, skipDialog: this.skipDialog })
   }
 
@@ -695,7 +697,7 @@ export default class GameServer {
     }
 
     const startIdx = this.startingLevelIndex ?? 0
-    if (startIdx > 0) {
+    if (startIdx > 0 && !this.disableQuiz) {
       this._preLevelQuizQueue   = startIdx
       this._preLevelTargetIndex = startIdx
       this._startPreLevelQuiz()
@@ -1612,6 +1614,7 @@ export default class GameServer {
           vector: vector ?? { x: 1, y: 0 },
           startedAt: Date.now(),
           isChanneled: false,
+          effectiveCastTime: Math.round((config.castTime ?? 1000) / (player.fireRateMult ?? 1)),
         }
         return
       }
@@ -2531,7 +2534,7 @@ export default class GameServer {
     if (isLastLevel) {
       // Campaign complete — final victory!
       this._changeScene('result', { cumulativeStats: { ...this.stats, playerSnapshot: snapshot } })
-    } else if (GAME_CONFIG.QUIZ_BETWEEN_LEVELS) {
+    } else if (GAME_CONFIG.QUIZ_BETWEEN_LEVELS && !this.disableQuiz) {
       // Start quiz phase before showing level-complete
       this._startQuiz()
     } else {

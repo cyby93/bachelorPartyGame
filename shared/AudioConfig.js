@@ -102,6 +102,8 @@ export const AUDIO_ONE_SHOTS = {
   fx_hit_flesh_03: { key: 'fx_hit_flesh_03', src: '/assets/audio/sfx/fx_hit_flesh_03.ogg' },
   fx_portal_beam_start: { key: 'fx_portal_beam_start', src: '/assets/audio/sfx/fx_portal_beam_start.ogg' },
   fx_portal_beam_loop: { key: 'fx_portal_beam_loop', src: '/assets/audio/sfx/fx_portal_beam_loop.ogg' },
+  sfx_portal_entrance_loop: { key: 'sfx_portal_entrance_loop', src: '/assets/audio/sfx/sfx_portal_entrance_loop.ogg' },
+  sfx_portal_entrance_end:  { key: 'sfx_portal_entrance_end',  src: '/assets/audio/sfx/sfx_portal_entrance_end.ogg' },
   sfx_enemy_felguard_melee: { key: 'sfx_enemy_felguard_melee', src: '/assets/audio/sfx/sfx_enemy_felguard_melee.mp3' },
   sfx_enemy_bonechewer_brute_melee: { key: 'sfx_enemy_bonechewer_brute_melee', src: '/assets/audio/sfx/sfx_enemy_bonechewer_brute_melee.mp3' },
   sfx_enemy_illidari_centurion_charge: { key: 'sfx_enemy_illidari_centurion_charge', src: '/assets/audio/sfx/sfx_enemy_illidari_centurion_charge.mp3' },
@@ -196,7 +198,7 @@ function buildExplicitSkillAudioMap() {
 
     'Hammer Swing': createSkillAudio('Paladin', 'sfx_family_melee_holy', 'sfx_skill_hammer_swing_cast', 'sfx_skill_hammer_swing_impact'),
     "Avenger's Shield": createSkillAudio('Paladin', 'sfx_family_holy_projectile', 'sfx_skill_avengers_shield_cast', 'sfx_skill_avengers_shield_impact', 'sfx_skill_avengers_shield_travel'),
-    'Divine Shield': createSkillAudio('Paladin', 'sfx_family_holy_barrier', 'sfx_skill_divine_shield_cast', 'sfx_skill_divine_shield_impact'),
+    'Divine Protection': createSkillAudio('Paladin', 'sfx_family_holy_barrier', 'sfx_skill_divine_shield_cast', 'sfx_skill_divine_shield_impact'),
     Consecration: createSkillAudio('Paladin', 'sfx_family_holy_ground', 'sfx_skill_consecration_cast', 'sfx_skill_consecration_impact'),
 
     'Lightning Bolt': createSkillAudio('Shaman', 'sfx_family_lightning_cast', 'sfx_skill_lightning_bolt_cast', 'sfx_skill_lightning_bolt_impact', 'sfx_skill_lightning_bolt_travel', 'sfx_skill_lightning_bolt_precast'),

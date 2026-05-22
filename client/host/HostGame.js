@@ -434,6 +434,7 @@ export default class HostGame {
       'dummy_ranged',
       'dummy_tank',
       'warglaives_of_azzinoth',
+      'bladestorm_sword',
     ]
     const manifest = SPRITE_KEYS.map(k => ({ alias: k, src: `/assets/sprites/${k}.png` }))
 

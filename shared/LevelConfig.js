@@ -31,7 +31,7 @@ import { BALANCE } from './BalanceConfig.js'
 const R = BALANCE.RANGED_BASE_DPS
 const X = BALANCE.ENEMY_HP_MULT
 
-const L2_BUILDING_SIZE = 60
+const L2_BUILDING_SIZE = 90
 const L2_MAP_WIDTH = 1400
 const L2_MAP_HEIGHT = 1000
 const L2_MAP_PADDING = 130

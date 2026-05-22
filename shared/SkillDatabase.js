@@ -26,7 +26,7 @@ const SkillDatabase = {
       inputType: 'DIRECTIONAL',
       cooldown:  1000,
       damage:    8,
-      range:     80,
+      range:     70,
       angle:     Math.PI,   // 180° cone
       iconFile:  'ability_warrior_cleave'
     },
@@ -50,7 +50,7 @@ const SkillDatabase = {
       inputType: 'INSTANT',
       cooldown:  12000,
       damage:    10,             // damage per tick — tune via BalanceConfig
-      radius:    90,           // slightly larger than Cleave range
+      radius:    70,           
       duration:  4000,          // 4 seconds of spinning
       tickRate:  400,           // hits every 400 ms
       effectType: 'DAMAGE',
@@ -65,6 +65,8 @@ const SkillDatabase = {
       arc:                 Math.PI,  // 180° block arc
       shieldReduction:     0.65,     // base 65% reduction on overflow damage; upgradeable to 90%
       shieldAbsorbThreshold: 10,     // flat damage fully absorbed before reduction; upgradeable to 25
+      chargeDuration:      2000,     // ms to hold before auto-latch is available
+      duration:            2500,     // ms the shield stays active after charged release
       iconFile:            'ability_defend',
       dotColor:            0xcccccc,
     }
@@ -100,14 +102,16 @@ const SkillDatabase = {
       dotColor:  0x88ccff,
     },
     {
-      name:                'Divine Shield',
+      name:                'Divine Protection',
       type:                'SHIELD',
       inputType:           'DIRECTIONAL',
       cooldown:            3000,
       arc:                 Math.PI,  // 180° block arc
       shieldReduction:     0.65,     // base 65% reduction on overflow damage; upgradeable to 90%
       shieldAbsorbThreshold: 10,     // flat damage fully absorbed before reduction; upgradeable to 25
-      iconFile:            'spell_holy_divineshield',
+      chargeDuration:      2500,     // ms to hold before auto-latch is available
+      duration:            2500,     // ms the shield stays active after charged release
+      iconFile:            'spell_holy_divineprotection',
       dotColor:            0xffd700,
     },
     {
@@ -327,7 +331,7 @@ const SkillDatabase = {
       inputType:  'INSTANT',
       autoRefire: true,
       cooldown:   1000,
-      radius:     200,
+      radius:     160,
       // damage:     400,
       // healAmount: 600,
       damage:     4,
@@ -392,10 +396,10 @@ const SkillDatabase = {
       type:      'AOE',
       subtype:   'AOE_SELF',
       inputType: 'INSTANT',
-      cooldown:  7000,
+      cooldown:  8000,
       radius:    180,
       effectType: 'DEBUFF',
-      effectParams: { rooted: true, duration: 2000 },
+      effectParams: { rooted: true, duration: 4000 },
       iconFile:  'spell_frost_frostnova',
       dotColor:  0x44eeff,
     },

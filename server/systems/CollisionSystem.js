@@ -48,12 +48,13 @@ export default class CollisionSystem {
    * @param {object} target    – { x, y } target position
    * @returns {boolean}
    */
-  inCone(origin, dirVector, halfAngle, range, target) {
+  inCone(origin, dirVector, halfAngle, range, target, targetRadius = 0) {
     const dx   = target.x - origin.x
     const dy   = target.y - origin.y
     const dist = Math.sqrt(dx * dx + dy * dy)
 
-    if (dist > range) return false
+    if (dist > range + targetRadius) return false
+    if (dist < 1) return true
 
     const targetAngle = Math.atan2(dy, dx)
     const dirAngle    = Math.atan2(dirVector.y, dirVector.x)
@@ -61,7 +62,8 @@ export default class CollisionSystem {
     let diff = Math.abs(targetAngle - dirAngle)
     if (diff > Math.PI) diff = Math.PI * 2 - diff   // wrap to [0, π]
 
-    return diff <= halfAngle
+    const expansion = targetRadius > 0 ? Math.asin(Math.min(targetRadius / dist, 1)) : 0
+    return diff <= halfAngle + expansion
   }
 
   /**
@@ -100,6 +102,19 @@ export default class CollisionSystem {
     const dFwd = forward - clampedFwd
     const dLat = lateral - clampedLat
     return (dFwd * dFwd + dLat * dLat) <= (targetRadius * targetRadius)
+  }
+
+  /**
+   * Circle vs ellipse overlap — used for AOE zone vs enemy/boss hit detection.
+   * Minkowski sum approximation: (dx/(r+rx))² + (dy/(r+ry))² ≤ 1.
+   * Exact at axis-aligned extremes; slight over-estimate at 45°.
+   */
+  circleOverlapsEllipse(circleCenter, circleRadius, ellipseCenter, rx, ry) {
+    const dx  = circleCenter.x - ellipseCenter.x
+    const dy  = circleCenter.y - ellipseCenter.y
+    const tRX = circleRadius + rx
+    const tRY = circleRadius + ry
+    return (dx * dx) / (tRX * tRX) + (dy * dy) / (tRY * tRY) <= 1
   }
 
   /**

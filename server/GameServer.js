@@ -220,7 +220,8 @@ export default class GameServer {
         player.isAiming    = true
         player.aimSelf     = !!selfZone
         player.lastAimTime = Date.now()
-        if (player.shieldActive) {
+        // Track aim while held; freeze once auto-latched (shieldExpiresAt set)
+        if (player.shieldActive && player.shieldExpiresAt == null) {
           player.shieldAngle = player.aimAngle
         }
       }
@@ -629,7 +630,9 @@ export default class GameServer {
         p.hp          = p.maxHp
         p.isDowned      = false
         p.activeCast  = null
-        p.shieldActive = false
+        p.shieldActive      = false
+        p.shieldExpiresAt   = null
+        p.shieldChargeStart = null
         p.activeEffects = []
         p.rebuildStats()
         p.setArenaSize(this.arenaWidth, this.arenaHeight)
@@ -743,7 +746,9 @@ export default class GameServer {
       p.hp              = p.maxHp   // full HP — set AFTER overrides so upgraded maxHp is used
       p.isDowned          = false
       p.activeCast      = null
-      p.shieldActive    = false
+      p.shieldActive      = false
+      p.shieldExpiresAt   = null
+      p.shieldChargeStart = null
       p.activeEffects   = []
       p.bladestormActive = false
       p.rebuildStats()
@@ -1052,8 +1057,10 @@ export default class GameServer {
     this.players.forEach(p => {
       if (p.isHost) return
       p.setMoveInput(0, 0)
-      p.activeCast = null
-      p.shieldActive = false
+      p.activeCast        = null
+      p.shieldActive      = false
+      p.shieldExpiresAt   = null
+      p.shieldChargeStart = null
     })
 
     this.inputQueues.forEach(queue => {
@@ -1419,6 +1426,25 @@ export default class GameServer {
     // 2. Update players
     this.players.forEach(p => p.update(dt))
 
+    // 2a. Auto-expire latched shields
+    this.players.forEach(p => {
+      if (p.shieldExpiresAt != null && now >= p.shieldExpiresAt) {
+        const skillIndex = p.shieldSkillIndex
+        p.shieldActive      = false
+        p.shieldSkillIndex  = -1
+        p.shieldExpiresAt   = null
+        p.shieldChargeStart = null
+        if (skillIndex >= 0) {
+          const config = p.getSkillConfig(skillIndex)
+          const effectiveCooldown = config
+            ? Math.round(config.cooldown / (p.fireRateMult ?? 1))
+            : 3000
+          this.cooldowns.start(p.id, skillIndex, effectiveCooldown)
+          this.io.emit(EVENTS.COOLDOWN, { playerId: p.id, skillIndex, durationMs: effectiveCooldown })
+        }
+      }
+    })
+
     // 2b. Wall collision for players (includes downed players who can now crawl)
     if (this._wallSegments.length > 0) {
       const isGateDead = (id) => this._isGateDead(id)
@@ -1588,7 +1614,7 @@ export default class GameServer {
       }
     }
 
-    // SHIELD: START bypasses cooldown; END triggers cooldown
+    // SHIELD: START bypasses cooldown; END triggers cooldown (deferred if auto-latch)
     if (config.type === 'SHIELD') {
       if (action === 'START') {
         if (this.cooldowns.isOnCooldown(player.id, index)) return
@@ -1597,10 +1623,16 @@ export default class GameServer {
       } else if (action === 'END') {
         const gs = this._gs()
         this.skillSystem.execute(gs, player, config, index, vector ?? { x: 1, y: 0 }, action)
-        const effectiveCooldown = Math.round(config.cooldown / (player.fireRateMult ?? 1))
-        this.cooldowns.start(player.id, index, effectiveCooldown)
-        this.io.emit(EVENTS.COOLDOWN, { playerId: player.id, skillIndex: index, durationMs: effectiveCooldown })
-        this._tutorialRecordAbilityUse(player, index)
+        // Auto-latch: shield stays active — cooldown fires when shield expires (in tick)
+        if (player.shieldExpiresAt != null) {
+          this._tutorialRecordAbilityUse(player, index)
+        } else {
+          // Manual or early release — start cooldown now
+          const effectiveCooldown = Math.round(config.cooldown / (player.fireRateMult ?? 1))
+          this.cooldowns.start(player.id, index, effectiveCooldown)
+          this.io.emit(EVENTS.COOLDOWN, { playerId: player.id, skillIndex: index, durationMs: effectiveCooldown })
+          this._tutorialRecordAbilityUse(player, index)
+        }
       }
       return
     }
@@ -1693,7 +1725,8 @@ export default class GameServer {
       range:     config.range ?? 0,
       color:     classColor,
     }
-    if (config.width != null) _skillPayload.width = config.width
+    if (config.width  != null) _skillPayload.width      = config.width
+    if (config.angle  != null) _skillPayload.skillAngle = config.angle
     if (_preDashX !== null && config.subtype === 'TELEPORT') {
       _skillPayload.srcX = _preDashX
       _skillPayload.srcY = _preDashY

@@ -20,7 +20,7 @@
 
 - Per-level music routing is wired through stable `levelId` in init/scene payloads.
 - Host audio handles scene changes, player skill fire, effect damage/heal, targeted hit, boss dialog, Illidan phase transitions, aura pulse, portal beam warning/damage/end, player joins, and player downed detection.
-- Controller cues (all synth tones in `ControllerAudio.js`): join (660Hz triangle), downed (220Hz sawtooth, pitch-bend down), level-up (C-E-G ascending triad, 523→659→784Hz, staggered 110ms).
+- Controller cues in `ControllerAudio.js`: button click (`simple_button.ogg`, preloaded WebAudio buffer, fired via event delegation on `.app` div in `App.svelte`), join (660Hz triangle synth), downed (220Hz sawtooth, pitch-bend down), level-up (C-E-G ascending triad, 523→659→784Hz, staggered 110ms).
 - Level 5 and 6 dialog lines support placeholder `voiceKey` fields for future VO files.
 - Missing files fall back gracefully to synth/no-op behavior.
 
@@ -37,7 +37,7 @@
 
 - All 40 player skills have explicit cast/impact mappings, plus travel keys where appropriate.
 - Boss/core-enemy mappings are seeded explicitly for Illidan, Shade, and major archetypes/adds.
-- Encounter utility sounds are explicitly keyed: portal beams, aura pulse, scene/result stingers, join/downed cues.
+- Encounter utility sounds are explicitly keyed: portal beams, aura pulse, scene/result stingers, join/downed cues, portal entrance loop/end (Training Grounds level selector gate).
 
 ## Important Contract Decisions
 

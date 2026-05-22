@@ -54,12 +54,28 @@ export default class TrainingGroundsRenderer extends BaseRenderer {
     this._lastTutorialPhase = 0
     this._zoneContainer     = null
     this._zoneTime          = 0
+    this._transitionOverlay = null
+    this._transitionAlpha   = 0
+    this._fadeState         = null
   }
 
   _onBeforeExit() {
+    this._fadeState = null
     if (this._zoneContainer) {
       this._zoneContainer.destroy({ children: true })
       this._zoneContainer = null
+    }
+  }
+
+  startFadeOut(durationMs, onComplete) {
+    if (!this._transitionOverlay) return onComplete?.()
+    this._transitionAlpha = 0
+    this._transitionOverlay.alpha = 0
+    this._fadeState = {
+      dir:        'out',
+      speed:      1 / (durationMs / 1000),
+      done:       false,
+      onComplete,
     }
   }
 
@@ -68,6 +84,16 @@ export default class TrainingGroundsRenderer extends BaseRenderer {
     const levelZoneState    = this.game.knownState.levelZoneState    ?? null
     const unlockedLevelCount = this.game.knownState.unlockedLevelCount ?? 1
     this._updateZones(levelZoneState, unlockedLevelCount)
+
+    if (this._fadeState && !this._fadeState.done && this._transitionOverlay) {
+      this._transitionAlpha = Math.min(1, this._transitionAlpha + this._fadeState.speed * dt)
+      this._transitionOverlay.alpha = this._transitionAlpha
+      if (this._transitionAlpha >= 1) {
+        this._transitionAlpha = 1
+        this._fadeState.done = true
+        this._fadeState.onComplete?.()
+      }
+    }
   }
 
   // ── Zone selector rendering ────────────────────────────────────────────────
@@ -151,7 +177,7 @@ export default class TrainingGroundsRenderer extends BaseRenderer {
             portal.alpha = 1.0
             portal.tint  = 0xffffff
           } else {
-            portal.alpha = 0.45
+            portal.alpha = 0.7
             portal.tint  = 0xffffff
           }
         }
@@ -432,5 +458,10 @@ export default class TrainingGroundsRenderer extends BaseRenderer {
     title.position.set(W / 2, 14)
     this._uiRoot.addChild(title)
 
+    this._transitionOverlay = new Graphics()
+    this._transitionOverlay.rect(0, 0, W, H)
+    this._transitionOverlay.fill({ color: 0x000000, alpha: 1 })
+    this._transitionOverlay.alpha = this._transitionAlpha
+    this._uiRoot.addChild(this._transitionOverlay)
   }
 }

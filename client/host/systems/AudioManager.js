@@ -97,6 +97,8 @@ export default class AudioManager {
     if (cfg?.music) this._playMusic(withResolvedAudioPaths(cfg.music, 'music'))
     else if (scene === 'lobby') this._playMusic(withResolvedAudioPaths(getLevelAudio(null, 'lobby')?.music, 'music'))
 
+    this._stopLoopingSfx('portal_entrance')
+
     if (scene === 'battle' || scene === 'bossFight') {
       this.playTransition()
     } else if (scene === 'result') {
@@ -229,6 +231,19 @@ export default class AudioManager {
     this._playNamedSfx('boss_aura_pulse', { family: 'boss_aura' })
   }
 
+  handlePortalEntranceLoop() {
+    this._startLoopingSfx('portal_entrance', 'sfx_portal_entrance_loop', { volumeScale: 0.85 })
+  }
+
+  handlePortalEntranceLoopStop() {
+    this._stopLoopingSfx('portal_entrance')
+  }
+
+  handlePortalEntranceEnd() {
+    this._stopLoopingSfx('portal_entrance')
+    this._playNamedSfx('sfx_portal_entrance_end')
+  }
+
   handlePortalBeamWarning() {
     this._stopLoopingSfx('portal_beam')
     this._playNamedSfx('fx_portal_beam_start', { family: 'portal_beam' })
@@ -304,17 +319,11 @@ export default class AudioManager {
     this._lastDownedPlayers = deadNow
   }
 
-  playTransition() {
-    this._playArpeggio([261.6, 329.6, 392, 523.2], 'triangle', 0.18, 90)
-  }
+  playTransition() {}
 
-  playVictory() {
-    this._playArpeggio([392, 523.2, 659.3, 783.9, 659.3, 783.9], 'triangle', 0.22, 80)
-  }
+  playVictory() {}
 
-  playDefeat() {
-    this._playArpeggio([440, 370, 294, 220], 'sawtooth', 0.18, 140)
-  }
+  playDefeat() {}
 
   playPlayButton() {
     this._playNamedSfx('ui_play_button')
@@ -583,35 +592,4 @@ export default class AudioManager {
     return 0.8 + (Math.abs(hash) % 50) / 100
   }
 
-  _playArpeggio(notes, type, volume, intervalMs) {
-    notes.forEach((hz, i) => {
-      window.setTimeout(() => this._tone(hz, type, volume, 0, 0.1, 0.18, 0, 'sfx'), i * intervalMs)
-    })
-  }
-
-  _tone(hz, type, vol, attack, sustain, release, bend = 0, busName = 'sfx') {
-    if (!this._ctx || !this._buses || this._settings.muted) return
-
-    const ctx = this._ctx
-    const bus = this._buses[busName] ?? this._buses.sfx
-    const now = ctx.currentTime
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-
-    osc.type = type
-    osc.frequency.setValueAtTime(hz, now)
-    if (bend !== 0) {
-      osc.frequency.linearRampToValueAtTime(hz + bend, now + sustain + release)
-    }
-
-    gain.gain.setValueAtTime(0.0001, now)
-    gain.gain.linearRampToValueAtTime(vol, now + attack + 0.001)
-    gain.gain.setValueAtTime(vol, now + attack + sustain)
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + attack + sustain + release)
-
-    osc.connect(gain)
-    gain.connect(bus)
-    osc.start(now)
-    osc.stop(now + attack + sustain + release + 0.02)
-  }
 }

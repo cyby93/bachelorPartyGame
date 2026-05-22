@@ -266,9 +266,13 @@
     if (!document.fullscreenElement && !isIOS) toggleFullscreen()
   }
 
+  function handleAppClick(event) {
+    if (event.target.closest('.skill-btn') || event.target.closest('.move-zone')) return
+    if (event.target.closest('button')) controllerAudio.handleButton()
+  }
+
   function handleClassReady(cls) {
     className = cls
-    controllerAudio.handleJoin()
     screen = 'joining'
     socket.emit(EVENTS.JOIN, {
       name:         playerName,
@@ -354,7 +358,8 @@
   </div>
 {/if}
 
-<div class="app">
+<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+<div class="app" onclick={handleAppClick}>
   {#if screen === 'name'}
     <NameScreen onnext={handleNameSubmit} initialName={playerName} message={rejoinMessage} />
 

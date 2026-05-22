@@ -14,12 +14,12 @@ export const ABILITY_LABEL = {
   'Cleave':                'Aim and hold',
   'Thunder Clap':          'Tap',
   'Bladestorm':            'Tap',
-  'Shield Block':          'Aim and hold',
+  'Shield Block':          'Hold to charge',
 
   // Paladin
   'Hammer Swing':          'Aim and hold',
   "Avenger's Shield":      'Aim and release',
-  'Divine Shield':         'Aim and hold',
+  'Divine Protection':     'Hold to charge',
   'Consecration':          'Tap',
 
   // Shaman
@@ -80,15 +80,15 @@ export const ABILITY_DETAIL = {
   'Bladestorm':
     'Spins for 4 seconds, dealing damage to all enemies in melee range. Other skills are unavailable while active.',
   'Shield Block':
-    'Blocks 65% of incoming damage from the aimed direction for as long as you hold.',
+    'Aim and hold to raise a 180° steel shield that blocks 65% of incoming damage. Hold for 2s to fully charge it — releasing a charged shield keeps it active hands-free for 2.5s.',
 
   // Paladin
   'Hammer Swing':
     'A focused melee strike in a 90° arc.',
   "Avenger's Shield":
     'Hurls a holy shield that bounces between up to 3 targets, slowing each on hit.',
-  'Divine Shield':
-    'Blocks 65% of incoming damage from the aimed direction for as long as you hold.',
+  'Divine Protection':
+    'Aim and hold to raise a 180° divine shield that blocks 65% of incoming damage. Hold for 2.5s to fully charge it — releasing a charged shield keeps it active hands-free for 2.5s.',
   'Consecration':
     'Consecrates the ground beneath you for 6 seconds, dealing damage to enemies and healing allies who stand in it.',
 

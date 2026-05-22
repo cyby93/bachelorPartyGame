@@ -4,7 +4,8 @@
  * Created by BattleRenderer in enter(), destroyed in exit().
  */
 
-import { Graphics, Sprite } from 'pixi.js'
+import { Assets, Container, Graphics, Sprite } from 'pixi.js'
+import { GAME_CONFIG } from '../../../shared/GameConfig.js'
 import ParticleSystem       from './ParticleSystem.js'
 import OneShotEffectSystem  from './OneShotEffectSystem.js'
 import GroundEffectSystem   from './GroundEffectSystem.js'
@@ -23,7 +24,7 @@ export default class VFXManager {
     this.floatingText = new FloatingTextPool(layers.worldUi)
 
     this._fxLayer          = layers.fx
-    this._bladestorms      = []         // { gfx, born, duration, angle, getPos }
+    this._bladestorms      = []         // { container, swords, born, duration, radius, angle, getPos }
     this._bloodlustSpirits = []         // { sprite, born, duration, startX, startY }
     this._bloodlustAuras   = new Map()  // playerId → { getPos, timer }
 
@@ -60,8 +61,19 @@ export default class VFXManager {
       ['Icebound Fortitude',  (d) => { os.iceboundFortitude(d.x, d.y); ps.iceShards(d.x, d.y) }],
       // Thunder Clap: instant full-radius stamp (Frost Nova pattern) — earth shockwave aesthetic
       ['Thunder Clap',        (d) => { os.thunderClapRing(d.x, d.y, d.radius || 120); ps.hitSpark(d.x, d.y, d.color || '#ffcc00') }],
-      // Bladestorm: persistent visual attached via attachBladestorm — fire cast flash only
-      ['Bladestorm',          (d) => { os.aoeFlash(d.x, d.y, d.radius || 70, d.color) }],
+      // Cleave: rotational sweep that exactly traces the 180° hitbox cone
+      ['Cleave', (d) => {
+        const halfAngle = (d.skillAngle ?? Math.PI) / 2
+        os.cleaveWipe(d.x, d.y, d.angle, halfAngle, d.range || 70)
+        ps.hitSpark(d.x, d.y, d.color || '#ff4400')
+      }],
+      // Hammer Swing: instant golden stamp that exactly traces the 90° hitbox cone
+      ['Hammer Swing', (d) => {
+        const halfAngle = (d.skillAngle ?? Math.PI / 2) / 2
+        os.hammerStamp(d.x, d.y, d.angle, halfAngle, d.range || 70)
+        ps.hitSpark(d.x, d.y, d.color || '#ffd700')
+      }],
+      // Bladestorm: persistent visual handled entirely by attachBladestorm in BaseRenderer — no cast flash
       ['Blink', (d) => {
         if (d.srcX != null) {
           os.aoeFlash(d.srcX, d.srcY, 35, d.color)
@@ -159,85 +171,109 @@ export default class VFXManager {
   }
 
   /**
-   * Attach a spinning Bladestorm visual to a player container for the skill duration.
-   * @param {Function} getPos  — () => { x, y } in world space
+   * Attach a spinning Bladestorm visual to a player for the skill duration.
+   * Spawns 5 bladestorm_sword sprites orbiting the warrior with motion-trail ghosts.
+   * @param {Function} getPos   — () => { x, y } in world space
    * @param {number}   duration — ms the storm lasts
+   * @param {number}   radius   — orbit radius in px
    */
   attachBladestorm(getPos, duration, radius) {
-    const gfx = new Graphics()
-    this._fxLayer.addChild(gfx)
-    this._bladestorms.push({ gfx, born: Date.now(), duration, radius, angle: 0, getPos })
+    const SWORD_COUNT = 5
+    const TRAIL_LEN   = 8
+    const BLADE_H     = 14   // thin axis of the stretched sword sprite
+
+    const texture   = Assets.get('bladestorm_sword')
+    const container = new Container()
+    this._fxLayer.addChild(container)
+
+    const swords = Array.from({ length: SWORD_COUNT }, () => {
+      const trails = Array.from({ length: TRAIL_LEN }, () => {
+        const t = new Sprite(texture)
+        t.anchor.set(0.5)
+        t.tint   = 0x99bbff
+        t.alpha  = 0
+        container.addChild(t)
+        return t
+      })
+      const sprite = new Sprite(texture)
+      sprite.anchor.set(0.5)
+      container.addChild(sprite)
+      return { sprite, trails, history: [] }
+    })
+
+    if (GAME_CONFIG.DEBUG_HITBOXES) {
+      const debugGfx = new Graphics()
+      debugGfx.circle(0, 0, radius)
+      debugGfx.stroke({ color: 0x00ffff, width: 1.5, alpha: 0.7 })
+      container.addChild(debugGfx)
+    }
+
+    this._bladestorms.push({ container, swords, born: Date.now(), duration, radius, angle: 0, getPos })
   }
 
   _tickBladestorms(dt) {
+    const SWORD_COUNT = 5
+    const TRAIL_LEN   = 8
+    const BLADE_H     = 14   // thin axis px (constant regardless of radius)
+    const ROT_SPEED   = Math.PI * 3.5   // rad/s
+    const TRAIL_ALPHA = 0.38
     const now = Date.now()
+
     for (let i = this._bladestorms.length - 1; i >= 0; i--) {
-      const b = this._bladestorms[i]
+      const b   = this._bladestorms[i]
       const age = now - b.born
+
       if (age >= b.duration) {
-        b.gfx.destroy()
+        b.container.destroy({ children: true })
         this._bladestorms.splice(i, 1)
         continue
       }
-
-      b.angle += dt * Math.PI * 3.5   // ~1.75 full rotations per second
 
       const pos = b.getPos()
       if (!pos) {
-        b.gfx.destroy()
+        b.container.destroy({ children: true })
         this._bladestorms.splice(i, 1)
         continue
       }
-      const { x, y } = pos
+
+      b.angle += dt * ROT_SPEED
+      b.container.position.set(pos.x, pos.y)
+
       const alpha = age < 200
         ? age / 200
         : age > b.duration - 400
           ? (b.duration - age) / 400
           : 1.0
 
-      const r        = b.radius
-      const rHandle  = r * 0.28    // pommel end
-      const rGuard   = r * 0.50    // crossguard position
-      const rRoot    = r * 0.52    // blade root (just past guard)
-      const rTip     = r * 1.22    // blade tip
-      const bladeHW  = r * 0.065   // blade half-width at root
-      const guardLen = r * 0.14    // crossguard half-length
+      const r = b.radius
 
-      b.gfx.clear()
-      b.gfx.position.set(x, y)
+      for (let j = 0; j < SWORD_COUNT; j++) {
+        const sw = b.swords[j]
+        const a  = b.angle + j * (2 * Math.PI / SWORD_COUNT)
+        // Sword spans center → radius: position at midpoint, width = r fills the radial axis
+        const sx = Math.cos(a) * r * 0.5
+        const sy = Math.sin(a) * r * 0.5
 
-      for (let j = 0; j < 6; j++) {
-        const a  = b.angle + j * (Math.PI / 3)
-        const ca = Math.cos(a), sa = Math.sin(a)
-        // perpendicular axis (blade width direction)
-        const px = -sa, py = ca
+        sw.history.push({ x: sx, y: sy, angle: a })
+        if (sw.history.length > TRAIL_LEN) sw.history.shift()
 
-        // ── Handle ────────────────────────────────────────────────────────
-        b.gfx.moveTo(ca * rHandle, sa * rHandle)
-        b.gfx.lineTo(ca * rGuard,  sa * rGuard)
-        b.gfx.stroke({ color: 0x8b6340, width: 3.5, alpha: 0.9 * alpha })
+        sw.sprite.position.set(sx, sy)
+        sw.sprite.rotation = a
+        sw.sprite.width    = r
+        sw.sprite.height   = BLADE_H
+        sw.sprite.alpha    = alpha
 
-        // ── Crossguard ────────────────────────────────────────────────────
-        b.gfx.moveTo(ca * rGuard + px * guardLen, sa * rGuard + py * guardLen)
-        b.gfx.lineTo(ca * rGuard - px * guardLen, sa * rGuard - py * guardLen)
-        b.gfx.stroke({ color: 0xccaa55, width: 3, alpha: 0.95 * alpha })
-
-        // ── Blade (tapered triangle) ──────────────────────────────────────
-        const bRx = ca * rRoot, bRy = sa * rRoot
-        const bTx = ca * rTip,  bTy = sa * rTip
-        const sxL = px * bladeHW, syL = py * bladeHW
-
-        // Blade fill — steel blue-white
-        b.gfx.moveTo(bRx + sxL, bRy + syL)
-        b.gfx.lineTo(bRx - sxL, bRy - syL)
-        b.gfx.lineTo(bTx, bTy)
-        b.gfx.closePath()
-        b.gfx.fill({ color: 0xddeeff, alpha: 0.88 * alpha })
-
-        // Bright edge highlight along one side
-        b.gfx.moveTo(bRx + sxL, bRy + syL)
-        b.gfx.lineTo(bTx, bTy)
-        b.gfx.stroke({ color: 0xffffff, width: 1.5, alpha: 0.75 * alpha })
+        for (let t = 0; t < TRAIL_LEN; t++) {
+          const ts  = sw.trails[t]
+          const idx = sw.history.length - 1 - t
+          if (idx < 0) { ts.alpha = 0; continue }
+          const h = sw.history[idx]
+          ts.position.set(h.x, h.y)
+          ts.rotation = h.angle
+          ts.width    = r
+          ts.height   = BLADE_H
+          ts.alpha    = ((TRAIL_LEN - t) / TRAIL_LEN) * TRAIL_ALPHA * alpha
+        }
       }
     }
   }
@@ -353,7 +389,7 @@ export default class VFXManager {
   }
 
   destroy() {
-    for (const b of this._bladestorms) b.gfx.destroy()
+    for (const b of this._bladestorms) b.container.destroy({ children: true })
     this._bladestorms.length = 0
     for (const b of this._bloodlustSpirits) b.sprite.destroy()
     this._bloodlustSpirits.length = 0

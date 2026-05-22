@@ -147,9 +147,23 @@ socket.on(EVENTS.PLAYER_LEFT, id => {
 })
 
 socket.on(EVENTS.STATE_DELTA, delta => {
+  const prevZoneState = game.knownState.levelZoneState
   game.receiveState(delta)
   syncGameState()
   audio.syncPlayerState(game.knownState.players)
+
+  if ('levelZoneState' in delta) {
+    const next = delta.levelZoneState
+    const prevPending = prevZoneState?.pendingIndex ?? null
+    const nextPending = next?.pendingIndex         ?? null
+
+    if (nextPending != null && prevPending == null) {
+      audio.handlePortalEntranceLoop()
+    } else if (nextPending == null && prevPending != null && next != null) {
+      // Players walked off before committing
+      audio.handlePortalEntranceLoopStop()
+    }
+  }
 })
 
 socket.on(EVENTS.SCENE_CHANGE, (data) => {
@@ -170,10 +184,24 @@ socket.on(EVENTS.SCENE_CHANGE, (data) => {
   currentObjectives = data.objectives ?? null
   currentScene      = scene
   if (scene === 'quiz') quizState.set({ phase: 'waiting', question: null, progress: null, results: null, upgrades: [] })
-  game.switchScene(scene === 'staging' ? 'lobby' : scene, meta)
-  currentLevelMeta = meta
-  audio.setScene(scene, meta)
-  syncGameState()
+
+  const fromTrainingGrounds = game._activeSceneName === 'trainingGrounds'
+  const isLevelStart = scene === 'battle' || scene === 'bossFight'
+
+  if (fromTrainingGrounds && isLevelStart && game.activeRenderer?.startFadeOut) {
+    audio.handlePortalEntranceEnd()
+    game.activeRenderer.startFadeOut(600, () => {
+      game.switchScene(scene, meta)
+      currentLevelMeta = meta
+      audio.setScene(scene, meta)
+      syncGameState()
+    })
+  } else {
+    game.switchScene(scene === 'staging' ? 'lobby' : scene, meta)
+    currentLevelMeta = meta
+    audio.setScene(scene, meta)
+    syncGameState()
+  }
 })
 
 socket.on(EVENTS.OBJECTIVE_UPDATE, ({ objectives }) => {

@@ -32,11 +32,12 @@ export const UPGRADE_CONFIG = {
       { label: 'Bladestorm +2', deltas: { duration: 500 } },
       { label: 'Bladestorm +3', deltas: { damage: 1, cooldown: -1000 } },
     ],
-    // S3: Shield Block (SHIELD) — base 65%/10 absorb, +8.3% reduction and +5 absorb per tier → 90%/25 at T3
+    // S3: Shield Block (SHIELD) — base 65%/10 absorb, chargeDuration 2000ms, duration 2500ms
+    //   T3: 90%/25 absorb, chargeDuration 1000ms (-50%), duration 4000ms (+60%)
     [
-      { label: 'Shield Block +1', deltas: { shieldReduction: 0.083, shieldAbsorbThreshold: 5, cooldown: -500 } },
-      { label: 'Shield Block +2', deltas: { shieldReduction: 0.083, shieldAbsorbThreshold: 5, arc: 0.3 } },
-      { label: 'Shield Block +3', deltas: { shieldReduction: 0.084, shieldAbsorbThreshold: 5, cooldown: -500, arc: 0.2 } },
+      { label: 'Shield Block +1', deltas: { shieldReduction: 0.083, shieldAbsorbThreshold: 5, cooldown: -500, chargeDuration: -400, duration: 500 } },
+      { label: 'Shield Block +2', deltas: { shieldReduction: 0.083, shieldAbsorbThreshold: 5, arc: 0.3,        chargeDuration: -400, duration: 500 } },
+      { label: 'Shield Block +3', deltas: { shieldReduction: 0.084, shieldAbsorbThreshold: 5, cooldown: -500, chargeDuration: -200, duration: 500, arc: 0.2 } },
     ],
   ],
 
@@ -54,11 +55,12 @@ export const UPGRADE_CONFIG = {
       { label: "Avenger's Shield +2", deltas: { damage: 7 } },
       { label: "Avenger's Shield +3", deltas: { damage: 7, cooldown: -500 } },
     ],
-    // S2: Divine Shield (SHIELD) — base 65%/10 absorb, +8.3% reduction and +5 absorb per tier → 90%/25 at T3
+    // S2: Divine Protection (SHIELD) — base 65%/10 absorb, chargeDuration 2500ms, duration 2500ms
+    //   T3: 90%/25 absorb, chargeDuration 1000ms (-60%), duration 4000ms (+60%)
     [
-      { label: 'Divine Shield +1', deltas: { shieldReduction: 0.083, shieldAbsorbThreshold: 5, cooldown: -300 } },
-      { label: 'Divine Shield +2', deltas: { shieldReduction: 0.083, shieldAbsorbThreshold: 5, arc: 0.3 } },
-      { label: 'Divine Shield +3', deltas: { shieldReduction: 0.084, shieldAbsorbThreshold: 5, cooldown: -400, arc: 0.2 } },
+      { label: 'Divine Protection +1', deltas: { shieldReduction: 0.083, shieldAbsorbThreshold: 5, cooldown: -300, chargeDuration: -500, duration: 500 } },
+      { label: 'Divine Protection +2', deltas: { shieldReduction: 0.083, shieldAbsorbThreshold: 5, arc: 0.3,        chargeDuration: -500, duration: 500 } },
+      { label: 'Divine Protection +3', deltas: { shieldReduction: 0.084, shieldAbsorbThreshold: 5, cooldown: -400, chargeDuration: -500, duration: 500, arc: 0.2 } },
     ],
     // S3: Consecration (AOE_SELF) — damage 3/tick, 8 ticks, healAmount 3, cooldown 7000ms → base DPS ~3.4
     [

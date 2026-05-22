@@ -71,6 +71,7 @@ Leviathan PixelLab ID: `a7aab6e3-b4d3-4d32-9fc4-b58acf24d572`.
 | Wrath (Druid) | `projectile_wrath` | `public/assets/sprites/projectile_wrath.png` | `nature` |
 | Searing Totem fireball | `projectile_fireball` | shared with Fireball | `fire` |
 | Hawk pet (Hunter) | `sharp_feather` | `public/assets/sprites/sharp_feather.png` | `wind`, faceDirection, angleOffset=π/4 |
+| Bladestorm (Warrior) | `bladestorm_sword` | `public/assets/sprites/bladestorm_sword.png` | orbit VFX — not a projectile; see AOE table |
 
 All sprites live in the flat `public/assets/sprites/` directory. To add a new projectile: drop `{spriteKey}.png` there and add the key to `SPRITE_KEYS` in `HostGame.js`. No separate manifest entry or subdirectory needed.
 
@@ -190,8 +191,10 @@ Rule: sprites are wrong for burst effects — shapes + particles only.
 | Tranquility | CHANNEL | `tranquilityField` (4.0s persistent ring, `OneShotEffectSystem`) | `tranquilityBurst` + `tranquilityAmbient` per-frame | `tranquilityField` accepts `emitFn` callback; VFXManager passes `() => ps.tranquilityAmbient(...)` |
 | Explosive Trap | EXPLOSION | `explosionBurst` (0.3s, fire) | `explosionBurst` | Emission live in `ServerMinion._updateTrap()`. Payload: `{ type, skillName, x, y, radius, color: '#ff6600' }` |
 | Icebound Fortitude | BUFF | `iceboundFortitude` (0.55s, 8 ice spikes + crystal ring) | `iceShards` (20 blue-white, gravity -20) | |
+| Cleave (Warrior) | MELEE | `cleaveWipe` (0.22s, rotational sweep left→right) | `hitSpark` (red) | `d.skillAngle` drives `halfAngle`; blade radial + tip arc; fade-out at 80%. Requires `skillAngle` in SKILL_FIRED payload. |
+| Hammer Swing (Paladin) | MELEE | `hammerStamp` (0.22s, instant golden stamp) | `hitSpark` (gold) | Full cone at t=0, 4 crack radials first 35%, white inner tip first 25%. Requires `skillAngle` in SKILL_FIRED payload. |
 | Thunder Clap | AOE_SELF | `thunderClapRing` (0.4s, gold instant stamp) | `hitSpark` (gold) | Frost Nova pattern — full-radius at t=0, no expansion. 8 crack radials first 25%, golden fill + double ring. |
-| Bladestorm | AOE/BLADESTORM | `aoeFlash` on cast + `attachBladestorm` persistent | — | `attachBladestorm(getPos, 4000)` called from `BaseRenderer.onSkillFired`; VFXManager ticks 6 sword shapes (handle/crossguard/blade, steel blue-white, no ring) |
+| Bladestorm | AOE/BLADESTORM | `aoeFlash` on cast + `attachBladestorm` persistent | — | `attachBladestorm(getPos, 4000, radius)` from `BaseRenderer.onSkillFired`; 5 `bladestorm_sword` Sprites (36px, PixelLab `bcdcac1c`) orbit at `radius` px, each with 8 blue-tinted ghost trail sprites (TRAIL_ALPHA=0.38). Container per storm, `destroy({children:true})` on expire. Sword facing: `a + π/2` (tangent). May need `SWORD_ANGLE_OFFSET` tuning if sprite orientation doesn't align. |
 
 ## Debuff Rendering Patterns (2026-05-14)
 

@@ -48,6 +48,9 @@ export default class ServerPlayer {
     this.shieldReduction       = 0  // fraction of overflow damage blocked (0–1)
     this.shieldAbsorbThreshold = 0  // flat damage fully absorbed before reduction kicks in
     this.shieldSkillIndex      = -1 // which skill slot holds the active shield
+    this.shieldChargeStart     = null // timestamp (ms) when hold began; null when not charging
+    this.shieldChargeDuration  = 0   // ms required to reach full charge (from skill config)
+    this.shieldExpiresAt       = null // timestamp (ms) when auto-active shield drops; null = manual hold
 
     this.isAiming    = false
     this.aimSelf     = false
@@ -296,6 +299,9 @@ export default class ServerPlayer {
       delta.shieldAngle = cur.shieldAngle
       delta.shieldArc   = cur.shieldArc
     }
+    if (cur.shieldChargeStart    !== prev.shieldChargeStart)    delta.shieldChargeStart    = cur.shieldChargeStart
+    if (cur.shieldChargeDuration !== prev.shieldChargeDuration) delta.shieldChargeDuration = cur.shieldChargeDuration
+    if (cur.shieldExpiresAt      !== prev.shieldExpiresAt)      delta.shieldExpiresAt      = cur.shieldExpiresAt
 
     // Cast progress (0-1), only if actively casting
     if (this.activeCast) {
@@ -341,10 +347,13 @@ export default class ServerPlayer {
       comboPoints:  this.comboPoints,
       isAiming:     this.isAiming,
       aimSelf:      this.aimSelf,
-      shieldActive:  this.shieldActive,
-      shieldAngle:  +this.shieldAngle.toFixed(3),
-      shieldArc:    +this.shieldArc.toFixed(3),
-      shieldAbsorb:  this.shieldAbsorb ?? 0,
+      shieldActive:         this.shieldActive,
+      shieldAngle:         +this.shieldAngle.toFixed(3),
+      shieldArc:           +this.shieldArc.toFixed(3),
+      shieldAbsorb:         this.shieldAbsorb ?? 0,
+      shieldChargeStart:    this.shieldChargeStart,
+      shieldChargeDuration: this.shieldChargeDuration,
+      shieldExpiresAt:      this.shieldExpiresAt,
       fireRateMult: +this.fireRateMult.toFixed(3),
     }
   }

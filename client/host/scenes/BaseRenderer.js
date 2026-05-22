@@ -202,6 +202,7 @@ export default class BaseRenderer {
 
     this.projSprites.forEach((s, id) => {
       if (!activeIds.has(id)) {
+        this.vfx?.triggerImpact(s.container.position.x, s.container.position.y, s._color)
         s.detach()
         this._dyingProjectiles.set(id, s)
         this.projSprites.delete(id)

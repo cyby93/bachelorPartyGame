@@ -139,7 +139,8 @@ export default class PlayerSprite {
     this._shieldGfx = new Graphics()
     this._shieldGfx.alpha = 0   // hidden by default
     this.container.addChild(this._shieldGfx)
-    this._shieldVisible = false
+    this._shieldVisible   = false
+    this._shieldFadeTimer = 0   // seconds remaining in fade-out
 
     // ── HoT visual (Regrowth — animated HP bar frame glow) ───────────────
     this._hotGfx = new Graphics()
@@ -206,10 +207,17 @@ export default class PlayerSprite {
 
   // ── Shield arc drawing ─────────────────────────────────────────────────────
 
-  _drawShieldArc(angle, arc) {
+  // chargeProgress: 0.0–1.0 while holding (null = auto-active or legacy)
+  // shieldExpiresAt: timestamp (ms) for auto-active duration (null = manual hold)
+  _drawShieldArc(angle, arc, chargeProgress = null, shieldExpiresAt = null) {
     const g = this._shieldGfx
     const shieldRadius = SPRITE_H - 20
-    const halfArc = arc / 2
+    const halfArc   = arc / 2
+    const startAngle = angle - halfArc
+    const endAngle   = angle + halfArc
+    const isCharging = chargeProgress !== null
+    const isCharged  = isCharging && chargeProgress >= 1
+    const nowMs      = Date.now()
 
     g.clear()
 
@@ -219,39 +227,69 @@ export default class PlayerSprite {
     if (isWarrior) {
       // Steel shield — bold metallic arc with inner bevel
       g.moveTo(0, 0)
-      g.arc(0, 0, shieldRadius + 4, angle - halfArc, angle + halfArc)
+      g.arc(0, 0, shieldRadius + 4, startAngle, endAngle)
       g.lineTo(0, 0)
       g.fill({ color: 0x888888, alpha: 0.25 })
 
-      g.arc(0, 0, shieldRadius + 4, angle - halfArc, angle + halfArc)
+      g.arc(0, 0, shieldRadius + 4, startAngle, endAngle)
       g.stroke({ color: 0xdddddd, width: 5, alpha: 0.9 })
 
-      g.arc(0, 0, shieldRadius - 2, angle - halfArc, angle + halfArc)
+      g.arc(0, 0, shieldRadius - 2, startAngle, endAngle)
       g.stroke({ color: 0x555555, width: 2, alpha: 0.5 })
+
+      // Amber charge ring sweeps the arc border as progress fills
+      if (isCharging) {
+        const sweepEnd  = startAngle + arc * chargeProgress
+        const ringAlpha = isCharged
+          ? 0.55 + 0.45 * (0.5 + 0.5 * Math.sin(nowMs / 150)) // pulse when fully charged
+          : 0.85
+        g.arc(0, 0, shieldRadius + 4, startAngle, sweepEnd)
+        g.stroke({ color: 0xff9900, width: 7, alpha: ringAlpha })
+      }
     } else if (isPaladin) {
       // Divine golden shield — holy glow with inner fill
+      // Outer glow intensifies as charge builds
+      const glowAlpha = isCharging ? 0.30 + 0.40 * chargeProgress : 0.30
+      const glowWidth = isCharging ? 1.5 + 2 * chargeProgress : 1.5
+
       g.moveTo(0, 0)
-      g.arc(0, 0, shieldRadius + 6, angle - halfArc, angle + halfArc)
+      g.arc(0, 0, shieldRadius + 6, startAngle, endAngle)
       g.lineTo(0, 0)
       g.fill({ color: 0xffd700, alpha: 0.18 })
 
-      g.arc(0, 0, shieldRadius + 6, angle - halfArc, angle + halfArc)
+      g.arc(0, 0, shieldRadius + 6, startAngle, endAngle)
       g.stroke({ color: 0xffd700, width: 4, alpha: 0.85 })
 
-      g.arc(0, 0, shieldRadius + 10, angle - halfArc, angle + halfArc)
-      g.stroke({ color: 0xffffff, width: 1.5, alpha: 0.30 })
+      g.arc(0, 0, shieldRadius + 10, startAngle, endAngle)
+      g.stroke({ color: 0xffffff, width: glowWidth, alpha: glowAlpha })
 
-      g.arc(0, 0, shieldRadius, angle - halfArc, angle + halfArc)
+      g.arc(0, 0, shieldRadius, startAngle, endAngle)
       g.stroke({ color: 0xffeeaa, width: 2, alpha: 0.55 })
+
+      // Bright gold/white ring sweeps the outer glow layer as progress fills
+      if (isCharging) {
+        const sweepEnd  = startAngle + arc * chargeProgress
+        const ringAlpha = isCharged
+          ? 0.65 + 0.35 * (0.5 + 0.5 * Math.sin(nowMs / 200)) // heartbeat pulse when fully charged
+          : 0.90
+        g.arc(0, 0, shieldRadius + 10, startAngle, sweepEnd)
+        g.stroke({ color: 0xffffff, width: 3.5, alpha: ringAlpha })
+      }
     } else {
       // Default blue shield
       g.moveTo(0, 0)
-      g.arc(0, 0, shieldRadius, angle - halfArc, angle + halfArc)
+      g.arc(0, 0, shieldRadius, startAngle, endAngle)
       g.lineTo(0, 0)
       g.fill({ color: 0x00d2ff, alpha: 0.2 })
 
-      g.arc(0, 0, shieldRadius, angle - halfArc, angle + halfArc)
+      g.arc(0, 0, shieldRadius, startAngle, endAngle)
       g.stroke({ color: 0x00d2ff, width: 3, alpha: 0.8 })
+
+      if (isCharging) {
+        const sweepEnd = startAngle + arc * chargeProgress
+        g.arc(0, 0, shieldRadius, startAngle, sweepEnd)
+        g.stroke({ color: 0xffffff, width: 5, alpha: 0.85 })
+      }
     }
   }
 
@@ -442,12 +480,39 @@ export default class PlayerSprite {
     this.container.alpha = (state.isDowned && this._animState !== 'downed') ? 0.2 : 1.0
 
     // Shield arc
-    const shieldOn = !!state.shieldActive
+    const shieldOn    = !!state.shieldActive
+    const wasVisible  = this._shieldVisible
+    const nowMs       = Date.now()
+
     if (shieldOn) {
-      this._drawShieldArc(state.shieldAngle ?? 0, state.shieldArc ?? Math.PI / 2)
-      this._shieldGfx.alpha = 1
-    } else if (this._shieldVisible) {
-      this._shieldGfx.alpha = 0
+      const angle = state.shieldAngle ?? 0
+      const arc   = state.shieldArc   ?? Math.PI / 2
+
+      let chargeProgress  = null
+      const shieldExpiresAt = state.shieldExpiresAt ?? null
+
+      if (state.shieldChargeStart != null && (state.shieldChargeDuration ?? 0) > 0) {
+        chargeProgress = Math.min(1, (nowMs - state.shieldChargeStart) / state.shieldChargeDuration)
+      }
+
+      this._drawShieldArc(angle, arc, chargeProgress, shieldExpiresAt)
+
+      // Expiry flicker — last 800ms of auto-active shield
+      if (shieldExpiresAt != null && shieldExpiresAt - nowMs < 800) {
+        const flicker = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(nowMs / 80))
+        this._shieldGfx.alpha = Math.max(0.1, flicker)
+      } else {
+        this._shieldGfx.alpha = 1
+      }
+      this._shieldFadeTimer = 0.3  // prime fade for when shield drops
+    } else {
+      if (wasVisible) this._shieldFadeTimer = 0.3
+      if (this._shieldFadeTimer > 0) {
+        this._shieldFadeTimer = Math.max(0, this._shieldFadeTimer - dt)
+        this._shieldGfx.alpha = this._shieldFadeTimer / 0.3
+      } else {
+        this._shieldGfx.alpha = 0
+      }
     }
     this._shieldVisible = shieldOn
 

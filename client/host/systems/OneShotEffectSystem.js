@@ -555,6 +555,10 @@ export default class OneShotEffectSystem {
         // White outer ring — sharp leading edge
         gfx.circle(0, 0, r)
         gfx.stroke({ color: 0xffffff, width: strokeW + 2, alpha: 0.85 * fade })
+
+        // Hitbox boundary — cyan circle at full radius, constant so it's always readable
+        gfx.circle(0, 0, radius)
+        gfx.stroke({ color: 0x00ffff, width: 1.5, alpha: 0.7 })
       }
     })
   }
@@ -708,6 +712,10 @@ export default class OneShotEffectSystem {
       // White-gold outer ring — crisp edge
       gfx.circle(0, 0, radius)
       gfx.stroke({ color: 0xffee00, width: 3, alpha: 0.95 * fade })
+
+      // Hitbox boundary — cyan circle matches server distance check exactly
+      gfx.circle(0, 0, radius)
+      gfx.stroke({ color: 0x00ffff, width: 1.5, alpha: 0.7 })
     }})
   }
 
@@ -792,6 +800,141 @@ export default class OneShotEffectSystem {
         gfx.circle(0, 0, ringR + 5)
         gfx.stroke({ color: 0xffffff, width: 1, alpha: 0.25 * fade })
       }
+    }})
+  }
+
+  /**
+   * Warrior Cleave sweep — blade rotates from the left edge of the cone to the
+   * right edge, leaving a fading red-orange trail. The swept region exactly
+   * matches the server hitbox cone.
+   * @param {number} halfAngle  half the cone width in radians (e.g. Math.PI/2 for 180°)
+   */
+  cleaveWipe(x, y, facing, halfAngle, range) {
+    const duration   = 0.22
+    const SWEEP_END  = 0.80   // sweep completes at 80%; remainder is fade-out
+    const gfx = this._getGfx()
+    gfx.position.set(x, y)
+    gfx.alpha = 1; gfx.scale.set(1)
+
+    const startAngle = facing - halfAngle
+    const endAngle   = facing + halfAngle
+
+    this._active.push({ gfx, elapsed: 0, duration, update: (progress) => {
+      gfx.clear()
+
+      if (progress < SWEEP_END) {
+        const sweepP    = progress / SWEEP_END
+        const sweepEdge = startAngle + (endAngle - startAngle) * sweepP
+        const fade      = 1 - sweepP * 0.35
+
+        // Swept fill behind blade
+        gfx.moveTo(0, 0)
+        gfx.arc(0, 0, range, startAngle, sweepEdge)
+        gfx.lineTo(0, 0)
+        gfx.fill({ color: 0xff3300, alpha: 0.28 * fade })
+
+        // Swept arc outline
+        gfx.moveTo(Math.cos(startAngle) * range, Math.sin(startAngle) * range)
+        gfx.arc(0, 0, range, startAngle, sweepEdge)
+        gfx.stroke({ color: 0xff7744, width: 1.5, alpha: 0.45 * fade })
+
+        // Blade radial line — bright white leading edge
+        gfx.moveTo(0, 0)
+        gfx.lineTo(Math.cos(sweepEdge) * range, Math.sin(sweepEdge) * range)
+        gfx.stroke({ color: 0xffffff, width: 2.5, alpha: 0.90 * fade })
+
+        // Blade tip highlight — short bright arc at leading edge
+        const tipW     = 0.18
+        const tipStart = Math.max(startAngle, sweepEdge - tipW)
+        gfx.moveTo(Math.cos(tipStart) * range, Math.sin(tipStart) * range)
+        gfx.arc(0, 0, range, tipStart, sweepEdge)
+        gfx.stroke({ color: 0xffffff, width: 3, alpha: 0.90 * fade })
+
+      } else {
+        // Fade-out: full cone dissolves
+        const fadeP = (progress - SWEEP_END) / (1 - SWEEP_END)
+        const fade  = 1 - fadeP
+
+        gfx.moveTo(0, 0)
+        gfx.arc(0, 0, range, startAngle, endAngle)
+        gfx.lineTo(0, 0)
+        gfx.fill({ color: 0xff3300, alpha: 0.22 * fade })
+
+        gfx.moveTo(Math.cos(startAngle) * range, Math.sin(startAngle) * range)
+        gfx.arc(0, 0, range, startAngle, endAngle)
+        gfx.stroke({ color: 0xff7744, width: 1.5, alpha: 0.38 * fade })
+      }
+
+      // Hitbox boundary — cyan cone outline matches server inCone geometry exactly
+      gfx.moveTo(0, 0)
+      gfx.arc(0, 0, range, startAngle, endAngle)
+      gfx.lineTo(0, 0)
+      gfx.stroke({ color: 0x00ffff, width: 1.5, alpha: 0.7 })
+    }})
+  }
+
+  /**
+   * Paladin Hammer Swing stamp — golden cone appears at full size instantly,
+   * crack lines radiate along the arc, then fades. Communicates a focused slam.
+   * @param {number} halfAngle  half the cone width in radians (e.g. Math.PI/4 for 90°)
+   */
+  hammerStamp(x, y, facing, halfAngle, range) {
+    const duration = 0.22
+    const gfx = this._getGfx()
+    gfx.position.set(x, y)
+    gfx.alpha = 1; gfx.scale.set(1)
+
+    const startAngle = facing - halfAngle
+    const endAngle   = facing + halfAngle
+
+    this._active.push({ gfx, elapsed: 0, duration, update: (progress) => {
+      gfx.clear()
+      const fade = 1 - progress
+
+      // Cone fill — full size instantly
+      gfx.moveTo(0, 0)
+      gfx.arc(0, 0, range, startAngle, endAngle)
+      gfx.lineTo(0, 0)
+      gfx.fill({ color: 0xffd700, alpha: 0.38 * fade })
+
+      // Arc outer edge — bright gold
+      gfx.moveTo(Math.cos(startAngle) * range, Math.sin(startAngle) * range)
+      gfx.arc(0, 0, range, startAngle, endAngle)
+      gfx.stroke({ color: 0xffe966, width: 2.5, alpha: 0.95 * fade })
+
+      // Radial side edges
+      gfx.moveTo(0, 0)
+      gfx.lineTo(Math.cos(startAngle) * range, Math.sin(startAngle) * range)
+      gfx.moveTo(0, 0)
+      gfx.lineTo(Math.cos(endAngle) * range, Math.sin(endAngle) * range)
+      gfx.stroke({ color: 0xffffff, width: 1.5, alpha: 0.60 * fade })
+
+      // Crack lines radiating along the cone — first 35% only
+      if (progress < 0.35) {
+        const crackFade = 1 - progress / 0.35
+        for (let i = 0; i < 4; i++) {
+          const t = (i + 0.5) / 4
+          const a = startAngle + (endAngle - startAngle) * t
+          gfx.moveTo(Math.cos(a) * range * 0.45, Math.sin(a) * range * 0.45)
+          gfx.lineTo(Math.cos(a) * range * 1.10, Math.sin(a) * range * 1.10)
+        }
+        gfx.stroke({ color: 0xffffff, width: 1.5, alpha: 0.75 * crackFade })
+      }
+
+      // Bright inner highlight at cone tip — slam impact feel, first 25% only
+      if (progress < 0.25) {
+        const fp = 1 - progress / 0.25
+        gfx.moveTo(0, 0)
+        gfx.arc(0, 0, range * 0.3, startAngle, endAngle)
+        gfx.lineTo(0, 0)
+        gfx.fill({ color: 0xffffff, alpha: 0.32 * fp })
+      }
+
+      // Hitbox boundary — cyan cone outline matches server inCone geometry exactly
+      gfx.moveTo(0, 0)
+      gfx.arc(0, 0, range, startAngle, endAngle)
+      gfx.lineTo(0, 0)
+      gfx.stroke({ color: 0x00ffff, width: 1.5, alpha: 0.7 })
     }})
   }
 

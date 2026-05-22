@@ -34,6 +34,8 @@ export default class TrainingDummy {
     this.hp        = 500
     this.maxHp     = 500
     this.radius    = GAME_CONFIG.ENEMY_RADIUS
+    this.radiusX   = this.radius / 2
+    this.radiusY   = this.radius
     this.isDead    = false
     this.isDummy   = true
     this.isPlayer  = false

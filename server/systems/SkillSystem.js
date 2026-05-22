@@ -188,7 +188,7 @@ export default class SkillSystem {
 
     const _inHitbox = (tx, ty, tr = 0) => useRect
       ? this._collision.inOrientedRect({ x: player.x, y: player.y }, v, config.range, halfWidth, { x: tx, y: ty }, tr)
-      : this._collision.inCone({ x: player.x, y: player.y }, v, halfAngle, config.range, { x: tx, y: ty })
+      : this._collision.inCone({ x: player.x, y: player.y }, v, halfAngle, config.range, { x: tx, y: ty }, tr)
 
     let hitCount = 0
     let totalDamageDealt = 0
@@ -439,6 +439,7 @@ export default class SkillSystem {
   }
 
   _executeShield(player, config, vector, action, skillIndex) {
+    const now = Date.now()
     if (action === 'START') {
       const v = normalize(vector ?? { x: 1, y: 0 })
       player.shieldActive          = true
@@ -447,9 +448,27 @@ export default class SkillSystem {
       player.shieldReduction       = config.shieldReduction ?? 0.6
       player.shieldAbsorbThreshold = config.shieldAbsorbThreshold ?? 0
       player.shieldSkillIndex      = skillIndex
+      player.shieldChargeStart     = now
+      player.shieldChargeDuration  = config.chargeDuration ?? 0
+      player.shieldExpiresAt       = null
     } else if (action === 'END') {
-      player.shieldActive     = false
-      player.shieldSkillIndex = -1
+      const chargeDuration = config.chargeDuration ?? 0
+      const fullyCharged = chargeDuration > 0 &&
+        player.shieldChargeStart != null &&
+        (now - player.shieldChargeStart) >= chargeDuration
+
+      if (fullyCharged && config.duration != null) {
+        // Charged release — shield latches, stays active for config.duration ms
+        player.shieldExpiresAt   = now + config.duration
+        player.shieldChargeStart = null
+        // shieldActive stays true; angle/arc/reduction stay locked
+      } else {
+        // Manual release (held past charge) or early release — drop immediately
+        player.shieldActive      = false
+        player.shieldSkillIndex  = -1
+        player.shieldChargeStart = null
+        player.shieldExpiresAt   = null
+      }
     }
   }
 
@@ -886,7 +905,10 @@ export default class SkillSystem {
       const fearDuration = config.fearDuration ?? 2500
       gs.enemies.forEach(e => {
         if (e.isDead) return
-        if (this._collision.distance({ x: cx, y: cy }, { x: e.x, y: e.y }) <= radius + e.radius) {
+        if (this._collision.circleOverlapsEllipse(
+          { x: cx, y: cy }, radius,
+          { x: e.x, y: e.y }, e.radiusX ?? e.radius / 2, e.radiusY ?? e.radius
+        )) {
           e.activeEffects = e.activeEffects ?? []
           e.activeEffects.push({
             source: 'fear',
@@ -926,7 +948,10 @@ export default class SkillSystem {
     // Damage enemies
     gs.enemies.forEach(e => {
       if (e.isDead) return
-      if (this._collision.distance({ x: cx, y: cy }, { x: e.x, y: e.y }) <= radius + e.radius) {
+      if (this._collision.circleOverlapsEllipse(
+        { x: cx, y: cy }, radius,
+        { x: e.x, y: e.y }, e.radiusX ?? e.radius / 2, e.radiusY ?? e.radius
+      )) {
         this._dealDamage(gs, player, e, config.damage ?? 0, config.name)
         // Apply debuff if effectParams present
         if (config.effectParams) {
@@ -946,7 +971,10 @@ export default class SkillSystem {
 
     // Damage boss
     if (gs.boss && !gs.boss.isDead && !gs.boss.isImmune) {
-      if (this._collision.distance({ x: cx, y: cy }, { x: gs.boss.x, y: gs.boss.y }) <= radius + gs.boss.radius) {
+      if (this._collision.circleOverlapsEllipse(
+        { x: cx, y: cy }, radius,
+        { x: gs.boss.x, y: gs.boss.y }, gs.boss.radiusX ?? gs.boss.radius / 2, gs.boss.radiusY ?? gs.boss.radius
+      )) {
         this._dealDamage(gs, player, gs.boss, config.damage ?? 0, config.name)
       }
     }
@@ -1179,9 +1207,9 @@ export default class SkillSystem {
       if (!proj.isEnemyProj) gs.enemies.forEach(e => {
         if (!proj.isAlive || e.isDead) return
         if (proj.hit.has(e.id)) return
-        const projCircle = { x: proj.x, y: proj.y, radius: proj.radius }
-        const enemyCircle = { x: e.x, y: e.y, radius: e.radius }
-        if (this._collision.circlesOverlap(projCircle, enemyCircle)) {
+        const projCircle   = { x: proj.x, y: proj.y, radius: proj.radius }
+        const enemyEllipse = { x: e.x, y: e.y, rx: e.radiusX ?? e.radius, ry: e.radiusY ?? e.radius }
+        if (this._collision.ellipseCircleOverlap(enemyEllipse, projCircle)) {
           // Shield check — shielded enemies block projectiles from the protected arc
           if (e._shieldActive && e._shieldAngle != null) {
             // Use incoming direction (reversed) so it aligns with _shieldAngle (toward player)

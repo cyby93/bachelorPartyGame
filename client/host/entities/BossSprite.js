@@ -40,8 +40,9 @@ export default class BossSprite {
     this._currentDir      = null
     this._lastRenderX     = null
     this._lastRenderY     = null
-    this._walkLinger      = 0    // seconds remaining before falling back to idle
-    this._transitionTimer = 0    // seconds remaining in one-shot phase transition animation
+    this._walkLinger       = 0    // seconds remaining before falling back to idle
+    this._transitionTimer  = 0    // seconds remaining in one-shot phase transition animation
+    this._downedIntroDone  = false
 
     if (this._bossName === 'Shade of Akama') {
       this._buildShadeOfAkama()
@@ -179,6 +180,44 @@ export default class BossSprite {
     if (!animCfg) return
 
     const dir = angleToDir(state.angle ?? Math.PI / 2)
+
+    // Terminal downed state — boss is dead; lock permanently, never transition back
+    if (state.isDead) {
+      if (this._animState !== 'downed') {
+        this._animState      = 'downed'
+        this._animFrame      = 0
+        this._animTimer      = 0
+        this._currentDir     = null
+        this._downedIntroDone = false
+      }
+      // Play intro (all frames) once, then loop only the last 2 frames
+      const downedCfg  = animCfg.downed ?? animCfg.idle
+      const loopStart  = Math.max(0, downedCfg.frames - 2)
+      this._animTimer += dt
+      if (this._animTimer >= 1 / downedCfg.fps) {
+        this._animTimer -= 1 / downedCfg.fps
+        if (!this._downedIntroDone) {
+          if (this._animFrame < downedCfg.frames - 1) {
+            this._animFrame++
+          } else {
+            this._downedIntroDone = true
+            this._animFrame = loopStart
+          }
+        } else {
+          this._animFrame = loopStart + (this._animFrame - loopStart + 1) % 2
+        }
+      }
+      if (dir !== this._currentDir || this._animFrame !== this._lastAnimFrame) {
+        const key = `${this._bossType}_downed_${dir}_${this._animFrame}`
+        const tex = Assets.get(key)
+        if (tex) {
+          this._body.children[0].texture = tex
+        }
+        this._currentDir    = dir
+        this._lastAnimFrame = this._animFrame
+      }
+      return
+    }
 
     // Tick transition timer — locks all other animation during phase freeze window
     if (this._transitionTimer > 0) {

@@ -117,6 +117,9 @@ export function buildFullState(gs) {
     // Level unlock & zone selector
     levelZoneState:     gs.scene === 'trainingGrounds' ? (gs._levelZoneState ?? null) : null,
     unlockedLevelCount: gs.unlockedLevelCount,
+
+    // Level 6 closing cinematic
+    closingCinematic: gs._closingCinematic?.getDTO() ?? null,
   }
 }
 
@@ -218,5 +221,8 @@ export function buildDeltaState(gs) {
     // Level unlock & zone selector
     levelZoneState:     gs.scene === 'trainingGrounds' ? (gs._levelZoneState ?? null) : null,
     unlockedLevelCount: gs.unlockedLevelCount,
+
+    // Level 6 closing cinematic
+    closingCinematic: gs._closingCinematic?.getDTO() ?? null,
   }
 }

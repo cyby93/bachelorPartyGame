@@ -196,7 +196,7 @@ const SkillDatabase = {
       radius:    2500,
       duration:  7000,
       effectType: 'BUFF',
-      effectParams: { speedMultiplier: 1.5, fireRateMultiplier: 1.5 },
+      effectParams: { speedMultiplier: 1.2, fireRateMultiplier: 1.5 },
       iconFile:  'spell_nature_bloodlust',
       dotColor:  0xff2200,
     }

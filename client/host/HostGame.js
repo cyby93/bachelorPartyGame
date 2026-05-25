@@ -60,17 +60,19 @@ export const DIRECTIONAL_BOSSES = new Set(['illidan', 'illidan_demon'])
 
 export const DIRECTIONAL_BOSS_ANIMATIONS = {
   // transition: one-shot played during phase freeze window. Add once sprites are generated.
-  illidan:       { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, flying: { frames: 4, fps: 7 } },
+  illidan:       { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, flying: { frames: 4, fps: 7 }, downed: { frames: 7, fps: 10 } },
   illidan_demon: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
   // Shade of Akama reuses NPC akama sprites — already loaded by DIRECTIONAL_NPC_ANIMATIONS
   akama:         { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
 }
 
 /** NPC types with 8-directional animated sprites. Asset keys: {type}_{dir} / {type}_{anim}_{dir}_{frame} */
-export const DIRECTIONAL_NPCS = new Set(['akama'])
+export const DIRECTIONAL_NPCS = new Set(['akama', 'bride'])
 
 export const DIRECTIONAL_NPC_ANIMATIONS = {
   akama: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 } },
+  // bride: dance is south-only; loader must handle missing dirs gracefully (Assets.load silently skips 404s)
+  bride: { idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, dance: { frames: 9, fps: 10, southOnly: true } },
 }
 
 /**
@@ -93,6 +95,7 @@ export const DIRECTIONAL_ANIMATIONS = {
     walk:   { frames: 6, fps: 10 },
     cast:   { frames: 6, fps: 8  },
     downed: { frames: 9, fps: 10 },
+    dance:  { frames: 9, fps: 10, southOnly: true },
     skills: {
       ability: { frames: 4, fps: 12 },  // generic fallback (existing priest strip)
       // Add skill-specific entries as sprites become available, e.g.:
@@ -102,6 +105,7 @@ export const DIRECTIONAL_ANIMATIONS = {
   },
   warrior: {
     idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 },
+    dance: { frames: 9, fps: 10, southOnly: true },
     skills: {
       // cleave:       { frames: 5, fps: 14 },
       // thunderstomp: { frames: 6, fps: 12 },
@@ -109,20 +113,24 @@ export const DIRECTIONAL_ANIMATIONS = {
   },
   paladin: {
     idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 },
+    dance: { frames: 9, fps: 10, southOnly: true },
     skills: {},
   },
   hunter: {
     idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 },
+    dance: { frames: 9, fps: 10, southOnly: true },
     skills: {
       // shootBow: { frames: 4, fps: 14 },
     },
   },
   druid: {
     idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 },
+    dance: { frames: 9, fps: 10, southOnly: true },
     skills: {},
   },
   mage: {
     idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 },
+    dance: { frames: 9, fps: 10, southOnly: true },
     skills: {
       // frostNova: { frames: 4, fps: 12 },
       // fireball:  { frames: 4, fps: 12 },
@@ -130,20 +138,24 @@ export const DIRECTIONAL_ANIMATIONS = {
   },
   warlock: {
     idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 },
+    dance: { frames: 9, fps: 10, southOnly: true },
     skills: {},
   },
   deathknight: {
     idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 },
+    dance: { frames: 9, fps: 10, southOnly: true },
     skills: {},
   },
   shaman: {
     idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 },
+    dance: { frames: 9, fps: 10, southOnly: true },
     skills: {
       // totem: { frames: 5, fps: 10 },
     },
   },
   rogue: {
     idle: { frames: 4, fps: 7 }, walk: { frames: 6, fps: 10 }, downed: { frames: 9, fps: 10 },
+    dance: { frames: 9, fps: 10, southOnly: true },
     skills: {},
   },
 }
@@ -316,6 +328,7 @@ export default class HostGame {
     if ('buildings' in delta)      this.knownState.buildings   = delta.buildings ?? []
     if ('npcs'      in delta)      this.knownState.npcs        = delta.npcs      ?? []
     if ('pylons'    in delta)      this.knownState.pylons      = delta.pylons    ?? []
+    if ('closingCinematic' in delta) this.knownState.closingCinematic = delta.closingCinematic ?? null
   }
 
   addPlayer(dto) {
@@ -435,6 +448,9 @@ export default class HostGame {
       'dummy_tank',
       'warglaives_of_azzinoth',
       'bladestorm_sword',
+      'pickup_key',
+      'pickup_ring',
+      'cell_structure',
     ]
     const manifest = SPRITE_KEYS.map(k => ({ alias: k, src: `/assets/sprites/${k}.png` }))
 
@@ -456,7 +472,8 @@ export default class HostGame {
     for (const [cls, anims] of Object.entries(DIRECTIONAL_ANIMATIONS)) {
       for (const [animName, cfg] of Object.entries(anims)) {
         if (animName === 'skills') continue   // handled separately below
-        for (const dir of DIRECTIONS) {
+        const dirs = cfg.southOnly ? ['south'] : DIRECTIONS
+        for (const dir of dirs) {
           for (let i = 0; i < cfg.frames; i++) {
             manifest.push({
               alias: `player_${cls}_${animName}_${dir}_${i}`,
@@ -532,7 +549,8 @@ export default class HostGame {
     }
     for (const [type, anims] of Object.entries(DIRECTIONAL_NPC_ANIMATIONS)) {
       for (const [animName, cfg] of Object.entries(anims)) {
-        for (const dir of DIRECTIONS) {
+        const dirs = cfg.southOnly ? ['south'] : DIRECTIONS
+        for (const dir of dirs) {
           for (let i = 0; i < cfg.frames; i++) {
             manifest.push({ alias: `${type}_${animName}_${dir}_${i}`, src: `/assets/sprites/${type}/${animName}/${dir}/${i}.png` })
           }

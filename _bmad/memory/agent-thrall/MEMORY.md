@@ -2,6 +2,23 @@
 
 _Curated long-term knowledge. Every token here loads every session — keep it tight._
 
+## Closing Cinematic Assets (2026-05-24)
+
+Flat sprites in `SPRITE_KEYS`: `pickup_key` (48×48), `pickup_ring` (48×48), `cell_structure` (64×64).
+
+Bride NPC: `DIRECTIONAL_NPCS` + `DIRECTIONAL_NPC_ANIMATIONS.bride` — idle (8dir×4f), walk (8dir×6f), dance (south-only×9f). Files at `public/assets/sprites/bride/{dir}.png` + `bride/{anim}/{dir}/{frame}.png`.
+
+**southOnly flag:** Any animation config with `southOnly: true` causes the manifest loader to emit only south-dir aliases. Both player and NPC loaders handle it. Dance state in PlayerSprite also reads this flag to lock `effectiveDir = 'south'`.
+
+**Dance state machine (PlayerSprite.js):**
+- `setDancing(bool)` is the public API — guards on `this._animCfg?.dance` so classes without the animation are safe.
+- Priority: `downed > dance > cast > ability > walk > idle`.
+- BattleRenderer calls `sprite.setDancing(isDancing)` in `_onPlayerSync`.
+
+**priest** has dance animation (south-only, 9f): `public/assets/sprites/priest/dance/south/{0-8}.png`. PixelLab ID: `30cf18b2-26d0-4d73-a6e1-123603cc23da` (character `59c665b2-8bf0-4937-873e-eadea392643d`).
+
+**Open:** `ring_moment` bride animation not generated. Cinematic bride still placeholder circle — wiring into `_renderClosingCinematic` is a separate task. Other classes have no dance frames yet.
+
 ## Portal Gate Sprites — Level Selector (2026-05-21)
 
 Training Grounds level selector redesigned as stone portal archways.

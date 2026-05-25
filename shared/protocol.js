@@ -71,10 +71,22 @@ export const EVENTS = {
   LEVIATHAN_DEATH: 'leviathan:death', // S→All: { entityId, x, y, generation } — fires at death, before despawn
   LEVIATHAN_SPAWN: 'leviathan:spawn', // S→All: { entityId, x, y, generation } — fires when child becomes active
 
+  // ── Level 6: Illidan closing cinematic ──────────────────────────────────────
+  ILLIDAN_CLOSING_CINEMATIC_START: 'illidan:closingCinematicStart', // S→All: { bossX, bossY, gatherRadius }
+  CLOSING_ITEMS_SPAWNED: 'closing:itemsSpawned',    // S→All: { items: [{ id, type, x, y }] }
+  CLOSING_ITEM_PICKUP:   'closing:itemPickup',      // S→All: { itemId, playerId, itemType }
+  CLOSING_CELL_SPAWN:    'closing:cellSpawn',       // S→All: { x, y, width, height }
+  CLOSING_CELL_OPEN:     'closing:cellOpen',        // S→All: { keyHolderId }
+  CLOSING_BRIDE_WALK_OUT: 'closing:brideWalkOut',   // S→All: { startX, startY, targetX, targetY, durationMs }
+  CLOSING_RING_MOMENT:   'closing:ringMoment',      // S→All: { ringHolderId, brideX, brideY }
+  CLOSING_DANCE_START:   'closing:danceStart',      // S→All: { playerIds: [...] } — ring holder + bride first
+  CLOSING_ALL_DANCE:     'closing:allDance',        // S→All: { playerIds: [...] } — all players now dancing
+
   // ── Level transitions ────────────────────────────────────────────────────
   LEVEL_VICTORY:   'level:victory',   // S→All: fired when win condition met, before scene change — client plays closing VFX
   TRANSITION_VFX:  'transition:vfx',  // S→All: { event: string } — named VFX trigger during transitions
 
+  DEBUG_KILL_ILLIDAN:  'host:debugKillIllidan', // host→S: {} — skip to closing cinematic immediately
   DEBUG_ACTION_RESULT: 'debug:action_result', // S→Host: { message, isError? }
 
   // ── Connection lifecycle ─────────────────────────────────────────────────────

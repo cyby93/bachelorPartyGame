@@ -830,12 +830,26 @@ export default class SkillSystem {
       // Buff all living players in radius
       const haste = config.effectParams?.fireRateMultiplier ?? 1
       const buffDuration = config.effectParams?.duration ?? config.duration ?? 3000
+      const skillName = config.name ?? 'aoe_buff'
       gs.players.forEach(p => {
         if (p.isDowned || p.isHost) return
         if (this._collision.distance({ x: cx, y: cy }, { x: p.x, y: p.y }) <= radius) {
           if (config.effectParams) {
+            // Prevent stacking: if this exact buff is already active, only refresh the expiry
+            const existing = p.activeEffects.find(e => e.source === 'aoe_buff' && e.skillName === skillName)
+            if (existing) {
+              existing.expiresAt = Date.now() + buffDuration
+              if (haste > 1 && gs.minions) {
+                const hasteExpiry = Date.now() + buffDuration
+                gs.minions.forEach(m => {
+                  if (m.ownerId === p.id) m._hasteExpiresAt = hasteExpiry
+                })
+              }
+              return
+            }
             p.activeEffects.push({
               source: 'aoe_buff',
+              skillName,
               params: config.effectParams,
               expiresAt: Date.now() + buffDuration,
             })

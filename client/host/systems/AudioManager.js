@@ -408,6 +408,7 @@ export default class AudioManager {
     audio.preload = 'auto'
     audio.volume = clamp01(this._settings.music) * clamp01(this._settings.master) * this._musicDuck
     audio.muted = !!this._settings.muted
+    if (definition.startTime) audio.currentTime = definition.startTime
     audio.play().catch(() => {})
     this._musicEl = audio
   }

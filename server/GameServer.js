@@ -21,6 +21,7 @@ import CinematicMovementSystem from './systems/CinematicMovementSystem.js'
 import CooldownSystem from './systems/CooldownSystem.js'
 import DialogSystem from './systems/DialogSystem.js'
 import IllidanEncounter from './systems/IllidanEncounter.js'
+import ClosingCinematicSystem from './systems/ClosingCinematicSystem.js'
 import PortalBeamSystem from './systems/PortalBeamSystem.js'
 import SkillSystem from './systems/SkillSystem.js'
 import SpawnSystem from './systems/SpawnSystem.js'
@@ -114,6 +115,7 @@ export default class GameServer {
 
     this.minionSpawnSystem  = null   // ambient minions (activated after dialog)
     this._illidanEncounter  = null   // IllidanEncounter instance for Level 6
+    this._closingCinematic  = null   // ClosingCinematicSystem — active after Illidan dies
     this._dialogSystem      = null
     this._cinematicSystem   = null   // walk-in / walk-out cinematic movement
 
@@ -243,6 +245,7 @@ export default class GameServer {
     socket.on(EVENTS.DEBUG_SET_UNLOCKED_LEVELS, data => this._onDebugSetUnlockedLevels(socket, data))
     socket.on(EVENTS.DEBUG_SPAWN_ENEMY,       data => this._onDebugSpawnEnemy(socket, data))
     socket.on(EVENTS.DEBUG_CLEAR_ENEMIES,  ()   => this._onDebugClearEnemies(socket))
+    socket.on(EVENTS.DEBUG_KILL_ILLIDAN,   ()   => this._onDebugKillIllidan(socket))
     socket.on(EVENTS.QUIZ_ANSWER,  data => this._onQuizAnswer(socket, data))
     socket.on(EVENTS.QUIZ_UPGRADE, data => this._onQuizUpgrade(socket, data))
     socket.on('disconnect',         ()   => this._onDisconnect(socket))
@@ -515,6 +518,26 @@ export default class GameServer {
     this._emitDebugResult(removed > 0 ? `Removed ${removed} enemies` : 'No enemies to remove')
   }
 
+  _onDebugKillIllidan(socket) {
+    if (!this.players.get(socket.id)?.isHost) return
+    if (this.currentLevel?.id !== 'level_6' || this.scene !== 'bossFight') {
+      this._emitDebugResult('Not on the Illidan level', true)
+      return
+    }
+    if (this._levelCompletePending) {
+      this._emitDebugResult('Closing cinematic already started')
+      return
+    }
+    if (!this.boss) {
+      this._emitDebugResult('No boss found', true)
+      return
+    }
+    this.boss.hp     = 0
+    this.boss.isDead = true
+    this._onLevelComplete()
+    this._emitDebugResult('Illidan killed — closing cinematic starting')
+  }
+
   _tickBotAI() {
     this._botController.update()
   }
@@ -705,7 +728,7 @@ export default class GameServer {
       this._preLevelTargetIndex = startIdx
       this._startPreLevelQuiz()
     } else {
-      this._startLevel(0)
+      this._startLevel(startIdx)
     }
   }
 
@@ -1043,6 +1066,7 @@ export default class GameServer {
     // Encounter systems
     this.minionSpawnSystem = null
     this._illidanEncounter = null
+    if (this._closingCinematic) { this._closingCinematic.destroy(); this._closingCinematic = null }
     if (this._dialogSystem)   { this._dialogSystem.destroy();   this._dialogSystem   = null }
     if (this._cinematicSystem){ this._cinematicSystem.destroy(); this._cinematicSystem = null }
 
@@ -1534,9 +1558,14 @@ export default class GameServer {
       // Update enemies (AI + contact damage + split-on-death)
       this._updateEnemies(dt, now)
 
-      // Update boss
-      if (this.boss) {
+      // Update boss (skipped while closing cinematic is running)
+      if (this.boss && !this._closingCinematic) {
         this._updateBoss(dt, now)
+      }
+
+      // Tick closing cinematic (replaces boss + objective updates for Level 6 end-sequence)
+      if (this._closingCinematic) {
+        this._closingCinematic.tick(dt, now)
       }
 
       // Update NPCs (Akama attacks boss)
@@ -1565,8 +1594,10 @@ export default class GameServer {
       }
 
       this._checkRevive(now)
-      this._updateObjectives(now)
-      this._checkAllDead()
+      if (!this._closingCinematic) {
+        this._updateObjectives(now)
+        this._checkAllDead()
+      }
     }
 
     // 4. Broadcast delta state
@@ -2513,6 +2544,12 @@ export default class GameServer {
     if (this._levelCompletePending) return
     this._levelCompletePending = true
 
+    // Level 6 (Illidan): hand off to the closing cinematic instead of the normal flow
+    if (this.currentLevel?.id === 'level_6') {
+      this._startClosingCinematic()
+      return
+    }
+
     // Walk-out cinematic: clear enemies and walk players off-screen right before victory fires
     const walkOutMs = this.currentLevel?.transition?.closing?.walkOutMs ?? 0
     if (walkOutMs > 0 && !this.skipDialog && !this.currentLevel?.debugSandbox) {
@@ -2531,6 +2568,28 @@ export default class GameServer {
     }
 
     await this._doLevelComplete()
+  }
+
+  _startClosingCinematic() {
+    this.enemies.clear()
+    this.projectiles.clear()
+
+    for (const p of this.players.values()) {
+      p.activeEffects = p.activeEffects.filter(e => !e.source?.startsWith('illidan:'))
+    }
+
+    this._closingCinematic = new ClosingCinematicSystem({
+      io:          this.io,
+      players:     this.players,
+      boss:        this.boss,
+      arenaWidth:  this.arenaWidth,
+      arenaHeight: this.arenaHeight,
+      config:      ILLIDAN_CONFIG.closingCinematic,
+      onComplete:  () => {
+        this._closingCinematic = null
+        this._doLevelComplete()
+      },
+    })
   }
 
   async _doLevelComplete() {

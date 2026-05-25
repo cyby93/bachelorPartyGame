@@ -58,6 +58,10 @@
   function handleForceEnterRaid() {
     socket.emit(EVENTS.HOST_ENTER_RAID)
   }
+
+  function handleKillIllidan() {
+    socket.emit(EVENTS.DEBUG_KILL_ILLIDAN)
+  }
 </script>
 
 <button class="debug-toggle util-btn" onclick={() => debugOpen = !debugOpen}>
@@ -119,6 +123,9 @@
       <span class="slider-label">{unlockedLevels}</span>
     </div>
     <button class="util-btn force-raid-btn" onclick={handleForceEnterRaid}>⚡ Force Enter Raid</button>
+    {#if $gameState.serverScene === 'bossFight'}
+      <button class="util-btn kill-illidan-btn" onclick={handleKillIllidan}>💀 Kill Illidan (skip fight)</button>
+    {/if}
   </div>
 {/if}
 
@@ -235,4 +242,12 @@
     border-color: rgba(180, 130, 30, 0.50);
   }
   .force-raid-btn:hover { color: #ffe080; border-color: var(--rn-gold); }
+
+  .kill-illidan-btn {
+    width: 100%;
+    color: #e05050;
+    border-color: rgba(200, 60, 60, 0.40);
+    margin-top: 4px;
+  }
+  .kill-illidan-btn:hover { color: #ff8080; border-color: rgba(200, 60, 60, 0.70); }
 </style>

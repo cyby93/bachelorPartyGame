@@ -303,6 +303,45 @@ socket.on(EVENTS.ILLIDAN_AURA_PULSE, data => {
   game.activeRenderer?.onIllidanAuraPulse?.(data)
 })
 
+// ── Level 6: Illidan closing cinematic ────────────────────────
+
+socket.on(EVENTS.ILLIDAN_CLOSING_CINEMATIC_START, data => {
+  game.activeRenderer?.onClosingCinematicStart?.(data)
+})
+
+socket.on(EVENTS.CLOSING_ITEMS_SPAWNED, data => {
+  game.activeRenderer?.onClosingItemsSpawned?.(data)
+})
+
+socket.on(EVENTS.CLOSING_ITEM_PICKUP, data => {
+  game.activeRenderer?.onClosingItemPickup?.(data)
+})
+
+socket.on(EVENTS.CLOSING_CELL_SPAWN, data => {
+  game.activeRenderer?.onClosingCellSpawn?.(data)
+})
+
+socket.on(EVENTS.CLOSING_CELL_OPEN, data => {
+  game.activeRenderer?.onClosingCellOpen?.(data)
+})
+
+socket.on(EVENTS.CLOSING_BRIDE_WALK_OUT, data => {
+  game.activeRenderer?.onClosingBrideWalkOut?.(data)
+})
+
+socket.on(EVENTS.CLOSING_RING_MOMENT, data => {
+  game.activeRenderer?.onClosingRingMoment?.(data)
+  audio._playMusic({ key: 'closing_ring_moment', src: '/assets/audio/music/closing_ring_moment.mp3', loop: false, startTime: 5 })
+})
+
+socket.on(EVENTS.CLOSING_DANCE_START, data => {
+  game.activeRenderer?.onClosingDanceStart?.(data)
+})
+
+socket.on(EVENTS.CLOSING_ALL_DANCE, data => {
+  game.activeRenderer?.onClosingAllDance?.(data)
+})
+
 // ── Level 4: Leviathan split events ───────────────────────────
 
 socket.on(EVENTS.LEVIATHAN_DEATH, data => {

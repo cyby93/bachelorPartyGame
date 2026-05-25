@@ -5,6 +5,7 @@
  */
 
 import { Graphics } from 'pixi.js'
+import { GAME_CONFIG } from '../../../shared/GameConfig.js'
 
 function parseColor(hex) {
   if (typeof hex === 'string') return parseInt(hex.replace('#', ''), 16)
@@ -556,9 +557,11 @@ export default class OneShotEffectSystem {
         gfx.circle(0, 0, r)
         gfx.stroke({ color: 0xffffff, width: strokeW + 2, alpha: 0.85 * fade })
 
-        // Hitbox boundary — cyan circle at full radius, constant so it's always readable
-        gfx.circle(0, 0, radius)
-        gfx.stroke({ color: 0x00ffff, width: 1.5, alpha: 0.7 })
+        if (GAME_CONFIG.DEBUG_HITBOXES) {
+          // Hitbox boundary — cyan circle at full radius, constant so it's always readable
+          gfx.circle(0, 0, radius)
+          gfx.stroke({ color: 0x00ffff, width: 1.5, alpha: 0.7 })
+        }
       }
     })
   }
@@ -713,9 +716,11 @@ export default class OneShotEffectSystem {
       gfx.circle(0, 0, radius)
       gfx.stroke({ color: 0xffee00, width: 3, alpha: 0.95 * fade })
 
-      // Hitbox boundary — cyan circle matches server distance check exactly
-      gfx.circle(0, 0, radius)
-      gfx.stroke({ color: 0x00ffff, width: 1.5, alpha: 0.7 })
+      if (GAME_CONFIG.DEBUG_HITBOXES) {
+        // Hitbox boundary — cyan circle matches server distance check exactly
+        gfx.circle(0, 0, radius)
+        gfx.stroke({ color: 0x00ffff, width: 1.5, alpha: 0.7 })
+      }
     }})
   }
 
@@ -865,11 +870,13 @@ export default class OneShotEffectSystem {
         gfx.stroke({ color: 0xff7744, width: 1.5, alpha: 0.38 * fade })
       }
 
-      // Hitbox boundary — cyan cone outline matches server inCone geometry exactly
-      gfx.moveTo(0, 0)
-      gfx.arc(0, 0, range, startAngle, endAngle)
-      gfx.lineTo(0, 0)
-      gfx.stroke({ color: 0x00ffff, width: 1.5, alpha: 0.7 })
+      if (GAME_CONFIG.DEBUG_HITBOXES) {
+        // Hitbox boundary — cyan cone outline matches server inCone geometry exactly
+        gfx.moveTo(0, 0)
+        gfx.arc(0, 0, range, startAngle, endAngle)
+        gfx.lineTo(0, 0)
+        gfx.stroke({ color: 0x00ffff, width: 1.5, alpha: 0.7 })
+      }
     }})
   }
 

@@ -97,6 +97,7 @@ export default class PlayerSprite {
     this._currentAbilitySkill = null    // skillName being played in 'ability' state
     this._castSkill          = null     // skillName of the active cast (from STATE_DELTA.castSkill)
     this._wasDowned     = false    // previous isDowned — detects downed/resurrection transitions
+    this._isDancing     = false    // set by BattleRenderer during closing cinematic dance phase
 
     // ── Name label ───────────────────────────────────────────────────────
     this._nameText = new Text({
@@ -339,6 +340,24 @@ export default class PlayerSprite {
     this._abilityTimer = cfg.frames / cfg.fps
   }
 
+  /**
+   * Called by BattleRenderer when the closing cinematic starts/stops the dance phase.
+   * Dance locks the sprite to south-facing and loops the dance animation strip.
+   */
+  setDancing(dancing) {
+    if (dancing === this._isDancing) return
+    this._isDancing = dancing
+    if (dancing && this._animCfg?.dance) {
+      this._animState = 'dance'
+      this._animFrame = 0
+      this._animTimer = 0
+    } else if (!dancing && this._animState === 'dance') {
+      this._animState = 'idle'
+      this._animFrame = 0
+      this._animTimer = 0
+    }
+  }
+
   // ── Per-frame update ───────────────────────────────────────────────────────
 
   /**
@@ -361,7 +380,7 @@ export default class PlayerSprite {
           this._animFrame = 0
           this._animTimer = 0
         } else if (!isDowned && this._wasDowned) {
-          this._animState = 'idle'
+          this._animState = this._isDancing ? 'dance' : 'idle'
           this._animFrame = 0
           this._animTimer = 0
         }
@@ -375,6 +394,13 @@ export default class PlayerSprite {
         if (isCasting) this._castSkill = state.castSkill ?? null
         if (this._animState === 'downed') {
           // locked — no other state may interrupt a downed animation
+        } else if (this._isDancing && this._animCfg?.dance) {
+          // Dance locks south-facing and loops — only downed may override it
+          if (this._animState !== 'dance') {
+            this._animState = 'dance'
+            this._animFrame = 0
+            this._animTimer = 0
+          }
         } else if (isCasting && this._animCfg?.cast) {
           if (this._animState !== 'cast') {
             this._animState = 'cast'
@@ -416,30 +442,33 @@ export default class PlayerSprite {
         }
 
         // 3. Swap texture when direction or frame changes
-        if (dir !== this._currentDir || this._animFrame !== this._lastAnimFrame) {
+        // South-only animations (e.g. dance) always use 'south' regardless of player angle.
+        const cfg2 = this._animCfg[this._animState]
+        const effectiveDir = cfg2?.southOnly ? 'south' : dir
+        if (effectiveDir !== this._currentDir || this._animFrame !== this._lastAnimFrame) {
           // For 'ability', use the skill name as the animation folder; fall back to 'ability'.
           const animNameForKey = this._animState === 'ability'
             ? (this._currentAbilitySkill ?? 'ability')
             : this._animState
-          const key = `player_${this._className}_${animNameForKey}_${dir}_${this._animFrame}`
+          const key = `player_${this._className}_${animNameForKey}_${effectiveDir}_${this._animFrame}`
           const tex = Assets.get(key)
           if (tex) {
             this._shapeSprite.texture = tex
           } else if (this._animState === 'ability' && animNameForKey !== 'ability') {
             // Skill-specific strip missing — try generic 'ability' fallback before static
-            const genericKey = `player_${this._className}_ability_${dir}_${this._animFrame}`
+            const genericKey = `player_${this._className}_ability_${effectiveDir}_${this._animFrame}`
             const genericTex = Assets.get(genericKey)
             if (genericTex) {
               this._shapeSprite.texture = genericTex
             } else {
-              const staticTex = Assets.get(`player_${this._className}_${dir}`)
+              const staticTex = Assets.get(`player_${this._className}_${effectiveDir}`)
               if (staticTex) this._shapeSprite.texture = staticTex
             }
           } else {
-            const fallback = Assets.get(`player_${this._className}_${dir}`)
+            const fallback = Assets.get(`player_${this._className}_${effectiveDir}`)
             if (fallback) this._shapeSprite.texture = fallback
           }
-          this._currentDir    = dir
+          this._currentDir    = effectiveDir
           this._lastAnimFrame = this._animFrame
         }
 

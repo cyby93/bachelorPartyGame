@@ -262,6 +262,41 @@ export const ILLIDAN_CONFIG = {
   },
 
   /**
+   * Closing cinematic — plays after Illidan dies (Level 6 only).
+   * Owned by ClosingCinematicSystem; GameServer instantiates it instead of
+   * calling _onLevelComplete() directly.
+   */
+  closingCinematic: {
+    ringHolderName: 'Cyby',
+
+    gatherRadius:    300,
+    gatherDurationMs: 8000,
+
+    closingDialog: [
+      { speaker: 'akama',   text: '[PLACEHOLDER]', voiceKey: 'voice_akama_illidan_dies_01',  delayAfter: 4000 },
+      { speaker: 'illidan', text: '[PLACEHOLDER]', voiceKey: 'voice_illidan_dying_01',        delayAfter: 4000 },
+    ],
+
+    itemDropOffsets: {
+      ring: { x: -40, y:  10 },
+      key:  { x:  40, y: -10 },
+    },
+    pickupRadius: 50,
+
+    cellPosition: { x: 1300, y: 450 },
+    cellSize:     { width: 120, height: 160 },
+
+    brideExitPosition:   { x: 1160, y: 450 },
+    brideWalkDurationMs: 3000,
+
+    cellTriggerRadius: 80,
+    ringTriggerRadius: 160,
+    ringMomentDurationMs: 3000,
+    allDanceTriggerDelayMs: 1500,
+    danceCompleteDurationMs: 20000,
+  },
+
+  /**
    * Reactive combat VO — played without subtitle overlay or SFX ducking.
    * Keys follow the pattern voice_illidan_<category>_NN.ogg in /assets/audio/voice/.
    * Tune cooldowns here once you have real assets to judge pacing.

@@ -97,6 +97,24 @@ export default class BattleRenderer extends BaseRenderer {
     this._transitionOverlay = null
     this._transitionAlpha   = 0    // current applied alpha (persists across resize)
     this._fadeState         = null // { dir: 'in'|'out', speed: number, done: bool, onComplete? }
+
+    // Level 6 closing cinematic graphics
+    this._cinematicGfx      = new Graphics()
+    this._cinematicOverlay  = new Graphics()   // guidance arrows + item icons
+    this._entityRoot.addChild(this._cinematicGfx)
+    this._entityRoot.addChild(this._cinematicOverlay)
+    this._cinematicCell     = null   // { x, y, width, height, doorOpen }
+    this._cinematicPickups  = []     // [{ id, type, x, y, isPickedUp }]
+    this._cinematicBride    = null   // { x, y, state, walkStart, walkDuration, startX, startY, targetX, targetY }
+    this._dancingPlayerIds  = new Set()
+    this._cinematicTime     = 0      // elapsed ms for animation drivers
+    this._pickupSpawnTimes  = {}     // itemId → timestamp, for pop-in
+    this._itemHolders       = {}     // playerId → itemType
+    this._pickupSpriteMap   = new Map() // itemId → Sprite
+    this._holderIconSprites = new Map() // playerId → Sprite (item icon above head)
+    this._ringFlyAnim       = null   // { spr, startX, startY, targetX, targetY, startMs, durationMs }
+    this._cellSprite        = null   // Sprite for cell_structure asset
+    this._brideEntry        = null   // { container, body, _animState, _animFrame, _animTimer, _lastAnimFrame }
   }
 
   // ── Transition lifecycle ──────────────────────────────────────────────────
@@ -187,6 +205,30 @@ export default class BattleRenderer extends BaseRenderer {
     this._portalBeamGfx.clear()
     this._mirrorGfx.clear()
     this._portalBeams.clear()
+
+    // Closing cinematic
+    this._cinematicGfx.clear()
+    this._cinematicOverlay.clear()
+    this._cinematicCell    = null
+    this._cinematicPickups = []
+    this._cinematicBride   = null
+    this._dancingPlayerIds.clear()
+    this._cinematicTime    = 0
+    this._pickupSpawnTimes = {}
+    this._itemHolders      = {}
+    this._pickupSpriteMap.forEach(spr => spr.destroy())
+    this._pickupSpriteMap.clear()
+    this._holderIconSprites.forEach(spr => spr.destroy())
+    this._holderIconSprites.clear()
+    if (this._ringFlyAnim) { this._ringFlyAnim.spr.destroy(); this._ringFlyAnim = null }
+    if (this._cellSprite) {
+      this._cellSprite.destroy()
+      this._cellSprite = null
+    }
+    if (this._brideEntry) {
+      this._brideEntry.container.destroy({ children: true })
+      this._brideEntry = null
+    }
   }
 
   _resetUIRefs() {
@@ -213,6 +255,9 @@ export default class BattleRenderer extends BaseRenderer {
       this.vfx.auras.sync(p.id, sprite.container, p.effects, this.game.getPlayerRadius())
     }
 
+    // During closing cinematic dance: activate dance animation (south-locked, looping)
+    const isDancing = this._dancingPlayerIds.has(p.id)
+    if (sprite.setDancing) sprite.setDancing(isDancing)
   }
 
   _onPlayerRemoved(id) {
@@ -298,19 +343,23 @@ export default class BattleRenderer extends BaseRenderer {
     this._pylonTime = (this._pylonTime + dt) % 10
     this._renderPylons(state, dt)
 
-    // Boss
-    if (state.boss && !state.boss.isDead) {
+    // Boss — kept alive during closing cinematic so Illidan holds his death pose
+    const cinematic = state.closingCinematic
+    if (state.boss && (!state.boss.isDead || cinematic)) {
       if (!this.bossSprite) {
         this.bossSprite = new BossSprite(BOSS_CONFIG_BY_NAME[state.boss.name] ?? ILLIDAN_CONFIG)
         this.bossContainer.addChild(this.bossSprite.container)
       }
       this.bossSprite.update(state.boss, dt)
     }
-    if (state.boss?.isDead && this.bossSprite) {
+    if (state.boss?.isDead && !cinematic && this.bossSprite) {
       this.bossContainer.removeChild(this.bossSprite.container)
       this.bossSprite.destroy()
       this.bossSprite = null
     }
+
+    // Closing cinematic (Level 6 end-sequence)
+    this._renderClosingCinematic(dt)
 
     // NPCs (friendly entities like Akama)
     const npcs = state.npcs ?? []
@@ -1095,6 +1144,361 @@ export default class BattleRenderer extends BaseRenderer {
         const a    = Math.sin(frac * Math.PI) * 0.8
         this._warlockBeamGfx.circle(px, py, 2.5)
         this._warlockBeamGfx.fill({ color: 0x6600cc, alpha: a })
+      }
+    }
+  }
+
+  // ── Closing cinematic event handlers ──────────────────────────────────────
+
+  onClosingCinematicStart(_data) {
+    // Boss holds its death pose — no visual change needed here.
+    // Cell / items arrive via subsequent events.
+  }
+
+  onClosingCellSpawn({ x, y, width, height }) {
+    this._cinematicCell = { x, y, width, height, doorOpen: false }
+    const tex = Assets.get('cell_structure')
+    if (tex && !this._cellSprite) {
+      this._cellSprite        = new Sprite(tex)
+      this._cellSprite.anchor.set(0.5)
+      this._cellSprite.width  = width
+      this._cellSprite.height = height
+      this._cellSprite.position.set(x, y)
+      this._entityRoot.addChild(this._cellSprite)
+    }
+  }
+
+  onClosingItemsSpawned({ items }) {
+    this._cinematicPickups = items.map(i => ({ ...i, isPickedUp: false, pickedUpBy: null }))
+    const now = performance.now()
+    for (const item of items) {
+      this._pickupSpawnTimes[item.id] = now
+      this._createPickupSprite(item)
+    }
+  }
+
+  _createPickupSprite(item) {
+    if (this._pickupSpriteMap.has(item.id)) return
+    const key = item.type === 'ring' ? 'pickup_ring' : 'pickup_key'
+    const tex = Assets.get(key)
+    if (!tex) return
+    const spr = new Sprite(tex)
+    spr.anchor.set(0.5)
+    spr.position.set(item.x, item.y)
+    spr.width  = 0
+    spr.height = 0
+    this._entityRoot.addChild(spr)
+    this._pickupSpriteMap.set(item.id, spr)
+  }
+
+  onClosingItemPickup({ itemId, playerId, itemType }) {
+    const pickup = this._cinematicPickups.find(p => p.id === itemId)
+    if (pickup) { pickup.isPickedUp = true; pickup.pickedUpBy = playerId }
+    this._itemHolders[playerId] = itemType
+    const spr = this._pickupSpriteMap.get(itemId)
+    if (spr) spr.visible = false
+    const iconTex = Assets.get(itemType === 'ring' ? 'pickup_ring' : 'pickup_key')
+    if (iconTex && !this._holderIconSprites.has(playerId)) {
+      const icon = new Sprite(iconTex)
+      icon.anchor.set(0.5)
+      icon.width  = 44
+      icon.height = 44
+      this._entityRoot.addChild(icon)
+      this._holderIconSprites.set(playerId, icon)
+    }
+  }
+
+  onClosingCellOpen(_data) {
+    if (this._cinematicCell) this._cinematicCell.doorOpen = true
+    for (const [playerId, itemType] of Object.entries(this._itemHolders)) {
+      if (itemType === 'key') {
+        delete this._itemHolders[playerId]
+        const icon = this._holderIconSprites.get(playerId)
+        if (icon) { icon.destroy(); this._holderIconSprites.delete(playerId) }
+      }
+    }
+  }
+
+  onClosingBrideWalkOut({ startX, startY, targetX, targetY, durationMs }) {
+    this._cinematicBride = {
+      x: startX, y: startY,
+      startX, startY, targetX, targetY,
+      walkStartMs:   performance.now(),
+      walkDurationMs: durationMs,
+      state:         'walking',
+    }
+    this._ensureBrideSprite()
+  }
+
+  _ensureBrideSprite() {
+    if (this._brideEntry) return
+    const tex = Assets.get('bride_south')
+    if (!tex) return
+    const body = new Sprite(tex)
+    body.anchor.set(0.5)
+    body.width  = 124
+    body.height = 124
+    const nameLabel = new Text({
+      text:  'Ági',
+      style: { fontFamily: 'Arial', fontSize: 12, fontWeight: 'bold', fill: '#ffffff', align: 'center' },
+    })
+    nameLabel.anchor.set(0.5, 1)
+    nameLabel.position.set(0, -65)
+    const container = new Container()
+    container.addChild(body)
+    container.addChild(nameLabel)
+    this._entityRoot.addChild(container)
+    this._brideEntry = { container, body, _animState: null, _animFrame: 0, _animTimer: 0, _lastAnimFrame: -1 }
+  }
+
+  onClosingRingMoment({ ringHolderId, brideX, brideY }) {
+    if (this._cinematicBride) {
+      this._cinematicBride.x     = brideX
+      this._cinematicBride.y     = brideY
+      this._cinematicBride.state = 'ceremony'
+    }
+    // Use ringHolderId from the event directly — _itemHolders can be unreliable if the same
+    // player picked up both items (second pickup overwrites the first in the map).
+    const holderSprite = this.playerSprites?.get(ringHolderId)
+    const startX = holderSprite ? holderSprite.container.position.x : brideX - 150
+    const startY = holderSprite ? holderSprite.container.position.y - 56 : brideY
+    const tex = Assets.get('pickup_ring')
+    if (tex) {
+      const spr = new Sprite(tex)
+      spr.anchor.set(0.5)
+      spr.width  = 44
+      spr.height = 44
+      spr.position.set(startX, startY)
+      this._entityRoot.addChild(spr)
+      this._ringFlyAnim = { spr, startX, startY, targetX: brideX, targetY: brideY - 40, startMs: performance.now(), durationMs: 900 }
+    }
+    // Destroy head icon
+    const icon = this._holderIconSprites.get(ringHolderId)
+    if (icon) { icon.destroy(); this._holderIconSprites.delete(ringHolderId) }
+    delete this._itemHolders[ringHolderId]
+  }
+
+  onClosingDanceStart({ playerIds }) {
+    for (const id of playerIds) this._dancingPlayerIds.add(id)
+    if (this._cinematicBride) this._cinematicBride.state = 'dancing'
+  }
+
+  onClosingAllDance({ playerIds }) {
+    for (const id of playerIds) this._dancingPlayerIds.add(id)
+  }
+
+  // ── Closing cinematic renderer (called each frame from _renderFrame) ────────
+
+  _renderClosingCinematic(dt) {
+    this._cinematicTime += dt * 1000
+    const t = this._cinematicTime
+
+    this._cinematicGfx.clear()
+    this._cinematicOverlay.clear()
+
+    const cinematic = this.game.knownState.closingCinematic
+    if (!cinematic) return
+
+    // Sync state from delta (handles reconnects and catches up to server truth)
+    if (cinematic.pickups?.length) {
+      for (const sp of cinematic.pickups) {
+        const local = this._cinematicPickups.find(p => p.id === sp.id)
+        if (local) {
+          local.isPickedUp = sp.isPickedUp
+          local.pickedUpBy = sp.pickedUpBy
+        } else {
+          this._cinematicPickups.push({ ...sp })
+          if (!this._pickupSpawnTimes[sp.id]) this._pickupSpawnTimes[sp.id] = performance.now()
+          this._createPickupSprite(sp)
+        }
+        if (sp.pickedUpBy) this._itemHolders[sp.pickedUpBy] = sp.type
+        if (sp.isPickedUp) {
+          const spr = this._pickupSpriteMap.get(sp.id)
+          if (spr) spr.visible = false
+        }
+      }
+    }
+    if (cinematic.bride && !this._cinematicBride) {
+      this._cinematicBride = { ...cinematic.bride, walkStartMs: performance.now(), walkDurationMs: 1 }
+      this._ensureBrideSprite()
+    }
+    if (cinematic.bride && this._cinematicBride) {
+      this._cinematicBride.state = cinematic.bride.state
+      if (cinematic.bride.state !== 'walking') {
+        this._cinematicBride.x = cinematic.bride.x
+        this._cinematicBride.y = cinematic.bride.y
+      }
+    }
+    for (const id of (cinematic.dancingPlayerIds ?? [])) this._dancingPlayerIds.add(id)
+
+    // ── Cell structure ──────────────────────────────────────────────────────
+    if (this._cinematicCell) {
+      const { x, y, width, height, doorOpen } = this._cinematicCell
+      const cx = x - width / 2
+      const cy = y - height / 2
+
+      // Sprite handles the walls; fallback rect if texture didn't load
+      if (!this._cellSprite) {
+        this._cinematicGfx.rect(cx, cy, width, height)
+        this._cinematicGfx.fill({ color: 0x4a3728, alpha: 0.9 })
+        this._cinematicGfx.rect(cx, cy, width, height)
+        this._cinematicGfx.stroke({ color: 0x8b6f47, width: 3, alpha: 1 })
+      }
+
+      // Door opening (left side of cell)
+      if (!doorOpen) {
+        const doorW = 32
+        const doorH = 80
+        const dx2   = cx
+        const dy2   = cy + (height - doorH) / 2
+        this._cinematicGfx.rect(dx2, dy2, doorW, doorH)
+        this._cinematicGfx.fill({ color: 0x2a1a0e, alpha: 1 })
+        this._cinematicGfx.rect(dx2, dy2, doorW, doorH)
+        this._cinematicGfx.stroke({ color: 0x6b4c2a, width: 2, alpha: 1 })
+      }
+    }
+
+    // ── Pickup sprites ───────────────────────────────────────────────────────
+    for (const pickup of this._cinematicPickups) {
+      if (pickup.isPickedUp) continue
+      const spawnAge  = performance.now() - (this._pickupSpawnTimes[pickup.id] ?? performance.now())
+      const popIn     = Math.min(1, spawnAge / 300)
+      const pulse     = 0.6 + 0.4 * Math.sin((t / 1500) * Math.PI * 2)
+      const glowR     = 36 * popIn
+      const dispSize  = 60
+
+      const spr = this._pickupSpriteMap.get(pickup.id)
+      if (spr) {
+        spr.position.set(pickup.x, pickup.y)
+        spr.width  = dispSize * popIn
+        spr.height = dispSize * popIn
+        spr.alpha  = pulse * 0.95
+        spr.visible = true
+      } else {
+        // Fallback circle if texture not loaded
+        const color = pickup.type === 'ring' ? 0xffd700 : 0xa8d4e6
+        this._cinematicGfx.circle(pickup.x, pickup.y, glowR - 4)
+        this._cinematicGfx.fill({ color, alpha: pulse * 0.9 })
+        this._cinematicGfx.circle(pickup.x, pickup.y, glowR - 4)
+        this._cinematicGfx.stroke({ color: 0xffffff, width: 1.5, alpha: pulse * 0.6 })
+      }
+    }
+
+    // ── Bride NPC ────────────────────────────────────────────────────────────
+    if (this._cinematicBride) {
+      const bride = this._cinematicBride
+      let bx = bride.x
+      let by = bride.y
+
+      if (bride.state === 'walking' && bride.walkDurationMs > 1) {
+        const rawT   = (performance.now() - bride.walkStartMs) / bride.walkDurationMs
+        const clampT = Math.min(1, rawT)
+        const ease   = clampT < 0.5 ? 4 * clampT ** 3 : 1 - (-2 * clampT + 2) ** 3 / 2
+        bx = bride.startX + (bride.targetX - bride.startX) * ease
+        by = bride.startY + (bride.targetY - bride.startY) * ease
+      }
+
+      // Lazy-create sprite on reconnect path
+      this._ensureBrideSprite()
+
+      if (this._brideEntry) {
+        this._brideEntry.container.position.set(bx, by)
+
+        const targetAnim = bride.state === 'walking' ? 'walk'
+          : bride.state === 'dancing' ? 'dance'
+          : 'idle'
+
+        const animCfg = DIRECTIONAL_NPC_ANIMATIONS.bride
+        if (animCfg) {
+          if (targetAnim !== this._brideEntry._animState) {
+            this._brideEntry._animState  = targetAnim
+            this._brideEntry._animFrame  = 0
+            this._brideEntry._animTimer  = 0
+            this._brideEntry._lastAnimFrame = -1
+          }
+          const cfg = animCfg[targetAnim] ?? animCfg.idle
+          this._brideEntry._animTimer += dt
+          if (this._brideEntry._animTimer >= 1 / cfg.fps) {
+            this._brideEntry._animTimer -= 1 / cfg.fps
+            this._brideEntry._animFrame  = (this._brideEntry._animFrame + 1) % cfg.frames
+          }
+          if (this._brideEntry._animFrame !== this._brideEntry._lastAnimFrame) {
+            const key = `bride_${targetAnim}_south_${this._brideEntry._animFrame}`
+            const tex = Assets.get(key)
+            if (tex) this._brideEntry.body.texture = tex
+            this._brideEntry._lastAnimFrame = this._brideEntry._animFrame
+          }
+        }
+      } else {
+        // Fallback circle if textures not loaded
+        this._cinematicGfx.circle(bx, by, 62)
+        this._cinematicGfx.fill({ color: 0xfff5fa, alpha: 0.95 })
+        this._cinematicGfx.circle(bx, by, 62)
+        this._cinematicGfx.stroke({ color: 0xffc8d8, width: 2, alpha: 1 })
+      }
+    }
+
+    // ── Item icons above holders' heads ─────────────────────────────────────
+    for (const [playerId, icon] of this._holderIconSprites) {
+      const holderSprite = this.playerSprites?.get(playerId)
+      if (!holderSprite) continue
+      const pos = holderSprite.container.position
+      icon.position.set(pos.x, pos.y - 56)
+    }
+
+    // ── Ring fly animation ───────────────────────────────────────────────────
+    if (this._ringFlyAnim) {
+      const fly    = this._ringFlyAnim
+      const rawT   = Math.min(1, (performance.now() - fly.startMs) / fly.durationMs)
+      const ease   = 1 - (1 - rawT) ** 3
+      const arcY   = -100 * Math.sin(Math.PI * rawT)
+      fly.spr.position.set(
+        fly.startX + (fly.targetX - fly.startX) * ease,
+        fly.startY + (fly.targetY - fly.startY) * ease + arcY,
+      )
+      const scale      = 1 - 0.35 * ease
+      fly.spr.width    = 44 * scale
+      fly.spr.height   = 44 * scale
+      fly.spr.alpha    = rawT > 0.75 ? (1 - rawT) / 0.25 : 1
+      if (rawT >= 1) { fly.spr.destroy(); this._ringFlyAnim = null }
+    }
+
+    // ── Guidance arrow ───────────────────────────────────────────────────────
+    const { guidanceHolderId, guidanceTarget } = cinematic
+    if (guidanceHolderId && guidanceTarget) {
+      const holderSprite = this.playerSprites?.get(guidanceHolderId)
+      if (holderSprite) {
+        const from = holderSprite.container.position
+        const to   = guidanceTarget
+
+        const dx2     = to.x - from.x
+        const dy2     = to.y - from.y
+        const dist    = Math.hypot(dx2, dy2) || 1
+        const nx      = dx2 / dist
+        const ny      = dy2 / dist
+
+        // Bob along pointing axis
+        const bob   = Math.sin((t / 800) * Math.PI * 2) * 4
+        const alpha = 0.65 + 0.35 * Math.sin(((t - 200) / 800) * Math.PI * 2)
+
+        const ax = from.x + nx * 28 + nx * bob
+        const ay = from.y + ny * 28 + ny * bob
+
+        const perp   = { x: -ny, y: nx }
+        const tipX   = ax + nx * 22
+        const tipY   = ay + ny * 22
+        const left   = { x: ax - perp.x * 10, y: ay - perp.y * 10 }
+        const right  = { x: ax + perp.x * 10, y: ay + perp.y * 10 }
+
+        // Arcane outer glow
+        this._cinematicOverlay.poly([left.x, left.y, right.x, right.y, tipX, tipY])
+        this._cinematicOverlay.fill({ color: 0xb478ff, alpha: alpha * 0.35 })
+
+        // Gold chevron fill
+        this._cinematicOverlay.poly([left.x, left.y, right.x, right.y, tipX, tipY])
+        this._cinematicOverlay.fill({ color: 0xffd700, alpha })
+        this._cinematicOverlay.poly([left.x, left.y, right.x, right.y, tipX, tipY])
+        this._cinematicOverlay.stroke({ color: 0xffffff, width: 1, alpha: alpha * 0.6 })
       }
     }
   }

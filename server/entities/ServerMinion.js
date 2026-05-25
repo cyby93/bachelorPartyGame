@@ -37,7 +37,10 @@ export default class ServerMinion {
     this._hasteExpiresAt = 0
 
     // TRAP arm delay — prevents instant trigger on spawn
-    this._armedAt    = Date.now() + 300
+    this._armedAt     = Date.now() + 300
+    // TRAP zone phase state
+    this._triggered   = false
+    this._triggeredAt = 0
   }
 
   takeDamage(amount) {
@@ -108,36 +111,58 @@ export default class ServerMinion {
 
   _updateTrap(gs, skillSystem) {
     if (Date.now() < this._armedAt) return
-    const triggerRadius = this.config.triggerRadius ?? 40
 
-    const triggered = this._findNearestWithinRadius(gs, triggerRadius)
-    if (!triggered) return
-
-    // Trigger the trap
     const effect = this.config.trapEffect
-    if (effect) {
-      const radius = effect.radius ?? 120
-      skillSystem._executeAOEAtPoint(gs, this._asPlayer(), {
-        radius,
-        damage:      effect.damage     ?? 0,
-        healAmount:  effect.healAmount ?? 0,
-        effectType:  effect.effectType ?? 'DAMAGE',
-        effectParams: effect.effectParams,
-      }, this.x, this.y)
 
-      if (gs.io) {
-        gs.io.emit('skill:fired', {
-          type:      'EXPLOSION',
-          skillName: this.config.name ?? null,
-          x:         Math.round(this.x),
-          y:         Math.round(this.y),
-          radius,
-          color:     '#ff6600',
-        })
+    if (this._triggered) {
+      // Zone phase: keep slowing enemies inside the radius until zone expires
+      const zoneDuration = effect?.zoneDuration ?? 6000
+      if (Date.now() - this._triggeredAt >= zoneDuration) {
+        this.isDead = true
+        return
       }
+      this._applyZoneSlow(gs, effect)
+      return
     }
 
-    this.isDead = true
+    // Armed phase: check for trigger
+    const triggerRadius = this.config.triggerRadius ?? 40
+    if (!this._findNearestWithinRadius(gs, triggerRadius)) return
+
+    this._triggered   = true
+    this._triggeredAt = Date.now()
+
+    if (effect && gs.io) {
+      gs.io.emit('skill:fired', {
+        type:      'EXPLOSION',
+        skillName: this.config.name ?? null,
+        x:         Math.round(this.x),
+        y:         Math.round(this.y),
+        radius:    effect.radius ?? 120,
+        color:     effect.vfxColor ?? '#ff6600',
+      })
+    }
+  }
+
+  _applyZoneSlow(gs, effect) {
+    const radius          = effect?.radius ?? 120
+    const ep              = effect?.effectParams ?? {}
+    const REFRESH_WINDOW  = 800   // ms — slow lingers briefly after leaving the zone
+    const source          = `trap_zone_${this.id}`
+
+    gs.enemies.forEach(e => {
+      if (e.isDead) return
+      if (Math.hypot(e.x - this.x, e.y - this.y) > radius) return
+
+      e.activeEffects = e.activeEffects ?? []
+      const existing = e.activeEffects.find(eff => eff.source === source)
+      if (existing) {
+        existing.expiresAt = Date.now() + REFRESH_WINDOW
+      } else {
+        e.activeEffects.push({ source, params: ep, expiresAt: Date.now() + REFRESH_WINDOW })
+        if (ep.speedMultiplier != null) e.speedMult = (e.speedMult ?? 1) * ep.speedMultiplier
+      }
+    })
   }
 
   // ── PET ────────────────────────────────────────────────────────────────────
@@ -315,7 +340,7 @@ export default class ServerMinion {
   }
 
   toDTO() {
-    return {
+    const dto = {
       id:          this.id,
       ownerId:     this.ownerId,
       minionType:  this.minionType,
@@ -329,5 +354,10 @@ export default class ServerMinion {
       remaining:   Math.max(0, this.expiresAt - Date.now()),
       spriteKey:   this.spriteKey,
     }
+    if (this._triggered) {
+      dto.isTriggered = true
+      dto.zoneRadius  = this.config.trapEffect?.radius ?? 120
+    }
+    return dto
   }
 }

@@ -209,7 +209,7 @@ function buildExplicitSkillAudioMap() {
     'Shoot Bow': createSkillAudio('Hunter', 'sfx_family_arrow', 'sfx_skill_shoot_bow_cast', 'sfx_skill_shoot_bow_impact', 'sfx_skill_shoot_bow_travel', 'sfx_skill_shoot_bow_precast'),
     'Aimed Shot': createSkillAudio('Hunter', 'sfx_family_arrow_heavy', 'sfx_skill_aimed_shot_cast', 'sfx_skill_aimed_shot_impact', 'sfx_skill_aimed_shot_travel', 'sfx_skill_aimed_shot_precast'),
     'Call of the Wild': createSkillAudio('Hunter', 'sfx_family_beast_summon', 'sfx_skill_call_of_the_wild_cast', 'sfx_skill_call_of_the_wild_impact'),
-    'Explosive Trap': createSkillAudio('Hunter', 'sfx_family_trap_explosive', 'sfx_skill_explosive_trap_cast', 'sfx_skill_explosive_trap_impact'),
+    'Freezing Trap': createSkillAudio('Hunter', 'sfx_family_trap_freeze', 'sfx_skill_freezing_trap_cast', 'sfx_skill_freezing_trap_impact'),
 
     Penance: createSkillAudio('Priest', 'sfx_family_holy_burst', 'sfx_skill_penance_cast', 'sfx_skill_penance_impact', 'sfx_skill_penance_travel'),
     'Holy Nova': createSkillAudio('Priest', 'sfx_family_holy_nova', 'sfx_skill_holy_nova_cast', 'sfx_skill_holy_nova_impact'),
@@ -255,7 +255,7 @@ export const SIGNATURE_SKILLS = new Set([
   'Mass Resurrection', // Priest   — rare, dramatic channel
   'Death Grip',        // DK       — iconic pull
   'Fear',              // Warlock  — crowd control
-  'Explosive Trap',    // Hunter   — AoE burst
+  'Freezing Trap',     // Hunter   — AoE slow trap
   'Ambush',            // Rogue    — teleport attack
 ])
 
@@ -317,8 +317,8 @@ export const SKILL_AUDIO_ONE_SHOTS = {
   sfx_skill_aimed_shot_cast: { key: 'sfx_skill_aimed_shot_cast', src: '/assets/sounds/sfx_skill_aimed_shot_cast.ogg' },
   sfx_skill_aimed_shot_impact: { key: 'sfx_skill_aimed_shot_impact', src: '/assets/sounds/sfx_skill_aimed_shot_impact.ogg' },
   sfx_skill_call_of_the_wild_cast: { key: 'sfx_skill_call_of_the_wild_cast', src: '/assets/sounds/sfx_skill_call_of_the_wild_cast.ogg' },
-  sfx_skill_explosive_trap_cast: { key: 'sfx_skill_explosive_trap_cast', src: '/assets/sounds/sfx_skill_explosive_trap_cast.ogg' },
-  sfx_skill_explosive_trap_impact: { key: 'sfx_skill_explosive_trap_impact', src: '/assets/sounds/sfx_skill_explosive_trap_impact.ogg' },
+  sfx_skill_freezing_trap_cast: { key: 'sfx_skill_freezing_trap_cast', src: '/assets/sounds/sfx_skill_freezing_trap_cast.ogg' },
+  sfx_skill_freezing_trap_impact: { key: 'sfx_skill_freezing_trap_impact', src: '/assets/sounds/sfx_skill_freezing_trap_impact.ogg' },
   sfx_skill_penance_cast: { key: 'sfx_skill_penance_cast', src: '/assets/sounds/sfx_skill_penance_cast.ogg' },
   sfx_skill_penance_impact: { key: 'sfx_skill_penance_impact', src: '/assets/sounds/sfx_skill_penance_impact.ogg' },
   sfx_skill_holy_nova_cast: { key: 'sfx_skill_holy_nova_cast', src: '/assets/sounds/sfx_skill_holy_nova_cast.ogg' },

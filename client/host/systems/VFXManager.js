@@ -147,8 +147,13 @@ export default class VFXManager {
     this._typeHandlers.set('CHANNEL',   (d) => os.impactFlash(d.x, d.y, d.color))
     this._typeHandlers.set('TARGETED',  (d) => os.impactFlash(d.x, d.y, d.color))
     this._typeHandlers.set('EXPLOSION', (d) => {
-      os.explosionBurst(d.x, d.y, d.radius || 120)
-      ps.explosionBurst(d.x, d.y, d.radius || 120)
+      if (d.skillName === 'Freezing Trap') {
+        os.freezingTrapBurst(d.x, d.y, d.radius || 120)
+        ps.iceShards(d.x, d.y)
+      } else {
+        os.explosionBurst(d.x, d.y, d.radius || 120)
+        ps.explosionBurst(d.x, d.y, d.radius || 120)
+      }
       os.impactFlash(d.x, d.y, d.color)
     })
     this._typeHandlers.set('SPAWN', (d) => {

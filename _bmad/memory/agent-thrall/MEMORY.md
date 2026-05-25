@@ -80,7 +80,7 @@ Leviathan PixelLab ID: `a7aab6e3-b4d3-4d32-9fc4-b58acf24d572`.
 | Avenger's Shield (Paladin) | `projectile_avengers_shield` | `public/assets/sprites/projectile_avengers_shield.png` | `holy` |
 | Shoot Bow (Hunter) | `projectile_shoot_arrow` | `public/assets/sprites/projectile_shoot_arrow.png` | `none` |
 | Aimed Shot (Hunter) | `projectile_aimed_shot` | `public/assets/sprites/projectile_aimed_shot.png` | `none` |
-| Explosive Trap (Hunter) | `trap_explosive` | `public/assets/sprites/trap_explosive.png` | trap object |
+| Freezing Trap (Hunter) | `trap_freezing` | `public/assets/sprites/trap_freezing.png` | trap object |
 | Fireball (Mage) | `projectile_fireball` | `public/assets/sprites/projectile_fireball.png` | `fire` |
 | Pyroblast (Mage) | `projectile_fireball` | shared with Fireball — larger radius reads as bigger shot | `fire` |
 | Shadow Bolt (Warlock) | `projectile_shadow_bolt` | `public/assets/sprites/projectile_shadow_bolt.png` | `shadow` |

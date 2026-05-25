@@ -1,8 +1,5 @@
 ## Balance
 Need to balance skills
 
-## VFX
-hunter's trap, beasts should be rendered behind the players ()
-
-Hitboxes for:
-Priest holy nova
+## Modifications
+'Play tutorial' button should be on the Gathering hall, not the training grounds. play tutorial button should put everyone into the training grounds BUT with the tutorial sequenced phases

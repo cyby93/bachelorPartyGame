@@ -457,6 +457,45 @@ export default class OneShotEffectSystem {
   }
 
   /**
+   * Freezing trap burst — 0.45s slow-expanding ice ring for Freezing Trap detonations.
+   * Communicates the slow zone area; cold spread feeling rather than violent pop.
+   */
+  freezingTrapBurst(x, y, radius) {
+    const duration = 0.45
+    const gfx = this._getGfx()
+    gfx.position.set(x, y)
+    gfx.alpha = 1; gfx.scale.set(1)
+    this._active.push({ gfx, elapsed: 0, duration, update: (progress) => {
+      gfx.clear()
+      const r = radius * (0.15 + 0.85 * progress)
+      const fade = 1 - progress
+
+      // Inner frost fill — fades quickly, conveys the freeze origin
+      if (progress < 0.5) {
+        const bp = progress / 0.5
+        gfx.circle(0, 0, r * 0.55)
+        gfx.fill({ color: 0xffffff, alpha: 0.55 * (1 - bp) })
+        gfx.circle(0, 0, r * 0.85)
+        gfx.fill({ color: 0x00ccff, alpha: 0.25 * (1 - bp) })
+      }
+
+      // Secondary inner ring — shows exact slow edge faintly
+      if (r > 10) {
+        gfx.circle(0, 0, r - 6)
+        gfx.stroke({ color: 0x88ddff, width: 2, alpha: 0.55 * fade })
+      }
+
+      // Main expanding ice ring — dominant visual
+      gfx.circle(0, 0, r)
+      gfx.stroke({ color: 0x00ccff, width: Math.max(1, 4 * fade), alpha: 0.9 * fade })
+
+      // Outer soft glow halo — reinforces the cold aura feel
+      gfx.circle(0, 0, r + 5)
+      gfx.stroke({ color: 0x88ddff, width: 2, alpha: 0.3 * fade })
+    }})
+  }
+
+  /**
    * Moonfire beam — 0.25s column that shrinks its full width to zero over its lifetime.
    * Both top and bottom edges narrow symmetrically toward the centre line.
    */

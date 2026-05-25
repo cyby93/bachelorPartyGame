@@ -32,7 +32,7 @@ export const ABILITY_LABEL = {
   'Shoot Bow':             'Aim and hold',
   'Aimed Shot':            'Aim and hold',
   'Call of the Wild':      'Tap',
-  'Explosive Trap':        'Tap',
+  'Freezing Trap':         'Tap',
 
   // Priest
   'Penance':               'Aim and release',
@@ -109,8 +109,8 @@ export const ABILITY_DETAIL = {
     'Deals high damage and slows the target by 50% for 4 seconds.',
   'Call of the Wild':
     'Summons a random companion for 20 seconds — bear (melee tank), hawk (invincible ranged), or panther (fast melee).',
-  'Explosive Trap':
-    'Drops a trap that explodes for massive area damage when an enemy steps on it.',
+  'Freezing Trap':
+    'Drops a trap that creates a freezing area slowing all enemies by 50% for 6 seconds when triggered.',
 
   // Priest
   'Penance':

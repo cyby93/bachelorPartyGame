@@ -542,6 +542,13 @@ export default class BaseRenderer {
       }
 
     } else if (m.minionType === 'TRAP') {
+      // Ground zone ring — drawn beneath the trap sprite, shown when triggered
+      const zoneGfx = new Graphics()
+      zoneGfx.visible = false
+      root.addChild(zoneGfx)
+      root._zoneGfx       = zoneGfx
+      root._lastTriggered = false
+
       const tex = m.spriteKey ? Assets.get(m.spriteKey) : null
       if (tex) {
         const img = new Sprite(tex)
@@ -676,6 +683,22 @@ export default class BaseRenderer {
         const fillColor = pct > 0.5 ? 0x44ff44 : pct > 0.25 ? 0xffaa00 : 0xff4444
         root._hpFill.rect(-12, 16, 24 * pct, 4)
         root._hpFill.fill({ color: fillColor, alpha: 0.95 })
+      }
+    }
+
+    if (root._minionType === 'TRAP' && root._zoneGfx) {
+      const nowTriggered = !!m.isTriggered
+      if (nowTriggered !== root._lastTriggered) {
+        root._lastTriggered = nowTriggered
+        root._zoneGfx.visible = nowTriggered
+        if (nowTriggered) {
+          const r = m.zoneRadius ?? 120
+          root._zoneGfx.clear()
+          root._zoneGfx.circle(0, 0, r)
+          root._zoneGfx.fill({ color: 0x00aaff, alpha: 0.12 })
+          root._zoneGfx.circle(0, 0, r)
+          root._zoneGfx.stroke({ color: 0x00ccff, width: 2, alpha: 0.5 })
+        }
       }
     }
   }

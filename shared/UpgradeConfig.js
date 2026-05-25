@@ -119,11 +119,11 @@ export const UPGRADE_CONFIG = {
       { label: 'Call of the Wild +2', deltas: { damageBonus: 1, cooldown: -500 } },
       { label: 'Call of the Wild +3', deltas: { damageBonus: 2, duration: 2000, cooldown: -500 } },
     ],
-    // S3: Explosive Trap (SPAWN/TRAP) — trapEffect.damage 25, trapEffect.radius 120, cooldown 8000ms → base DPS ~3.2
+    // S3: Freezing Trap (SPAWN/TRAP) — persistent slow zone 50% for 6s, radius 120, cooldown 8000ms
     [
-      { label: 'Explosive Trap +1', deltas: { 'trapEffect.damage': 5, cooldown: -1000 } },
-      { label: 'Explosive Trap +2', deltas: { 'trapEffect.damage': 5, 'trapEffect.radius': 15 } },
-      { label: 'Explosive Trap +3', deltas: { 'trapEffect.damage': 10 } },
+      { label: 'Freezing Trap +1', deltas: { cooldown: -1000 } },
+      { label: 'Freezing Trap +2', deltas: { 'trapEffect.radius': 20, 'trapEffect.zoneDuration': 1000 } },
+      { label: 'Freezing Trap +3', deltas: { cooldown: -1000, 'trapEffect.zoneDuration': 1000 } },
     ],
   ],
 

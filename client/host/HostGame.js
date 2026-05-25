@@ -437,7 +437,7 @@ export default class HostGame {
       'projectile_lightning_bolt',
       'projectile_wrath',
       'aura_pw_shield',
-      'trap_explosive',
+      'trap_freezing',
       'searing_totem',
       'minion_bear',
       'minion_hawk',

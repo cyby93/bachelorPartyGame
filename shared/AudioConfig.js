@@ -243,6 +243,22 @@ function buildExplicitSkillAudioMap() {
   }
 }
 
+// Skills that always punch through the global concurrent cast cap (Gate 2).
+// They still respect the per-family throttle (Gate 1) — two of the same sound won't stack.
+// Edit this set to promote or demote skills.
+export const SIGNATURE_SKILLS = new Set([
+  'Bloodlust',         // Shaman   — raid-wide haste; must always be heard
+  'Avenger\'s Shield', // Paladin 
+  'Bladestorm',        // Warrior  — sustained spinning AoE
+  'Pyroblast',         // Mage     — long-cast heavy fireball
+  'Tranquility',       // Druid    — major AoE heal channel
+  'Mass Resurrection', // Priest   — rare, dramatic channel
+  'Death Grip',        // DK       — iconic pull
+  'Fear',              // Warlock  — crowd control
+  'Explosive Trap',    // Hunter   — AoE burst
+  'Ambush',            // Rogue    — teleport attack
+])
+
 function buildSkillAudioMap() {
   const explicit = buildExplicitSkillAudioMap()
   const map = {}
@@ -250,7 +266,7 @@ function buildSkillAudioMap() {
   for (const [className, skills] of Object.entries(SkillDatabase)) {
     for (const skill of skills) {
       const skillKey = toAudioKey(skill.name)
-      map[skill.name] = explicit[skill.name] ?? {
+      const entry = explicit[skill.name] ?? {
         className,
         family: deriveSkillFamily(skill),
         cast: skill.audio?.cast ?? `sfx_skill_${skillKey}_cast`,
@@ -259,6 +275,7 @@ function buildSkillAudioMap() {
         precast: skill.audio?.precast ?? null,
         channel: skill.audio?.channel ?? null,
       }
+      map[skill.name] = { ...entry, tier: SIGNATURE_SKILLS.has(skill.name) ? 'signature' : 'combat' }
     }
   }
 

@@ -14,6 +14,8 @@
 - Controllers stay intentionally sparse.
 - Voice may duck music.
 - Dense damage events are throttled to avoid noise soup.
+- Dense skill cast sounds are throttled via two gates in `handleSkillFired`: per-family throttle (200ms, `_skillFamilyThrottle` Map) and global concurrent cap (4 sounds per 100ms, `_recentSkillFires` rolling array). All three constants live in `_throttle` in the constructor — tunable by ear.
+- Skill tier system overlays both gates: `SIGNATURE_SKILLS` Set in `shared/AudioConfig.js` marks 10 iconic abilities that bypass Gate 2 (concurrent cap) and never consume a slot. `buildSkillAudioMap()` stamps every entry with `tier: 'signature' | 'combat'`. Edit the set to promote/demote skills.
 - Audio keys are logical integration contracts; gameplay code should not hardcode asset file paths ad hoc.
 
 ## Current Runtime Coverage

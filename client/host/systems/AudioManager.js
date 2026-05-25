@@ -55,8 +55,13 @@ export default class AudioManager {
     this._throttle = {
       hit: 90,
       downed: 800,
+      skillCastFamilyMs: 200,
+      skillCastMaxConcurrent: 4,
+      skillCastWindowMs: 100,
     }
     this._lastDownedAt = 0
+    this._skillFamilyThrottle = new Map()
+    this._recentSkillFires = []
     this._channelPlayers = new Map()
     this._loopingSfx = new Map()
     this._sfxCache = new Map()
@@ -123,7 +128,26 @@ export default class AudioManager {
 
   handleSkillFired(data) {
     const audio = getSkillAudio(data?.skillName, data?.type, data?.subtype)
-    this._playNamedSfx(audio.cast, { family: audio.family, variation: data?.playerId })
+    const family = audio.family ?? 'generic'
+    const t = nowMs()
+
+    // Gate 1: per-family throttle — same sound family can't fire twice within the window
+    const lastFamilyFire = this._skillFamilyThrottle.get(family) ?? 0
+    if (t - lastFamilyFire < this._throttle.skillCastFamilyMs) return
+
+    // Gate 2: global concurrent cap — at most N distinct skill cast sounds in the window.
+    // Signature-tier skills bypass this entirely and don't consume a slot.
+    if (audio.tier !== 'signature') {
+      const windowStart = t - this._throttle.skillCastWindowMs
+      while (this._recentSkillFires.length && this._recentSkillFires[0] < windowStart) {
+        this._recentSkillFires.shift()
+      }
+      if (this._recentSkillFires.length >= this._throttle.skillCastMaxConcurrent) return
+      this._recentSkillFires.push(t)
+    }
+
+    this._skillFamilyThrottle.set(family, t)
+    this._playNamedSfx(audio.cast, { family, variation: data?.playerId })
   }
 
   handleSkillInterrupted(data) {

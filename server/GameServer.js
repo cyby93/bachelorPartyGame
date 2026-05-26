@@ -2011,6 +2011,7 @@ export default class GameServer {
     } else if (action.action === 'leaveBlaze') {
       // Flame of Azzinoth drops a persistent fire circle — damages players, not the flame itself
       this.skillSystem.addZone('enemy_' + enemyId, {
+        name:       'Blaze',
         radius:     action.radius,
         duration:   30000,
         damage:     25,

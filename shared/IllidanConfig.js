@@ -69,13 +69,6 @@ const _huntAbilities = [
     coneRange: 200,
     healPerTarget: Math.round(7 * R), // 70 at defaults
   },
-  // {
-  //   name:           'Shear',
-  //   cooldown:       8000,
-  //   type:           'shear',
-  //   maxHpReduction: 0.2,  // reduces effective max HP by 20%
-  //   duration:       3000,
-  // },
   {
     name: "Parasitic Shadowfiend",
     cooldown: 14000,

@@ -942,6 +942,8 @@ export default class SkillSystem {
       return
     }
 
+    if (effectType === 'VISUAL') return
+
     if (effectType === 'PLAYER_DAMAGE') {
       // Boss-owned zone that damages players (not enemies or boss itself)
       gs.players.forEach(p => {
@@ -1845,6 +1847,7 @@ export default class SkillSystem {
       radius: z.radius,
       color: z.color,
       skillName: z.config?.name ?? null,
+      hostile:   z.ownerId === 'boss' || z.ownerId?.startsWith('enemy_'),
       remaining: Math.max(0, z.expiresAt - now),
       duration: z.expiresAt - z.createdAt,
     }))

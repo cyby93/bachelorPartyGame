@@ -159,6 +159,108 @@ export default class ParticleSystem {
     }
   }
 
+  /** Flame Crash ambient — 3 hot fire particles rising fast within the zone. */
+  flameCrashAmbient(cx, cy, radius) {
+    const colors = [0xff4400, 0xff6600, 0xffaa00, 0xffdd00]
+    for (let i = 0; i < 3; i++) {
+      if (this._particles.length >= MAX_PARTICLES) break
+      const a = Math.random() * Math.PI * 2
+      const r = Math.random() * radius * 0.80
+      const x = cx + Math.cos(a) * r
+      const y = cy + Math.sin(a) * r
+      const color = colors[Math.floor(Math.random() * colors.length)]
+      const life  = 0.30 + Math.random() * 0.30
+      let p = this._pool.pop()
+      if (p) {
+        p.x = x; p.y = y
+        p.vx = (Math.random() - 0.5) * 30
+        p.vy = -(50 + Math.random() * 70)
+        p.color = color; p.life = life; p.maxLife = life
+        p.radius = 1.2 + Math.random() * 1.8; p.gravity = -80
+      } else {
+        p = { x, y, vx: (Math.random() - 0.5) * 30, vy: -(50 + Math.random() * 70), color, life, maxLife: life, radius: 1.2 + Math.random() * 1.8, gravity: -80 }
+      }
+      this._particles.push(p)
+    }
+  }
+
+  /** Blaze ambient (Flame of Azzinoth) — 3 intense fire particles erupting upward. */
+  blazeAmbient(cx, cy, radius) {
+    const colors = [0xff2200, 0xff6600, 0xffaa00, 0xffee00, 0xffffff]
+    for (let i = 0; i < 3; i++) {
+      if (this._particles.length >= MAX_PARTICLES) break
+      const a = Math.random() * Math.PI * 2
+      const r = Math.random() * radius * 0.85
+      const x = cx + Math.cos(a) * r
+      const y = cy + Math.sin(a) * r
+      const color = colors[Math.floor(Math.random() * colors.length)]
+      const life  = 0.25 + Math.random() * 0.30
+      let p = this._pool.pop()
+      if (p) {
+        p.x = x; p.y = y
+        p.vx = (Math.random() - 0.5) * 40
+        p.vy = -(60 + Math.random() * 90)
+        p.color = color; p.life = life; p.maxLife = life
+        p.radius = 1.5 + Math.random() * 2.0; p.gravity = -100
+      } else {
+        p = { x, y, vx: (Math.random() - 0.5) * 40, vy: -(60 + Math.random() * 90), color, life, maxLife: life, radius: 1.5 + Math.random() * 2.0, gravity: -100 }
+      }
+      this._particles.push(p)
+    }
+  }
+
+  /** Eye Beams ambient — 2 void sparks drifting chaotically within the zone. */
+  eyeBeamsAmbient(cx, cy, radius) {
+    const colors = [0x9933ff, 0x6600cc, 0xcc88ff, 0x440088]
+    for (let i = 0; i < 2; i++) {
+      if (this._particles.length >= MAX_PARTICLES) break
+      const a = Math.random() * Math.PI * 2
+      const r = Math.random() * radius * 0.85
+      const x = cx + Math.cos(a) * r
+      const y = cy + Math.sin(a) * r
+      const color = colors[Math.floor(Math.random() * colors.length)]
+      const life  = 0.70 + Math.random() * 0.50
+      const dir   = Math.random() * Math.PI * 2
+      const speed = 15 + Math.random() * 25
+      let p = this._pool.pop()
+      if (p) {
+        p.x = x; p.y = y
+        p.vx = Math.cos(dir) * speed
+        p.vy = Math.sin(dir) * speed
+        p.color = color; p.life = life; p.maxLife = life
+        p.radius = 1.0 + Math.random() * 1.5; p.gravity = 0
+      } else {
+        p = { x, y, vx: Math.cos(dir) * speed, vy: Math.sin(dir) * speed, color, life, maxLife: life, radius: 1.0 + Math.random() * 1.5, gravity: 0 }
+      }
+      this._particles.push(p)
+    }
+  }
+
+  /** Freezing Trap ambient — 3 ice crystal motes drifting slowly within the zone. */
+  freezingTrapAmbient(cx, cy, radius) {
+    const colors = [0x88ddff, 0xaaeeff, 0xffffff, 0x44aacc]
+    for (let i = 0; i < 3; i++) {
+      if (this._particles.length >= MAX_PARTICLES) break
+      const a = Math.random() * Math.PI * 2
+      const r = Math.random() * radius * 0.85
+      const x = cx + Math.cos(a) * r
+      const y = cy + Math.sin(a) * r
+      const color = colors[Math.floor(Math.random() * colors.length)]
+      const life  = 0.70 + Math.random() * 0.60
+      let p = this._pool.pop()
+      if (p) {
+        p.x = x; p.y = y
+        p.vx = (Math.random() - 0.5) * 12
+        p.vy = -(8 + Math.random() * 18)
+        p.color = color; p.life = life; p.maxLife = life
+        p.radius = 1.0 + Math.random() * 1.5; p.gravity = 5
+      } else {
+        p = { x, y, vx: (Math.random() - 0.5) * 12, vy: -(8 + Math.random() * 18), color, life, maxLife: life, radius: 1.0 + Math.random() * 1.5, gravity: 5 }
+      }
+      this._particles.push(p)
+    }
+  }
+
   /** Holy Nova radial burst — 20 sparkles fire outward to AOE boundary. */
   holyNovaBurst(x, y, radius) {
     const count  = 20

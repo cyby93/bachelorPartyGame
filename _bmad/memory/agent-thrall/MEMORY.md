@@ -191,6 +191,30 @@ Three beam arrays, all drawn in `_renderBeams()`:
 - Start conservative on alpha and scale, tune upward. Never go the other direction first.
 - Particle origin matters — tail-only spawn with perpendicular scatter feels natural. All-directions scatter felt wrong.
 
+## AOE Ground Zone Visual System (2026-05-26)
+
+`GroundEffectSystem.js` uses `ZONE_THEMES` keyed by skillName. Each zone gets 4 PIXI objects (z-order bottom→top): `glowGfx` (blurred bright core, optional) → `gfx` (multi-layer concentric fills, static) → `flickerGfx` (animated, cleared each frame) → `borderGfx` (pulsing ring).
+
+**Themes and flicker styles:**
+| skillName | layers | flicker | glow |
+|---|---|---|---|
+| Flame Crash | 4 layers (char→red→orange→yellow) | fire — 5 random pulsing blobs | BlurFilter(8), glowColor 0xffcc00 |
+| Eye Beams | 3 layers (void black→deep purple→violet) | void — rings collapsing inward | none |
+| Consecration | 3 layers (dark→gold→pale gold) | holy — 8 rotating rays | BlurFilter(6), glowColor 0xffffcc |
+| Death and Decay | 3 layers (dark green→mid green→bright green) | plague — 6 lissajous bubbles | none |
+| Freezing Trap | 3 layers (dark ice→blue→cyan) | ice — 2 counter-rotating hexagons | BlurFilter(5), glowColor 0xaaeeff |
+| (unknown) | single fill from server color | none | none |
+
+**BlurFilter** is in `pixi.js` (v8.5.0). Import: `import { BlurFilter } from 'pixi.js'`. Filters are explicitly destroyed on zone removal.
+
+**Freezing Trap zone**: `ServerMinion._updateTrap()` calls `skillSystem.addZone()` with `effectType: 'VISUAL'` on trigger. `SkillSystem._executeAOEAtPoint()` has an early return for `'VISUAL'` to prevent spurious damage ticks.
+
+**New ParticleSystem methods:** `flameCrashAmbient`, `eyeBeamsAmbient`, `freezingTrapAmbient`. All called from `GroundEffectSystem._emitParticles()` via theme particle key. Existing `consecrationAmbient`/`deathDecayAmbient` remain unchanged.
+
+**Alpha starting values:** conservative (0.18–0.40 per layer). Expect tuning after first visual review.
+
+**CRITICAL — `name` required in addZone config:** `getZonesDTO()` reads `z.config?.name ?? null` for skillName. If `name` is omitted, skillName is null on the client and no theme is applied — silent plain-circle fallback. Always include `name: 'Skill Name'` when calling `skillSystem.addZone()`. IllidanEncounter.js was missing this for both Flame Crash and Eye Beams — fixed 2026-05-26.
+
 ## AOE / Skill-Specific VFX
 
 Branch on `data.skillName` in `VFXManager.triggerSkillVFX`. All AOE_SELF skills, plus CAST and CHANNEL cases.

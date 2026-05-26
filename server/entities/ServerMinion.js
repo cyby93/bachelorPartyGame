@@ -142,6 +142,16 @@ export default class ServerMinion {
         color:     effect.vfxColor ?? '#ff6600',
       })
     }
+
+    // Persistent visual zone for the slow field duration
+    if (effect) {
+      skillSystem.addZone(this.ownerId, {
+        name:       this.config.name ?? 'Freezing Trap',
+        radius:     effect.radius ?? 120,
+        duration:   effect.zoneDuration ?? 6000,
+        effectType: 'VISUAL',
+      }, this.x, this.y, effect.vfxColor ?? '#00ccff')
+    }
   }
 
   _applyZoneSlow(gs, effect) {

@@ -333,6 +333,7 @@ export default class IllidanEncounter {
         })
         const gf = attack.groundFire
         this.skillSystem.addZone('boss', {
+          name: 'Flame Crash',
           radius: gf.radius, duration: gf.duration,
           damage: gf.tickDamage, tickRate: gf.tickRate,
           effectType: 'PLAYER_DAMAGE',
@@ -642,6 +643,7 @@ export default class IllidanEncounter {
         beam.lastFireZonePct = progress
         const gf = beam.groundFire
         this.skillSystem.addZone('boss', {
+          name: 'Eye Beams',
           radius: gf.radius, duration: gf.duration,
           damage: gf.tickDamage, tickRate: gf.tickRate,
           effectType: 'PLAYER_DAMAGE',

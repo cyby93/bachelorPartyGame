@@ -1,4 +1,6 @@
 <script>
+  import { ABILITY_DETAIL } from '../../../shared/AbilityBriefing.js'
+
   let { skills = [], onupgrade } = $props()
   let chosen = $state(false)
 
@@ -86,6 +88,12 @@
               <span class="tier">{skill.currentTier}/{skill.maxTier}</span>
             </div>
             {#if canUpgrade}
+              {#if skill.preview.label}
+                <span class="upgrade-label">{skill.preview.label}</span>
+              {/if}
+              {#if ABILITY_DETAIL[skill.name]}
+                <span class="skill-desc">{ABILITY_DETAIL[skill.name]}</span>
+              {/if}
               <div class="changes">
                 {#each skill.preview.changes as change}
                   {@const delta = change.to - change.from}
@@ -192,6 +200,20 @@
 
   .name { font-weight: bold; flex: 1; font-size: 12px; }
   .tier { font-size: 11px; color: var(--rn-text-dim); flex-shrink: 0; }
+
+  .upgrade-label {
+    font-size: 10px;
+    font-weight: bold;
+    color: var(--rn-gold);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .skill-desc {
+    font-size: 10px;
+    color: var(--rn-text-dim);
+    line-height: 1.3;
+  }
 
   .changes {
     display: flex;

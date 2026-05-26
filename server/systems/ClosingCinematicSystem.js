@@ -166,11 +166,6 @@ export default class ClosingCinematicSystem {
     if (this._stage !== STAGE.GATHER) return
     this._cinematicMovement = null
 
-    if (this._isSinglePlayer) {
-      this._startDanceAll()
-      return
-    }
-
     this._stage = STAGE.ITEMS_VISIBLE
 
     const bx = this.boss.x

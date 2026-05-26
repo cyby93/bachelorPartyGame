@@ -304,6 +304,7 @@ export default class IllidanEncounter {
       this.boss.isImmune = false
       this.boss.speed    = 0
       this.boss.radius   = ILLIDAN_CONFIG.demonFormRadius ?? 85
+      if (this.boss.hp <= 0) { this.boss.isDead = true }
     })
   }
 

@@ -1069,7 +1069,7 @@ export default class SkillSystem {
       gs.io.emit('effect:damage', {
         targetId:    target.id,
         amount:      finalAmount,
-        type:        returnedDealt === 0 ? 'immune' : 'damage',
+        type:        'damage',
         sourceSkill: sourceSkill ?? null,
       })
     }
@@ -1343,7 +1343,7 @@ export default class SkillSystem {
           } else {
             const minHp = gs.scene === 'lobby' ? 1 : 0
             const dealt  = p.takeDamage(damage, minHp)
-            if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount: dealt, type: dealt === 0 ? 'immune' : dmgType, sourceSkill: proj.sourceSkill ?? null })
+            if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount: dealt, type: dmgType, sourceSkill: proj.sourceSkill ?? null })
           }
           if (!proj.pierce) proj.isAlive = false
         })
@@ -1846,10 +1846,11 @@ export default class SkillSystem {
       y: Math.round(z.y),
       radius: z.radius,
       color: z.color,
-      skillName: z.config?.name ?? null,
-      hostile:   z.ownerId === 'boss' || z.ownerId?.startsWith('enemy_'),
-      remaining: Math.max(0, z.expiresAt - now),
-      duration: z.expiresAt - z.createdAt,
+      skillName:   z.config?.name ?? null,
+      hostile:     z.ownerId === 'boss' || z.ownerId?.startsWith('enemy_'),
+      followOwner: z.followOwner ?? false,
+      remaining:   Math.max(0, z.expiresAt - now),
+      duration:    z.expiresAt - z.createdAt,
     }))
   }
 

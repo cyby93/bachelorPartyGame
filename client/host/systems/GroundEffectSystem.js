@@ -16,61 +16,59 @@ function parseColor(hex) {
 const ZONE_THEMES = {
   'Flame Crash': {
     layers: [
-      { r: 1.00, color: 0x1a0500, alpha: 0.20 },
-      { r: 0.75, color: 0xcc2200, alpha: 0.20 },
-      { r: 0.50, color: 0xff6600, alpha: 0.25 },
-      { r: 0.28, color: 0xffdd00, alpha: 0.38 },
+      { r: 1.00, color: 0x4a1800, alpha: 0.16 },
+      { r: 0.75, color: 0x7a2800, alpha: 0.16 },
+      { r: 0.50, color: 0xa84400, alpha: 0.20 },
+      { r: 0.28, color: 0xcc6600, alpha: 0.26 },
     ],
-    glowBlur: 7, glowColor: 0xffcc00, glowR: 0.22, glowAlpha: 0.75,
+    glowBlur: 7, glowColor: 0xcc6600, glowR: 0.22, glowAlpha: 0.45,
     flicker: 'fire',
     borderColor: 0xff6600, borderWidth: 3, borderPulseSpeed: 7,
     particles: 'flameCrash',
   },
   'Blaze': {
     layers: [
-      { r: 1.00, color: 0x200800, alpha: 0.18 },
-      { r: 0.80, color: 0xdd2200, alpha: 0.20 },
-      { r: 0.55, color: 0xff7700, alpha: 0.24 },
-      { r: 0.32, color: 0xffcc00, alpha: 0.35 },
-      { r: 0.15, color: 0xffffff, alpha: 0.28 },
+      { r: 1.00, color: 0x3d1400, alpha: 0.15 },
+      { r: 0.80, color: 0x7a2800, alpha: 0.16 },
+      { r: 0.55, color: 0xa03800, alpha: 0.18 },
+      { r: 0.32, color: 0xbb5500, alpha: 0.24 },
+      { r: 0.15, color: 0xcc7700, alpha: 0.18 },
     ],
-    glowBlur: 6, glowColor: 0xffffff, glowR: 0.14, glowAlpha: 0.70,
+    glowBlur: 5, glowColor: 0xcc7700, glowR: 0.14, glowAlpha: 0.45,
     flicker: 'blaze',
     borderColor: 0xff8800, borderWidth: 2, borderPulseSpeed: 7,
     particles: 'blaze',
   },
   'Eye Beams': {
     layers: [
-      { r: 1.00, color: 0x080018, alpha: 0.32 },
-      { r: 0.72, color: 0x2200aa, alpha: 0.32 },
-      { r: 0.45, color: 0x5533dd, alpha: 0.38 },
-      { r: 0.22, color: 0xaaaaff, alpha: 0.50 },
+      { r: 1.00, color: 0x1a0a44, alpha: 0.25 },
+      { r: 0.72, color: 0x2d1577, alpha: 0.24 },
+      { r: 0.45, color: 0x4422aa, alpha: 0.28 },
+      { r: 0.22, color: 0x5533bb, alpha: 0.35 },
     ],
-    glowBlur: 7, glowColor: 0x9988ff, glowR: 0.25, glowAlpha: 0.88,
+    glowBlur: 7, glowColor: 0x5533bb, glowR: 0.25, glowAlpha: 0.50,
     flicker: 'felfire',
     borderColor: 0x7755ff, borderWidth: 2, borderPulseSpeed: 5,
     particles: 'eyeBeams',
   },
   'Consecration': {
     layers: [
-      { r: 1.00, color: 0x1a0f00, alpha: 0.18 },
-      { r: 0.70, color: 0xffaa00, alpha: 0.20 },
-      { r: 0.40, color: 0xffee88, alpha: 0.28 },
+      { r: 1.00, color: 0x956600, alpha: 0.25 },
     ],
-    glowBlur: 6, glowColor: 0xffffcc, glowR: 0.25, glowAlpha: 0.72,
+    glowBlur: 6, glowColor: 0xddaa44, glowR: 0.25, glowAlpha: 0.72,
     flicker: 'holy',
     borderColor: 0xffcc00, borderWidth: 3, borderPulseSpeed: 3,
     particles: 'consecration',
   },
   'Death and Decay': {
     layers: [
-      { r: 1.00, color: 0x0a1400, alpha: 0.28 },
-      { r: 0.65, color: 0x1a5500, alpha: 0.25 },
-      { r: 0.35, color: 0x44cc22, alpha: 0.22 },
+      { r: 1.00, color: 0x1e2208, alpha: 0.28 },
+      { r: 0.65, color: 0x344408, alpha: 0.25 },
+      { r: 0.35, color: 0x485a0e, alpha: 0.22 },
     ],
     glowBlur: 0,
-    flicker: 'plague',
-    borderColor: 0x33aa33, borderWidth: 4, borderPulseSpeed: 2.5,
+    flicker: 'deathrune',
+    borderColor: 0x667711, borderWidth: 4, borderPulseSpeed: 2.5,
     particles: 'deathDecay',
   },
   'Freezing Trap': {
@@ -122,14 +120,26 @@ function _buildFlickerState(skillName) {
       })),
     }
   }
+  if (skillName === 'Consecration') {
+    return {
+      embers: Array.from({ length: 28 }, () => ({
+        bearing:   Math.random() * Math.PI * 2,
+        distFrac:  Math.random() * 0.85,
+        phase:     Math.random() * Math.PI * 2,
+        speedMult: 0.8 + Math.random() * 1.5,
+        rFrac:     0.008 + Math.random() * 0.008,
+      })),
+    }
+  }
   if (skillName === 'Death and Decay') {
     return {
-      bubbles: Array.from({ length: 6 }, () => ({
-        angle:    Math.random() * Math.PI * 2,
-        distFrac: 0.20 + Math.random() * 0.55,
-        phaseX:   Math.random() * Math.PI * 2,
-        phaseY:   Math.random() * Math.PI * 2,
-        rFrac:    0.05 + Math.random() * 0.07,
+      runes: Array.from({ length: 10 }, () => ({
+        bearing:   Math.random() * Math.PI * 2,
+        distFrac:  0.35 + Math.random() * 0.48,
+        angle:     Math.random() * Math.PI * 2,
+        phase:     Math.random() * Math.PI * 2,
+        speedMult: 0.5 + Math.random() * 0.9,
+        blood:     Math.random() < 0.35,
       })),
     }
   }
@@ -259,6 +269,7 @@ export default class GroundEffectSystem {
       flickerState: _buildFlickerState(z.skillName),
       color:        theme ? theme.borderColor : fallbackColor,
       hostile:      z.hostile ?? false,
+      followOwner:  z.followOwner ?? false,
       radius:       z.radius,
       skillName:    z.skillName,
       x: z.x, y: z.y,
@@ -288,7 +299,7 @@ export default class GroundEffectSystem {
     borderGfx.clear()
     borderGfx.circle(0, 0, radius)
     borderGfx.stroke({ color: theme.borderColor, width: theme.borderWidth, alpha: pulse })
-    this._drawTeamRing(zone)
+    if (!zone.followOwner) this._drawTeamRing(zone)
   }
 
   _drawDefaultBorder(zone) {
@@ -296,7 +307,7 @@ export default class GroundEffectSystem {
     zone.borderGfx.clear()
     zone.borderGfx.circle(0, 0, zone.radius)
     zone.borderGfx.stroke({ color: zone.color, width: 3, alpha: pulse })
-    this._drawTeamRing(zone)
+    if (!zone.followOwner) this._drawTeamRing(zone)
   }
 
   _drawTeamRing(zone) {
@@ -317,7 +328,7 @@ export default class GroundEffectSystem {
       case 'holy':   this._drawHolyFlicker(zone, t);   break
       case 'void':   this._drawVoidFlicker(zone, t);   break
       case 'ice':    this._drawIceFlicker(zone, t);    break
-      case 'plague': this._drawPlagueFlicker(zone, t); break
+      case 'deathrune': this._drawDeathruneFlicker(zone, t); break
     }
   }
 
@@ -330,9 +341,9 @@ export default class GroundEffectSystem {
       const cx    = Math.cos(fl.angle) * dist
       const cy    = Math.sin(fl.angle) * dist
       const fr    = radius * fl.rFrac * (0.7 + 0.5 * Math.abs(Math.sin(t * 9 * fl.speedMult + fl.phase + 1.2)))
-      const color = Math.sin(t * 5 + fl.phase) > 0 ? 0xff5500 : 0xffaa00
+      const color = Math.sin(t * 5 + fl.phase) > 0 ? 0xa84400 : 0xcc6600
       flickerGfx.circle(cx, cy, fr)
-      flickerGfx.fill({ color, alpha: 0.62 })
+      flickerGfx.fill({ color, alpha: 0.35 })
     }
   }
 
@@ -345,16 +356,16 @@ export default class GroundEffectSystem {
       const cx    = Math.cos(fl.angle) * dist
       const cy    = Math.sin(fl.angle) * dist
       const fr    = radius * fl.rFrac * (0.7 + 0.5 * Math.abs(Math.sin(t * 9 * fl.speedMult + fl.phase + 1.2)))
-      const color = Math.sin(t * 5 + fl.phase) > 0 ? 0x6633ff : 0xaaaaff
+      const color = Math.sin(t * 5 + fl.phase) > 0 ? 0x4422aa : 0x5533bb
       flickerGfx.circle(cx, cy, fr)
-      flickerGfx.fill({ color, alpha: 0.55 })
+      flickerGfx.fill({ color, alpha: 0.32 })
     }
   }
 
   // Blaze: 8 chaotic blobs — faster, hotter, 3-color cycle (Flame of Azzinoth)
   _drawBlazeFlicker(zone, t) {
     const { flickerGfx, flickerState, radius } = zone
-    const colors = [0xff2200, 0xff8800, 0xffdd00]
+    const colors = [0x7a2800, 0xa03800, 0xbb5500]
     for (const fl of flickerState.flames) {
       const pulse = 0.45 + 0.55 * Math.abs(Math.sin(t * 7 * fl.speedMult + fl.phase))
       const dist  = radius * fl.distFrac * (0.6 + 0.4 * Math.sin(t * 5 * fl.speedMult + fl.phase + 0.8))
@@ -364,21 +375,20 @@ export default class GroundEffectSystem {
       const colorPhase = (Math.sin(t * 6 + fl.phase) + 1) * 1.5  // 0–3
       const color = colors[Math.min(2, Math.floor(colorPhase))]
       flickerGfx.circle(cx, cy, fr)
-      flickerGfx.fill({ color, alpha: 0.68 })
+      flickerGfx.fill({ color, alpha: 0.40 })
     }
   }
 
-  // Holy: 8 radial rays rotating slowly, alpha pulsing per ray
+  // Holy: tiny fixed embers scattered across the zone, each flickering independently
   _drawHolyFlicker(zone, t) {
-    const { flickerGfx, radius } = zone
-    const baseAngle = t * 0.3
-    const len = radius * 0.55
-    for (let i = 0; i < 8; i++) {
-      const a     = baseAngle + i * Math.PI * 0.25
-      const alpha = 0.18 + 0.12 * Math.sin(t * 2 + i * 0.8)
-      flickerGfx.moveTo(0, 0)
-      flickerGfx.lineTo(Math.cos(a) * len, Math.sin(a) * len)
-      flickerGfx.stroke({ color: 0xffffcc, width: 2, alpha })
+    const { flickerGfx, flickerState, radius } = zone
+    if (!flickerState.embers) return
+    for (const em of flickerState.embers) {
+      const alpha = 0.15 + 0.70 * Math.abs(Math.sin(t * 3 * em.speedMult + em.phase))
+      const px = Math.cos(em.bearing) * radius * em.distFrac
+      const py = Math.sin(em.bearing) * radius * em.distFrac
+      flickerGfx.circle(px, py, radius * em.rFrac)
+      flickerGfx.fill({ color: 0xffeeaa, alpha })
     }
   }
 
@@ -415,15 +425,44 @@ export default class GroundEffectSystem {
     }
   }
 
-  // Plague: slow drifting bubbles with lissajous motion
-  _drawPlagueFlicker(zone, t) {
+  // Death and Decay: pulsing skull in center + scattered runic etch marks
+  _drawDeathruneFlicker(zone, t) {
     const { flickerGfx, flickerState, radius } = zone
-    for (const b of flickerState.bubbles) {
-      const x  = Math.cos(b.angle) * radius * b.distFrac + Math.sin(t * 0.7 + b.phaseX) * radius * 0.15
-      const y  = Math.sin(b.angle) * radius * b.distFrac + Math.cos(t * 0.5 + b.phaseY) * radius * 0.12
-      const br = radius * b.rFrac * (0.8 + 0.35 * Math.sin(t * 1.5 + b.phaseX))
-      flickerGfx.circle(x, y, br)
-      flickerGfx.fill({ color: 0x55cc33, alpha: 0.42 })
+    const rotCol   = 0x89a572  // putrid yellow-green
+    const bloodCol = 0xaa1100  // dark blood red
+    const skullAlpha = 0.30 + 0.20 * Math.sin(t * 1.2)
+
+    // Skull cranium
+    const headR = radius * 0.20
+    flickerGfx.circle(0, -headR * 0.05, headR)
+    flickerGfx.stroke({ color: rotCol, width: 1.5, alpha: skullAlpha })
+
+    // Eye sockets — blood red
+    const eyeR = headR * 0.20
+    flickerGfx.circle(-headR * 0.33, -headR * 0.05, eyeR)
+    flickerGfx.fill({ color: bloodCol, alpha: skullAlpha + 0.20 })
+    flickerGfx.circle( headR * 0.33, -headR * 0.05, eyeR)
+    flickerGfx.fill({ color: bloodCol, alpha: skullAlpha + 0.20 })
+
+    // Jaw arc
+    flickerGfx.arc(0, headR * 0.18, headR * 0.58, Math.PI * 0.12, Math.PI * 0.88)
+    flickerGfx.stroke({ color: rotCol, width: 1.5, alpha: skullAlpha })
+
+    // Runic etch marks — green or blood red
+    if (!flickerState.runes) return
+    for (const rn of flickerState.runes) {
+      const col   = rn.blood ? bloodCol : rotCol
+      const alpha = 0.18 + 0.42 * Math.abs(Math.sin(t * 1.8 * rn.speedMult + rn.phase))
+      const px  = Math.cos(rn.bearing) * radius * rn.distFrac
+      const py  = Math.sin(rn.bearing) * radius * rn.distFrac
+      const len = radius * 0.055
+      const ca  = Math.cos(rn.angle), sa = Math.sin(rn.angle)
+      flickerGfx.moveTo(px - ca * len, py - sa * len)
+      flickerGfx.lineTo(px + ca * len, py + sa * len)
+      const ca2 = Math.cos(rn.angle + 0.6), sa2 = Math.sin(rn.angle + 0.6)
+      flickerGfx.moveTo(px, py)
+      flickerGfx.lineTo(px + ca2 * len * 0.65, py + sa2 * len * 0.65)
+      flickerGfx.stroke({ color: col, width: 1, alpha })
     }
   }
 

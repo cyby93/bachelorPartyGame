@@ -2,14 +2,16 @@
   import { onMount, onDestroy } from 'svelte'
   import nipplejs from 'nipplejs'
 
-  // Keep a reference to the props proxy so the callback is always read fresh
-  // (not captured as a stale snapshot in the onMount closure).
   const p = $props()
 
-  let zoneEl   = null
-  let joystick = null
+  let zoneEl        = null
+  let joystick      = null
+  let _lastVec      = { x: 0, y: 0 }
+  let _lastMoveTime = 0
+  let _watchdog     = null
 
-  onMount(() => {
+  function _createJoystick() {
+    joystick?.destroy()
     joystick = nipplejs.create({
       zone:  zoneEl,
       mode:  'dynamic',
@@ -19,16 +21,44 @@
 
     joystick.on('move', (_, data) => {
       if (data.vector) {
-        p.onmove?.({ x: data.vector.x, y: -data.vector.y })
+        const vec = { x: data.vector.x, y: -data.vector.y }
+        _lastVec      = vec
+        _lastMoveTime = Date.now()
+        p.onmove?.(vec)
       }
     })
 
     joystick.on('end', () => {
+      _lastVec = { x: 0, y: 0 }
       p.onmove?.({ x: 0, y: 0 })
     })
+  }
+
+  onMount(() => {
+    _createJoystick()
+
+    // iOS fires touchcancel when a touch is hijacked (scroll, alert, screen lock).
+    // nipplejs may not fire 'end' in that case — reset and recreate.
+    zoneEl.addEventListener('touchcancel', () => {
+      _lastVec = { x: 0, y: 0 }
+      p.onmove?.({ x: 0, y: 0 })
+      _createJoystick()
+    })
+
+    // Watchdog: if input vector is non-zero but no move event for 500ms, the
+    // joystick is frozen — clear it and recreate.
+    _watchdog = setInterval(() => {
+      const nonZero = Math.abs(_lastVec.x) > 0.01 || Math.abs(_lastVec.y) > 0.01
+      if (nonZero && Date.now() - _lastMoveTime > 10000) {
+        _lastVec = { x: 0, y: 0 }
+        p.onmove?.({ x: 0, y: 0 })
+        _createJoystick()
+      }
+    }, 250)
   })
 
   onDestroy(() => {
+    clearInterval(_watchdog)
     p.onmove?.({ x: 0, y: 0 })
     joystick?.destroy()
   })

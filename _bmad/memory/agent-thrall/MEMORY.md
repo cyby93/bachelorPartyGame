@@ -198,12 +198,15 @@ Three beam arrays, all drawn in `_renderBeams()`:
 **Themes and flicker styles:**
 | skillName | layers | flicker | glow |
 |---|---|---|---|
-| Flame Crash | 4 layers (char→red→orange→yellow) | fire — 5 random pulsing blobs | BlurFilter(8), glowColor 0xffcc00 |
-| Eye Beams | 3 layers (void black→deep purple→violet) | void — rings collapsing inward | none |
-| Consecration | 3 layers (dark→gold→pale gold) | holy — 8 rotating rays | BlurFilter(6), glowColor 0xffffcc |
+| Flame Crash | 4 layers (dark brown→muted red→muted orange→amber) | fire — 5 blobs, alpha 0.35 | BlurFilter(7), glowColor 0xee8800, glowAlpha 0.45 |
+| Blaze | 5 layers (dark→muted red→muted orange→warm gold→soft gold) | blaze — 8 blobs, alpha 0.40 | BlurFilter(5), glowColor 0xee9900, glowAlpha 0.45 |
+| Eye Beams | 4 layers (dark purple→mid purple→violet→muted lavender) | felfire — 4 blobs, alpha 0.32 | BlurFilter(7), glowColor 0x8877ee, glowAlpha 0.50 |
+| Consecration | 1 layer (mid amber 0x956600, alpha 0.25) | holy — 28 tiny ember dots, each alpha-pulsing independently | BlurFilter(6), glowColor 0xddaa44, glowAlpha 0.72 |
 | Death and Decay | 3 layers (dark green→mid green→bright green) | plague — 6 lissajous bubbles | none |
 | Freezing Trap | 3 layers (dark ice→blue→cyan) | ice — 2 counter-rotating hexagons | BlurFilter(5), glowColor 0xaaeeff |
 | (unknown) | single fill from server color | none | none |
+
+**2026-05-26 hostile zone softening pass:** Flame Crash, Blaze, and Eye Beams had too-high contrast (near-black outer → pure bright inner) and glowAlpha 0.75–0.88. Fixed: outer layers lifted to mid-value dark, inner layers desaturated/darkened, glow reduced to 0.45–0.50, flicker alpha cut to 0.32–0.40. Felfire blobs also shifted from bright 0xaaaaff to muted 0x8866cc.
 
 **BlurFilter** is in `pixi.js` (v8.5.0). Import: `import { BlurFilter } from 'pixi.js'`. Filters are explicitly destroyed on zone removal.
 

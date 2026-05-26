@@ -1,7 +1,7 @@
 import { CLASSES, CLASS_NAMES, resolveClassName } from '../shared/ClassConfig.js'
 import { ENEMY_TYPES } from '../shared/EnemyTypeConfig.js'
 import { GAME_CONFIG } from '../shared/GameConfig.js'
-import { ILLIDAN_CONFIG } from '../shared/IllidanConfig.js'
+import { ILLIDAN_CONFIG, ILLIDAN_PHASE } from '../shared/IllidanConfig.js'
 import { CAMPAIGN, DEBUG_TEST_LEVEL, LEVEL_SELECT_OPTIONS } from '../shared/LevelConfig.js'
 import { EVENTS } from '../shared/protocol.js'
 import { QUIZ_QUESTIONS } from '../shared/QuizQuestions.js'
@@ -1257,8 +1257,13 @@ export default class GameServer {
 
   _onTutorialStart(socket) {
     if (!this.players.get(socket.id)?.isHost) return
-    if (this.scene !== 'trainingGrounds') return
+    if (this.scene !== 'trainingGrounds' && this.scene !== 'lobby') return
     if (this._tutorialActive) return
+
+    if (this.scene === 'lobby') {
+      this.players.forEach(p => { if (!p.isHost) p.ready = false })
+      this._changeScene('trainingGrounds')
+    }
 
     this._tutorialActive = true
     this._tutorialPhase = 1
@@ -2577,6 +2582,10 @@ export default class GameServer {
 
     for (const p of this.players.values()) {
       p.activeEffects = p.activeEffects.filter(e => !e.source?.startsWith('illidan:'))
+    }
+
+    if (this.boss?.phase === ILLIDAN_PHASE.DEMON_FORM) {
+      this.boss.phase = ILLIDAN_PHASE.HUNT_2
     }
 
     this._closingCinematic = new ClosingCinematicSystem({

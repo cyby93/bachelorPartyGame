@@ -57,5 +57,6 @@
     inset: 0;
     pointer-events: none;
     border-radius: inherit;
+    z-index: 1;
   }
 </style>

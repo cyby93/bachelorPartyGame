@@ -32,6 +32,7 @@
   const scene              = $derived($gameState.serverScene)
   const isCampaign         = $derived(['battle', 'bossFight', 'levelComplete', 'quiz'].includes(scene))
   const isTraining         = $derived(scene === 'trainingGrounds')
+  const isLobby            = $derived(scene === 'lobby')
   const isSandbox          = $derived($gameState.levelMeta?.debugSandbox === true && (scene === 'battle' || scene === 'bossFight'))
   const isTutorialActive   = $derived($gameState.tutorial?.active === true)
 
@@ -91,7 +92,7 @@
     <GameplaySidebar />
 
     <div class="actions">
-      {#if isTraining && !isTutorialActive}
+      {#if (isLobby || isTraining) && !isTutorialActive}
         <HostButton label="Play Tutorial" variant="secondary" onclick={handleStartTutorial} />
       {/if}
 

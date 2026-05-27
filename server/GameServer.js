@@ -184,11 +184,16 @@ export default class GameServer {
     this._botSeq = 0
 
     this._botController = new BotController({
-      bots:        this.bots,
-      players:     this.players,
-      inputQueues: this.inputQueues,
-      enemies:     this.enemies,
-      getBoss:     () => this.boss,
+      bots:            this.bots,
+      players:         this.players,
+      inputQueues:     this.inputQueues,
+      enemies:         this.enemies,
+      getBoss:         () => this.boss,
+      buildings:       this.buildings,
+      gates:           this.gates,
+      getCurrentLevel: () => this.currentLevel,
+      isDialogRunning: () => this._dialogSystem?.isRunning() ?? false,
+      getScene:        () => this.scene,
     })
 
     this.tick      = 0

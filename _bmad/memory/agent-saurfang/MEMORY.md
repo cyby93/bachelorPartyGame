@@ -90,3 +90,19 @@ SKILL_FIRED payload includes `width: config.width` when set — Thrall's VFX bra
 - `_checkAllDead()` gameover — before `currentLevel = null`
 
 **Critical ordering**: always call `recordLevel` and `_buildPlayerSnapshot()` BEFORE nulling `this.currentLevel` or `this.currentLevelIndex` — those values are used in the call.
+
+## BotController — architecture and deps (as of 2026-05-27)
+
+`server/systems/BotController.js`. Constructor receives: `bots, players, inputQueues, enemies, getBoss, buildings, gates, getCurrentLevel, isDialogRunning, getScene`.
+
+`GameServer.js` passes `buildings` and `gates` by Map reference (always current), plus three lambdas: `getCurrentLevel`, `isDialogRunning` (`this._dialogSystem?.isRunning() ?? false`), `getScene`.
+
+**Behaviour summary:**
+1. Downed → crawl toward nearest alive character (move input only)
+2. Dialog running OR scene ≠ 'battle'/'bossFight' → idle wander
+3. HP < 30% → non-healers retreat to nearest healer; no healer = flee from threat
+4. `destroyBuildings`/`destroyGates` objectives → ~65% of bots (by `objectiveBias`) move toward nearest live building or active gate
+5. Skill selection: eligibility-gated loop every 2 ticks — Mass Rez only when downed ally exists; Blink/DASH/Vanish only when enemy < 220px; CHANNEL skills suppress movement; HEAL_ALLY only when ally < 85% HP; AOE_SELF only when enemy in range; etc.
+6. `skillNextAllowed[slot]` tracks `castTime + cooldown` — bots skip CDs without wasting ticks.
+
+**Future hook — difficulty levels:** pass `difficulty` per botState at init; scale thresholds in `_isEligible` and skill timing. Not yet implemented.

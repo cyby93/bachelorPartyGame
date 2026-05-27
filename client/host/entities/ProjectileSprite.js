@@ -28,6 +28,7 @@ const PROJECTILE_CONFIG = {
   'sharp_feather':               { trailStyle: 'wind',      faceDirection: true, angleOffset: Math.PI / 4, bodyScale: 2.0, trailLength: 6 },
 }
 
+const HOSTILE_COLORS    = [0x880000, 0xcc2200, 0xff4444, 0xff8888]
 const DIVINE_COLORS     = [0xfffbe0, 0xffeeaa, 0xffd966]
 const ICHOR_COLORS      = [0x3a5c1a, 0x4a7a22, 0x6b9e30, 0x8fbe42]
 const FIRE_COLORS       = [0xff2200, 0xff6600, 0xff9900, 0xffcc33, 0xffeeaa]
@@ -47,7 +48,8 @@ export default class ProjectileSprite {
 
     this._color          = colorNum
     this._radius         = data.radius ?? 8
-    this._trailStyle     = cfg.trailStyle    ?? 'default'
+    this._hostile        = data.hostile ?? false
+    this._trailStyle     = this._hostile ? 'hostile' : (cfg.trailStyle ?? 'default')
     this._spinSpeed      = cfg.spinSpeed     ?? 0
     this._trailMax       = cfg.trailLength   ?? TRAIL_LENGTH
     this._rotation       = 0
@@ -56,6 +58,7 @@ export default class ProjectileSprite {
     this._hasPosition    = false
     this._facingSet      = false
     this._particles      = []  // lingering sparkles / drips: { x, y, born, life, r, color }
+    this._spawnFlashBorn = this._hostile ? Date.now() : null  // white spawn flash for hostile projectiles
 
     this.container = new Container()
 
@@ -68,12 +71,22 @@ export default class ProjectileSprite {
     this._body.anchor.set(0.5)
     this._body.width  = this._radius * 2 * bodyScale
     this._body.height = this._radius * 2 * bodyScale
-    this._body.tint   = textureKey === 'projectile_default' ? colorNum : 0xffffff
+    if (this._hostile) {
+      this._body.tint = 0xff4444
+    } else {
+      this._body.tint = textureKey === 'projectile_default' ? colorNum : 0xffffff
+    }
     this.container.addChild(this._body)
 
     if (this._faceDirection && data.angle != null) {
       this._body.rotation = data.angle + this._angleOffset
       this._facingSet = true
+    }
+
+    // Spawn flash overlay for hostile projectiles — bright white circle that fades over 150ms
+    if (this._hostile) {
+      this._flashGfx = new Graphics()
+      this.container.addChild(this._flashGfx)
     }
 
     this._trail = []
@@ -108,6 +121,8 @@ export default class ProjectileSprite {
         this._spawnIchorDrips(prevX, prevY, dx / dist, dy / dist, now)
       } else if (this._trailStyle === 'fire') {
         this._spawnFireEmbers(prevX, prevY, dx / dist, dy / dist, now)
+      } else if (this._trailStyle === 'hostile') {
+        this._spawnHostileEmbers(prevX, prevY, dx / dist, dy / dist, now)
       } else if (this._trailStyle === 'shadow') {
         this._spawnShadowTendrils(prevX, prevY, dx / dist, dy / dist, now)
       } else if (this._trailStyle === 'lightning') {
@@ -128,6 +143,20 @@ export default class ProjectileSprite {
     if (this._spinSpeed > 0) {
       this._rotation += this._spinSpeed
       this._body.rotation = this._rotation
+    }
+
+    // Tick spawn flash for hostile projectiles (fades to invisible over 150ms)
+    if (this._flashGfx && this._spawnFlashBorn != null) {
+      const elapsed = now - this._spawnFlashBorn
+      if (elapsed < 150) {
+        const alpha = (1 - elapsed / 150) * 0.8
+        this._flashGfx.clear()
+        this._flashGfx.circle(0, 0, this._radius * 1.6)
+        this._flashGfx.fill({ color: 0xffffff, alpha })
+      } else {
+        this._flashGfx.clear()
+        this._spawnFlashBorn = null
+      }
     }
 
     this._drawTrail(newX, newY, now)
@@ -193,6 +222,7 @@ export default class ProjectileSprite {
     if (this._trailStyle === 'divine')    { this._drawDivineTrail(cx, cy, now);       return }
     if (this._trailStyle === 'ichor')     { this._drawIchorTrail(cx, cy, now);        return }
     if (this._trailStyle === 'fire')      { this._drawFireTrail(cx, cy, now);         return }
+    if (this._trailStyle === 'hostile')   { this._drawHostileTrail(cx, cy, now);      return }
     if (this._trailStyle === 'shadow')    { this._drawShadowTrail(cx, cy, now);       return }
     if (this._trailStyle === 'lightning') { this._drawLightningTrail(cx, cy, now);    return }
     if (this._trailStyle === 'nature')    { this._drawNatureTrail(cx, cy, now);       return }
@@ -301,6 +331,43 @@ export default class ProjectileSprite {
       g.fill({ color: 0xff7700, alpha: t * 0.22 })
       g.circle(rx, ry, r * 0.45)
       g.fill({ color: 0xffee88, alpha: t * 0.50 })
+    }
+    for (const p of this._particles) {
+      const t = 1 - (now - p.born) / p.life
+      g.circle(p.x - cx, p.y - cy, p.r * t)
+      g.fill({ color: p.color, alpha: t * 0.70 })
+    }
+  }
+
+  _spawnHostileEmbers(wx, wy, fwdX, fwdY, now) {
+    const perpX = -fwdY
+    const perpY =  fwdX
+    for (let i = 0; i < 2; i++) {
+      const side   = (Math.random() - 0.5) * this._radius * 1.8
+      const behind = Math.random() * this._radius * 1.0
+      this._particles.push({
+        x:     wx - fwdX * behind + perpX * side,
+        y:     wy - fwdY * behind + perpY * side,
+        born:  now,
+        life:  180 + Math.random() * 160,
+        r:     0.6 + Math.random() * 1.6,
+        color: HOSTILE_COLORS[Math.floor(Math.random() * HOSTILE_COLORS.length)],
+      })
+    }
+  }
+
+  _drawHostileTrail(cx, cy, now) {
+    const g   = this._trailGfx
+    const r   = this._radius * 0.7
+    const pts = this._interpolateTrail(cx, cy, r)
+    for (let i = pts.length - 1; i >= 0; i--) {
+      const { rx, ry, t } = pts[i]
+      g.circle(rx, ry, r * 1.8)
+      g.fill({ color: 0x660000, alpha: t * 0.10 })
+      g.circle(rx, ry, r * 1.1)
+      g.fill({ color: 0xcc2200, alpha: t * 0.25 })
+      g.circle(rx, ry, r * 0.45)
+      g.fill({ color: 0xff8888, alpha: t * 0.55 })
     }
     for (const p of this._particles) {
       const t = 1 - (now - p.born) / p.life
@@ -439,6 +506,8 @@ export default class ProjectileSprite {
     this._body.visible = false
     this._detached   = true
     this._detachedAt = Date.now()
+    if (this._flashGfx) this._flashGfx.clear()
+    this._spawnFlashBorn = null
   }
 
   updateDetached() {

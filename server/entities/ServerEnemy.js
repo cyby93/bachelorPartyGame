@@ -900,6 +900,14 @@ export default class ServerEnemy {
 
     if (this.pullTarget?.pulledBy != null) dto.pulledBy = this.pullTarget.pulledBy
 
+    // Charger AI — serialize windup state so client can render charge direction arrow
+    if (this._chargeState && this._chargeState !== 'idle') {
+      dto.chargeState = this._chargeState
+      if (this._chargeDir) {
+        dto.chargeAngle = Math.atan2(this._chargeDir.dy, this._chargeDir.dx)
+      }
+    }
+
     const now = Date.now()
     if (this.activeEffects?.length) {
       const debuffs = this.activeEffects

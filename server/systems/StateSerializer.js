@@ -175,6 +175,7 @@ export function buildDeltaState(gs) {
         color:     proj.color,
         spriteKey: proj.spriteKey ?? null,
         angle:     Math.atan2(proj.vy, proj.vx),
+        hostile:   proj.isEnemyProj ?? false,
       })
     }
   })

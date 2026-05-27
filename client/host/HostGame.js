@@ -10,7 +10,7 @@
  *   - Manages scene lifecycle (enter / exit / update)
  */
 
-import { Application, Container, Graphics, Assets } from 'pixi.js'
+import { Application, Container, Graphics, Assets, TilingSprite } from 'pixi.js'
 import { GAME_CONFIG }  from '../../shared/GameConfig.js'
 import LobbyRenderer           from './scenes/LobbyRenderer.js'
 import TrainingGroundsRenderer from './scenes/TrainingGroundsRenderer.js'
@@ -387,7 +387,10 @@ export default class HostGame {
     this.app.renderer.resize(width, height)
 
     const { width: arenaWidth, height: arenaHeight } = this.currentArena
-    const fitScale = Math.min(width / arenaWidth, height / arenaHeight)
+    // visualBounds may be larger than the arena to reserve screen margin for
+    // content that overflows the arena boundary (portal tops, large boss sprites).
+    const vb = this._levelMeta?.visualBounds
+    const fitScale = Math.min(width / (vb?.width ?? arenaWidth), height / (vb?.height ?? arenaHeight))
     const worldWidth = arenaWidth * fitScale
     const worldHeight = arenaHeight * fitScale
     const offsetX = (width - worldWidth) / 2
@@ -422,6 +425,8 @@ export default class HostGame {
       'enemy_gaterepairer', 'enemy_leviathan', 'enemy_warlock',
       'enemy_flameofazzinoth', 'enemy_shadowdemon',
       'portal_building',
+      'gate_blacktemple',
+      'wall_blacktemple',
       'portal_gate_1', 'portal_gate_2', 'portal_gate_3',
       'portal_gate_4', 'portal_gate_5', 'portal_gate_6',
       'boss_akama',
@@ -633,6 +638,7 @@ export default class HostGame {
     // Draw wall segments between rooms
     const rooms = this._levelMeta?.rooms
     const passages = this._levelMeta?.passages
+    const wallSegments = []  // collect {x,y,w,h} for sprite overlay
     if (rooms && rooms.length >= 2 && passages) {
       const sorted = [...rooms].sort((a, b) => a.x - b.x)
       for (let i = 0; i < sorted.length - 1; i++) {
@@ -654,15 +660,27 @@ export default class HostGame {
         for (const p of wallPassages) {
           if (p.y > curY) {
             this._drawWallRect(bgGfx, wallX, curY, wallW, p.y - curY)
+            wallSegments.push({ x: wallX, y: curY, w: wallW, h: p.y - curY })
           }
           curY = p.y + p.height
         }
         if (curY < wallBottom) {
           this._drawWallRect(bgGfx, wallX, curY, wallW, wallBottom - curY)
+          wallSegments.push({ x: wallX, y: curY, w: wallW, h: wallBottom - curY })
         }
       }
     }
 
     this.layers.bg.addChild(bgGfx)
+
+    // Overlay sprite tiles on walls when the wall texture is available (e.g. Level 3)
+    const wallTex = Assets.get('wall_blacktemple')
+    if (wallTex && wallSegments.length) {
+      for (const seg of wallSegments) {
+        const ts = new TilingSprite({ texture: wallTex, width: seg.w, height: seg.h })
+        ts.position.set(seg.x, seg.y)
+        this.layers.bg.addChild(ts)
+      }
+    }
   }
 }

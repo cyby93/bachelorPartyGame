@@ -55,7 +55,7 @@ export const CAMPAIGN = [
     ],
     spawning: {
       mode: 'wave',
-      waveCount: 3,
+      waveCount: 5,
       betweenWaveDelayMs: 3000,
       // 'random2' — server picks 2 random edges per wave so the horde
       // is grouped and players can't predict which sides to watch.
@@ -63,12 +63,16 @@ export const CAMPAIGN = [
       //   select 2 of ['top','bottom','left','right'] and spawn from those only.
       spawnEdge: 'random2',
       progression: [
-        { fromWave: 1, enemyTypes: ['felGuard', 'coilskarHarpooner'],
+        { fromWave: 1, enemyTypes: ['felGuard', 'bonechewerBrute'],
           countRange: [3, 4] },
-        { fromWave: 2, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic'],
+        { fromWave: 2, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute'],
           countRange: [5, 6] },
-        { fromWave: 3, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic', 'coilskarSerpentGuard', 'bloodProphet', 'illidariCenturion'],
-          countRange: [9, 10] },
+        { fromWave: 3, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'illidariCenturion'],
+          countRange: [6, 8] },
+        { fromWave: 4, enemyTypes: ['felGuard', 'coilskarHarpooner', 'ashtonghueMystic', 'bloodProphet', 'illidariCenturion'],
+          countRange: [8, 10] },
+        { fromWave: 5, enemyTypes: ['felGuard', 'coilskarHarpooner', 'bonechewerBrute', 'ashtonghueMystic', 'coilskarSerpentGuard', 'bloodProphet', 'illidariCenturion'],
+          countRange: [10, 12] },
       ],
     },
     difficulty: {
@@ -207,9 +211,9 @@ export const CAMPAIGN = [
     ],
     gates: [
       // Gate1 blocks passage1 — x=750 is center of 40px gap (730+20), y=300 is center of passage (210..390)
-      { id: 'gate1', passageId: 'passage1', hp: Math.round(4 * X * R), position: { x: 750, y: 300 }, width: 40, height: 180 },
+      { id: 'gate1', passageId: 'passage1', hp: Math.round(4 * X * R), position: { x: 750, y: 300 }, width: 40, height: 180, spriteKey: 'gate_blacktemple' },
       // Gate2 at the far right edge of the right room — x=1062 center, y=300 matches gate1
-      { id: 'gate2', passageId: null,       hp: Math.round(8 * X * R), position: { x: 1062, y: 300 }, width: 48, height: 180 },
+      { id: 'gate2', passageId: null,       hp: Math.round(8 * X * R), position: { x: 1062, y: 300 }, width: 48, height: 180, spriteKey: 'gate_blacktemple' },
     ],
     spawning: {
       mode: 'continuous',
@@ -426,8 +430,10 @@ export const CAMPAIGN = [
         target:         null,     // decorative — does not attack Illidan
         initialAngle:   0,        // face east (toward Illidan)
         spawnPosition:  { x: 320, y: 450 },
+        isHealable:     false,    // players should not waste heals on Akama in this level
       },
     ],
+    visualBounds: { height: 1150 }, // extra vertical room for Illidan's large sprite near arena edges
 
     // Entrance cinematic. Boss is immune until all lines have played.
     // After dialog completes, boss becomes vulnerable.

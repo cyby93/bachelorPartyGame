@@ -147,9 +147,10 @@ export default class ServerBoss {
     this.y += (dy / dist) * pps * dt
     this.angle = Math.atan2(dy, dx)
 
-    // Clamp
-    this.x = Math.max(this.radius, Math.min(this.arenaWidth  - this.radius, this.x))
-    this.y = Math.max(this.radius, Math.min(this.arenaHeight - this.radius, this.y))
+    // Clamp — use radius*2 for Y so the boss sprite (rendered at radius*4 height)
+    // never overflows the arena top/bottom edge and clips off screen.
+    this.x = Math.max(this.radius,     Math.min(this.arenaWidth  - this.radius,     this.x))
+    this.y = Math.max(this.radius * 2, Math.min(this.arenaHeight - this.radius * 2, this.y))
   }
 
   /**

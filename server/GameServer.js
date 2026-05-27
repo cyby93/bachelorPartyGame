@@ -1009,11 +1009,12 @@ export default class GameServer {
       gates:       gatesDTO(this),
       buildings:   buildingsDTO(this),
       npcs:        npcsDTO(this),
-      rooms:       level.arena?.rooms ?? [],
-      passages:    level.arena?.passages ?? [],
-      mirrors:     level.mirrors ?? [],
+      rooms:        level.arena?.rooms ?? [],
+      passages:     level.arena?.passages ?? [],
+      mirrors:      level.mirrors ?? [],
       debugSandbox: !!level.debugSandbox,
-      transition:  level.transition ?? null,
+      transition:   level.transition ?? null,
+      visualBounds: level.visualBounds ?? null,
     })
   }
 
@@ -1188,11 +1189,17 @@ export default class GameServer {
 
     this.scene = name
     console.log(`[~] scene → ${name}`)
+    // Training Grounds portals render 30px above the arena top — add visual buffer so
+    // the fit-scale calculation leaves room for them on narrow-height screens.
+    const _tgBounds = name === 'trainingGrounds'
+      ? { visualBounds: { height: GAME_CONFIG.CANVAS_HEIGHT + 100 } }
+      : {}
     this.io.emit(EVENTS.SCENE_CHANGE, {
       scene: name,
       levelId: this.currentLevel?.id ?? null,
       arenaWidth: this.arenaWidth,
       arenaHeight: this.arenaHeight,
+      ..._tgBounds,
       ...extra,
     })
 

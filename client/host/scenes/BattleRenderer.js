@@ -47,7 +47,7 @@ export default class BattleRenderer extends BaseRenderer {
     this.bossSprite   = null
     this.npcGfx       = new Map()   // npcId → { container, body, hpFill, nameLabel }
     this.tombstoneGfx = new Map()   // playerId → Graphics
-    this.gateGfx      = new Map()   // gateId → Graphics
+    this.gateGfx      = new Map()   // gateId → { container, hpGfx, bodyGfx? }
     this.buildingGfx  = new Map()   // buildingId → Graphics
 
     // Previous-frame HP tracking for hit sparks and death bursts
@@ -168,7 +168,7 @@ export default class BattleRenderer extends BaseRenderer {
     this.npcGfx.clear()
     this.tombstoneGfx.forEach(gfx => gfx.destroy())
     this.tombstoneGfx.clear()
-    this.gateGfx.forEach(gfx => gfx.destroy())
+    this.gateGfx.forEach(entry => entry.container.destroy({ children: true }))
     this.gateGfx.clear()
     this.buildingGfx.forEach(entry => entry.container.destroy({ children: true }))
     this.buildingGfx.clear()
@@ -510,58 +510,75 @@ export default class BattleRenderer extends BaseRenderer {
 
     for (const gate of gates) {
       if (gate.isDead) {
-        // Remove destroyed gates
         if (this.gateGfx.has(gate.id)) {
-          this._entityRoot.removeChild(this.gateGfx.get(gate.id))
-          this.gateGfx.get(gate.id).destroy()
+          const entry = this.gateGfx.get(gate.id)
+          this._entityRoot.removeChild(entry.container)
+          entry.container.destroy({ children: true })
           this.gateGfx.delete(gate.id)
         }
         continue
       }
 
       if (!this.gateGfx.has(gate.id)) {
-        const gfx = new Graphics()
-        this.gateGfx.set(gate.id, gfx)
-        this._entityRoot.addChild(gfx)
+        const container = new Container()
+        const hpGfx    = new Graphics()
+        let bodyGfx = null
+
+        const tex = gate.spriteKey ? Assets.get(gate.spriteKey) : null
+        if (tex) {
+          const body = new Sprite(tex)
+          body.anchor.set(0.5)
+          body.width  = gate.width  ?? 40
+          body.height = gate.height ?? 100
+          container.addChild(body)
+        } else {
+          bodyGfx = new Graphics()
+          container.addChild(bodyGfx)
+        }
+        container.addChild(hpGfx)
+
+        this.gateGfx.set(gate.id, { container, hpGfx, bodyGfx })
+        this._entityRoot.addChild(container)
+        container.position.set(gate.x, gate.y)
       }
 
-      const gfx = this.gateGfx.get(gate.id)
+      const { container, hpGfx, bodyGfx } = this.gateGfx.get(gate.id)
+      container.position.set(gate.x, gate.y)
+
       const gateW = gate.width  ?? 40
       const gateH = gate.height ?? 100
       const hpPct = gate.hp / (gate.maxHp || 1)
 
-      gfx.clear()
+      // Procedural body — only for gates without a sprite
+      if (bodyGfx) {
+        bodyGfx.clear()
+        const bodyColor = gate.isActive ? 0xff4444 : 0x666666
+        bodyGfx.rect(-gateW / 2, -gateH / 2, gateW, gateH)
+        bodyGfx.fill({ color: bodyColor, alpha: 0.7 })
+        bodyGfx.rect(-gateW / 2, -gateH / 2, gateW, gateH)
+        bodyGfx.stroke({ color: gate.isActive ? 0xff8888 : 0x999999, width: 3 })
+      }
 
-      // Gate body — rectangular
-      const bodyColor = gate.isActive ? 0xff4444 : 0x666666
-      const gateX = gate.x - gateW / 2
-      const gateY = gate.y - gateH / 2
-      gfx.rect(gateX, gateY, gateW, gateH)
-      gfx.fill({ color: bodyColor, alpha: 0.7 })
-      gfx.rect(gateX, gateY, gateW, gateH)
-      gfx.stroke({ color: gate.isActive ? 0xff8888 : 0x999999, width: 3 })
-
-      // HP bar above gate
+      // HP bar (always rendered above gate center)
       const barW = Math.max(gateW, 60)
       const barH = 5
-      const barX = gate.x - barW / 2
-      const barY = gateY - 12
-      gfx.rect(barX, barY, barW, barH)
-      gfx.fill({ color: 0x111111, alpha: 0.8 })
+      hpGfx.clear()
+      hpGfx.rect(-barW / 2, -gateH / 2 - 12, barW, barH)
+      hpGfx.fill({ color: 0x111111, alpha: 0.8 })
       if (hpPct > 0) {
         const hpColor = hpPct > 0.5 ? 0xe74c3c : hpPct > 0.25 ? 0xe67e22 : 0xc0392b
-        gfx.rect(barX, barY, barW * hpPct, barH)
-        gfx.fill(hpColor)
+        hpGfx.rect(-barW / 2, -gateH / 2 - 12, barW * hpPct, barH)
+        hpGfx.fill(hpColor)
       }
-      gfx.rect(barX, barY, barW, barH)
-      gfx.stroke({ color: 0x333333, width: 1 })
+      hpGfx.rect(-barW / 2, -gateH / 2 - 12, barW, barH)
+      hpGfx.stroke({ color: 0x333333, width: 1 })
     }
 
     // Remove stale gate graphics
-    this.gateGfx.forEach((gfx, id) => {
+    this.gateGfx.forEach((entry, id) => {
       if (!activeGateIds.has(id)) {
-        this._entityRoot.removeChild(gfx)
-        gfx.destroy()
+        this._entityRoot.removeChild(entry.container)
+        entry.container.destroy({ children: true })
         this.gateGfx.delete(id)
       }
     })

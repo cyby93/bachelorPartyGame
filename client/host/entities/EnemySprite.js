@@ -311,6 +311,9 @@ export default class EnemySprite {
     // Berserk ring (Blade Fury)
     this._berserkGfx.alpha = state.isBerserking ? 0.8 : 0
 
+    // Charge telegraph arrow — shown during windup, removed on idle/charging
+    this._syncChargeArrow(state)
+
     this._syncDebuffVisuals(state.debuffs, Date.now())
   }
 
@@ -422,6 +425,53 @@ export default class EnemySprite {
         this._debuffGfx.stroke({ color: 0xffdd44, width: 2, alpha: 0.75 })
       }
     }
+  }
+
+  _syncChargeArrow(state) {
+    const isWindup = state.chargeState === 'windup' && state.chargeAngle != null
+
+    if (!isWindup) {
+      if (this._chargeArrow) {
+        this._chargeArrow.destroy()
+        this._chargeArrow = null
+      }
+      return
+    }
+
+    if (!this._chargeArrow) {
+      this._chargeArrow = new Graphics()
+      this.container.addChild(this._chargeArrow)
+    }
+
+    const now = Date.now()
+    const pulse = 0.85 + 0.15 * Math.abs(Math.sin(now / 65))  // ~4Hz
+    const g = this._chargeArrow
+    g.clear()
+
+    const angle      = state.chargeAngle
+    const shaftLen   = 90
+    const headLen    = 18
+    const headWidth  = 9
+    const cos        = Math.cos(angle)
+    const sin        = Math.sin(angle)
+    const tipX       = cos * shaftLen
+    const tipY       = sin * shaftLen
+    const baseX      = cos * (shaftLen - headLen)
+    const baseY      = sin * (shaftLen - headLen)
+    const perpX      = -sin * headWidth * pulse
+    const perpY      =  cos * headWidth * pulse
+
+    // Shaft
+    g.moveTo(0, 0)
+    g.lineTo(tipX, tipY)
+    g.stroke({ color: 0xff8800, width: 2.5, alpha: 0.85 })
+
+    // Arrowhead
+    g.moveTo(tipX, tipY)
+    g.lineTo(baseX + perpX, baseY + perpY)
+    g.lineTo(baseX - perpX, baseY - perpY)
+    g.lineTo(tipX, tipY)
+    g.fill({ color: 0xff8800, alpha: 0.85 })
   }
 
   destroy() {

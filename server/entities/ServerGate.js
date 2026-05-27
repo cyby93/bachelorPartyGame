@@ -27,6 +27,7 @@ export default class ServerGate {
     this.isDead    = false
     this.isActive  = false    // only active gate can be damaged
     this.isPlayer  = false
+    this.spriteKey = config.spriteKey ?? null
   }
 
   /**
@@ -59,9 +60,10 @@ export default class ServerGate {
       width:    this.width,
       height:   this.height,
       radius:   this.radius,
-      isDead:   this.isDead,
-      isActive: this.isActive,
-      isGate:   true,
+      isDead:    this.isDead,
+      isActive:  this.isActive,
+      isGate:    true,
+      spriteKey: this.spriteKey,
     }
   }
 }

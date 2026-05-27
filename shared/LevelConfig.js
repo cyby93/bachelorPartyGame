@@ -215,6 +215,21 @@ export const CAMPAIGN = [
       // Gate2 at the far right edge of the right room — x=1062 center, y=300 matches gate1
       { id: 'gate2', passageId: null,       hp: Math.round(8 * X * R), position: { x: 1062, y: 300 }, width: 48, height: 180, spriteKey: 'gate_blacktemple' },
     ],
+    boulderMechanic: {
+      cycleMs:         16000,  // full cycle: rest + charge + roll
+      chargingMs:       4000,  // warning/charge phase before boulders move
+      rollingMs:        2000,  // boulders cross the 600px arena in this time
+      restMs:          10000,  // downtime after a roll before next cycle
+      damage:             80,  // HP per boulder hit
+      slowMultiplier:    0.5,  // 50% speed for 4s
+      slowDurationMs:   4000,
+      boulderRadius:      28,  // px — server-authoritative collision radius
+      columnWidth:        60,  // px — 12 columns left room, 5 columns right room
+      rooms: [
+        { roomId: 'left',  xStart: 0,   xEnd: 730 },
+        { roomId: 'right', xStart: 770, xEnd: 1100, requiresGate1Dead: true },
+      ],
+    },
     spawning: {
       mode: 'continuous',
       interval: 6000,

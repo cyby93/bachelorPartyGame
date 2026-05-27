@@ -67,6 +67,12 @@ export const EVENTS = {
   PORTAL_BEAM_DAMAGE:  'portal:beam_damage',  // S→All: { beamId, points: [{x,y}] } — active damage phase
   PORTAL_BEAM_END:     'portal:beam_end',     // S→All: { beamId }
 
+  // ── Level 3: Boulder Mechanic ──────────────────────────────────────
+  BOULDER_SPAWN: 'boulder:spawn',   // S→All: { boulders: [{id, roomId, columnX, y, direction, radius}], chargingMs }
+  BOULDER_ROLL:  'boulder:roll',    // S→All: { boulders: [{id, columnX, y, direction}] }
+  BOULDER_CLEAR: 'boulder:clear',   // S→All: { reason: 'cycle'|'gate1_death' }
+  BOULDER_HIT:   'boulder:hit',     // S→All: { boulderIds: [...], playerId }
+
   // ── Level 4: Leviathan split sequence ───────────────────────────────
   LEVIATHAN_DEATH: 'leviathan:death', // S→All: { entityId, x, y, generation } — fires at death, before despawn
   LEVIATHAN_SPAWN: 'leviathan:spawn', // S→All: { entityId, x, y, generation } — fires when child becomes active

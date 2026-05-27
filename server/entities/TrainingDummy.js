@@ -124,15 +124,15 @@ export class RangedDummy extends TrainingDummy {
     this._fireCooldown = 1.5   // initial delay before first shot (seconds)
   }
 
-  update(dt, gs) {
+  update(dt, players, ctx) {
     super.update(dt)   // regen HP + pull handling
 
-    if (!gs) return
+    if (!players) return
 
     this._fireCooldown -= dt
     if (this._fireCooldown > 0) return
 
-    const target = _nearestPlayer(gs.players, this.x, this.y)
+    const target = _nearestPlayer(players, this.x, this.y)
     if (!target) return
 
     this._fireCooldown = 2.5   // seconds between shots
@@ -145,7 +145,7 @@ export class RangedDummy extends TrainingDummy {
     const speed  = 160   // px/s — slow, easy to dodge
     const projId = `ep-${++_epSeq}`
 
-    gs.projectiles.set(projId, {
+    ctx?.projectiles?.set(projId, {
       id:           projId,
       x:            this.x,
       y:            this.y,
@@ -181,15 +181,15 @@ export class MeleeDummy extends TrainingDummy {
     this._attackCooldown = 1.5   // initial delay before first attack (seconds)
   }
 
-  update(dt, gs) {
+  update(dt, players, ctx) {
     super.update(dt)   // regen HP + pull handling
 
-    if (!gs) return
+    if (!players) return
 
     // Override pull: base update handles pullTarget movement; skip chase during pull
     if (this.pullTarget) return
 
-    const target = _nearestPlayer(gs.players, this.x, this.y)
+    const target = _nearestPlayer(players, this.x, this.y)
     if (!target) return
 
     const dx   = target.x - this.x
@@ -204,15 +204,13 @@ export class MeleeDummy extends TrainingDummy {
 
       const { damage: dummyDmg, type: dummyType } = target.shieldResult(this.x, this.y, 20)
       if (dummyDmg <= 0) {
-        if (gs.io) gs.io.emit('effect:damage', { targetId: target.id, amount: 0, type: 'blocked', sourceSkill: null })
+        ctx?.io?.emit('effect:damage', { targetId: target.id, amount: 0, type: 'blocked', sourceSkill: null })
         return
       }
 
       // minHp=1 so players can never die in lobby
       const dealt = target.takeDamage(dummyDmg, 1)
-      if (gs.io) {
-        gs.io.emit('effect:damage', { targetId: target.id, amount: dealt, type: dummyType, sourceSkill: null })
-      }
+      ctx?.io?.emit('effect:damage', { targetId: target.id, amount: dealt, type: dummyType, sourceSkill: null })
     }
   }
 }

@@ -22,6 +22,7 @@ import CooldownSystem from './systems/CooldownSystem.js'
 import DialogSystem from './systems/DialogSystem.js'
 import IllidanEncounter from './systems/IllidanEncounter.js'
 import ClosingCinematicSystem from './systems/ClosingCinematicSystem.js'
+import BoulderSystem    from './systems/BoulderSystem.js'
 import PortalBeamSystem from './systems/PortalBeamSystem.js'
 import SkillSystem from './systems/SkillSystem.js'
 import SpawnSystem from './systems/SpawnSystem.js'
@@ -102,6 +103,7 @@ export default class GameServer {
     this.buildings = new Map()    // id → ServerBuilding
     this.buildingSpawnSystem = null
     this.portalBeamSystem    = null
+    this._boulderSystem      = null
 
     // Level 5: warlock/boss phase tracking
     this._bossPhase = 1
@@ -865,6 +867,11 @@ export default class GameServer {
       }
     }
 
+    // Boulder rolling mechanic (The Black Temple Gates)
+    if (level.boulderMechanic) {
+      this._boulderSystem = new BoulderSystem(level.boulderMechanic, this.arenaHeight)
+    }
+
     // Set up NPCs (Level 4 — Akama)
     if (level.npcs?.length) {
       for (const npcCfg of level.npcs) {
@@ -1057,6 +1064,7 @@ export default class GameServer {
     this.buildings.clear()
     this.buildingSpawnSystem = null
     this.portalBeamSystem    = null
+    this._boulderSystem      = null
     this._bossPhase    = 1
     this._warlockCount = 0
     this._lastWarlockBuffVfxTime = 0
@@ -1504,7 +1512,7 @@ export default class GameServer {
     if (this.scene === 'lobby' || this.scene === 'trainingGrounds') {
       const gs = this._gs()
       this.skillSystem.tick(gs, dt)
-      this.enemies.forEach(dummy => dummy.update(dt, gs))
+      this.enemies.forEach(dummy => dummy.update(dt, this.players, gs))
 
       if (this._tutorialActive && now - this._tutorialLastCooldownReset > 3000) {
         this._tutorialLastCooldownReset = now
@@ -1569,6 +1577,21 @@ export default class GameServer {
           this.players,
           (event, data) => this.io.emit(event, data),
           (player, dmg) => this.skillSystem._dealDamage(gs, null, player, dmg, 'Portal Beam')
+        )
+      }
+
+      // Boulder mechanic (Level 3 — The Black Temple Gates)
+      if (this._boulderSystem) {
+        const gs = this._gs()
+        this._boulderSystem.tick(
+          now,
+          this.players,
+          (event, data) => this.io.emit(event, data),
+          (player, dmg) => this.skillSystem._dealDamage(gs, null, player, dmg, 'Boulder'),
+          (player, slowMult, durationMs) => {
+            player.activeEffects.push({ source: 'boulder:slow', params: { speedMultiplier: slowMult }, expiresAt: now + durationMs })
+            player.rebuildStats()
+          }
         )
       }
 
@@ -2375,6 +2398,7 @@ export default class GameServer {
         if (gate.id === 'gate1' && this.spawnSystem?.setSpawnPhase) {
           this.spawnSystem.setSpawnPhase(2)
           console.log('[~] SpawnSystem advanced to phase 2 (gate1 destroyed)')
+          this._boulderSystem?.onGate1Destroyed((event, data) => this.io.emit(event, data))
         }
       }
     })

@@ -40,6 +40,12 @@ export function npcsDTO(gs) {
   return arr
 }
 
+export function bouldersDTO(gs) {
+  if (!gs._boulderSystem) return null
+  const dto = gs._boulderSystem.getBouldersDTO()
+  return dto.length > 0 ? dto : null
+}
+
 export function pylonsDTO(gs) {
   if (gs._pylons.size === 0) return []
   const arr = []
@@ -107,6 +113,7 @@ export function buildFullState(gs) {
     gates:     gatesDTO(gs),
     buildings: buildingsDTO(gs),
     npcs:      npcsDTO(gs),
+    boulders:  bouldersDTO(gs),
 
     // Live gameplay state — needed for mid-battle reconnects
     aoeZones: gs.skillSystem.getZonesDTO(),
@@ -214,6 +221,7 @@ export function buildDeltaState(gs) {
     gates:            gatesDTO(gs),
     buildings:        buildingsDTO(gs),
     npcs:             npcsDTO(gs),
+    boulders:         bouldersDTO(gs),
     waveInfo:         waveInfoDTO(gs),
     eyeBeams:         eyeBeamsDTO(gs),
     illidanFireballs: gs._illidanEncounter?.getFireballsDTO() ?? [],

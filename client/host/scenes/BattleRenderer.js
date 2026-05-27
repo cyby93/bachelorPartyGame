@@ -12,7 +12,7 @@
  *   boss, minion, tombstone rendering; hit sparks; aura sync; mode UI.
  */
 
-import { Container, Graphics, Text, Sprite, Assets } from 'pixi.js'
+import { Container, Graphics, Text, Sprite, Assets, ColorMatrixFilter } from 'pixi.js'
 import { GAME_CONFIG }  from '../../../shared/GameConfig.js'
 import { CLASSES }      from '../../../shared/ClassConfig.js'
 import BossSprite       from '../entities/BossSprite.js'
@@ -80,6 +80,14 @@ export default class BattleRenderer extends BaseRenderer {
     this._pylonBeamGfx  = new Graphics()
     this._entityRoot.addChild(this._pylonBeamGfx)
     this._pylonTime     = 0
+
+    // Level 3: Boulder mechanic graphics
+    this._boulderColumnGfx = new Graphics()   // column path marks (drawn below boulders)
+    this._boulderBodyGfx   = new Graphics()   // charge rings + fallback circles
+    this._entityRoot.addChild(this._boulderColumnGfx)
+    this._entityRoot.addChild(this._boulderBodyGfx)
+    this._boulderSprites   = new Map()  // boulderID → Sprite
+    this._boulderClear     = null   // { startMs, durationMs, reason } — clear animation state
 
     // Level 2: Portal Beam graphics
     this._portalBeamGfx  = new Graphics()
@@ -200,6 +208,13 @@ export default class BattleRenderer extends BaseRenderer {
     this.pylonGfx.clear()
     this._pylonBeamGfx.clear()
     this._pylonTime = 0
+
+    // Boulder mechanic
+    this._boulderColumnGfx.clear()
+    this._boulderBodyGfx.clear()
+    this._boulderSprites.forEach(spr => spr.destroy())
+    this._boulderSprites.clear()
+    this._boulderClear = null
 
     // Portal beams
     this._portalBeamGfx.clear()
@@ -331,6 +346,9 @@ export default class BattleRenderer extends BaseRenderer {
 
     // Eye Beams (Illidan Phase 2)
     this._renderEyeBeams(state.eyeBeams)
+
+    // Boulder mechanic (Level 3)
+    this._renderBoulders(state, dt)
 
     // Portal Beams (Level 2)
     this._renderPortalBeams(dt)
@@ -1027,6 +1045,151 @@ export default class BattleRenderer extends BaseRenderer {
       this._eyeBeamGfx.lineTo(cx, cy)
       this._eyeBeamGfx.stroke({ width: 3, color: 0xcc66ff, alpha: 0.95 })
     }
+  }
+
+  // ── Boulder mechanic (Level 3) ───────────────────────────────────────────
+
+  onBoulderClear({ reason }) {
+    const boulders = this.game.knownState.boulders
+    if (!boulders?.length && reason !== 'gate1_death') return
+    this._boulderClear = {
+      startMs:   performance.now(),
+      durationMs: reason === 'gate1_death' ? 200 : 400,
+      reason,
+    }
+  }
+
+  onBoulderHit({ playerId }) {
+    const state = this.game.knownState
+    const player = state.players?.[playerId]
+    if (!player) return
+    // Ground crack stamp — white circle flash fading over 800ms
+    const x = player.x, y = player.y
+    const startMs = performance.now()
+    const drawCrack = () => {
+      const age = performance.now() - startMs
+      if (age > 800) return
+      const alpha = (1 - age / 800) * 0.7
+      this._boulderBodyGfx.circle(x, y, 22)
+      this._boulderBodyGfx.stroke({ color: 0xaaaaaa, width: 3, alpha })
+      requestAnimationFrame(drawCrack)
+    }
+    requestAnimationFrame(drawCrack)
+  }
+
+  _renderBoulders(state, dt) {
+    const boulders = state.boulders ?? []
+    const now = performance.now()
+
+    // Handle clear animation — fade out column marks and (if gate1_death) keep marks fading longer
+    let clearAlpha = 1
+    let columnClearAlpha = 1
+    if (this._boulderClear) {
+      const age = now - this._boulderClear.startMs
+      const { durationMs, reason } = this._boulderClear
+      const colDuration = reason === 'gate1_death' ? 800 : durationMs
+      clearAlpha       = Math.max(0, 1 - age / durationMs)
+      columnClearAlpha = Math.max(0, 1 - age / colDuration)
+      if (age >= colDuration) this._boulderClear = null
+    }
+
+    this._boulderColumnGfx.clear()
+    this._boulderBodyGfx.clear()
+
+    if (boulders.length === 0 && !this._boulderClear) return
+
+    const COLUMN_W    = 54   // 60px column - 3px gap each side
+    const ARENA_H     = state.arenaHeight ?? 600
+    const COL_ALPHA_L = 0.07  // left room base alpha
+    const COL_ALPHA_R = 0.045  // right room base alpha (denser space → quieter)
+
+    const tex = Assets.get('boulder_rock')
+    const activeBoulderIds = new Set(boulders.map(b => b.id))
+
+    // Remove sprites for boulders no longer in state
+    this._boulderSprites.forEach((spr, id) => {
+      if (!activeBoulderIds.has(id)) {
+        this._entityRoot.removeChild(spr)
+        spr.destroy()
+        this._boulderSprites.delete(id)
+      }
+    })
+
+    for (const b of boulders) {
+      const baseAlpha = b.roomId === 'right' ? COL_ALPHA_R : COL_ALPHA_L
+
+      // Column mark: alpha ramps during charge, one flash near full charge
+      let colAlpha
+      if (b.state === 'charging') {
+        const ramp  = baseAlpha + b.chargeProgress * (0.14 - baseAlpha)
+        const flash = b.chargeProgress > 0.92 ? (1 - (b.chargeProgress - 0.92) / 0.08) * 0.30 : 0
+        colAlpha = ramp + flash
+      } else {
+        colAlpha = baseAlpha
+      }
+      colAlpha *= columnClearAlpha
+
+      this._boulderColumnGfx.rect(b.columnX - COLUMN_W / 2, 0, COLUMN_W, ARENA_H)
+      this._boulderColumnGfx.fill({ color: 0x8B7355, alpha: colAlpha })
+
+      const bAlpha = clearAlpha
+      if (bAlpha <= 0) continue
+
+      // Boulder body — sprite if loaded, fallback to circle
+      if (tex) {
+        let spr = this._boulderSprites.get(b.id)
+        if (!spr) {
+          spr = new Sprite(tex)
+          spr.anchor.set(0.5)
+          spr.width  = b.radius * 2
+          spr.height = b.radius * 2
+          this._entityRoot.addChild(spr)
+          this._boulderSprites.set(b.id, spr)
+        }
+        spr.position.set(b.columnX, b.y)
+        spr.alpha = bAlpha
+        if (b.state === 'rolling') spr.rotation += 0.04
+      } else {
+        this._boulderBodyGfx.circle(b.columnX, b.y, b.radius)
+        this._boulderBodyGfx.fill({ color: 0x8B7355, alpha: 0.85 * bAlpha })
+        this._boulderBodyGfx.circle(b.columnX, b.y, b.radius)
+        this._boulderBodyGfx.stroke({ color: 0x555555, width: 2, alpha: bAlpha })
+      }
+
+      // Charge ring (always, regardless of sprite)
+      if (b.state === 'charging') {
+        const outerR    = b.radius + 9
+        const thick     = b.chargeProgress * 14
+        const ringAlpha = (0.3 + b.chargeProgress * 0.55) * bAlpha
+        if (thick > 0.5) {
+          this._boulderBodyGfx.circle(b.columnX, b.y, outerR - thick / 2)
+          this._boulderBodyGfx.stroke({ color: 0xFFC850, width: thick, alpha: ringAlpha })
+        }
+        this._drawDirectionArrow(b.columnX, b.y, b.direction, b.radius, bAlpha * 0.7)
+
+      } else if (b.state === 'rolling' && !tex) {
+        // Fallback only: dust trail
+        const trailY = b.y - b.direction * b.radius * 1.8
+        this._boulderBodyGfx.moveTo(b.columnX, b.y)
+        this._boulderBodyGfx.lineTo(b.columnX, trailY)
+        this._boulderBodyGfx.stroke({ color: 0x8B7355, width: b.radius * 0.6, alpha: 0.18 * bAlpha })
+      }
+    }
+  }
+
+  _drawDirectionArrow(cx, baseY, direction, radius, alpha) {
+    // Small triangle pointing in the direction of travel, just outside the boulder
+    const tipOffset = radius + 14
+    const tipY  = baseY - direction * tipOffset   // direction +1 = down, so arrow tip is UP (away from destination)
+    const halfW = 7
+    const tailY = tipY + direction * 10           // tail toward center
+
+    this._boulderBodyGfx.poly([
+      cx,          tipY,
+      cx - halfW,  tailY,
+      cx + halfW,  tailY,
+    ])
+    this._boulderBodyGfx.fill({ color: 0xFFCC44, alpha })
   }
 
   // ── Warlock channeling beams (Level 4 Phase 1) ────────────────────────────

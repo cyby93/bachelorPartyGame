@@ -353,6 +353,16 @@ socket.on(EVENTS.LEVIATHAN_SPAWN, data => {
   game.activeRenderer?.onLeviathanSpawn?.(data)
 })
 
+// ── Level 3: Boulder events ────────────────────────────────────
+
+socket.on(EVENTS.BOULDER_CLEAR, data => {
+  game.activeRenderer?.onBoulderClear?.(data)
+})
+
+socket.on(EVENTS.BOULDER_HIT, data => {
+  game.activeRenderer?.onBoulderHit?.(data)
+})
+
 // ── Level 2: Portal Beam events ────────────────────────────────
 
 socket.on(EVENTS.PORTAL_BEAM_WARNING, data => {

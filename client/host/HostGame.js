@@ -328,6 +328,7 @@ export default class HostGame {
     if ('buildings' in delta)      this.knownState.buildings   = delta.buildings ?? []
     if ('npcs'      in delta)      this.knownState.npcs        = delta.npcs      ?? []
     if ('pylons'    in delta)      this.knownState.pylons      = delta.pylons    ?? []
+    if ('boulders'  in delta)      this.knownState.boulders    = delta.boulders  ?? []
     if ('closingCinematic' in delta) this.knownState.closingCinematic = delta.closingCinematic ?? null
   }
 
@@ -426,6 +427,7 @@ export default class HostGame {
       'enemy_flameofazzinoth', 'enemy_shadowdemon',
       'portal_building',
       'gate_blacktemple',
+      'boulder_rock',
       'wall_blacktemple',
       'portal_gate_1', 'portal_gate_2', 'portal_gate_3',
       'portal_gate_4', 'portal_gate_5', 'portal_gate_6',

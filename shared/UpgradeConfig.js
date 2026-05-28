@@ -123,7 +123,7 @@ export const UPGRADE_CONFIG = {
     [
       { label: 'Freezing Trap +1', deltas: { cooldown: -1000 } },
       { label: 'Freezing Trap +2', deltas: { 'trapEffect.radius': 20, 'trapEffect.zoneDuration': 1000 } },
-      { label: 'Freezing Trap +3', deltas: { cooldown: -1000, 'trapEffect.zoneDuration': 1000 } },
+      { label: 'Freezing Trap +3', deltas: { 'trapEffect.radius': 20, cooldown: -1000, 'trapEffect.zoneDuration': 1000 } },
     ],
   ],
 

@@ -43,22 +43,25 @@ export const ENEMY_TYPES = {
   // ── Bonechewer Brute — slow tanky fel orc ───────────────────────────────
   bonechewerBrute: {
     hp: Math.round(2.00 * HP_MULT * BASE_DPS),
-    speed: 0.6, 
-    radius: 24, 
-    meleeDamage: Math.round(0.875 * DAMAGE_MULT * BASE_DPS),
+    speed: 0.6,
     radius: 45,
+    meleeDamage: Math.round(0.875 * DAMAGE_MULT * BASE_DPS),
     color: '#8B0000',
-    ai: 'chase',
+    ai: 'woundedBrute',
+    enrageSpeedMult:  1.5,
+    enrageDamageMult: 1.5,
+    enrageDuration:   5000,
   },
 
   // ── Coilskar Harpooner — ranged naga ────────────────────────────────────
   coilskarHarpooner: {
-    hp: Math.round(0.50 * HP_MULT * BASE_DPS), 
-    speed: 1.0, 
-    radius: 30, 
+    hp: Math.round(0.50 * HP_MULT * BASE_DPS),
+    speed: 1.0,
+    radius: 30,
     meleeDamage: Math.round(0.125 * DAMAGE_MULT * BASE_DPS),
     color: '#1a5f7a',
     ai: 'ranged',
+    isRanged: true,
     projectileSpeed: 280,
     projectileDamage: Math.round(0.35 * DAMAGE_MULT * BASE_DPS),
     attackRange: 320,
@@ -103,6 +106,7 @@ export const ENEMY_TYPES = {
     meleeDamage: Math.round(0.125 * DAMAGE_MULT * BASE_DPS),
     color: '#7b4f9e',
     ai: 'healer',
+    isRanged: true,
     healAmount: Math.round(0.24 * HP_MULT * BASE_DPS),
     healRadius: 300,
     healCooldown: 3000,
@@ -122,17 +126,19 @@ export const ENEMY_TYPES = {
     meleeDamage: 0,
     color: '#8B0000',
     ai: 'bloodProphet',
-    buffRadius:        180,   // px — radius of the speed-buff pulse
+    isRanged: true,
+    buffRadius:        220,   // px — radius of the speed-buff pulse
     buffCooldown:      6000,  // ms between pulses
     buffSpeedMult:     1.5,   // ×1.5 speed to nearby allies for 4 s
     teleportRange:     100,   // teleports when a player closes to this distance
-    teleportCooldown:  3000,  // ms between teleports
+    teleportCooldown:  4000,  // ms between teleports
+    puddleRadius:      40,    // px — damage zone left behind on teleport
   },
 
   // ── Coilskar Serpent Guard — shield-bearing naga tank ───────────────────
   coilskarSerpentGuard: {
-    hp: Math.round(1.70 * HP_MULT * BASE_DPS), speed: 1.0, 
-    radius: 38, meleeDamage: Math.round(0.70 * DAMAGE_MULT * BASE_DPS),
+    hp: Math.round(1.70 * HP_MULT * BASE_DPS), speed: 1.0,
+    radius: 50, meleeDamage: Math.round(0.50 * DAMAGE_MULT * BASE_DPS),
     color: '#0d4f6b',
     ai: 'shielded',
     shieldArc: 2.094,  // 120° in radians (Math.PI * 2/3)
@@ -165,16 +171,17 @@ export const ENEMY_TYPES = {
   leviathan: {
     hp: Math.round(26.00 * HP_MULT * BASE_DPS),
     speed: 1.0,
-    radius: 60,
-    meleeDamage: Math.round(0.625 * DAMAGE_MULT * BASE_DPS),
+    radius: 80,
+    meleeDamage: Math.round(0.7 * DAMAGE_MULT * BASE_DPS),
     spriteSize: 250,
     color: '#2E8B57',
     shape: 'circle',
     ai: 'leviathan',
-    projectileSpeed: 180,
-    projectileDamage: Math.round(0.375 * DAMAGE_MULT * BASE_DPS),
+    projectileSpeed: 160,
+    projectileDamage: Math.round(0.4 * DAMAGE_MULT * BASE_DPS),
     attackRange: 400,
     attackCooldown: 2000,
+    projectileRadius: 8,
     maxRangedTargets: 2,
     splitOnDeath: {
       count: 2,

@@ -289,7 +289,7 @@ const SkillDatabase = {
       inputType:     'INSTANT',
       cooldown:      8000,
       duration:      50000,
-      triggerRadius: 40,
+      triggerRadius: 100,
       spriteKey:     'trap_freezing',
       trapEffect: {
         radius:      120,

@@ -455,6 +455,7 @@ export default class HostGame {
       'dummy_tank',
       'warglaives_of_azzinoth',
       'bladestorm_sword',
+      'bladefury_blade',
       'pickup_key',
       'pickup_ring',
       'cell_structure',

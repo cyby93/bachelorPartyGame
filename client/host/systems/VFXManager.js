@@ -176,18 +176,19 @@ export default class VFXManager {
   }
 
   /**
-   * Attach a spinning Bladestorm visual to a player for the skill duration.
-   * Spawns 5 bladestorm_sword sprites orbiting the warrior with motion-trail ghosts.
-   * @param {Function} getPos   — () => { x, y } in world space
-   * @param {number}   duration — ms the storm lasts
-   * @param {number}   radius   — orbit radius in px
+   * Attach a spinning Bladestorm visual to a player/enemy for the skill duration.
+   * @param {Function} getPos      — () => { x, y } in world space
+   * @param {number}   duration    — ms the storm lasts
+   * @param {number}   radius      — orbit radius in px
+   * @param {string}   [texKey]    — texture asset key (default: 'bladestorm_sword')
+   * @param {number}   [tint]      — blade tint color (default: 0x99bbff silver-blue)
    */
-  attachBladestorm(getPos, duration, radius) {
+  attachBladestorm(getPos, duration, radius, texKey = 'bladestorm_sword', tint = 0x99bbff) {
     const SWORD_COUNT = 5
     const TRAIL_LEN   = 8
     const BLADE_H     = 14   // thin axis of the stretched sword sprite
 
-    const texture   = Assets.get('bladestorm_sword')
+    const texture   = Assets.get(texKey) ?? Assets.get('bladestorm_sword')
     const container = new Container()
     this._fxLayer.addChild(container)
 
@@ -195,7 +196,7 @@ export default class VFXManager {
       const trails = Array.from({ length: TRAIL_LEN }, () => {
         const t = new Sprite(texture)
         t.anchor.set(0.5)
-        t.tint   = 0x99bbff
+        t.tint   = tint
         t.alpha  = 0
         container.addChild(t)
         return t

@@ -1945,7 +1945,7 @@ export default class GameServer {
         })
       }
 
-      if (e.meleeDamage > 0 && now - e._lastContactDamage > e._attackCooldown) {
+      if (e.meleeDamage > 0 && e._chargeState !== 'dazed' && now - e._lastContactDamage > e._attackCooldown) {
         this.players.forEach(p => {
           if (p.isHost || p.isDowned) return
           if (playerHitsEntity(p.x, p.y, e)) {
@@ -2030,7 +2030,7 @@ export default class GameServer {
         id: projId,
         x: action.x, y: action.y,
         vx: action.vx, vy: action.vy,
-        radius: 5,
+        radius: action.radius ?? 5,
         range: 500,
         distTraveled: 0,
         damage: action.damage,
@@ -2101,10 +2101,22 @@ export default class GameServer {
         radius: action.radius, color: '#8B0000',
       })
     } else if (action.action === 'teleport') {
+      const vfxX = action.departX ?? action.x
+      const vfxY = action.departY ?? action.y
       this.io.emit(EVENTS.SKILL_FIRED, {
         type: 'TELEPORT', subtype: 'BLOOD_PROPHET',
-        x: action.x, y: action.y, color: '#8B0000',
+        x: vfxX, y: vfxY, color: '#8B0000',
       })
+      if (action.departX != null) {
+        this.skillSystem.addZone('enemy_' + enemyId, {
+          name: 'Crimson Puddle',
+          radius: action.puddleRadius ?? 60,
+          duration: 6000,
+          damage: 15,
+          tickRate: 1000,
+          effectType: 'PLAYER_DAMAGE',
+        }, action.departX, action.departY, '#8B0000')
+      }
     } else if (action.action === 'heal') {
       this.io.emit(EVENTS.SKILL_FIRED, {
         type: 'ENEMY_HEAL',

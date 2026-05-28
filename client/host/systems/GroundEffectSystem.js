@@ -82,6 +82,18 @@ const ZONE_THEMES = {
     borderColor: 0x44ccff, borderWidth: 3, borderPulseSpeed: 2,
     particles: 'freezingTrap',
   },
+  'Crimson Puddle': {
+    layers: [
+      { r: 1.00, color: 0x2a0000, alpha: 0.22 },
+      { r: 0.72, color: 0x5a0000, alpha: 0.22 },
+      { r: 0.45, color: 0x880000, alpha: 0.26 },
+      { r: 0.22, color: 0xaa1100, alpha: 0.30 },
+    ],
+    glowBlur: 4, glowColor: 0xaa0000, glowR: 0.18, glowAlpha: 0.40,
+    flicker: null,
+    borderColor: 0xcc2200, borderWidth: 2, borderPulseSpeed: 3,
+    particles: null,
+  },
 }
 
 // Pre-compute per-zone random values for flicker styles that need them.

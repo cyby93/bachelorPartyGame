@@ -49,7 +49,8 @@ export default class ProjectileSprite {
     this._color          = colorNum
     this._radius         = data.radius ?? 8
     this._hostile        = data.hostile ?? false
-    this._trailStyle     = this._hostile ? 'hostile' : (cfg.trailStyle ?? 'default')
+    const _hasCustomCfg  = data.spriteKey != null && PROJECTILE_CONFIG[data.spriteKey] != null
+    this._trailStyle     = (this._hostile && !_hasCustomCfg) ? 'hostile' : (cfg.trailStyle ?? 'default')
     this._spinSpeed      = cfg.spinSpeed     ?? 0
     this._trailMax       = cfg.trailLength   ?? TRAIL_LENGTH
     this._rotation       = 0
@@ -71,7 +72,7 @@ export default class ProjectileSprite {
     this._body.anchor.set(0.5)
     this._body.width  = this._radius * 2 * bodyScale
     this._body.height = this._radius * 2 * bodyScale
-    if (this._hostile) {
+    if (this._hostile && !_hasCustomCfg) {
       this._body.tint = 0xff4444
     } else {
       this._body.tint = textureKey === 'projectile_default' ? colorNum : 0xffffff

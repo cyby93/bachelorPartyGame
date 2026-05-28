@@ -58,17 +58,19 @@ export default class ServerEnemy {
     this._attackCooldown      = base.attackCooldown ?? 1500
     this._pendingAttackAbility = null   // set for one tick when attack fires; drives client anim
     this._projSpeed      = base.projectileSpeed  ?? 160
-    this._projDamage     = base.projectileDamage  ?? 12
+    this._projDamage     = base.projectileDamage ?? 12
+    this._projRadius     = base.projectileRadius ?? 5
 
     // Charger AI
-    this._chargeSpeed    = base.chargeSpeed    ?? 5.0
-    this._chargeRange    = base.chargeRange    ?? 250
-    this._chargeCooldown = base.chargeCooldown ?? 4000
-    this._chargeWindup   = base.chargeWindup   ?? 500
-    this._lastChargeEnd  = 0
-    this._chargeState    = 'idle'   // idle | windup | charging
-    this._chargeStart    = 0
-    this._chargeDir      = null     // { dx, dy } normalised
+    this._chargeSpeed         = base.chargeSpeed         ?? 5.0
+    this._chargeRange         = base.chargeRange         ?? 250
+    this._chargeCooldown      = base.chargeCooldown      ?? 4000
+    this._chargeWindup        = base.chargeWindup        ?? 500
+    this._chargeDazeDuration  = base.chargeDazeDuration  ?? 4000
+    this._lastChargeEnd       = 0
+    this._chargeState         = 'idle'   // idle | windup | charging | dazed
+    this._chargeStart         = 0
+    this._chargeDir           = null     // { dx, dy } normalised
 
     // Healer AI
     this._healAmount     = base.healAmount     ?? 10
@@ -123,14 +125,29 @@ export default class ServerEnemy {
     this._shieldAngle  = 0      // radians — updated each tick toward nearest player
     this._shieldActive = (base.ai === 'shielded')
 
+    // Wounded Brute AI
+    this._enraged           = false
+    this._previouslyEnraged = false
+    this._enrageTarget      = null
+    this._enrageTimer       = 0
+    this._baseSpeed         = this.speed
+    this._baseMeleeDamage   = this.meleeDamage
+    this._enrageSpeedMult   = base.enrageSpeedMult  ?? 1.5
+    this._enrageDamageMult  = base.enrageDamageMult ?? 1.5
+    this._enrageDuration    = base.enrageDuration   ?? 5000
+
     // Blood Prophet AI
     this._buffRadius       = base.buffRadius       ?? 180
     this._buffCooldown     = base.buffCooldown     ?? 6000
     this._buffSpeedMult    = base.buffSpeedMult    ?? 1.5
     this._teleportRange    = base.teleportRange    ?? 100
     this._teleportCooldown = base.teleportCooldown ?? 3000
+    this._puddleRadius     = base.puddleRadius     ?? 60
     this._lastBuff         = 0
     this._lastTeleport     = 0
+
+    // Ranged flag — used by panther to identify priority targets
+    this.isRanged = base.isRanged ?? false
 
     // Shadow Demon AI (Level 5, Phase 3) — set by GameServer after spawn
     this.targetPlayerId  = null
@@ -207,7 +224,8 @@ export default class ServerEnemy {
       case 'shadowDemon':     _action = this._aiShadowDemon(dt, pps, players); break
       case 'shadowfiend':     _action = this._aiShadowfiend(dt, pps, players); break
       case 'berserk':         _action = this._aiBerserk(dt, pps, players, ctx); break
-      case 'shielded':        _action = this._aiShielded(dt, pps, players, ctx?.minions); break
+      case 'shielded':        _action = this._aiShielded(dt, pps, players, ctx); break
+      case 'woundedBrute':    _action = this._aiWoundedBrute(dt, pps, players, ctx); break
       default:                _action = this._aiChase(dt, pps, players, ctx?.minions); break
     }
 
@@ -291,6 +309,14 @@ export default class ServerEnemy {
   _aiCharger(dt, pps, players, ctx) {
     const now = ctx?.now ?? Date.now()
 
+    if (this._chargeState === 'dazed') {
+      if (now - this._chargeStart >= this._chargeDazeDuration) {
+        this._chargeState   = 'idle'
+        this._lastChargeEnd = now
+      }
+      return null
+    }
+
     if (this._chargeState === 'charging') {
       // Rush in stored direction
       const chargePps = this._chargeSpeed * 60
@@ -301,8 +327,8 @@ export default class ServerEnemy {
       // End charge after reaching edge or travelling far enough
       const elapsed = now - this._chargeStart
       if (elapsed > 600) {  // max charge duration
-        this._chargeState = 'idle'
-        this._lastChargeEnd = now
+        this._chargeState = 'dazed'
+        this._chargeStart = now
       }
       return null
     }
@@ -355,13 +381,13 @@ export default class ServerEnemy {
     let hasHealTarget = false
 
     if (enemies) {
-      let bestDist = Infinity
+      let worstRatio = 1
       let bestAlly = null
       enemies.forEach(e => {
         if (e === this || e.isDead) return
         if (e.hp < e.maxHp) {
-          const d = Math.hypot(e.x - this.x, e.y - this.y)
-          if (d < bestDist) { bestDist = d; bestAlly = e }
+          const ratio = e.hp / e.maxHp
+          if (ratio < worstRatio) { worstRatio = ratio; bestAlly = e }
         }
       })
       if (bestAlly) {
@@ -463,6 +489,8 @@ export default class ServerEnemy {
       })
 
       if (tooClose) {
+        const departX = this.x
+        const departY = this.y
         // Try 8 candidate positions within 300px; pick the one farthest from all players
         let bestX = this.x, bestY = this.y, bestMinDist = -1
         const teleportRadius = 300
@@ -483,7 +511,7 @@ export default class ServerEnemy {
         this.x = bestX
         this.y = bestY
         this._lastTeleport = now
-        actions.push({ action: 'teleport', x: this.x, y: this.y })
+        actions.push({ action: 'teleport', x: this.x, y: this.y, departX, departY, puddleRadius: this._puddleRadius })
       }
     }
 
@@ -592,11 +620,11 @@ export default class ServerEnemy {
           vx: (dx / norm) * this._projSpeed,
           vy: (dy / norm) * this._projSpeed,
           damage: this._projDamage,
+          radius: this._projRadius,
           speed: this._projSpeed,
           color: ENEMY_TYPES[this.type]?.color ?? '#2E8B57',
           spriteKey: 'projectile_ichor',
           sourceSkill: 'Leviathan Volley',
-          // Exclude melee target from projectile hits
           excludeTargetId: this._meleeTarget.id,
           homingTargetId: target.id,
         })
@@ -819,9 +847,18 @@ export default class ServerEnemy {
       return null
     }
 
-    // Chase state — walk normally, activate berserk on cooldown
+    // Chase state — walk normally, activate berserk on cooldown OR when 2+ players in radius
     this._berserkTimer += dtMs
-    if (this._berserkTimer >= this._berserkCooldown) {
+    let proximityTrigger = false
+    if (!proximityTrigger) {
+      let nearbyCount = 0
+      players.forEach(p => {
+        if (p.isHost || p.isDowned) return
+        if (Math.hypot(p.x - this.x, p.y - this.y) <= this._berserkRadius) nearbyCount++
+      })
+      proximityTrigger = nearbyCount >= 2
+    }
+    if (this._berserkTimer >= this._berserkCooldown || proximityTrigger) {
       this._berserkState      = 'berserk'
       this._berserkTimer      = 0
       this._berserkStateTimer = 0
@@ -830,19 +867,114 @@ export default class ServerEnemy {
     return this._aiChase(dt, pps, players, ctx?.minions)
   }
 
-  // ── AI: Shielded (Coilskar Serpent Guard) ────────────────────────────────
+  // ── AI: Shielded (Coilskar Serpent Guard — Reactive Interceptor) ──────────
 
   /**
-   * Chases the nearest player normally.
-   * Maintains _shieldAngle pointing toward the nearest player each tick.
-   * Projectile blocking is handled in SkillSystem (collision check).
+   * Scans allied enemies. If any is below 50% HP, rushes to interpose between
+   * that ally and its nearest attacker, facing the attacker (shield blocks
+   * projectiles from that direction). Falls back to chasing nearest player.
    */
-  _aiShielded(dt, pps, players, minions = null) {
+  _aiShielded(dt, pps, players, ctx) {
+    const enemies = ctx?.enemies
+    const minions = ctx?.minions
+
+    let interposeTarget = null
+    if (enemies) {
+      let worstRatio = 0.5
+      enemies.forEach(e => {
+        if (e === this || e.isDead || !e.maxHp) return
+        const ratio = e.hp / e.maxHp
+        if (ratio <= worstRatio) { worstRatio = ratio; interposeTarget = e }
+      })
+    }
+
+    if (interposeTarget) {
+      // Find the nearest player to the injured ally — that's the attacker to interpose against
+      let attacker = null
+      let bestDist = Infinity
+      players.forEach(p => {
+        if (p.isHost || p.isDowned) return
+        const d = Math.hypot(p.x - interposeTarget.x, p.y - interposeTarget.y)
+        if (d < bestDist) { bestDist = d; attacker = p }
+      })
+
+      if (attacker) {
+        // Rush to midpoint between attacker and ally
+        const midX = (attacker.x + interposeTarget.x) / 2
+        const midY = (attacker.y + interposeTarget.y) / 2
+        const dx   = midX - this.x
+        const dy   = midY - this.y
+        const dist = Math.hypot(dx, dy)
+        if (dist > 5) {
+          const step = Math.min(pps * dt, dist)
+          this.x += (dx / dist) * step
+          this.y += (dy / dist) * step
+          this._clampToArena()
+        }
+        // Face the attacker — shield blocks damage from that direction
+        this._shieldAngle = Math.atan2(attacker.y - this.y, attacker.x - this.x)
+        return null
+      }
+    }
+
+    // No injured allies — chase nearest player with shield facing them
     const nearest = this._findNearest(players, minions)
     if (nearest) {
       this._shieldAngle = Math.atan2(nearest.y - this.y, nearest.x - this.x)
     }
     return this._aiChase(dt, pps, players, minions)
+  }
+
+  // ── AI: Wounded Brute (Bonechewer Brute) ─────────────────────────────────
+
+  /**
+   * Chases normally until sub-25% HP, then one-time enrages for 5 seconds:
+   * speed + damage buff, fixates on current target with a red visual line.
+   * After enrage expires, targeting resets.
+   */
+  _aiWoundedBrute(dt, pps, players, ctx) {
+    const dtMs = dt * 1000
+
+    if (this._enraged) {
+      this._enrageTimer -= dtMs
+      if (this._enrageTimer <= 0) {
+        this._enraged       = false
+        this._enrageTarget  = null
+        this.speed          = this._baseSpeed
+        this.meleeDamage    = this._baseMeleeDamage
+      } else if (this._enrageTarget && !this._enrageTarget.isDead && !this._enrageTarget.isHost) {
+        // Chase fixated target
+        const dx   = this._enrageTarget.x - this.x
+        const dy   = this._enrageTarget.y - this.y
+        const dist = Math.hypot(dx, dy)
+        const stopDist = GAME_CONFIG.PLAYER_RADIUS_X + this.radiusX
+        if (dist > stopDist) {
+          const step = Math.min(pps * dt, dist - stopDist)
+          this.x += (dx / dist) * step
+          this.y += (dy / dist) * step
+          this._clampToArena()
+        }
+        return null
+      }
+    }
+
+    // Normal chase
+    const nearest = this._findNearest(players, ctx?.minions)
+    const result  = this._aiChase(dt, pps, players, ctx?.minions)
+
+    // One-time HP trigger at 25%
+    if (!this._enraged && !this._previouslyEnraged && this.hp / this.maxHp <= 0.25 && nearest) {
+      this._previouslyEnraged = true
+      this._enraged           = true
+      this._enrageTarget      = nearest
+      this._enrageTimer       = this._enrageDuration
+      this._baseSpeed         = this.speed
+      this._baseMeleeDamage   = this.meleeDamage
+      this.speed              = this.speed * (this._enrageSpeedMult ?? 1.5)
+      this.meleeDamage        = this.meleeDamage * (this._enrageDamageMult ?? 1.5)
+    }
+
+    return result
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
@@ -859,6 +991,7 @@ export default class ServerEnemy {
       minions.forEach(m => {
         if (m.isDead) return
         if (m.minionType !== 'PET' && m.minionType !== 'WILD_BEAST') return
+        if (m.chosenBeast === 'hawk') return
         const d = Math.hypot(m.x - this.x, m.y - this.y)
         if (d < bestDist) { bestDist = d; nearest = m }
       })
@@ -891,6 +1024,8 @@ export default class ServerEnemy {
     if (this._isRepairing)          dto.isRepairing  = true
     if (this._shieldActive)         dto.shieldAngle  = this._shieldAngle
     if (this._berserkState === 'berserk') dto.isBerserking = true
+    if (this._chargeState === 'dazed')   dto.isDazed = true
+    if (this._enraged)                   { dto.isEnraged = true; dto.enrageTargetId = this._enrageTarget?.id ?? null }
     if (this.isFeared)                     dto.isFeared     = true
     dto.angle = this._facingAngle
     if (this._pendingAttackAbility) {

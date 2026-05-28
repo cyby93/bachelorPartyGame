@@ -47,6 +47,7 @@ export default class EnemySprite {
 
     const typeCfg     = ENEMY_TYPES[this.type] ?? ENEMY_TYPES.felGuard
     const R           = typeCfg.radius    ?? DEFAULT_R
+    this._R           = R
     const genScale    = this.type === 'leviathan' ? Math.pow(0.75, data.generation ?? 0) : 1.5
     const displaySize = (typeCfg.spriteSize ?? R * 2) * genScale
     const D           = displaySize / 2
@@ -102,6 +103,17 @@ export default class EnemySprite {
     this._berserkGfx.alpha = 0
     this.container.addChild(this._berserkGfx)
     this._drawBerserkRing(typeCfg.berserkRadius ?? 65)
+
+    // Enrage ring (Wounded Brute) — hidden by default
+    this._enrageGfx = new Graphics()
+    this._enrageGfx.alpha = 0
+    this.container.addChild(this._enrageGfx)
+    this._drawEnrageRing(R)
+
+    // Daze indicator (Centurion) — spinning star dots drawn dynamically
+    this._dazeGfx = new Graphics()
+    this.container.addChild(this._dazeGfx)
+    this._dazeTime = 0
 
     // Debuff visual layer
     this._debuffGfx = new Graphics()
@@ -189,6 +201,15 @@ export default class EnemySprite {
     g.clear()
     g.circle(0, 0, radius)
     g.stroke({ color: 0xff3300, width: 2, alpha: 0.7 })
+  }
+
+  _drawEnrageRing(radius) {
+    const g = this._enrageGfx
+    g.clear()
+    g.circle(0, 0, radius + 8)
+    g.stroke({ color: 0xff0000, width: 3, alpha: 0.9 })
+    g.circle(0, 0, radius + 4)
+    g.stroke({ color: 0xff6600, width: 1.5, alpha: 0.6 })
   }
 
   // ── Per-frame update ───────────────────────────────────────────────────────
@@ -310,6 +331,28 @@ export default class EnemySprite {
 
     // Berserk ring (Blade Fury)
     this._berserkGfx.alpha = state.isBerserking ? 0.8 : 0
+
+    // Enrage ring (Wounded Brute)
+    this._enrageGfx.alpha = state.isEnraged ? 0.9 : 0
+
+    // Daze indicator (Centurion) — 3 orange stars orbiting above head
+    this._dazeTime += dt
+    this._dazeGfx.clear()
+    if (state.isDazed) {
+      const R    = this._R
+      const oW   = R * 0.60  // orbit ellipse horizontal semi-axis
+      const oH   = R * 0.22  // orbit ellipse vertical semi-axis (depth perception)
+      const cy   = -R - 13   // orbit center — clear above head
+      for (let i = 0; i < 3; i++) {
+        const angle = this._dazeTime * 3.2 + i * (Math.PI * 2 / 3)
+        const sx = Math.cos(angle) * oW
+        const sy = cy + Math.sin(angle) * oH
+        this._dazeGfx.circle(sx, sy, 4.5)
+        this._dazeGfx.fill({ color: 0xffaa00, alpha: 0.92 })
+        this._dazeGfx.circle(sx, sy, 8)
+        this._dazeGfx.fill({ color: 0xff6600, alpha: 0.25 })
+      }
+    }
 
     // Charge telegraph arrow — shown during windup, removed on idle/charging
     this._syncChargeArrow(state)

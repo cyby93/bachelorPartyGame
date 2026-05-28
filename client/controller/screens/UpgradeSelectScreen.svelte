@@ -59,8 +59,13 @@
     return PATH_LABELS[path] || path.split('.').pop()
   }
 
-  function formatVal(v) {
+  const TIME_PATHS = new Set(['cooldown', 'castTime', 'duration', 'effectParams.duration', 'dot.duration', 'hot.duration'])
+  // For these paths a reduction is a buff, so negative delta should render green
+  const LOWER_IS_BETTER = new Set(['cooldown', 'castTime'])
+
+  function formatVal(v, path) {
     if (typeof v !== 'number') return String(v)
+    if (TIME_PATHS.has(path)) return (v / 1000).toFixed(1) + 's'
     return Number.isInteger(v) ? String(v) : v.toFixed(2)
   }
 </script>
@@ -84,7 +89,6 @@
           {/if}
           <div class="skill-body">
             <div class="skill-header">
-              <span class="name">{skill.name}</span>
               <span class="tier">{skill.currentTier}/{skill.maxTier}</span>
             </div>
             {#if canUpgrade}
@@ -98,8 +102,9 @@
                 {#each skill.preview.changes as change}
                   {@const delta = change.to - change.from}
                   {@const sign = delta >= 0 ? '+' : ''}
-                  <span class="change" class:positive={delta >= 0} class:negative={delta < 0}>
-                    {formatPath(change.path)}: {formatVal(change.from)} → {formatVal(change.to)} ({sign}{formatVal(delta)})
+                  {@const isGood = LOWER_IS_BETTER.has(change.path) ? delta <= 0 : delta >= 0}
+                  <span class="change" class:positive={isGood} class:negative={!isGood}>
+                    {formatPath(change.path)}: {formatVal(change.from, change.path)} → {formatVal(change.to, change.path)} ({sign}{formatVal(delta, change.path)})
                   </span>
                 {/each}
               </div>
@@ -198,7 +203,6 @@
     gap: 4px;
   }
 
-  .name { font-weight: bold; flex: 1; font-size: 12px; }
   .tier { font-size: 11px; color: var(--rn-text-dim); flex-shrink: 0; }
 
   .upgrade-label {

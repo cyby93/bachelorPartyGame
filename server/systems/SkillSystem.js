@@ -763,8 +763,9 @@ export default class SkillSystem {
 
     const id = gs.nextMinionId()
     const color = CLASSES[player.className]?.color ?? '#ffffff'
-    const spawnX = player.x + v.x * 30
-    const spawnY = player.y + v.y * 30
+    const isTrap = config.subtype === 'TRAP'
+    const spawnX = isTrap ? player.x : player.x + v.x * 30
+    const spawnY = isTrap ? player.y : player.y + v.y * 30
 
     // WILD_BEAST: randomly pick one beast variant and flatten stats into petStats
     if (config.subtype === 'WILD_BEAST' && config.beastVariants?.length) {
@@ -1225,16 +1226,29 @@ export default class SkillSystem {
         if (proj.hit.has(e.id)) return
         const projCircle   = { x: proj.x, y: proj.y, radius: proj.radius }
         const enemyEllipse = { x: e.x, y: e.y, rx: e.radiusX ?? e.radius, ry: e.radiusY ?? e.radius }
-        if (this._collision.ellipseCircleOverlap(enemyEllipse, projCircle)) {
-          // Shield check — shielded enemies block projectiles from the protected arc
-          if (e._shieldActive && e._shieldAngle != null) {
-            // Use incoming direction (reversed) so it aligns with _shieldAngle (toward player)
+        // Early shield-arc perimeter check for shielded enemies (e.g. Serpent Guard)
+        if (e._shieldActive && e._shieldAngle != null) {
+          const shieldPerim = e.radius * 1.5 + 6
+          if (Math.hypot(proj.x - e.x, proj.y - e.y) <= shieldPerim) {
             let diff = Math.atan2(-proj.vy, -proj.vx) - e._shieldAngle
-            // Normalise to [-π, π]
             while (diff >  Math.PI) diff -= Math.PI * 2
             while (diff < -Math.PI) diff += Math.PI * 2
             if (Math.abs(diff) < e._shieldArc / 2) {
-              // Deflected — consume the projectile but deal no damage
+              proj.hit.add(e.id)
+              if (!proj.pierce) proj.isAlive = false
+              gs.io?.emit('skill:fired', { type: 'BUFF', subtype: 'SHIELD_DEFLECT', x: proj.x, y: proj.y, color: '#4db8e8' })
+              return
+            }
+          }
+        }
+
+        if (this._collision.ellipseCircleOverlap(enemyEllipse, projCircle)) {
+          // Shield check at body contact (fallback — caught above if inside arc perimeter)
+          if (e._shieldActive && e._shieldAngle != null) {
+            let diff = Math.atan2(-proj.vy, -proj.vx) - e._shieldAngle
+            while (diff >  Math.PI) diff -= Math.PI * 2
+            while (diff < -Math.PI) diff += Math.PI * 2
+            if (Math.abs(diff) < e._shieldArc / 2) {
               proj.hit.add(e.id)
               if (!proj.pierce) proj.isAlive = false
               gs.io?.emit('skill:fired', { type: 'BUFF', subtype: 'SHIELD_DEFLECT', x: proj.x, y: proj.y, color: '#4db8e8' })
@@ -1329,9 +1343,22 @@ export default class SkillSystem {
 
       // Collision check vs players — for enemy-fired projectiles (e.g. RangedDummy)
       if (proj.isAlive && proj.isEnemyProj) {
+        // Shield perimeter radius: matches the visual arc drawn at SPRITE_H-20 = 42px
+        const SHIELD_PERIM = GAME_CONFIG.PLAYER_RADIUS * 2 + 2
         gs.players.forEach(p => {
           if (!proj.isAlive || p.isHost || p.isDowned) return
           if (proj.hit.has(p.id)) return
+
+          // Early shield-arc check — block at arc perimeter before body contact
+          if (p.shieldActive && Math.hypot(proj.x - p.x, proj.y - p.y) <= SHIELD_PERIM) {
+            if (p.isShieldBlocking(proj.x, proj.y)) {
+              proj.hit.add(p.id)
+              if (gs.io) gs.io.emit('effect:damage', { targetId: p.id, amount: 0, type: 'blocked', sourceSkill: proj.sourceSkill ?? null })
+              if (!proj.pierce) proj.isAlive = false
+              return
+            }
+          }
+
           const projCircle    = { x: proj.x, y: proj.y, radius: proj.radius }
           const playerEllipse = { x: p.x,    y: p.y,    rx: GAME_CONFIG.PLAYER_RADIUS_X, ry: GAME_CONFIG.PLAYER_RADIUS_Y }
           if (!this._collision.ellipseCircleOverlap(playerEllipse, projCircle)) return

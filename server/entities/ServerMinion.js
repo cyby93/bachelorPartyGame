@@ -281,8 +281,16 @@ export default class ServerMinion {
       return
     }
 
-    // Bear / Panther: melee chase-and-attack (same as PET but uses WILD_BEAST petStats)
-    const target = this._findNearest(gs)
+    // Panther: prioritize ranged enemies (attackRange > 100), fallback to nearest
+    // Bear: prioritize melee enemies (attackRange ≤ 100), fallback to nearest
+    let target
+    if (this.chosenBeast === 'panther') {
+      target = this._findNearestRangedEnemy(gs) ?? this._findNearest(gs)
+    } else if (this.chosenBeast === 'bear') {
+      target = this._findNearestMeleeEnemy(gs) ?? this._findNearest(gs)
+    } else {
+      target = this._findNearest(gs)
+    }
     if (!target) return
 
     const dx   = target.x - this.x
@@ -334,6 +342,30 @@ export default class ServerMinion {
     if (gs.boss && !gs.boss.isDead && !gs.boss.isImmune) check(gs.boss)
     gs.buildings?.forEach(b => { if (!b.isDead) check(b) })
 
+    return best
+  }
+
+  _findNearestRangedEnemy(gs) {
+    let best = null
+    let bestDist = Infinity
+    gs.enemies.forEach(e => {
+      if (e.isDead) return
+      if (!e.isRanged) return
+      const dist = Math.hypot(e.x - this.x, e.y - this.y)
+      if (dist < bestDist) { bestDist = dist; best = e }
+    })
+    return best
+  }
+
+  _findNearestMeleeEnemy(gs) {
+    let best = null
+    let bestDist = Infinity
+    gs.enemies.forEach(e => {
+      if (e.isDead) return
+      if (e.isRanged) return
+      const dist = Math.hypot(e.x - this.x, e.y - this.y)
+      if (dist < bestDist) { bestDist = dist; best = e }
+    })
     return best
   }
 

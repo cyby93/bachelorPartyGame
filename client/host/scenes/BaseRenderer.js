@@ -161,14 +161,30 @@ export default class BaseRenderer {
     const activeIds = new Set(enemies.map(e => e.id))
 
     for (const e of enemies) {
-      if (!this.enemySprites.has(e.id)) {
+      const wasNew = !this.enemySprites.has(e.id)
+      if (wasNew) {
         const s = new EnemySprite(e)
         this.enemySprites.set(e.id, s)
         this._enemyContainer.addChild(s.container)
         this._onEnemyCreated(e, s)
       }
       const sprite = this.enemySprites.get(e.id)
+      const wasBerserking = sprite._trackBerserking ?? false
       sprite.update(e, dt)
+      sprite._trackBerserking = !!e.isBerserking
+
+      // Attach bladefury_blade orbit when berserk activates
+      if (e.type === 'bonechewerBladeFury' && !wasBerserking && e.isBerserking) {
+        const berserkDuration = 2500
+        const berserkRadius   = 65
+        this.vfx?.attachBladestorm(
+          () => sprite.container.position,
+          berserkDuration,
+          berserkRadius,
+          'bladefury_blade',
+          0xff6633
+        )
+      }
 
       // Sync status auras based on server state flags
       const enemyEffects = []

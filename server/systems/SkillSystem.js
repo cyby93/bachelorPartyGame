@@ -264,6 +264,49 @@ export default class SkillSystem {
         gs.io.emit('player:comboPoints', { playerId: player.id, points: player.comboPoints })
       }
     }
+
+    // Holy Strikes proc (Paladin — every Nth Hammer of Light hit)
+    if (config.name === 'Hammer of Light' && player.className === 'Paladin' && hitCount > 0) {
+      const proc = config.holyStrikeProc
+      const procEvery = proc?.procEvery ?? 3
+      player.hammerSwingCount = (player.hammerSwingCount ?? 0) + 1
+      if (player.hammerSwingCount >= procEvery) {
+        player.hammerSwingCount = 0
+        this._procHolyStrike(gs, player, proc)
+      }
+    }
+  }
+
+  _procHolyStrike(gs, player, proc = {}) {
+    const PROC_RANGE = proc.range ?? 150
+    const healAmount = proc.heal  ?? 24
+
+    let target   = null
+    let lowestHp = Infinity
+    gs.players.forEach(p => {
+      if (p.isDowned || p.isHost || p.id === player.id) return
+      const dist = Math.hypot(p.x - player.x, p.y - player.y)
+      if (dist > PROC_RANGE) return
+      if (p.hp < lowestHp) { lowestHp = p.hp; target = p }
+    })
+    if (!target) target = player
+
+    const healed = target.heal(healAmount)
+    this._trackHeal(gs, player.id, healed)
+
+    if (gs.io) {
+      if (healed > 0) {
+        gs.io.emit('effect:damage', { targetId: target.id, amount: healed, type: 'heal', sourceSkill: 'Hammer of Light' })
+      }
+      const color = CLASSES[player.className]?.color ?? '#ffffff'
+      gs.io.emit('targeted:hit', {
+        casterX: Math.round(player.x), casterY: Math.round(player.y),
+        targetX: Math.round(target.x), targetY: Math.round(target.y),
+        effectType: 'heal', color,
+        sourceSkill: 'Hammer of Light',
+        targetId: target.id,
+      })
+    }
   }
 
   _executeAOE(gs, player, config, v) {

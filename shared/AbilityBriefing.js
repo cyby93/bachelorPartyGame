@@ -17,7 +17,7 @@ export const ABILITY_LABEL = {
   'Shield Block':          'Hold to charge',
 
   // Paladin
-  'Hammer Swing':          'Aim and hold',
+  'Hammer of Light':          'Aim and hold',
   "Avenger's Shield":      'Aim and release',
   'Divine Protection':     'Hold to charge',
   'Consecration':          'Tap',
@@ -83,8 +83,8 @@ export const ABILITY_DETAIL = {
     'Aim and hold to raise a 180° steel shield that blocks 65% of incoming damage. Hold for 2s to fully charge it — releasing a charged shield keeps it active hands-free for 2.5s.',
 
   // Paladin
-  'Hammer Swing':
-    'A focused melee strike in a 90° arc.',
+  'Hammer of Light':
+    'A focused melee strike in a 90° arc. Every 3rd hit automatically heals the lowest-HP ally nearby.',
   "Avenger's Shield":
     'Hurls a holy shield that bounces between up to 3 targets, slowing each on hit.',
   'Divine Protection':

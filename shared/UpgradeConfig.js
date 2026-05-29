@@ -43,11 +43,11 @@ export const UPGRADE_CONFIG = {
 
   // ── PALADIN ──────────────────────────────────────────────────────────────
   Paladin: [
-    // S0: Hammer Swing (MELEE) — damage 10, range 70, cooldown 1200ms → base DPS ~8.3
+    // S0: Hammer of Light (MELEE) — damage 10, range 70, cooldown 1200ms → base DPS ~8.3
     [
-      { label: 'Hammer Swing +1', deltas: { damage: 2 } },
-      { label: 'Hammer Swing +2', deltas: { damage: 1, range: 10 } },
-      { label: 'Hammer Swing +3', deltas: { damage: 2, cooldown: -200 } },
+      { label: 'Hammer of Light +1', deltas: { damage: 2 } },
+      { label: 'Hammer of Light +2', deltas: { damage: 1, range: 10 } },
+      { label: 'Hammer of Light +3', deltas: { damage: 2, cooldown: -200 } },
     ],
     // S1: Avenger's Shield (PROJECTILE) — damage 40, chain 2, cooldown 7000ms → base DPS ~5.7
     [

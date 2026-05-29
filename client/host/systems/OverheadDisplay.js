@@ -23,6 +23,7 @@ export default class OverheadDisplay {
       yOffset: config.yOffset ?? -30,
       showCastBar: config.showCastBar ?? true,
       showComboPips: config.showComboPips ?? false,
+      pipColor: config.pipColor ?? 0xffdd00,
     }
 
     this._container = new Container()
@@ -158,21 +159,21 @@ export default class OverheadDisplay {
     this._lastComboPoints = points
     this._lastComboMax    = maxPts
 
-    const BAR_W = 44   // must match HP bar width (PlayerSprite BAR_W)
-    const BAR_H = 3
+    const BAR_W   = 44
+    const PIP_H   = 3
+    const PIP_GAP = 2
+    const pipW    = (BAR_W - (maxPts - 1) * PIP_GAP) / maxPts
 
     this._comboBarGfx.clear()
 
-    // Background
-    this._comboBarGfx.rect(-BAR_W / 2, 0, BAR_W, BAR_H)
-    this._comboBarGfx.fill({ color: 0x111111, alpha: 0.8 })
-
-    // Fill
-    if (points > 0) {
-      const pct   = Math.min(1, points / maxPts)
-      const fillW = BAR_W * pct
-      this._comboBarGfx.rect(-BAR_W / 2, 0, fillW, BAR_H)
-      this._comboBarGfx.fill({ color: 0xffdd00, alpha: 0.95 })
+    for (let i = 0; i < maxPts; i++) {
+      const x = -BAR_W / 2 + i * (pipW + PIP_GAP)
+      this._comboBarGfx.rect(x, 0, pipW, PIP_H)
+      this._comboBarGfx.fill({ color: 0x111111, alpha: 0.8 })
+      if (i < points) {
+        this._comboBarGfx.rect(x, 0, pipW, PIP_H)
+        this._comboBarGfx.fill({ color: this._config.pipColor, alpha: 0.95 })
+      }
     }
   }
 

@@ -48,11 +48,11 @@ const SkillDatabase = {
       type:      'AOE',
       subtype:   'BLADESTORM',  // player-attached spinning AOE — follows caster, blocks Shield Block only
       inputType: 'INSTANT',
-      cooldown:  12000,
-      damage:    10,             // damage per tick — tune via BalanceConfig
+      cooldown:  14000,
+      damage:    8,             // damage per tick — tune via BalanceConfig
       radius:    70,           
       duration:  4000,          // 4 seconds of spinning
-      tickRate:  400,           // hits every 400 ms
+      tickRate:  500,           // hits every 400 ms
       effectType: 'DAMAGE',
       iconFile:  'ability_warrior_bladestorm',
       dotColor:  0xcc2200,
@@ -75,14 +75,19 @@ const SkillDatabase = {
   // ── PALADIN ──────────────────────────────────────────────────────────────
   Paladin: [
     {
-      name:      'Hammer Swing',
+      name:      'Hammer of Light',
       type:      'MELEE',
       inputType: 'DIRECTIONAL',
-      cooldown:  1200,
-      damage:    10,
+      cooldown:  1000,
+      damage:    7,
       range:     70,
       angle:     Math.PI  / 2,   // 90° cone
-      iconFile:  'spell_paladin_hammerofwrath'
+      iconFile:  'spell_paladin_hammerofwrath',
+      holyStrikeProc: {
+        procEvery: 4,
+        heal:      24,
+        range:     200,
+      }
     },
     {
       name:      "Avenger's Shield",
@@ -121,11 +126,11 @@ const SkillDatabase = {
       inputType: 'INSTANT',
       cooldown:  7000,
       damage:    4,
+      healAmount: 5,
       radius:    100,
       duration:  6000,
       tickRate:  700,
       effectType: 'DUAL',
-      healAmount: 4,
       iconFile:  'spell_holy_innerfire',
       dotColor:  0xffaa33,
     }
@@ -209,7 +214,7 @@ const SkillDatabase = {
       type:      'PROJECTILE',
       inputType: 'DIRECTIONAL',
       cooldown:  500,
-      damage:    5,
+      damage:    6,
       speed:     700,
       radius:    6,
       range:     800,
@@ -410,8 +415,8 @@ const SkillDatabase = {
       type:      'DASH',
       subtype:   'TELEPORT',
       inputType: 'DIRECTIONAL',
-      cooldown:  5000,
-      distance:  250,
+      cooldown:  6000,
+      distance:  220,
       iconFile:  'spell_arcane_blink',
       dotColor:  0xaa44ff,
     },
@@ -566,7 +571,7 @@ const SkillDatabase = {
       cooldown:    5000,
       range:       350,
       damage:      34,
-      comboDamage: 12,
+      comboDamage: 14,
       iconFile:    'ability_rogue_ambush',
       dotColor:    0x660099,
     }
@@ -672,8 +677,8 @@ const SkillDatabase = {
       subtype:   'AOE_ADJACENT',   // spawns adjacent to caster: edge touches caster, extends outward
       inputType: 'DIRECTIONAL',
       cooldown:  10000,
-      damage:    4,
-      radius:    120,
+      damage:    3,
+      radius:    100,
       duration:  7000,
       tickRate:  500,
       effectType: 'DAMAGE',

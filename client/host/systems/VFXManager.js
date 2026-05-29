@@ -67,8 +67,8 @@ export default class VFXManager {
         os.cleaveWipe(d.x, d.y, d.angle, halfAngle, d.range || 70)
         ps.hitSpark(d.x, d.y, d.color || '#ff4400')
       }],
-      // Hammer Swing: instant golden stamp that exactly traces the 90° hitbox cone
-      ['Hammer Swing', (d) => {
+      // Hammer of Light: instant golden stamp that exactly traces the 90° hitbox cone
+      ['Hammer of Light', (d) => {
         const halfAngle = (d.skillAngle ?? Math.PI / 2) / 2
         os.hammerStamp(d.x, d.y, d.angle, halfAngle, d.range || 70)
         ps.hitSpark(d.x, d.y, d.color || '#ffd700')

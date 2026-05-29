@@ -41,6 +41,14 @@ const HEALER_CLASSES = new Set(['Shaman', 'Druid', 'Priest'])
  */
 function getInstantHeal(skill) {
   switch (skill.type) {
+    case 'MELEE':
+      // holyStrikeProc: heal fires every procEvery hits — expected heal per activation = avg / procEvery
+      if (skill.holyStrikeProc) {
+        const p = skill.holyStrikeProc
+        return p.heal / p.procEvery
+      }
+      return 0
+
     case 'TARGETED':
       if (skill.subtype === 'HEAL_ALLY') {
         // Chain Heal hits primary + up to maxChains targets, capped at TARGET_COUNT

@@ -33,3 +33,4 @@ Leans analytical but approachable — shows the math, explains what it means in 
 | 2026-05-20 | Pyroblast onImpact AOE splash now scales by TARGET_COUNT in multi-target mode. | dps-calculator.js CAST branch fixed. Same pattern as Tranquility + Searing Totem fixes. |
 | 2026-05-21 | MELEE cone attacks (Cleave, Hammer Swing, Death Strike) now scale by TARGET_COUNT in multi-target mode. | dps-calculator.js MELEE case split from PROJECTILE; angle presence gates scaling. |
 | 2026-05-21 | Flat ×N multi-target model replaced with geometric expected-hit-count model. | Three formulas (cone, AOE_SELF, placed circle) + DoT coverage factor. --density=tight/normal/loose presets added. |
+| 2026-05-29 | Paladin holyStrikeProc heal added to HPS calculator. | New MELEE case in getInstantHeal: expected heal/activation = avg(healMin,healMax)/procEvery. Paladin off-role HPS: 8.0 → 11.5. |

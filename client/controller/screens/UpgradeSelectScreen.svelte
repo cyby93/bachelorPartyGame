@@ -1,6 +1,4 @@
 <script>
-  import { ABILITY_DETAIL } from '../../../shared/AbilityBriefing.js'
-
   let { skills = [], onupgrade } = $props()
   let chosen = $state(false)
 
@@ -94,9 +92,6 @@
             {#if canUpgrade}
               {#if skill.preview.label}
                 <span class="upgrade-label">{skill.preview.label}</span>
-              {/if}
-              {#if ABILITY_DETAIL[skill.name]}
-                <span class="skill-desc">{ABILITY_DETAIL[skill.name]}</span>
               {/if}
               <div class="changes">
                 {#each skill.preview.changes as change}
@@ -211,12 +206,6 @@
     color: var(--rn-gold);
     text-transform: uppercase;
     letter-spacing: 0.04em;
-  }
-
-  .skill-desc {
-    font-size: 10px;
-    color: var(--rn-text-dim);
-    line-height: 1.3;
   }
 
   .changes {

@@ -292,6 +292,11 @@ export default class ParticleSystem {
     }
   }
 
+  /** Holy Strikes proc — 7 gold/white motes floating upward. */
+  holyHealProc(x, y) {
+    this._burst(x, y, 0xffdd44, 7, 55, 0.35, 2, { gravity: -45, colors: [0xffdd44, 0xffffaa, 0xffffff] })
+  }
+
   celestialBurst(x, y) {
     this._burst(x, y, 0x88ccff, 12, 100, 0.35, 3, { gravity: 0, colors: [0x4488ff, 0x88ccff, 0xffffff] })
   }

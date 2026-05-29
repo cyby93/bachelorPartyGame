@@ -780,7 +780,8 @@ export default class GameServer {
       p.shieldExpiresAt   = null
       p.shieldChargeStart = null
       p.activeEffects   = []
-      p.bladestormActive = false
+      p.bladestormActive  = false
+      p.hammerSwingCount  = 0
       p.rebuildStats()
       p.setArenaSize(this.arenaWidth, this.arenaHeight)
       // Walk-in system sets positions — handled after this forEach

@@ -196,7 +196,7 @@ function buildExplicitSkillAudioMap() {
     Bladestorm: createSkillAudio('Warrior', 'sfx_family_bladestorm', 'sfx_skill_bladestorm_cast', 'sfx_skill_bladestorm_impact', null, null, 'sfx_skill_bladestorm_channel'),
     'Shield Block': createSkillAudio('Warrior', 'sfx_family_shield_guard', 'sfx_skill_shield_wall_cast', 'sfx_skill_shield_wall_impact'),
 
-    'Hammer Swing': createSkillAudio('Paladin', 'sfx_family_melee_holy', 'sfx_skill_hammer_swing_cast', 'sfx_skill_hammer_swing_impact'),
+    'Hammer of Light': createSkillAudio('Paladin', 'sfx_family_melee_holy', 'sfx_skill_hammer_swing_cast', 'sfx_skill_hammer_swing_impact'),
     "Avenger's Shield": createSkillAudio('Paladin', 'sfx_family_holy_projectile', 'sfx_skill_avengers_shield_cast', 'sfx_skill_avengers_shield_impact', 'sfx_skill_avengers_shield_travel'),
     'Divine Protection': createSkillAudio('Paladin', 'sfx_family_holy_barrier', 'sfx_skill_divine_shield_cast', 'sfx_skill_divine_shield_impact'),
     Consecration: createSkillAudio('Paladin', 'sfx_family_holy_ground', 'sfx_skill_consecration_cast', 'sfx_skill_consecration_impact'),

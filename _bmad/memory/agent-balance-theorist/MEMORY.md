@@ -92,7 +92,8 @@ Both calculators use a tick-based greedy simulation (50ms ticks, 5-min fight).
 - **BY DESIGN: Mage Spread ⚠SPREAD flag** (2026-05-20). Fireball T2 `castTime: -80` flips priority above Pyroblast T2 → Pyroblast never fires → DPS < base. Cyby chose to keep the delta as a tuning signal, not a bug. `⚠SPREAD` flag now appears in upgraded calc output. Fix by adjusting Fireball T2 deltas until flag clears.
 - **🟡 CONCERN: Bladestorm opportunity cost** (2026-05-20). SkillDatabase comment says "blocks other skills" 4000ms but `getCastTime=0`. Sim treats as free instant. If engine locks player, Warrior DPS overstated. Verify engine behavior.
 - **✅ FIXED: Hunter S2 (Call of the Wild) WILD_BEAST modelling** (2026-05-20). Both calculators now average beast damage across all 3 variants. `getInstantDamage` formula: `avg(floor(duration/v.attackRate) * (v.damage + damageBonus))`. No TARGET_COUNT scaling (beasts are single-target attackers). Hunter base DPS: 21.3 → 32.5.
-- **Paladin outlier (×2.7 DPS):** Not addressed. Deferred by Cyby.
+- **✅ FIXED: Paladin holyStrikeProc in HPS calculator** (2026-05-29). `hps-calculator.js` `getInstantHeal` now has a `MELEE` case: if `skill.holyStrikeProc`, returns `p.heal / p.procEvery`. Schema: flat `heal` field (was `healMin`/`healMax` — removed). Hammer of Light: 6.0 HPS (heal:24, procEvery:4). Paladin off-role total: Consecration 6.9 + proc 6.0 = **12.9 HPS**. DPS calculator unchanged — proc is heal only, no DPS impact.
+- **Paladin outlier (×2.9 DPS):** Not addressed. Deferred by Cyby.
 - **Tranquility (Druid) multi-target:** ✅ Fixed 2026-05-20.
 - **L5 Phase 1 warlock defenders:** Requires engine support for dual-phase spawning per level. Deferred.
 - **'random2' edge:** Implemented but untested.

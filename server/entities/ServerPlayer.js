@@ -66,6 +66,7 @@ export default class ServerPlayer {
     this.isStunned       = false
     this.isInvisible     = false
     this.comboPoints     = 0    // max 5, gained from Sinister Strike
+    this.hammerSwingCount = 0   // Holy Strikes proc counter (Paladin), resets on death/transition
 
     // Skill upgrade tiers (incremented by quiz system)
     this.skillUpgrades   = [0, 0, 0, 0]
@@ -165,7 +166,7 @@ export default class ServerPlayer {
     }
     const dealt = Math.round(remaining)
     this.hp = Math.max(minHp, this.hp - dealt)
-    if (minHp === 0 && this.hp === 0) this.isDowned = true
+    if (minHp === 0 && this.hp === 0) { this.isDowned = true; this.hammerSwingCount = 0 }
     return dealt
   }
 
@@ -288,7 +289,8 @@ export default class ServerPlayer {
 
     // Visibility state change
     if (cur.isInvisible  !== prev.isInvisible)  delta.isInvisible  = cur.isInvisible
-    if (cur.comboPoints  !== prev.comboPoints)  delta.comboPoints  = cur.comboPoints
+    if (cur.comboPoints     !== prev.comboPoints)     delta.comboPoints     = cur.comboPoints
+    if (cur.hammerSwingCount !== prev.hammerSwingCount) delta.hammerSwingCount = cur.hammerSwingCount
 
     if (cur.isAiming !== prev.isAiming) delta.isAiming = cur.isAiming
     if (cur.aimSelf  !== prev.aimSelf)  delta.aimSelf  = cur.aimSelf
@@ -344,7 +346,8 @@ export default class ServerPlayer {
       maxHp:       this.maxHp,
       isDowned:      this.isDowned,
       isInvisible:  this.isInvisible,
-      comboPoints:  this.comboPoints,
+      comboPoints:     this.comboPoints,
+      hammerSwingCount: this.hammerSwingCount,
       isAiming:     this.isAiming,
       aimSelf:      this.aimSelf,
       shieldActive:         this.shieldActive,

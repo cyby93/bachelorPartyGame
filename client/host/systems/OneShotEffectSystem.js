@@ -605,6 +605,35 @@ export default class OneShotEffectSystem {
     })
   }
 
+  /** Holy Strikes proc — 0.32s golden-white bloom at the healed target. */
+  holyHealProc(x, y) {
+    const duration = 0.32
+    const gfx = this._getGfx()
+    gfx.position.set(x, y)
+    gfx.alpha = 1; gfx.scale.set(1)
+
+    this._active.push({ gfx, elapsed: 0, duration, update: (progress) => {
+      gfx.clear()
+      const fade = 1 - progress
+
+      // Inner gold fill — fades in first 40%
+      if (progress < 0.4) {
+        const bp = progress / 0.4
+        gfx.circle(0, 0, 22)
+        gfx.fill({ color: 0xffee88, alpha: 0.30 * (1 - bp) })
+      }
+
+      // Mid gold halo ring
+      const midR = 18 + progress * 22
+      gfx.circle(0, 0, midR - 4)
+      gfx.stroke({ color: 0xffd700, width: 2, alpha: 0.50 * fade })
+
+      // Outer white leading ring
+      gfx.circle(0, 0, midR)
+      gfx.stroke({ color: 0xffffff, width: 3 * (1 - progress * 0.6), alpha: 0.75 * fade })
+    }})
+  }
+
   /**
    * Blood Prophet buff pulse — 0.6s dark crimson expanding ring, radius = buff radius.
    */
@@ -920,7 +949,7 @@ export default class OneShotEffectSystem {
   }
 
   /**
-   * Paladin Hammer Swing stamp — golden cone appears at full size instantly,
+   * Paladin Hammer of Light stamp — golden cone appears at full size instantly,
    * crack lines radiate along the arc, then fades. Communicates a focused slam.
    * @param {number} halfAngle  half the cone width in radians (e.g. Math.PI/4 for 90°)
    */
@@ -976,11 +1005,12 @@ export default class OneShotEffectSystem {
         gfx.fill({ color: 0xffffff, alpha: 0.32 * fp })
       }
 
-      // Hitbox boundary — cyan cone outline matches server inCone geometry exactly
-      gfx.moveTo(0, 0)
-      gfx.arc(0, 0, range, startAngle, endAngle)
-      gfx.lineTo(0, 0)
-      gfx.stroke({ color: 0x00ffff, width: 1.5, alpha: 0.7 })
+      if (GAME_CONFIG.DEBUG_HITBOXES) {
+        gfx.moveTo(0, 0)
+        gfx.arc(0, 0, range, startAngle, endAngle)
+        gfx.lineTo(0, 0)
+        gfx.stroke({ color: 0x00ffff, width: 1.5, alpha: 0.7 })
+      }
     }})
   }
 

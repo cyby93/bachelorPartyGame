@@ -4,8 +4,8 @@
  * Imported by both server (for HP/speed) and client (for rendering + UI).
  */
 
-import SkillDatabase from './SkillDatabase.js'
 import { IS_TEST, TEST_OVERRIDES } from './BuildConfig.js'
+import SkillDatabase from './SkillDatabase.js'
 
 export const CLASS_NAMES = [
   'Warrior', 'Paladin', 'Shaman', 'Hunter',  'Priest',
@@ -20,7 +20,7 @@ const _CLASSES = {
   Priest:      { name: 'Priest',        color: '#ecf0f1', hp:  80, speed: 1.8, skills: SkillDatabase.Priest      },
   Mage:        { name: 'Mage',          color: '#00ffea', hp:  80, speed: 1.8, skills: SkillDatabase.Mage        },
   Druid:       { name: 'Druid',         color: '#00a326', hp: 90, speed: 2.0, skills: SkillDatabase.Druid       },
-  Rogue:       { name: 'Rogue',         color: '#657900', hp:  140, speed: 2.2, skills: SkillDatabase.Rogue       },
+  Rogue:       { name: 'Rogue',         color: '#657900', hp:  120, speed: 2.2, skills: SkillDatabase.Rogue       },
   Warlock:     { name: 'Warlock',       color: '#a600ff', hp:  80, speed: 1.8, skills: SkillDatabase.Warlock     },
   DeathKnight: { name: 'Death Knight',  color: '#cf0000', hp: 130, speed: 2.0, skills: SkillDatabase.DeathKnight },
 }

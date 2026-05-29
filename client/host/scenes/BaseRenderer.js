@@ -740,12 +740,13 @@ export default class BaseRenderer {
   _buildHitHandlers() {
     const bind = fn => fn.bind(this)
     this._hitHandlers = new Map([
-      ['Moonfire',    bind(this._hitMoonfire)],
-      ['Corruption',  bind(this._hitCorruption)],
-      ['Chain Heal',  bind(this._hitChainHeal)],
-      ['Regrowth',    bind(this._hitRegrowth)],
-      ['Death Grip',  bind(this._hitDeathGrip)],
-      ['Ambush',      bind(this._hitAmbush)],
+      ['Moonfire',         bind(this._hitMoonfire)],
+      ['Corruption',       bind(this._hitCorruption)],
+      ['Chain Heal',       bind(this._hitChainHeal)],
+      ['Regrowth',         bind(this._hitRegrowth)],
+      ['Death Grip',       bind(this._hitDeathGrip)],
+      ['Ambush',           bind(this._hitAmbush)],
+      ['Hammer of Light',  bind(this._hitHammerOfLight)],
     ])
   }
 
@@ -779,6 +780,12 @@ export default class BaseRenderer {
     // No line — plague hit at target
     this.vfx.oneShot.aoeFlash(targetX, targetY, 32, '#aa44ff')
     this.vfx.particles.shadowBurst(targetX, targetY)
+  }
+
+  _hitHammerOfLight(data) {
+    const { targetX, targetY } = data
+    this.vfx.oneShot.holyHealProc(targetX, targetY)
+    this.vfx.particles.holyHealProc(targetX, targetY)
   }
 
   _hitChainHeal(data) {

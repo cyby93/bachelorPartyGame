@@ -175,7 +175,8 @@ export default class PlayerSprite {
     this.overhead = new OverheadDisplay(this._statusEffects, {
       yOffset: OVERHEAD_ZERO + BAR_H - 3,
       showCastBar: true,
-      showComboPips: className === 'rogue',
+      showComboPips: className === 'rogue' || className === 'paladin',
+      pipColor: className === 'paladin' ? 0xffe680 : 0xffdd00,
       skills: this._classData.skills ?? [],
     })
   }
@@ -591,6 +592,8 @@ export default class PlayerSprite {
     this.overhead.updateCastBar(state.castProgress ?? 0, state.isChanneling ?? false)
     if (this._className === 'rogue') {
       this.overhead.setComboPoints(state.comboPoints ?? 0)
+    } else if (this._className === 'paladin') {
+      this.overhead.setComboPoints(state.hammerSwingCount ?? 0, 3)
     }
     const now = Date.now()
     if (Object.keys(this._cooldownEnds).length > 0) {

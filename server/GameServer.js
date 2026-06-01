@@ -183,6 +183,7 @@ export default class GameServer {
     // Disconnected real players waiting for reconnect — keyed by sessionToken.
     // Bot-ify timer fires independently after BOT_IFICATION_DELAY_MS.
     this.disconnectedPlayers = new Map() // sessionToken → ServerPlayer
+    this._waitingPlayers     = new Map() // socketId → name (entered name, picking class)
     this._botSeq = 0
 
     this._botController = new BotController({
@@ -217,6 +218,7 @@ export default class GameServer {
     socket.on(EVENTS.REJOIN,        ()   => this._onRejoin(socket))
     socket.on(EVENTS.PLAYER_READY,  ()   => this._onPlayerReady(socket))
     socket.on(EVENTS.JOIN,          data => this._onJoin(socket, data))
+    socket.on(EVENTS.PLAYER_WAITING, data => this._onPlayerWaiting(socket, data))
     socket.on(EVENTS.INPUT_MOVE,      data => this._onInputMove(socket, data))
     socket.on(EVENTS.INPUT_SKILL,     data => this._onInputSkill(socket, data))
     socket.on(EVENTS.INPUT_HIGHLIGHT, ()   => this._onInputHighlight(socket))
@@ -327,6 +329,11 @@ export default class GameServer {
     const player = this.players.get(socket.id)
     if (!player || player.isHost) return
 
+    // Park in waiting list first so the host pill turns gray rather than vanishing.
+    // WAITING_PLAYERS must land before PLAYER_LEFT so guestOrder retains the slot.
+    this._waitingPlayers.set(socket.id, player.name)
+    this._broadcastWaitingPlayers()
+
     this.disconnectedPlayers.delete(player.sessionToken)
     this.players.delete(socket.id)
     this.inputQueues.delete(socket.id)
@@ -335,6 +342,20 @@ export default class GameServer {
 
     this.io.emit(EVENTS.PLAYER_LEFT, socket.id)
     console.log(`[←] rejoin     ${player.name} (voluntary)`)
+  }
+
+  // ── Pre-join: player entered name, now picking class ──────────────────────
+
+  _onPlayerWaiting(socket, data) {
+    const name = (data?.name || '').slice(0, 20)
+    if (!name) return
+    this._waitingPlayers.set(socket.id, name)
+    this._broadcastWaitingPlayers()
+  }
+
+  _broadcastWaitingPlayers() {
+    const list = [...this._waitingPlayers.entries()].map(([id, name]) => ({ id, name }))
+    this.io.emit(EVENTS.WAITING_PLAYERS, list)
   }
 
   // ── Fresh join — called after class selection ──────────────────────────────
@@ -365,6 +386,11 @@ export default class GameServer {
 
     socket.emit(EVENTS.INIT, { ...buildFullState(this), you: buildYouPayload(player, this.cooldowns, this.scene) })
     this.io.emit(EVENTS.PLAYER_JOINED, player.toDTO())
+
+    // Broadcast waiting list AFTER player_joined so the client sees the player
+    // in the joined list before they disappear from the waiting list.
+    this._waitingPlayers.delete(socket.id)
+    this._broadcastWaitingPlayers()
   }
 
   _onInputMove(socket, data) {
@@ -609,6 +635,8 @@ export default class GameServer {
       this.io.emit(EVENTS.PLAYER_LEFT, socketId)
     }
     this.disconnectedPlayers.clear()
+    this._waitingPlayers.clear()
+    this._broadcastWaitingPlayers()
 
     this.unlockedLevelCount = 1
     this._levelZoneState    = null
@@ -1108,6 +1136,9 @@ export default class GameServer {
   }
 
   _onDisconnect(socket) {
+    if (this._waitingPlayers.delete(socket.id)) {
+      this._broadcastWaitingPlayers()
+    }
     const player = this.players.get(socket.id)
     console.log(`[-] disconnect  ${player?.name ?? socket.id}`)
 
@@ -2406,6 +2437,7 @@ export default class GameServer {
         gate.isActive = false
         needAdvance = true
         console.log(`[~] Gate ${gate.id} destroyed`)
+        this.io.emit(EVENTS.GATE_DESTROY, { gateId: gate.id })
 
         // Phase-aware spawn switching — when gate1 dies, move enemies to Room 2 spawn points
         if (gate.id === 'gate1' && this.spawnSystem?.setSpawnPhase) {

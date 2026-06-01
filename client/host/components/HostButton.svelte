@@ -1,6 +1,6 @@
 <script>
-  import { get } from 'svelte/store'
-  import { audioStore } from '../stores/audioStore.js'
+  import { get } from 'svelte/store';
+  import { audioStore } from '../stores/audioStore.js';
 
   let { label, variant = 'primary', disabled = false, sound = true, onclick } = $props()
 
@@ -26,7 +26,6 @@
     font-size: 13px;
     font-weight: 700;
     letter-spacing: 0.8px;
-    text-transform: uppercase;
     cursor: pointer;
     transition: background 0.12s ease, border-color 0.12s ease, opacity 0.12s ease;
     border: 1px solid var(--rn-border-btn);
@@ -74,7 +73,9 @@
   /* Large variant used on PLAY button in CreationScreen */
   .host-btn--large {
     padding: 16px 32px;
-    font-size: 18px;
+    /* font-family: 'Morpheus', 'Trebuchet MS', sans-serif; */
+    font-size: 24px;
+    font-weight: normal;
     letter-spacing: 2px;
     border-radius: var(--rn-radius-md);
     background: var(--rn-gradient-cta);

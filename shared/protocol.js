@@ -29,8 +29,10 @@ export const EVENTS = {
   // ── Server → All Clients ─────────────────────────────────────────────────
   INIT:          'game:init',       // full state snapshot sent on join
   STATE_DELTA:   'state:delta',     // incremental tick update (20 Hz)
-  PLAYER_JOINED: 'player:joined',   // { player DTO }
-  PLAYER_LEFT:   'player:left',     // socketId string
+  PLAYER_JOINED:  'player:joined',   // { player DTO }
+  PLAYER_LEFT:    'player:left',     // socketId string
+  PLAYER_WAITING: 'player:waiting',  // C→S: { name } — player entered name, picking class
+  WAITING_PLAYERS:'player:waitingList', // S→All: [{ id, name }]
   SCENE_CHANGE:  'scene:change',    // { scene, arenaWidth?, arenaHeight?, levelIndex?, totalLevels?, levelName?, objectives? }
   LEVEL_COMPLETE:    'level:complete',    // { levelIndex, levelName, stats }
   OBJECTIVE_UPDATE:  'objective:update',  // { objectives: [{ type, current, target }] }
@@ -72,6 +74,7 @@ export const EVENTS = {
   BOULDER_ROLL:  'boulder:roll',    // S→All: { boulders: [{id, columnX, y, direction}] }
   BOULDER_CLEAR: 'boulder:clear',   // S→All: { reason: 'cycle'|'gate1_death' }
   BOULDER_HIT:   'boulder:hit',     // S→All: { boulderIds: [...], playerId }
+  GATE_DESTROY:  'gate:destroy',    // S→All: { gateId }
 
   // ── Level 4: Leviathan split sequence ───────────────────────────────
   LEVIATHAN_DEATH: 'leviathan:death', // S→All: { entityId, x, y, generation } — fires at death, before despawn

@@ -40,6 +40,8 @@
 - All 40 player skills have explicit cast/impact mappings, plus travel keys where appropriate.
 - Boss/core-enemy mappings are seeded explicitly for Illidan, Shade, and major archetypes/adds.
 - Encounter utility sounds are explicitly keyed: portal beams, aura pulse, scene/result stingers, join/downed cues, portal entrance loop/end (Training Grounds level selector gate).
+- Level 3 boulder mechanic: `sfx_boulder_charge_up` (loop, charge phase), `sfx_boulder_loop` (loop, rolling phase), `sfx_gate_destroy` (one-shot on gate death). Loop IDs: `boulder_charge`, `boulder_loop`. Gate death emits `GATE_DESTROY` (new event added to protocol).
+- Level 5 pylon mechanic: `sfx_holy_tower_loop` (loop, charging state), `sfx_holy_tower_cast` (loop, active/healing state). Pylon events are piggybacked on `SKILL_FIRED` with `data.type` of `PYLON_SPAWN`/`PYLON_ACTIVATED`/`PYLON_EXPIRED`. Loop IDs: `pylon_charge`, `pylon_active` (safe as fixed IDs — only one pylon exists at a time). All 5 SFX files are awaiting assets.
 
 ## Important Contract Decisions
 

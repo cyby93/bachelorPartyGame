@@ -2,6 +2,7 @@ import { writable } from 'svelte/store'
 
 export const gameState = writable({
   players:            {},
+  waitingPlayers:     [],
   stats:              null,
   boss:               null,
   objectives:         null,

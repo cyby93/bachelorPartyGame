@@ -416,7 +416,7 @@ const SkillDatabase = {
       subtype:   'TELEPORT',
       inputType: 'DIRECTIONAL',
       cooldown:  6000,
-      distance:  220,
+      distance:  200,
       iconFile:  'spell_arcane_blink',
       dotColor:  0xaa44ff,
     },

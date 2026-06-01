@@ -138,6 +138,11 @@ export const AUDIO_ONE_SHOTS = {
   sfx_enemy_ashtongue_mystic_impact: { key: 'sfx_enemy_ashtongue_mystic_impact', src: '/assets/audio/sfx/sfx_enemy_ashtongue_mystic_impact.mp3' },
   sfx_enemy_shadow_demon_cast: { key: 'sfx_enemy_shadow_demon_cast', src: '/assets/audio/sfx/sfx_enemy_shadow_demon_cast.mp3' },
   sfx_enemy_shadow_demon_impact: { key: 'sfx_enemy_shadow_demon_impact', src: '/assets/audio/sfx/sfx_enemy_shadow_demon_impact.mp3' },
+  sfx_boulder_charge_up: { key: 'sfx_boulder_charge_up', src: '/assets/audio/sfx/sfx_boulder_charge_up.ogg' },
+  sfx_boulder_loop:      { key: 'sfx_boulder_loop',      src: '/assets/audio/sfx/sfx_boulder_loop.ogg' },
+  sfx_gate_destroy:      { key: 'sfx_gate_destroy',      src: '/assets/audio/sfx/sfx_gate_destroy.ogg' },
+  sfx_holy_tower_loop:   { key: 'sfx_holy_tower_loop',   src: '/assets/audio/sfx/sfx_holy_tower_loop.ogg' },
+  sfx_holy_tower_cast:   { key: 'sfx_holy_tower_cast',   src: '/assets/audio/sfx/sfx_holy_tower_cast.ogg' },
 }
 
 export const AUDIO_EVENT_FAMILIES = {

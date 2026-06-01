@@ -1,9 +1,10 @@
 <script>
-  import { fade } from 'svelte/transition'
-  import { onMount, onDestroy } from 'svelte'
-  import { EVENTS } from '../../../shared/protocol.js'
-  import { gameState } from '../stores/gameState.js'
-  import HostButton from '../components/HostButton.svelte'
+  import { onDestroy, onMount, untrack } from 'svelte';
+  import { fade } from 'svelte/transition';
+  import { CLASSES } from '../../../shared/ClassConfig.js';
+  import { EVENTS } from '../../../shared/protocol.js';
+  import HostButton from '../components/HostButton.svelte';
+  import { gameState } from '../stores/gameState.js';
 
   let { socket, audio } = $props()
 
@@ -92,6 +93,58 @@
     })
   }
 
+  const EDGE_SLOTS = [
+    { edge: 'left',   pct: 28 },
+    { edge: 'right',  pct: 28 },
+    { edge: 'left',   pct: 52 },
+    { edge: 'right',  pct: 52 },
+    { edge: 'left',   pct: 76 },
+    { edge: 'right',  pct: 76 },
+    { edge: 'top',    pct: 25 },
+    { edge: 'bottom', pct: 25 },
+    { edge: 'top',    pct: 75 },
+    { edge: 'bottom', pct: 75 },
+    { edge: 'left',   pct: 14 },
+    { edge: 'right',  pct: 14 },
+    { edge: 'top',    pct: 50 },
+  ]
+
+  const joinedGuests = $derived(
+    Object.values($gameState.players).filter(p => !p.isHost && !p.isBot)
+  )
+
+  // Joined entries override waiting entries when the same id is in both lists
+  // (the brief overlap window while the server sends PLAYER_JOINED then WAITING_PLAYERS).
+  const guestLookup = $derived(
+    new Map([
+      ...($gameState.waitingPlayers ?? []).map(w => [w.id, { id: w.id, name: w.name, color: '#888888',                                    pending: true  }]),
+      ...joinedGuests.map(p =>                          [p.id, { id: p.id, name: p.name, color: CLASSES[p.className]?.color ?? '#888888', pending: false }]),
+    ])
+  )
+
+  // Stable insertion-order list of ids — a player's position never changes once assigned.
+  let guestOrder = $state([])
+
+  $effect(() => {
+    const joinedIds  = joinedGuests.map(p => p.id)
+    const waitingIds = ($gameState.waitingPlayers ?? []).map(w => w.id)
+    const allIds     = new Set([...joinedIds, ...waitingIds])
+
+    const current = untrack(() => guestOrder)
+    const next    = current.filter(id => allIds.has(id))
+    for (const id of [...waitingIds, ...joinedIds]) {
+      if (!next.includes(id)) next.push(id)
+    }
+    guestOrder = next
+  })
+
+  const pillEntries = $derived(
+    guestOrder
+      .filter(id => guestLookup.has(id))
+      .slice(0, EDGE_SLOTS.length)
+      .map((id, i) => ({ ...guestLookup.get(id), slot: EDGE_SLOTS[i], delay: `${(i * 0.37).toFixed(2)}s` }))
+  )
+
   function toggleFullscreen() {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {})
@@ -136,7 +189,7 @@
       </div>
 
       <div class="play-area">
-        <HostButton label="▶  PLAY" variant="large" sound={false} onclick={handlePlay} />
+        <HostButton label="Play" variant="large" sound={false} onclick={handlePlay} />
       </div>
 
       <div class="footer-controls">
@@ -164,6 +217,22 @@
         </div>
       {/if}
     </div>
+  {/if}
+
+  {#if loadPhase === 'ready'}
+    {#each pillEntries as { id, name, slot, color, delay, pending } (id)}
+      <div
+        class="edge-anchor"
+        class:is-leaving={isLeaving}
+        data-edge={slot.edge}
+        style="--pos: {slot.pct}%; --delay: {delay};"
+        in:fade={{ duration: 700 }}
+      >
+        <div class="edge-pill" class:edge-pill--pending={pending} style="--cls-color: {color};">
+          {name}
+        </div>
+      </div>
+    {/each}
   {/if}
 </div>
 
@@ -252,7 +321,8 @@
   .crest { text-align: center; }
 
   .game-title {
-    font-size: clamp(32px, 5vw, 56px);
+    font-family: 'LifeCraft', 'Trebuchet MS', sans-serif;
+    font-size: clamp(32px, 10vw, 86px);
     font-weight: 900;
     letter-spacing: 6px;
     text-transform: uppercase;
@@ -371,5 +441,49 @@
     font-size: 12px;
     color: var(--rn-text-body);
     cursor: pointer;
+  }
+
+  /* --- Player edge ring --- */
+  .edge-anchor {
+    position: fixed;
+    pointer-events: none;
+    z-index: 60;
+    transition: opacity 2s ease-in-out;
+  }
+  .edge-anchor.is-leaving { opacity: 0; }
+
+  .edge-anchor[data-edge="left"]   { left: -100px;   top: var(--pos); transform: translateY(-50%); }
+  .edge-anchor[data-edge="right"]  { right: -100px;  top: var(--pos); transform: translateY(-50%); }
+  .edge-anchor[data-edge="top"]    { top: -30px;    left: var(--pos); transform: translateX(-50%); }
+  .edge-anchor[data-edge="bottom"] { bottom: -30px; left: var(--pos); transform: translateX(-50%); }
+
+  .edge-pill {
+    padding: 100px 184px;
+    background: radial-gradient(ellipse at center,
+      color-mix(in srgb, var(--cls-color) 26%, transparent) 0%,
+      color-mix(in srgb, var(--cls-color) 10%, transparent) 48%,
+      transparent 72%
+    );
+    border: none;
+    color: var(--cls-color);
+    font-family: 'Morpheus', 'Trebuchet MS', sans-serif;
+    font-size: 22px;
+    font-weight: normal;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    text-shadow: 0 0 14px color-mix(in srgb, var(--cls-color) 55%, transparent);
+    animation: pill-float 3.4s ease-in-out infinite alternate;
+    animation-delay: var(--delay);
+  }
+
+  .edge-pill--pending {
+    opacity: 0.55;
+    filter: grayscale(0.4);
+  }
+
+  @keyframes pill-float {
+    from { transform: translateY(0);    }
+    to   { transform: translateY(-15px); }
   }
 </style>

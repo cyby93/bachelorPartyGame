@@ -262,6 +262,7 @@
     playerName = name
     sessionStorage.setItem('playerName', name)
     rejoinMessage = ''
+    socket.emit(EVENTS.PLAYER_WAITING, { name })
     screen = 'classSelect'
     if (!document.fullscreenElement && !isIOS) toggleFullscreen()
   }

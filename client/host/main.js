@@ -64,15 +64,17 @@ game.setSocket(socket)
 socket.connect()
 
 // ── State tracking (feeds syncGameState) ───────────────────────
-let currentScene      = 'staging'
-let currentObjectives = null
-let currentLevelMeta  = null
-let currentNetworkUrl = ''
+let currentScene         = 'staging'
+let currentObjectives    = null
+let currentLevelMeta     = null
+let currentNetworkUrl    = ''
+let currentWaitingPlayers = []
 
 function syncGameState() {
   gameState.set({
     ...get(gameState),
     players:            game.knownState.players,
+    waitingPlayers:     currentWaitingPlayers,
     stats:              game.knownState.stats,
     boss:               game.knownState.boss,
     objectives:         currentObjectives,
@@ -137,12 +139,20 @@ socket.on(EVENTS.INIT, state => {
 
 socket.on(EVENTS.PLAYER_JOINED, player => {
   game.addPlayer(player)
-  if (!player?.isHost) audio.handlePlayerJoined()
+  if (!player?.isHost) {
+    audio.handlePlayerJoined()
+    audio.handlePlayerGreeting()
+  }
   syncGameState()
 })
 
 socket.on(EVENTS.PLAYER_LEFT, id => {
   game.removePlayer(id)
+  syncGameState()
+})
+
+socket.on(EVENTS.WAITING_PLAYERS, list => {
+  currentWaitingPlayers = list ?? []
   syncGameState()
 })
 
@@ -355,12 +365,28 @@ socket.on(EVENTS.LEVIATHAN_SPAWN, data => {
 
 // ── Level 3: Boulder events ────────────────────────────────────
 
+socket.on(EVENTS.BOULDER_SPAWN, data => {
+  audio.handleBoulderSpawn(data)
+  game.activeRenderer?.onBoulderSpawn?.(data)
+})
+
+socket.on(EVENTS.BOULDER_ROLL, data => {
+  audio.handleBoulderRoll(data)
+  game.activeRenderer?.onBoulderRoll?.(data)
+})
+
 socket.on(EVENTS.BOULDER_CLEAR, data => {
+  audio.handleBoulderClear(data)
   game.activeRenderer?.onBoulderClear?.(data)
 })
 
 socket.on(EVENTS.BOULDER_HIT, data => {
   game.activeRenderer?.onBoulderHit?.(data)
+})
+
+socket.on(EVENTS.GATE_DESTROY, data => {
+  audio.handleGateDestroy(data)
+  game.activeRenderer?.onGateDestroy?.(data)
 })
 
 // ── Level 2: Portal Beam events ────────────────────────────────

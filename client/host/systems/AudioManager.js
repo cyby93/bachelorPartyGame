@@ -1,20 +1,20 @@
-import { GAME_CONFIG } from '../../../shared/GameConfig.js'
 import {
-  AUDIO_STORAGE_KEYS,
-  AUDIO_STINGERS,
-  AUDIO_ONE_SHOTS,
   AUDIO_DUCKING,
+  AUDIO_ONE_SHOTS,
+  AUDIO_STINGERS,
+  AUDIO_STORAGE_KEYS,
   HIT_FLESH_KEYS,
-  SKILL_AUDIO_ONE_SHOTS,
   SFX_VOLUME_SCALES,
+  SKILL_AUDIO_ONE_SHOTS,
   createDefaultAudioSettings,
   getDialogAudio,
   getLevelAudio,
   getOneShotAudio,
-  getSourceSkillAudio,
   getSkillAudio,
+  getSourceSkillAudio,
   withResolvedAudioPaths,
 } from '../../../shared/AudioConfig.js'
+import { GAME_CONFIG } from '../../../shared/GameConfig.js'
 
 // Skills whose EFFECT_DAMAGE events (DOT ticks) should play no impact sound
 const DOT_SILENT_SKILLS = new Set(['Corruption', 'Moonfire'])
@@ -70,6 +70,8 @@ export default class AudioManager {
     this._voiceReleaseTimer = null
     this._fadingOutEl = null
     this._fadingOutTimer = null
+    this._greetingMusicDuck = 1
+    this._greetingDuckTimer = null
   }
 
   init() {
@@ -127,6 +129,10 @@ export default class AudioManager {
   }
 
   handleSkillFired(data) {
+    if (data?.type === 'PYLON_SPAWN')     { this._handlePylonSpawn();     return }
+    if (data?.type === 'PYLON_ACTIVATED') { this._handlePylonActivated(); return }
+    if (data?.type === 'PYLON_EXPIRED')   { this._handlePylonExpired();   return }
+
     const audio = getSkillAudio(data?.skillName, data?.type, data?.subtype)
     const family = audio.family ?? 'generic'
     const t = nowMs()
@@ -268,6 +274,25 @@ export default class AudioManager {
     this._playNamedSfx('sfx_portal_entrance_end')
   }
 
+  handleBoulderSpawn() {
+    this._stopLoopingSfx('boulder_loop')
+    this._startLoopingSfx('boulder_charge', 'sfx_boulder_charge_up', { volumeScale: 0.75 })
+  }
+
+  handleBoulderRoll() {
+    this._stopLoopingSfx('boulder_charge')
+    this._startLoopingSfx('boulder_loop', 'sfx_boulder_loop', { volumeScale: 0.8 })
+  }
+
+  handleBoulderClear() {
+    this._stopLoopingSfx('boulder_charge')
+    this._stopLoopingSfx('boulder_loop')
+  }
+
+  handleGateDestroy() {
+    this._playNamedSfx('sfx_gate_destroy', { family: 'sfx_gate', volumeScale: 0.9 })
+  }
+
   handlePortalBeamWarning() {
     this._stopLoopingSfx('portal_beam')
     this._playNamedSfx('fx_portal_beam_start', { family: 'portal_beam' })
@@ -283,6 +308,37 @@ export default class AudioManager {
 
   handlePlayerJoined() {
     this._playNamedSfx(AUDIO_STINGERS.playerJoin.key, { family: 'ui_join' })
+  }
+
+  handlePlayerGreeting() {
+    if (!this._greetingBag || this._greetingBag.length === 0) {
+      this._greetingBag = this._shuffle(Array.from({ length: 10 }, (_, i) => i + 1))
+    }
+    const n = this._greetingBag.pop()
+    const src = `/assets/audio/voice/voice_player_greeting_${String(n).padStart(2, '0')}.ogg`
+    this._playHtmlOneShot(src, 'voice', 0.9)
+
+    // Duck music for 3.5s; each consecutive greeting resets the hold timer
+    // so a rapid sequence of joins keeps the music ducked throughout.
+    if (this._greetingDuckTimer) {
+      clearTimeout(this._greetingDuckTimer)
+    } else {
+      this._greetingMusicDuck = 0.3
+      this._applySettings()
+    }
+    this._greetingDuckTimer = setTimeout(() => {
+      this._greetingDuckTimer = null
+      this._greetingMusicDuck = 1
+      this._applySettings()
+    }, 4500)
+  }
+
+  _shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[arr[i], arr[j]] = [arr[j], arr[i]]
+    }
+    return arr
   }
 
   syncPlayerState(players = {}) {
@@ -398,7 +454,7 @@ export default class AudioManager {
 
     if (this._musicEl) {
       this._musicEl.muted = muted
-      this._musicEl.volume = clamp01(this._settings.music) * clamp01(this._settings.master) * this._musicDuck
+      this._musicEl.volume = clamp01(this._settings.music) * clamp01(this._settings.master) * this._musicDuck * this._greetingMusicDuck
     }
 
     for (const entry of this._loopingSfx.values()) {
@@ -575,6 +631,21 @@ export default class AudioManager {
     entry.el.pause()
     entry.el.src = ''
     this._loopingSfx.delete(loopId)
+  }
+
+  _handlePylonSpawn() {
+    this._stopLoopingSfx('pylon_active')
+    this._startLoopingSfx('pylon_charge', 'sfx_holy_tower_loop', { volumeScale: 0.6 })
+  }
+
+  _handlePylonActivated() {
+    this._stopLoopingSfx('pylon_charge')
+    this._startLoopingSfx('pylon_active', 'sfx_holy_tower_cast', { volumeScale: 0.7 })
+  }
+
+  _handlePylonExpired() {
+    this._stopLoopingSfx('pylon_charge')
+    this._stopLoopingSfx('pylon_active')
   }
 
   _stopPlayerChannelAudio(playerId) {

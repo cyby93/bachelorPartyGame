@@ -76,7 +76,7 @@ export const ABILITY_DETAIL = {
   'Cleave':
     'Deals melee damage to all enemies in a 180° arc in front of you.',
   'Thunder Clap':
-    'Deals damage to all enemies within 120 units and slows them by 50% for 2 seconds.',
+    'Deals damage to all enemies within 120 units and slows them by 70% for 3.5 seconds.',
   'Bladestorm':
     'Spins for 4 seconds, dealing damage to all enemies in melee range. Other skills are unavailable while active.',
   'Shield Block':
@@ -84,7 +84,7 @@ export const ABILITY_DETAIL = {
 
   // Paladin
   'Hammer of Light':
-    'A focused melee strike in a 90° arc. Every 3rd hit automatically heals the lowest-HP ally nearby.',
+    'A focused melee strike in a 90° arc. Every 4th hit automatically heals the lowest-HP ally nearby.',
   "Avenger's Shield":
     'Hurls a holy shield that bounces between up to 3 targets, slowing each on hit.',
   'Divine Protection':
@@ -100,7 +100,7 @@ export const ABILITY_DETAIL = {
   'Searing Totem':
     'Places a fire totem at your feet that fires fireballs at nearby enemies for 12 seconds.',
   'Bloodlust':
-    'Increases movement speed and attack rate of every player by 30% for 7 seconds.',
+    'Increases every player\'s movement speed by 20% and attack rate by 50% for 7 seconds.',
 
   // Hunter
   'Shoot Bow':
@@ -108,7 +108,7 @@ export const ABILITY_DETAIL = {
   'Aimed Shot':
     'Deals high damage and slows the target by 50% for 4 seconds.',
   'Call of the Wild':
-    'Summons a random companion for 20 seconds — bear (melee tank), hawk (invincible ranged), or panther (fast melee).',
+    'Summons a random companion for 15 seconds — bear (melee tank), hawk (invincible ranged), or panther (fast melee).',
   'Freezing Trap':
     'Drops a trap that creates a freezing area slowing all enemies by 50% for 6 seconds when triggered.',
 
@@ -126,9 +126,9 @@ export const ABILITY_DETAIL = {
   'Fireball':
     'Channels and fires a fireball in the aimed direction.',
   'Frost Nova':
-    'Roots all nearby enemies in place for 2 seconds.',
+    'Roots all nearby enemies in place for 4 seconds.',
   'Blink':
-    'Teleports you 250 units in the aimed direction.',
+    'Teleports you 200 units in the aimed direction.',
   'Pyroblast':
     'A massive fireball that deals heavy damage on impact plus a secondary explosion in the surrounding area.',
 
@@ -146,7 +146,7 @@ export const ABILITY_DETAIL = {
   'Sinister Strike':
     'A melee strike that generates a combo point on hit.',
   'Vanish':
-    'Turns you invisible for 5 seconds. Your next attack while invisible deals 50% bonus damage.',
+    'Turns you invisible for 4 seconds. Your next attack while invisible deals 50% bonus damage.',
   'Sprint':
     'Doubles your movement speed for 4 seconds.',
   'Ambush':

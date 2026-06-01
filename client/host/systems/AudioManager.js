@@ -130,6 +130,8 @@ export default class AudioManager {
 
   handleSkillFired(data) {
     if (data?.type === 'PYLON_SPAWN')     { this._handlePylonSpawn();     return }
+    if (data?.type === 'PYLON_CHARGING')  { this._handlePylonCharging();  return }
+    if (data?.type === 'PYLON_IDLE')      { this._handlePylonIdle();      return }
     if (data?.type === 'PYLON_ACTIVATED') { this._handlePylonActivated(); return }
     if (data?.type === 'PYLON_EXPIRED')   { this._handlePylonExpired();   return }
 
@@ -635,7 +637,14 @@ export default class AudioManager {
 
   _handlePylonSpawn() {
     this._stopLoopingSfx('pylon_active')
+  }
+
+  _handlePylonCharging() {
     this._startLoopingSfx('pylon_charge', 'sfx_holy_tower_loop', { volumeScale: 0.6 })
+  }
+
+  _handlePylonIdle() {
+    this._stopLoopingSfx('pylon_charge')
   }
 
   _handlePylonActivated() {

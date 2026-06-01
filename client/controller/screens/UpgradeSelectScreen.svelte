@@ -51,15 +51,22 @@
     'totemAbility.tickRate': 'Totem Rate',
     'trapEffect.damage': 'Trap Dmg',
     'trapEffect.radius': 'Trap Radius',
+    'trapEffect.zoneDuration': 'Slow Duration',
+    'damageBonus': 'Pet Dmg Bonus',
+    'shieldReduction': 'Block %',
+    'shieldAbsorbThreshold': 'Absorb',
+    'arc': 'Arc',
+    'chargeDuration': 'Charge Time',
+    'lifesteal': 'Lifesteal',
   }
 
   function formatPath(path) {
     return PATH_LABELS[path] || path.split('.').pop()
   }
 
-  const TIME_PATHS = new Set(['cooldown', 'castTime', 'duration', 'effectParams.duration', 'dot.duration', 'hot.duration'])
+  const TIME_PATHS = new Set(['cooldown', 'castTime', 'duration', 'effectParams.duration', 'dot.duration', 'hot.duration', 'chargeDuration', 'tickRate'])
   // For these paths a reduction is a buff, so negative delta should render green
-  const LOWER_IS_BETTER = new Set(['cooldown', 'castTime'])
+  const LOWER_IS_BETTER = new Set(['cooldown', 'castTime', 'tickRate', 'chargeDuration'])
 
   function formatVal(v, path) {
     if (typeof v !== 'number') return String(v)

@@ -2225,6 +2225,7 @@ export default class GameServer {
       charges:      0,
       activatedAt:  null,
       _playerAccum: {},   // playerId → accumulated seconds in range (server-only)
+      _wasCharging: false,
     })
     this.io.emit(EVENTS.SKILL_FIRED, { type: 'PYLON_SPAWN', x: Math.round(x), y: Math.round(y) })
     console.log(`[~] Pylon ${id} spawned at (${Math.round(x)}, ${Math.round(y)})`)
@@ -2246,10 +2247,12 @@ export default class GameServer {
     for (const [id, pylon] of this._pylons) {
       if (pylon.state === 'inactive') {
         // Charge accumulation — one charge per player per second of proximity
+        let anyInRange = false
         this.players.forEach(p => {
           if (p.isHost || p.isDowned) return
           const dist = Math.hypot(p.x - pylon.x, p.y - pylon.y)
           if (dist <= cfg.chargeRadius) {
+            anyInRange = true
             pylon._playerAccum[p.id] = (pylon._playerAccum[p.id] ?? 0) + dt
             while (pylon._playerAccum[p.id] >= 1) {
               pylon.charges++
@@ -2259,6 +2262,14 @@ export default class GameServer {
             pylon._playerAccum[p.id] = 0
           }
         })
+
+        if (anyInRange && !pylon._wasCharging) {
+          pylon._wasCharging = true
+          this.io.emit(EVENTS.SKILL_FIRED, { type: 'PYLON_CHARGING' })
+        } else if (!anyInRange && pylon._wasCharging) {
+          pylon._wasCharging = false
+          this.io.emit(EVENTS.SKILL_FIRED, { type: 'PYLON_IDLE' })
+        }
 
         if (pylon.charges >= cfg.chargesRequired) {
           pylon.state       = 'active'

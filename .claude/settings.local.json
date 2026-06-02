@@ -109,7 +109,8 @@
       "Bash(cp -r /mnt/c/Workspace/bachelorPartyGame/public/assets/sprites/portal_gate_tmp_anim/. /mnt/c/Workspace/bachelorPartyGame/public/assets/sprites/portal_gate_6_anim/)",
       "Bash(ffmpeg -i /mnt/c/Workspace/bachelorPartyGame/public/assets/audio/music/closing_ring_moment.mp3 -ss 5 -c copy /mnt/c/Workspace/bachelorPartyGame/public/assets/audio/music/closing_ring_moment_trimmed.mp3)",
       "Bash(xargs '-I{}' sh -c 'hash=$\\(echo \"{}\" | cut -d\" \" -f1\\); git show $hash -- client/host/entities/EnemySprite.js 2>/dev/null | grep -q \"isDazed\" && echo \"Found in: {}\"')",
-      "Bash(echo \"EXIT: $?\")"
+      "Bash(echo \"EXIT: $?\")",
+      "WebFetch(domain:github.com)"
     ]
   },
   "enableAllProjectMcpServers": true,

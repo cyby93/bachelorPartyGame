@@ -278,6 +278,42 @@
     }
   }
 
+  // App switch / notification banner: same cleanup as onPointerCancel but triggered
+  // by page visibility loss (home button, full-screen notification, task switcher).
+  // touchcancel fires for system-interrupted touches but NOT for all app-switch paths on iOS.
+  $effect(() => {
+    const reset = () => {
+      const type = skill?.inputType
+      if (type === 'DIRECTIONAL' || type === 'TARGETED' || type === 'AIMED') {
+        joystickHeld = false
+        if (aimHeartbeat)     { clearInterval(aimHeartbeat);    aimHeartbeat    = null }
+        if (autoFireInterval) { clearInterval(autoFireInterval); autoFireInterval = null }
+        if (isShieldHold && held) {
+          held = false
+          onskill?.({ index, vector: lastVector, action: 'END' })
+        } else if (isCastHold) {
+          cancelCast()
+        }
+        lastDistance = 0
+      } else {
+        clearAutoRefire()
+        if (type === 'INSTANT' && isCastHold) {
+          cancelCast()
+        } else if (type === 'SUSTAINED' && held) {
+          held = false
+          onskill?.({ index, vector: { x: 1, y: 0 }, action: 'END' })
+        }
+      }
+    }
+    const onVisibility = () => { if (document.hidden) reset() }
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('blur', reset)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('blur', reset)
+    }
+  })
+
   onDestroy(() => {
     clearAutoRefire()
     if (aimHeartbeat) { clearInterval(aimHeartbeat); aimHeartbeat = null }

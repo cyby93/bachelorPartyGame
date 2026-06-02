@@ -40,6 +40,18 @@ Defense added (2026-05-20): when `joystickHeld` is true inside `onPointerCancel`
 
 Also: `MoveJoystick.svelte` now has `touch-action: none` on `.move-zone`. Without it, iOS can hijack movement touches as scroll gestures, preventing nipplejs from receiving `touchend`.
 
+## Mobile input: visibilitychange / blur — app-switch frozen joystick (2026-06-02)
+
+`touchcancel` fires for system-interrupted touches (phone call, Siri, notification pull-down) but **does NOT reliably fire when the user presses the home button or uses the app switcher on iOS.** In those cases, the joystick can remain stuck at its last position indefinitely.
+
+Defense added (2026-06-02):
+
+**MoveJoystick.svelte** — `_visHandler` (`document.visibilitychange`) and `_blurHandler` (`window.blur`) both call `_reset()` (zero vector + `_createJoystick()`). Handlers stored as module vars, cleaned up in `onDestroy`. Watchdog threshold reduced `10000 → 3000ms`.
+
+**SkillButton.svelte** — new `$effect` registers matching `visibilitychange` + `blur` listeners. On hide: mirrors the `onPointerCancel` path for DIRECTIONAL/TARGETED/AIMED (clear `aimHeartbeat`, `autoFireInterval`, emit SHIELD END or cancelCast), and the `onPointerUp` path for INSTANT/SUSTAINED. Returns cleanup that removes both listeners.
+
+Also added `multitouch: false` to nipplejs options in MoveJoystick (prevents multi-finger confusion on the same zone, related to nipplejs issue #94).
+
 ## Self-cast BURST projectiles (e.g. Penance self-heal)
 
 Self-cast BURST projectiles spawn with `vx=0, vy=0, selfCast=true`. `_tickProjectiles` has an early-return guard for these to avoid them freezing in place. **The guard must apply the heal before deleting the projectile.** Currently it checks `canHitAllies && healAmount > 0` and heals the owner directly. Each burst projectile in the 3-shot fires the full `healAmount` independently.

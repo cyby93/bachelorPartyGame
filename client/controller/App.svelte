@@ -50,7 +50,10 @@
   let wakeLock = null
   async function requestWakeLock() {
     if (!('wakeLock' in navigator)) return
-    try { wakeLock = await navigator.wakeLock.request('screen') } catch (_) {}
+    try {
+      wakeLock = await navigator.wakeLock.request('screen')
+      wakeLock.addEventListener('release', () => { wakeLock = null })
+    } catch (_) {}
   }
 
   // ── Socket (plain let — must NOT be Proxy-wrapped)

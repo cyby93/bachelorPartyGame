@@ -7,7 +7,7 @@ _Curated long-term knowledge. Distilled from sessions._
 ## Settled Design Decisions
 
 ### Illidan Fight Duration
-**Constant = 2116 encodes 8 minutes.** Formula: `fight_time = (constant × 2.2) / 9.7`. R and RLEF cancel — they never affect duration, only difficulty pressure. Do NOT re-derive this; it's settled.
+**Live constant = 1200 → ~4:32 at 13p.** Formula: `fight_time = (constant × hpMult) / GroupDPS_mult`. R and RLEF cancel. The original 2116 target (8 min) was superseded — Cyby intentionally shortened the fight. At 12p the fight is 4:28–4:50 depending on class composition. All scenarios well inside the 12-min enrage. Confirmed 2026-06-02.
 
 ### RLEF Semantics
 RLEF is a difficulty-pressure dial, not a fight duration knob. Higher RLEF = more HP AND more effective DPS, they cancel. It controls how threatening content feels for a given player skill level. Easy=0.3, Normal=0.5, Hard=0.7.

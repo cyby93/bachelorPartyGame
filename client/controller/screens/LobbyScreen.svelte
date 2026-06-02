@@ -283,7 +283,7 @@
 
   /* section wrapper — children use em relative to this 1.5em base */
   .skill-details {
-    font-size: 1.5em;
+    font-size: 1.3em;
     display: flex;
     flex-direction: column;
     gap: 4px 8px;
@@ -434,13 +434,13 @@
     }
 
     .skill-details {
-      font-size: 1.325em;
+      font-size: 1em;
     }
 
     .skill-meta,
     .skill-input-type,
     .skill-detail {
-      line-height: 1.5;
+      line-height: 1.1;
     }
     .skill-detail {
       font-size: 0.8em;

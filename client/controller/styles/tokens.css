@@ -57,4 +57,17 @@
   --rn-gradient-surface:  linear-gradient(180deg, #241408 0%, #1A0E06 100%);
   --rn-gradient-cta:      linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 22%), linear-gradient(180deg, #6A3810 0%, #4A2808 100%);
   --rn-gradient-confirm:  linear-gradient(135deg, #27ae60, #1e8449);
+
+  /* ── Font scale ──────────────────────────────────────────────── */
+  /* Change --rn-fs-base to scale every screen at once.            */
+  /* Override a per-screen var to tune one screen independently.   */
+  --rn-fs-base:    16px;
+  --rn-fs-app:     var(--rn-fs-base);
+  --rn-fs-name:    var(--rn-fs-base);
+  --rn-fs-class:   var(--rn-fs-base);
+  --rn-fs-lobby:   var(--rn-fs-base);
+  --rn-fs-game:    var(--rn-fs-base);
+  --rn-fs-skill:   var(--rn-fs-base);
+  --rn-fs-quiz:    var(--rn-fs-base);
+  --rn-fs-upgrade: var(--rn-fs-base);
 }

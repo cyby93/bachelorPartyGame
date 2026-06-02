@@ -333,6 +333,7 @@
     touch-action: none;
     position: relative;
     overflow: hidden;
+    font-size: var(--rn-fs-skill);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.04),
       0 8px 18px rgba(0, 0, 0, 0.14);
@@ -363,29 +364,31 @@
       0 0 16px rgba(0, 210, 100, 0.1);
   }
 
+  /* icon size tracks --rn-fs-skill; width/height in em so they scale together */
   .skill-icon {
-    font-size: 96px;
+    font-size: 6em;
     line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 96px;
-    height: 96px;
+    width: 6em;
+    height: 6em;
     padding: 4px;
     border-radius: var(--rn-radius-lg);
     background: rgba(7, 13, 18, 0.24);
     border: 1px solid rgba(255, 255, 255, 0.04);
   }
 
+  /* 1em relative to .skill-icon's font-size = same as icon container */
   .skill-icon-img {
-    width: 96px;
-    height: 96px;
+    width: 1em;
+    height: 1em;
     object-fit: contain;
     display: block;
   }
 
   .skill-name {
-    font-size: 11px;
+    font-size: 0.69em;
     color: var(--rn-text-label);
     text-align: center;
     padding: 0 8px 2px;
@@ -399,19 +402,14 @@
     }
 
     .skill-icon {
-      width: 68px;
-      height: 68px;
-      font-size: 68px;
+      width: 4.25em;
+      height: 4.25em;
+      font-size: 4.25em;
       border-radius: var(--rn-radius-md);
     }
 
-    .skill-icon-img {
-      width: 68px;
-      height: 68px;
-    }
-
     .skill-name {
-      font-size: 10px;
+      font-size: 0.625em;
       padding: 0 6px 2px;
     }
   }

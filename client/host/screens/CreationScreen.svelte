@@ -185,7 +185,6 @@
           <p class="join-label connecting">Fetching server address…</p>
         {/if}
         <div class="qr-frame" bind:this={qrEl}></div>
-        <p class="qr-hint">Scan to open the controller on your phone</p>
       </div>
 
       <div class="play-area">
@@ -460,8 +459,8 @@
   .edge-pill {
     padding: 100px 184px;
     background: radial-gradient(ellipse at center,
-      color-mix(in srgb, var(--cls-color) 26%, transparent) 0%,
-      color-mix(in srgb, var(--cls-color) 10%, transparent) 48%,
+      color-mix(in srgb, var(--cls-color) 21%, transparent) 0%,
+      color-mix(in srgb, var(--cls-color) 7%, transparent) 35%,
       transparent 72%
     );
     border: none;

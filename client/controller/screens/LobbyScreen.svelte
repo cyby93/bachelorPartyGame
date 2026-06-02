@@ -1,6 +1,6 @@
 <script>
+  import { ABILITY_DETAIL, ABILITY_LABEL } from "../../../shared/AbilityBriefing.js";
   import { CLASSES } from "../../../shared/ClassConfig.js";
-  import { ABILITY_LABEL, ABILITY_DETAIL } from "../../../shared/AbilityBriefing.js";
 
   // Must match GameScreen.svelte GRID_ORDER so the briefing positions match combat
   const GRID_ORDER = [1, 3, 0, 2];
@@ -66,13 +66,13 @@
       </div>
     </div>
     <div class="stats">
-      <span>❤️ {cls?.hp ?? "—"} HP</span>
-      <span>⚡ {cls?.speed ?? "—"}x Spd</span>
+      <span>{cls?.hp ?? "—"} ❤️</span>
+      <span>{cls?.speed ?? "—"}x⚡</span>
     </div>
     <div class="head-actions">
       {#if !ready && onchangeclass}
         <button type="button" class="change-btn" onclick={onchangeclass}>
-          ← Change class
+          Change class
         </button>
       {/if}
       {#if canReady}
@@ -116,9 +116,6 @@
             <span class="skill-input-type">
               {ABILITY_LABEL[skill.name] ?? skill.inputType}
             </span>
-            <!-- <span class="skill-hint">
-              {ABILITY_HINT[skill.name] ?? ""}
-            </span> -->
             {#if ABILITY_DETAIL[skill.name]}
               <span class="skill-detail">{ABILITY_DETAIL[skill.name]}</span>
             {/if}
@@ -138,6 +135,7 @@
     gap: 10px;
     min-height: 0;
     overflow: hidden;
+    font-size: var(--rn-fs-lobby);
     background: radial-gradient(
         circle at top,
         color-mix(
@@ -177,16 +175,17 @@
     gap: 8px;
   }
 
-  h1 {
-    font-size: 24px;
+  /* h1 {
+    font-size: 1.5em;
     line-height: 1;
     color: var(--rn-text-bright);
-  }
+  } */
 
-  .head-copy p {
-    font-size: 12px;
-    line-height: 1.45;
-    color: var(--rn-text-secondary);
+  .head-copy h1 {
+    font-size: 2em;
+    font-family: 'Morpheus', 'Trebuchet MS', sans-serif;
+    letter-spacing: 2px;
+    color: var(--class-color);
   }
 
   .hero-chip {
@@ -213,7 +212,7 @@
   }
 
   .hero-name {
-    font-size: 15px;
+    font-size: 1em;
     font-weight: bold;
     white-space: nowrap;
     overflow: hidden;
@@ -221,7 +220,7 @@
   }
 
   .class-tag {
-    font-size: 11px;
+    font-size: 0.75em;
     color: var(--rn-text-dim);
     white-space: nowrap;
   }
@@ -231,7 +230,7 @@
     flex-direction: column;
     align-items: flex-end;
     gap: 4px;
-    font-size: 12px;
+    font-size: 1em;
     color: var(--rn-text-body);
     flex-shrink: 0;
   }
@@ -263,8 +262,9 @@
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
   }
 
+  /* section wrapper — sets emoji icon size relative to .lobby base */
   .skill-icon {
-    font-size: 52px;
+    font-size: 3.25em;
     line-height: 1;
     flex-shrink: 0;
     display: flex;
@@ -281,7 +281,9 @@
     display: block;
   }
 
+  /* section wrapper — children use em relative to this 1.5em base */
   .skill-details {
+    font-size: 1.5em;
     display: flex;
     flex-direction: column;
     gap: 4px 8px;
@@ -290,7 +292,7 @@
   }
 
   .skill-name {
-    font-size: 13px;
+    font-size: 1em;
     font-weight: bold;
     white-space: nowrap;
     overflow: hidden;
@@ -298,24 +300,18 @@
   }
 
   .skill-meta {
-    font-size: 11px;
+    font-size: 0.6em;
     color: var(--rn-text-label);
   }
 
   .skill-input-type {
-    font-size: 12px;
+    font-size: 0.75em;
     font-weight: 700;
     color: var(--class-color);
   }
 
-  .skill-hint {
-    font-size: 11px;
-    line-height: 1.4;
-    color: var(--rn-text-body);
-  }
-
   .skill-detail {
-    font-size: 10px;
+    font-size: 0.6em;
     line-height: 1.45;
     color: var(--rn-text-secondary);
     margin-top: 2px;
@@ -338,7 +334,7 @@
     padding: 12px 14px;
     border-radius: var(--rn-radius-md);
     border: none;
-    font-size: 14px;
+    font-size: 1.125em;
     font-weight: bold;
     letter-spacing: 2px;
     background: var(--rn-gradient-cta);
@@ -352,7 +348,7 @@
     border: 1px solid var(--rn-border);
     background: transparent;
     color: var(--rn-text-dim);
-    font-size: 11px;
+    font-size: 0.69em;
     letter-spacing: 1px;
     cursor: pointer;
     text-align: center;
@@ -370,7 +366,7 @@
     border: 1px solid rgba(100, 72, 20, 0.35);
     background: var(--rn-gradient-surface);
     color: var(--rn-text-dim);
-    font-size: 12px;
+    font-size: 0.75em;
     font-weight: 600;
     letter-spacing: 1px;
     text-align: center;
@@ -405,18 +401,16 @@
     }
 
     .stats {
-      font-size: 11px;
+      font-size: 1em;
       gap: 2px;
     }
 
-    h1 {
-      font-size: 19px;
-    }
-
-    .head-copy p {
-      font-size: 10px;
-      line-height: 1.25;
-    }
+  .head-copy h1 {
+    font-size: 1.5em;
+    font-family: 'Morpheus', 'Trebuchet MS', sans-serif;
+    letter-spacing: 2px;
+    color: var(--class-color);
+  }
 
     .hero-chip {
       gap: 8px;
@@ -428,37 +422,40 @@
     }
 
     .hero-name {
-      font-size: 13px;
+      font-size: 1em;
     }
 
     .class-tag {
-      font-size: 10px;
+      font-size: 0.8em;
     }
 
     .skills-grid {
       gap: 6px;
     }
 
-    .skill-name {
-      font-size: 11px;
+    .skill-details {
+      font-size: 1.325em;
     }
 
     .skill-meta,
     .skill-input-type,
     .skill-detail {
-      font-size: 10px;
+      line-height: 1.5;
+    }
+    .skill-detail {
+      font-size: 0.8em;
       line-height: 1.2;
     }
 
     .ready-btn {
       min-width: 84px;
       padding: 10px 10px;
-      font-size: 12px;
+      font-size: 1em;
       letter-spacing: 1.2px;
     }
 
     .change-btn {
-      font-size: 10px;
+      font-size: 0.875em;
       padding: 10px 10px;
     }
   }

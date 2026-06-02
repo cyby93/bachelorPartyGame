@@ -133,10 +133,11 @@
     padding: 8px;
     gap: 8px;
     overflow-y: auto;
+    font-size: var(--rn-fs-upgrade);
   }
 
   .title {
-    font-size: 18px;
+    font-size: 1.125em;
     font-weight: bold;
     color: var(--rn-gold);
     margin: 0 0 4px;
@@ -150,6 +151,7 @@
     max-width: 500px;
   }
 
+  /* skill-card is a section wrapper — its em sets the base for card text */
   .skill-card {
     display: flex;
     flex-direction: row;
@@ -160,7 +162,7 @@
     border: 2px solid var(--rn-bg-surface);
     background: var(--rn-bg-surface);
     color: var(--rn-text-bright);
-    font-size: 13px;
+    font-size: 0.8125em;
     cursor: pointer;
     text-align: left;
     transition: border-color 0.15s;
@@ -187,7 +189,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 28px;
+    font-size: 2.15em;
     background: rgba(255,255,255,0.05);
   }
 
@@ -205,10 +207,10 @@
     gap: 4px;
   }
 
-  .tier { font-size: 11px; color: var(--rn-text-dim); flex-shrink: 0; }
+  .tier { font-size: 0.846em; color: var(--rn-text-dim); flex-shrink: 0; }
 
   .upgrade-label {
-    font-size: 10px;
+    font-size: 0.77em;
     font-weight: bold;
     color: var(--rn-gold);
     text-transform: uppercase;
@@ -219,7 +221,7 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
-    font-size: 11px;
+    font-size: 0.846em;
   }
 
   .change.positive { color: var(--rn-success); }
@@ -228,17 +230,17 @@
   .maxed-label {
     color: var(--rn-text-dim);
     font-weight: bold;
-    font-size: 12px;
+    font-size: 0.923em;
   }
 
   .done {
-    font-size: 22px;
+    font-size: 1.375em;
     color: var(--rn-success);
     font-weight: bold;
   }
 
   .sublabel {
-    font-size: 14px;
+    font-size: 0.875em;
     color: var(--rn-text-dimmer);
   }
 </style>

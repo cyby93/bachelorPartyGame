@@ -80,6 +80,7 @@
     display: flex;
     flex-direction: column;
     position: relative;
+    font-size: var(--rn-fs-game);
     background:
       radial-gradient(circle at top, color-mix(in srgb, var(--class-color, var(--rn-accent)) 14%, transparent) 0%, transparent 20%),
       linear-gradient(180deg, #1C1008 0%, #0D0802 100%);
@@ -112,7 +113,7 @@
   }
 
   .hud-name {
-    font-size: 14px;
+    font-size: 0.875em;
     font-weight: bold;
     white-space: nowrap;
     min-width: 0;
@@ -123,7 +124,7 @@
   }
 
   .hud-class {
-    font-size: 10px;
+    font-size: 0.625em;
     letter-spacing: 1px;
     text-transform: uppercase;
     color: var(--rn-text-label);
@@ -136,7 +137,7 @@
     border: 1px solid rgba(255, 215, 0, 0.4);
     border-radius: 6px;
     color: #ffd700;
-    font-size: 16px;
+    font-size: 1em;
     line-height: 1;
     padding: 3px 7px;
     cursor: pointer;
@@ -154,7 +155,7 @@
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: var(--rn-radius-sm);
     color: var(--rn-text-dim);
-    font-size: 13px;
+    font-size: 0.81em;
     padding: 3px 7px;
     cursor: pointer;
     flex-shrink: 0;
@@ -170,7 +171,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 15px;
+    font-size: 0.94em;
     color: var(--rn-accent);
     border-color: rgba(105, 204, 240, 0.3);
     opacity: 0.65;
@@ -178,7 +179,7 @@
   .hud-fs-btn:active { opacity: 1; }
 
   .hud-leave-btn {
-    font-size: 11px;
+    font-size: 0.69em;
     opacity: 0.45;
     padding: 3px 8px;
   }
@@ -208,7 +209,7 @@
     top: 10px;
     left: 12px;
     z-index: 3;
-    font-size: 10px;
+    font-size: 0.625em;
     letter-spacing: 1.4px;
     text-transform: uppercase;
     color: rgba(173, 193, 209, 0.72);
@@ -250,14 +251,14 @@
 
   .downed-overlay h2 {
     color: var(--rn-danger-dim);
-    font-size: 22px;
+    font-size: 1.375em;
     letter-spacing: 1px;
     text-transform: uppercase;
   }
 
   .downed-overlay p  {
     color: var(--rn-text-body);
-    font-size: 13px;
+    font-size: 0.81em;
     line-height: 1.4;
     max-width: 18ch;
   }
@@ -269,11 +270,11 @@
     }
 
     .hud-name {
-      font-size: 13px;
+      font-size: 0.81em;
     }
 
     .hud-class {
-      font-size: 9px;
+      font-size: 0.56em;
     }
 
     .controls {
@@ -288,7 +289,7 @@
     .control-label {
       top: 8px;
       left: 10px;
-      font-size: 9px;
+      font-size: 0.56em;
     }
 
     .skill-grid {

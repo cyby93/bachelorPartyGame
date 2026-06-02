@@ -23,10 +23,11 @@
     padding: 24px;
     gap: 12px;
     text-align: center;
+    font-size: var(--rn-fs-result);
   }
 
   .result {
-    font-size: 28px;
+    font-size: 1.75em;
     font-weight: bold;
     margin: 0;
   }
@@ -35,12 +36,12 @@
   .wrong   { color: var(--rn-danger); }
 
   .answer {
-    font-size: 16px;
+    font-size: 1em;
     color: var(--rn-text-body);
   }
 
   .sublabel {
-    font-size: 14px;
+    font-size: 0.875em;
     color: var(--rn-text-dimmer);
   }
 </style>

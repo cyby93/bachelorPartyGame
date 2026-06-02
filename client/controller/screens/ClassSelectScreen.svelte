@@ -1,5 +1,5 @@
 <script>
-  import { CLASS_NAMES, CLASSES } from '../../../shared/ClassConfig.js'
+  import { CLASS_NAMES, CLASSES } from '../../../shared/ClassConfig.js';
 
   let { onready } = $props()
 
@@ -19,16 +19,16 @@
   }
 
   const ROLES = {
-    Warrior:     'Tank',
-    Paladin:     'Tank / Heal',
-    Shaman:      'DPS / Heal',
+    Warrior:     'Tank / DPS',
+    Paladin:     'Tank / Healer',
+    Shaman:      'Healer',
     Hunter:      'Ranged DPS',
     Priest:      'Healer',
-    Mage:        'Glass Cannon',
-    Druid:       'Hybrid',
-    Rogue:       'Assassin',
-    Warlock:     'DoT Caster',
-    DeathKnight: 'Melee Tank',
+    Mage:        'Ranged DPS',
+    Druid:       'Healer',
+    Rogue:       'DPS',
+    Warlock:     'Ranged DPS',
+    DeathKnight: 'Tank / DPS',
   }
 
   function ready() {
@@ -40,9 +40,7 @@
 
 <div class="select-screen">
   <div class="screen-head">
-    <span class="kicker">Choose Your Class</span>
-    <h1>Build Your Raid Role</h1>
-    <p>Pick the class that fits your style. You will get a full ability briefing before the run starts.</p>
+    <h1>Choose Your Class</h1>
   </div>
 
   <div class="class-grid">
@@ -64,11 +62,10 @@
   {#if className}
     <div class="selection-bar" style="--class-color: {selectedClass?.color ?? '#00d2ff'}">
       <div class="selection-copy">
-        <span class="selection-label">Selected</span>
         <span class="selection-name">{selectedClass?.name}</span>
         <span class="selection-role">{ROLES[className]}</span>
       </div>
-      <button class="ready-btn" onclick={ready}>CONTINUE</button>
+      <button class="ready-btn" onclick={ready}>Continue</button>
     </div>
   {/if}
 </div>
@@ -82,6 +79,7 @@
     gap: 12px;
     min-height: 0;
     overflow: hidden;
+    font-size: var(--rn-fs-class);
     background:
       radial-gradient(circle at top, rgba(200, 148, 40, 0.14) 0%, rgba(200, 148, 40, 0) 26%),
       var(--rn-gradient-bg);
@@ -95,23 +93,10 @@
     padding: 6px 10px 2px;
   }
 
-  .kicker {
-    font-size: 11px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--rn-text-label);
-  }
-
   h1 {
-    font-size: 28px;
+    font-size: 2.75em;
     line-height: 1;
     color: var(--rn-text-bright);
-  }
-
-  p {
-    font-size: 13px;
-    line-height: 1.45;
-    color: var(--rn-text-secondary);
   }
 
   .class-grid {
@@ -160,13 +145,15 @@
   }
 
   .class-card .cls-name {
-    font-size: 13px;
+    font-family: 'Morpheus', 'Trebuchet MS', sans-serif;
+    font-size: 1.125em;
+    letter-spacing: 2px;
     font-weight: bold;
     text-align: center;
   }
 
   .class-card .role {
-    font-size: 10px;
+    font-size: 0.75em;
     color: var(--rn-text-label);
     text-align: center;
     line-height: 1.3;
@@ -186,28 +173,22 @@
 
   .selection-copy {
     min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+    display: inline;
     flex: 1;
   }
 
-  .selection-label {
-    font-size: 10px;
-    letter-spacing: 1.6px;
-    text-transform: uppercase;
-    color: var(--rn-text-label);
-  }
-
   .selection-name {
-    font-size: 18px;
+    font-family: 'Morpheus', 'Trebuchet MS', sans-serif;
+    font-size: 1.5em;
     font-weight: 700;
     color: var(--class-color);
+    letter-spacing: 2px;
   }
 
   .selection-role {
-    font-size: 12px;
+    font-size: 1em;
     color: var(--rn-text-body);
+    margin-left: 4px;
   }
 
   .ready-btn {
@@ -215,7 +196,7 @@
     padding: 14px 18px;
     border-radius: var(--rn-radius-md);
     border: none;
-    font-size: 15px;
+    font-size: 1.125em;
     font-weight: bold;
     background: var(--rn-gradient-cta);
     color: var(--rn-gold);
@@ -234,17 +215,8 @@
       padding: 0 6px;
     }
 
-    .kicker {
-      font-size: 10px;
-    }
-
     h1 {
-      font-size: 22px;
-    }
-
-    p {
-      font-size: 11px;
-      line-height: 1.3;
+      font-size: 1.75em;
     }
 
     .class-grid {
@@ -263,11 +235,11 @@
     }
 
     .class-card .cls-name {
-      font-size: 11px;
+      font-size: 1.25em;
     }
 
     .class-card .role {
-      font-size: 9px;
+      font-size: 0.875em;
       line-height: 1.15;
     }
 
@@ -277,23 +249,19 @@
       border-radius: var(--rn-radius-md);
     }
 
-    .selection-label {
-      font-size: 9px;
-    }
-
     .selection-name {
-      font-size: 15px;
+      font-size: 1.25em;
     }
 
     .selection-role {
-      font-size: 11px;
+      font-size: 0.75em;
     }
 
     .ready-btn {
       min-width: 120px;
       padding: 11px 14px;
       border-radius: var(--rn-radius-md);
-      font-size: 13px;
+      font-size: 0.81em;
       letter-spacing: 1.5px;
     }
   }

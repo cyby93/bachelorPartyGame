@@ -69,6 +69,7 @@
     justify-content: center;
     padding: 12px;
     gap: 10px;
+    font-size: var(--rn-fs-quiz);
   }
 
   .pre-level-label {
@@ -79,14 +80,14 @@
   }
 
   .title {
-    font-size: 20px;
+    font-size: 1.25em;
     font-weight: bold;
     color: var(--rn-warning);
     margin: 0;
   }
 
   .countdown {
-    font-size: 14px;
+    font-size: 0.875em;
     color: var(--rn-text-dim);
     margin: 0;
   }
@@ -108,7 +109,7 @@
     border: 2px solid var(--rn-bg-surface);
     background: var(--rn-bg-surface);
     color: var(--rn-text-bright);
-    font-size: 16px;
+    font-size: 1em;
     cursor: pointer;
     text-align: left;
     transition: background 0.15s, border-color 0.15s;
@@ -138,7 +139,7 @@
     background: var(--rn-bg-surface);
     color: var(--rn-info);
     font-weight: bold;
-    font-size: 15px;
+    font-size: 0.94em;
     flex-shrink: 0;
   }
 
@@ -155,7 +156,7 @@
     padding: 14px;
     border-radius: var(--rn-radius-md);
     border: none;
-    font-size: 16px;
+    font-size: 1em;
     font-weight: bold;
     background: var(--rn-gradient-confirm);
     color: #fff;
@@ -171,13 +172,13 @@
   .confirm-btn:not(:disabled):active { opacity: 0.85; }
 
   .waiting {
-    font-size: 20px;
+    font-size: 1.25em;
     color: var(--rn-success);
     font-weight: bold;
   }
 
   .sublabel {
-    font-size: 14px;
+    font-size: 0.875em;
     color: var(--rn-text-dimmer);
   }
 </style>

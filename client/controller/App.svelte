@@ -482,6 +482,7 @@
   .app {
     width: 100%;
     height: 100%;
+    font-size: var(--rn-fs-app);
   }
 
   .joining-screen {
@@ -496,13 +497,13 @@
   }
 
   .joining-class {
-    font-size: 26px;
+    font-size: 1.625em;
     font-weight: 700;
     color: var(--rn-text-bright);
   }
 
   .joining-label {
-    font-size: 14px;
+    font-size: 0.875em;
     color: var(--rn-text-label);
     letter-spacing: 1.5px;
     text-transform: uppercase;
@@ -517,6 +518,7 @@
     animation: spin 0.8s linear infinite;
   }
 
+  /* section wrapper — sets base for .sublabel inside */
   .end-screen {
     height: 100%;
     display: flex;
@@ -526,12 +528,13 @@
     text-align: center;
     padding: 24px;
     color: var(--rn-text-dim);
-    font-size: 18px;
+    font-size: 1.125em;
     gap: 8px;
   }
 
+  /* 14px / 18px (end-screen base) */
   .sublabel {
-    font-size: 14px;
+    font-size: 0.78em;
     color: var(--rn-text-dimmer);
   }
 
@@ -551,13 +554,13 @@
   }
 
   .rotate-icon {
-    font-size: 64px;
+    font-size: 4em;
     display: block;
     animation: spin 2s linear infinite;
   }
 
   .rotate-overlay p {
-    font-size: 18px;
+    font-size: 1.125em;
     color: var(--rn-text-body);
   }
 
@@ -567,12 +570,12 @@
     border: 1px solid var(--rn-border-btn);
     background: var(--rn-bg-surface);
     color: var(--rn-accent);
-    font-size: 15px;
+    font-size: 0.94em;
     cursor: pointer;
   }
 
   .ios-hint {
-    font-size: 14px;
+    font-size: 0.875em;
     color: var(--rn-text-body);
     max-width: 260px;
     text-align: center;

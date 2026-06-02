@@ -17,7 +17,6 @@
   <div class="brand-card">
     <div class="brand">
       <h1>RAID NIGHT</h1>
-      <p class="subtitle">Controller</p>
       {#if message}
         <p class="rejoin-message">{message}</p>
       {/if}
@@ -36,7 +35,7 @@
         spellcheck="false"
         {onkeydown}
       />
-      <button class="next-btn" onclick={submit} disabled={!name.trim()}>CONTINUE</button>
+      <button class="next-btn" onclick={submit} disabled={!name.trim()}>Continue</button>
     </div>
   </div>
 </div>
@@ -50,6 +49,7 @@
     justify-content: center;
     gap: 24px;
     padding: 24px;
+    font-size: var(--rn-fs-name);
     background:
       radial-gradient(circle at top, rgba(200, 148, 40, 0.14) 0%, rgba(200, 148, 40, 0) 24%),
       var(--rn-gradient-bg);
@@ -79,16 +79,10 @@
   }
 
   h1 {
-    font-size: 34px;
+    font-family: 'LifeCraft', 'Trebuchet MS', sans-serif;
+    font-size: clamp(2em, 10vw, 3.375em);
     color: var(--rn-gold);
     letter-spacing: 4px;
-    margin: 0;
-  }
-
-  .subtitle {
-    font-size: 14px;
-    color: var(--rn-text-secondary);
-    line-height: 1.45;
     margin: 0;
   }
 
@@ -107,7 +101,7 @@
     border: 1px solid var(--rn-border-subtle);
     background: rgba(255, 255, 255, 0.03);
     color: #fff;
-    font-size: 16px;
+    font-size: 1em;
     text-align: center;
     box-sizing: border-box;
   }
@@ -117,7 +111,7 @@
     padding: 14px;
     border-radius: var(--rn-radius-md);
     border: 1px solid rgba(160, 112, 30, 0.55);
-    font-size: 15px;
+    font-size: 0.94em;
     font-weight: bold;
     background: var(--rn-gradient-cta);
     color: var(--rn-text-bright);
@@ -136,7 +130,7 @@
   }
 
   .rejoin-message {
-    font-size: 13px;
+    font-size: 0.81em;
     color: var(--rn-accent);
     text-align: center;
     margin: 4px 0 0;
@@ -154,13 +148,12 @@
     }
 
     h1 {
-      font-size: 28px;
+      font-size: clamp(1.5em, 10vw, 3em);
     }
 
-    .subtitle,
     input,
     .next-btn {
-      font-size: 14px;
+      font-size: 0.875em;
     }
   }
 </style>

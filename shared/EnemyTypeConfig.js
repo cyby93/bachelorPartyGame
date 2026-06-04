@@ -208,7 +208,7 @@ export const ENEMY_TYPES = {
 
   // Phase 2 adds — must be kited to avoid Blaze zones; burning aura damages nearby players
   flameOfAzzinoth: {
-    hp: Math.round(10.00 * HP_MULT * BASE_DPS),
+    hp: Math.round(15 * HP_MULT * BASE_DPS),
     speed: 0.6,
     radius: 60,
     hitboxShape: 'oval',
@@ -227,7 +227,7 @@ export const ENEMY_TYPES = {
   // Phase 3 — slowly crawls toward one random player, instantly kills on contact, retargets on death
   // Mechanic: party must stop and focus it down before it reaches its target
   shadowDemon: {
-    hp: Math.round(10 * HP_MULT * BASE_DPS),   // 500 at defaults — tanky enough to require focused fire
+    hp: Math.round(5 * HP_MULT * BASE_DPS),   // 500 at defaults — tanky enough to require focused fire
     speed: 0.6,                    // slow crawl — gives the party time to react
     radius: 24,
     meleeDamage: 0,              // dealt as instant kill logic in GameServer

@@ -245,7 +245,7 @@ export default class GroundEffectSystem {
       glowGfx = new Graphics()
       glowGfx.circle(0, 0, z.radius * theme.glowR)
       glowGfx.fill({ color: theme.glowColor, alpha: theme.glowAlpha })
-      glowGfx.filters = [new BlurFilter(theme.glowBlur)]
+      glowGfx.filters = [new BlurFilter({ blur: theme.glowBlur, quality: 1 })]
       glowGfx.position.set(z.x, z.y)
       this._layer.addChild(glowGfx)
     }

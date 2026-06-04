@@ -24,6 +24,8 @@ export default class OverheadDisplay {
       showCastBar: config.showCastBar ?? true,
       showComboPips: config.showComboPips ?? false,
       pipColor: config.pipColor ?? 0xffdd00,
+      castBarWidth: config.castBarWidth ?? 44,
+      castBarYOffset: config.castBarYOffset ?? -6,
     }
 
     this._container = new Container()
@@ -35,9 +37,9 @@ export default class OverheadDisplay {
     this._castBarVisible = false
 
     if (this._config.showCastBar) {
-      const BAR_W = 44
+      const BAR_W = this._config.castBarWidth
       const BAR_H = 4
-      const barY = this._config.yOffset - 6
+      const barY = this._config.yOffset + this._config.castBarYOffset
 
       this._castBarBg = new Graphics()
       this._castBarBg.rect(-BAR_W / 2, barY, BAR_W, BAR_H)
@@ -202,6 +204,16 @@ export default class OverheadDisplay {
         this._cdBarGfx.fill({ color: seg.color, alpha: 0.9 })
       }
     }
+  }
+
+  repositionCastBar(newYOffset) {
+    if (!this._castBarBg) return
+    const barY = newYOffset + this._config.castBarYOffset
+    this._castBarY = barY
+    this._castBarBg.clear()
+    this._castBarBg.rect(-this._castBarW / 2, barY, this._castBarW, this._castBarH)
+    this._castBarBg.fill({ color: 0x111111, alpha: 0.8 })
+    this._castBarBg.stroke({ color: 0x666666, width: 0.5 })
   }
 
   update(dt) {

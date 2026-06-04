@@ -3,7 +3,7 @@
  * Server-side boss entity: Illidan Stormrage with phase-based AI.
  */
 
-import { ILLIDAN_CONFIG }        from '../../shared/IllidanConfig.js'
+import { ILLIDAN_CONFIG, ILLIDAN_PHASE } from '../../shared/IllidanConfig.js'
 import { SHADE_OF_AKAMA_CONFIG } from '../../shared/ShadeOfAkamaConfig.js'
 import { DEFAULT_BOSS_RADIUS }   from '../../shared/BaseBossConfig.js'
 
@@ -184,6 +184,7 @@ export default class ServerBoss {
       // Other abilities keep a practical range gate so the boss doesn't use
       // abilities it can't meaningfully deliver (e.g. across a very large map).
       const skipRangeCheck = ['fireball', 'darkBarrage', 'eyeBeams'].includes(ability.type)
+        || this.phase === ILLIDAN_PHASE.DEMON_FORM
       if (!skipRangeCheck) {
         const activationRange = ability.type === 'beam' ? 350 : 600
         if (bestDist > activationRange) continue

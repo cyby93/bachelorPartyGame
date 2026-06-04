@@ -67,6 +67,10 @@ export default class BattleRenderer extends BaseRenderer {
     this._eyeBeamGfx   = new Graphics()
     this._entityRoot.addChild(this._eyeBeamGfx)
 
+    // Shadow demon targeting lines (Illidan demon form)
+    this._shadowDemonLineGfx = new Graphics()
+    this._entityRoot.addChild(this._shadowDemonLineGfx)
+
     // Warglaive throw sprites (Illidan Phase 2 transition)
     this._warglaiveSprites = []
 
@@ -198,6 +202,9 @@ export default class BattleRenderer extends BaseRenderer {
 
     // Eye beams
     this._eyeBeamGfx.clear()
+
+    // Shadow demon targeting lines
+    this._shadowDemonLineGfx.clear()
 
     // Warlock beams
     this._warlockBeamGfx.clear()
@@ -346,6 +353,9 @@ export default class BattleRenderer extends BaseRenderer {
 
     // Eye Beams (Illidan Phase 2)
     this._renderEyeBeams(state.eyeBeams)
+
+    // Shadow Demon targeting lines (Illidan demon form)
+    this._renderShadowDemonLines(state.enemies, state.players)
 
     // Boulder mechanic (Level 3)
     this._renderBoulders(state, dt)
@@ -700,7 +710,7 @@ export default class BattleRenderer extends BaseRenderer {
     this._highlightCooldowns.set(playerId, now)
 
     const { x, y } = sprite.container.position
-    this.vfx?.oneShot.aoeFlash(x, y, 60, '#ffd700')
+    this.vfx?.oneShot.aoeFlash(x, y, 95, '#ffd700')
     setTimeout(() => {
       if (!this.vfx) return
       const pos = sprite.container.position
@@ -1025,6 +1035,24 @@ export default class BattleRenderer extends BaseRenderer {
    }
 
   // ── Eye Beam rendering (Illidan Phase 2) ──────────────────────────────────
+
+  _renderShadowDemonLines(enemies, players) {
+    this._shadowDemonLineGfx.clear()
+    if (!enemies?.length) return
+    const now = Date.now()
+    for (const e of enemies) {
+      if (e.type !== 'shadowDemon' || e.targetPlayerId == null) continue
+      const target = players?.[e.targetPlayerId]
+      if (!target) continue
+      const pulse = 0.35 + 0.40 * (0.5 + 0.5 * Math.sin((now / 1200) * Math.PI * 2))
+      this._shadowDemonLineGfx.moveTo(e.x, e.y)
+      this._shadowDemonLineGfx.lineTo(target.x, target.y)
+      this._shadowDemonLineGfx.stroke({ width: 8, color: 0x660000, alpha: pulse * 0.35 })
+      this._shadowDemonLineGfx.moveTo(e.x, e.y)
+      this._shadowDemonLineGfx.lineTo(target.x, target.y)
+      this._shadowDemonLineGfx.stroke({ width: 2, color: 0xff3333, alpha: pulse * 0.85 })
+    }
+  }
 
   _renderEyeBeams(eyeBeams) {
     this._eyeBeamGfx.clear()

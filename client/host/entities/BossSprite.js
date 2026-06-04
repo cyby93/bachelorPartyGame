@@ -72,6 +72,8 @@ export default class BossSprite {
       yOffset: -this._radius - 26,
       showCastBar: true,
       showStatusIcons: false,
+      castBarWidth: BAR_W,
+      castBarYOffset: 8,
     })
 
     if (GAME_CONFIG.DEBUG_HITBOXES) {
@@ -157,6 +159,7 @@ export default class BossSprite {
       this._hpBg.position.y   = barY
       this._hpFill.position.y = barY
       this.overhead._config.yOffset = barY
+      this.overhead.repositionCastBar(barY)
     }
 
     if (state.maxHp) this._updateHpBar(state.hp / state.maxHp)

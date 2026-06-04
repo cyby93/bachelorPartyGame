@@ -1027,6 +1027,7 @@ export default class ServerEnemy {
     if (this._chargeState === 'dazed')   dto.isDazed = true
     if (this._enraged)                   { dto.isEnraged = true; dto.enrageTargetId = this._enrageTarget?.id ?? null }
     if (this.isFeared)                     dto.isFeared     = true
+    if (this.type === 'shadowDemon' && this.targetPlayerId != null) dto.targetPlayerId = this.targetPlayerId
     dto.angle = this._facingAngle
     if (this._pendingAttackAbility) {
       dto.attackingAbility           = this._pendingAttackAbility

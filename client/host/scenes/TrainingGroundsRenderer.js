@@ -17,8 +17,8 @@ const GLOW_RY     = 33   // glow ellipse half-height
 
 const LEVEL_PORTAL_COLORS = [
   0x2255cc,  // L1 The Courtyard      — Arcane blue
-  0xcc5511,  // L2 The Siege          — War fire orange
-  0x22aa33,  // L3 Black Temple Gates — Fel green
+  0x22aa33,  // L2 Black Temple Gates — Fel green
+  0xcc5511,  // L3 The Siege          — War fire orange
   0x009988,  // L4 Serpentshrine      — Naga teal
   0x7722bb,  // L5 The Refectory      — Shadow violet
   0x330066,  // L6 Illidan's Sanctum  — Void purple
@@ -35,6 +35,14 @@ const PHASE_INSTRUCTIONS = [
 ]
 
 export default class TrainingGroundsRenderer extends BaseRenderer {
+
+  constructor(game) {
+    super(game)
+    this._trainingMinionLayer = new Container()
+    this._entityRoot.addChild(this._trainingMinionLayer)
+  }
+
+  get _minionContainer() { return this._trainingMinionLayer }
 
   // ── Hooks ──────────────────────────────────────────────────────────────────
 

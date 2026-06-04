@@ -33,7 +33,7 @@
       {#if onrejoin && !lobbyMode}
         <button class="hud-btn hud-leave-btn" onclick={onrejoin}>✕ Leave</button>
       {/if}
-      <button class="find-me-btn" onclick={() => onhighlight?.()} aria-label="Find me">
+      <button class="find-me-btn" onpointerdown={(e) => { e.stopPropagation(); onhighlight?.() }} aria-label="Find me">
         &#x25CE;
       </button>
     </div>
@@ -144,6 +144,7 @@
     flex-shrink: 0;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
+    pointer-events: all;
   }
 
   .find-me-btn:active {

@@ -151,11 +151,11 @@ export const ILLIDAN_CONFIG = {
     [ILLIDAN_PHASE.DEMON_FORM]: [
       {
         name: "Agonizing Flames",
-        cooldown: 12000,
+        cooldown: 10000,
         type: "agonizingFlames",
-        damage: Math.round(1.5 * Y * R), // 60 at defaults
-        splashRadius: 120,
-        dotDamage: Math.round(0.25 * Y * R), // 10 at defaults
+        damage: Math.round(1.25 * Y * R), // 60 at defaults
+        splashRadius: 70,
+        dotDamage: Math.round(0.2 * Y * R), // 10 at defaults
         dotInterval: 1000,
         dotDuration: 10000,
         dotRadius: 100,
@@ -165,16 +165,16 @@ export const ILLIDAN_CONFIG = {
         cooldown: 12000,
         type: "summonShadowDemons",
         count: 2,
-        hp: Math.round(10 * X * R), // 500 at defaults — tanky, requires focused fire
+        hp: Math.round(5 * X * R), // 500 at defaults — tanky, requires focused fire
         speed: 0.6, // slow crawl — kill it before it reaches the player
       },
       {
         name: "Shadow Blast",
-        cooldown: 1000,
+        cooldown: 0,
         type: "shadowBlast",
-        castTime: 2500,
+        castTime: 3500,
         damage: Math.round(1 * Y * R), // 40 at defaults
-        splashRadius: 80,
+        splashRadius: 70,
       },
     ],
   },
@@ -183,7 +183,7 @@ export const ILLIDAN_CONFIG = {
    * Aura of Dread — passive, active in Phase 3 (demon form).
    * Applied every tickRate ms to all players within radius.
    */
-  phase3Aura: { radius: 1000, damage: R, tickRate: 3000 },
+  phase3Aura: { radius: 2000, damage: R, tickRate: 3000 },
 
   /**
    * Enrage — triggers if the fight exceeds enrageTimer ms.

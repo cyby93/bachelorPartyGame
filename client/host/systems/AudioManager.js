@@ -64,7 +64,12 @@ export default class AudioManager {
     this._recentSkillFires = []
     this._channelPlayers = new Map()
     this._loopingSfx = new Map()
+    this._activeSfxEls = new Set()
     this._sfxCache = new Map()
+    this._currentScene = null
+    this._silentScenes = new Set([
+      'lobby', 'staging', 'menu', 'result', 'quiz', 'levelComplete', 'gameover',
+    ])
     this._activeVoiceEl = null
     this._reactiveVoiceEl = null
     this._voiceReleaseTimer = null
@@ -97,14 +102,31 @@ export default class AudioManager {
   setScene(scene, meta = {}) {
     if (!this._enabled) return
 
+    this._currentScene = scene
+
+    // Clear all held voice/duck/loop/one-shot state from the previous scene
+    this.handleDialogClear()
+    if (this._reactiveVoiceEl) {
+      this._reactiveVoiceEl.pause()
+      this._reactiveVoiceEl = null
+    }
+    for (const el of this._activeSfxEls) {
+      el.pause()
+      el.src = ''
+    }
+    this._activeSfxEls.clear()
+    for (const loopId of [...this._loopingSfx.keys()]) {
+      this._stopLoopingSfx(loopId)
+    }
+    this._skillFamilyThrottle.clear()
+    this._recentSkillFires.length = 0
+
     const levelId = meta.levelId ?? this._currentLevelId
     this._currentLevelId = levelId ?? null
 
     const cfg = getLevelAudio(levelId, scene)
     if (cfg?.music) this._playMusic(withResolvedAudioPaths(cfg.music, 'music'))
     else if (scene === 'lobby') this._playMusic(withResolvedAudioPaths(getLevelAudio(null, 'lobby')?.music, 'music'))
-
-    this._stopLoopingSfx('portal_entrance')
 
     if (scene === 'battle' || scene === 'bossFight') {
       this.playTransition()
@@ -129,6 +151,7 @@ export default class AudioManager {
   }
 
   handleSkillFired(data) {
+    if (this._silentScenes.has(this._currentScene)) return
     if (data?.type === 'PYLON_SPAWN')     { this._handlePylonSpawn();     return }
     if (data?.type === 'PYLON_CHARGING')  { this._handlePylonCharging();  return }
     if (data?.type === 'PYLON_IDLE')      { this._handlePylonIdle();      return }
@@ -169,6 +192,7 @@ export default class AudioManager {
   }
 
   handleEffectDamage(data) {
+    if (this._silentScenes.has(this._currentScene)) return
     if (!data) return
     if (DOT_SILENT_SKILLS.has(data.sourceSkill)) return
     const t = nowMs()
@@ -200,6 +224,7 @@ export default class AudioManager {
   }
 
   handleTargetedHit(data) {
+    if (this._silentScenes.has(this._currentScene)) return
     if (!data) return
     const enemyAudio = getSourceSkillAudio(data.sourceSkill)
     if (enemyAudio) {
@@ -360,12 +385,32 @@ export default class AudioManager {
       if (castSkill && castProgress != null && previous.castSkill !== castSkill) {
         const skillAudio = getSkillAudio(castSkill)
         if (isChanneling) {
-          if (skillAudio.cast) this._playNamedSfx(skillAudio.cast, { family: skillAudio.family, variation: player.id })
+          const family = skillAudio.family ?? 'generic'
+          const t = nowMs()
+          const lastFire = this._skillFamilyThrottle.get(family) ?? 0
+          if (skillAudio.cast && t - lastFire >= this._throttle.skillCastFamilyMs) {
+            this._skillFamilyThrottle.set(family, t)
+            this._playNamedSfx(skillAudio.cast, { family, variation: player.id })
+          }
           if (skillAudio.channel) this._startLoopingSfx(player.id, skillAudio.channel, { volumeScale: 0.85 })
           castSfxEl = null
         } else {
-          const startCue = skillAudio.precast ?? skillAudio.cast
-          castSfxEl = startCue ? this._playNamedSfx(startCue, { family: skillAudio.family, variation: player.id }) : null
+          // Only play precast (wind-up) cue — cast (fire) cue is owned by handleSkillFired.
+          // No fallback to skillAudio.cast: that would double-play for instant-fire skills.
+          const startCue = skillAudio.precast
+          if (startCue) {
+            const family = skillAudio.family ?? 'generic'
+            const t = nowMs()
+            const lastFire = this._skillFamilyThrottle.get(family) ?? 0
+            if (t - lastFire >= this._throttle.skillCastFamilyMs) {
+              this._skillFamilyThrottle.set(family, t)
+              castSfxEl = this._playNamedSfx(startCue, { family, variation: player.id })
+            } else {
+              castSfxEl = null
+            }
+          } else {
+            castSfxEl = null
+          }
         }
       }
 
@@ -525,8 +570,6 @@ export default class AudioManager {
   }
 
   _duckForVoice(active, { duckSfx = false } = {}) {
-    if (!this._buses) return
-
     const sfxWasDucked = this._sfxDucked
 
     if (active && duckSfx) {
@@ -535,25 +578,13 @@ export default class AudioManager {
     }
 
     this._musicDuck = active ? AUDIO_DUCKING.voiceMusicMultiplier : 1
-    this._applySettings()
 
-    const now = this._ctx?.currentTime ?? 0
-    const musicTarget = active
-      ? clamp01(this._settings.music) * AUDIO_DUCKING.voiceMusicMultiplier
-      : clamp01(this._settings.music)
-    this._buses.music.gain.cancelScheduledValues(now)
-    this._buses.music.gain.setValueAtTime(this._buses.music.gain.value, now)
-    this._buses.music.gain.linearRampToValueAtTime(musicTarget, now + AUDIO_DUCKING.releaseMs / 1000)
-
-    // Restore sfx bus smoothly when releasing a dialog duck
     if (!active && sfxWasDucked) {
       this._sfxDuck   = 1
       this._sfxDucked = false
-      const sfxTarget = clamp01(this._settings.sfx)
-      this._buses.sfx.gain.cancelScheduledValues(now)
-      this._buses.sfx.gain.setValueAtTime(this._buses.sfx.gain.value, now)
-      this._buses.sfx.gain.linearRampToValueAtTime(sfxTarget, now + AUDIO_DUCKING.releaseMs / 1000)
     }
+
+    this._applySettings()
   }
 
   _playVoice(dialog) {
@@ -607,6 +638,8 @@ export default class AudioManager {
     el.muted = !!this._settings.muted
     el.preload = 'auto'
     el.play().catch(() => {})
+    this._activeSfxEls.add(el)
+    el.addEventListener('ended', () => this._activeSfxEls.delete(el), { once: true })
     return el
   }
 

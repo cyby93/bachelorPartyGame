@@ -60,10 +60,10 @@ export const LEVEL_AUDIO = {
     music: { key: 'music_level_1_courtyard', src: '/assets/audio/music/music_level_1_courtyard.mp3', loop: true },
   },
   level_2: {
-    music: { key: 'music_level_2_siege', src: '/assets/audio/music/music_level_2_siege.mp3', loop: true },
+    music: { key: 'music_level_2_gates', src: '/assets/audio/music/music_level_2_gates.mp3', loop: true },
   },
   level_3: {
-    music: { key: 'music_level_3_gates', src: '/assets/audio/music/music_level_3_gates.mp3', loop: true },
+    music: { key: 'music_level_3_siege', src: '/assets/audio/music/music_level_3_siege.mp3', loop: true },
   },
   level_4: {
     music: { key: 'music_level_4_cavern', src: '/assets/audio/music/music_level_4_cavern.mp3', loop: true },

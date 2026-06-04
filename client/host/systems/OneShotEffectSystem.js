@@ -1023,6 +1023,7 @@ export default class OneShotEffectSystem {
       if (progress >= 1) {
         fx.gfx.clear()
         fx.gfx.visible = false
+        this._layer.removeChild(fx.gfx)
         this._pool.push(fx.gfx)
         this._active.splice(i, 1)
         continue
@@ -1040,13 +1041,10 @@ export default class OneShotEffectSystem {
   }
 
   _getGfx() {
-    let gfx = this._pool.pop()
-    if (!gfx) {
-      gfx = new Graphics()
-      this._layer.addChild(gfx)
-    }
+    const gfx = this._pool.pop() ?? new Graphics()
     gfx.clear()
     gfx.visible = true
+    this._layer.addChild(gfx)
     return gfx
   }
 }

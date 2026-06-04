@@ -657,11 +657,9 @@ export default class IllidanEncounter {
 
   _tickEffects(now) {
     this.players.forEach(p => {
-      // For dead players: expire the parasitic shadowfiend effect immediately so fiends don't spawn
+      // For dead players: clear all illidan: effects so fiends don't spawn and debuff visuals disappear
       if (p.isDowned) {
-        if (p.activeEffects?.some(e => e.source === 'illidan:parasiticShadowfiend')) {
-          p.activeEffects = p.activeEffects.filter(e => e.source !== 'illidan:parasiticShadowfiend')
-        }
+        p.activeEffects = (p.activeEffects ?? []).filter(e => !e.source?.startsWith('illidan:'))
         return
       }
       if (!p.activeEffects?.length) return

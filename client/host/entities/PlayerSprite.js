@@ -566,7 +566,8 @@ export default class PlayerSprite {
 
     // Agonizing Flame aura circle
     if (state.effects) {
-      const af = state.effects.find(e => e.src === 'illidan:agonizingFlames')
+      const isDowned = state.isDowned ?? false
+      const af = !isDowned && state.effects.find(e => e.src === 'illidan:agonizingFlames')
       if (af) {
         this._agonizingFlameRadius = af.params?.dotRadius ?? 100
       } else {

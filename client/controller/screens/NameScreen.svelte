@@ -26,7 +26,7 @@
       <input
         type="text"
         bind:value={name}
-        placeholder="Your raid name"
+        placeholder="Enter your nickname"
         maxlength="15"
         required
         autocomplete="off"

@@ -98,99 +98,12 @@ export const CAMPAIGN = [
     boss: null,
   },
 
-  // ── Level 2: The Siege (Destroy the Buildings) ────────────────────────
+  // ── Level 2: Destroy the Gates ────────────────────────────────────────
   {
     id: 'level_2',
-    name: 'The Siege',
-    audio: {
-      music: 'music_level_2_siege',
-    },
-    arena: { width: L2_MAP_WIDTH, height: L2_MAP_HEIGHT },
-    objectives: [
-      { type: 'destroyBuildings' },
-    ],
-    buildings: [
-      { id: 'b1', position: L2_BUILDING_POSITIONS[0], hp: Math.round(8 * X * R), width: L2_BUILDING_SIZE, height: L2_BUILDING_SIZE, spriteKey: 'portal_building' },
-      { id: 'b2', position: L2_BUILDING_POSITIONS[1], hp: Math.round(8 * X * R), width: L2_BUILDING_SIZE, height: L2_BUILDING_SIZE, spriteKey: 'portal_building' },
-      { id: 'b3', position: L2_BUILDING_POSITIONS[2], hp: Math.round(8 * X * R), width: L2_BUILDING_SIZE, height: L2_BUILDING_SIZE, spriteKey: 'portal_building' },
-      { id: 'b4', position: L2_BUILDING_POSITIONS[3], hp: Math.round(8 * X * R), width: L2_BUILDING_SIZE, height: L2_BUILDING_SIZE, spriteKey: 'portal_building' },
-    ],
-    // Portal beam mechanic: two buildings link via a mirror every 10 seconds.
-    // 3-second warning phase, then damage phase. Cyby will tune damage values.
-    // mirrors?: [{ id: string, position: { x: number, y: number } }]
-    mirrors: [
-      { id: 'm1', position: { x: 700, y: 200 } },
-      { id: 'm2', position: { x: 400, y: 500 } },
-      { id: 'm3', position: { x: 1000, y: 500 } },
-      { id: 'm4', position: { x: 700, y: 800 } },
-    ],
-    beamMechanic: {
-      cycleMs:         10000,  // full cycle length (warning + damage combined)
-      warningMs:       3000,   // warning phase duration before damage starts
-      damageMs:        5000,   // how long the damage phase lasts
-      damagePerSecond: 40,     // DPS to players caught in the beam rectangle
-      beamWidth:       60,     // half-width of each beam rectangle
-    },
-    buildingSpawning: {
-      baseInterval: 6000,          // ms between spawns per building
-      countPerSpawn: [1, 3],       // min/max enemies per spawn event
-      maxTotalAlive: 8,            // total cap shared across alive buildings — redistributes on death
-      buffFactor: 0.10,            // 25% faster spawns per destroyed building
-      spawnRadius: 120,             // spawn distance from building center
-      enemyTypes: [
-        { type: 'felGuard',   weight: 4 },
-        { type: 'bonechewerBrute',   weight: 2 },
-        { type: 'coilskarHarpooner',  weight: 3 },
-        { type: 'illidariCenturion', weight: 2 },
-        { type: 'bonechewerBladeFury', weight: 2 },
-        { type: 'ashtonghueMystic', weight: 2 },
-        { type: 'bloodProphet', weight: 2 },
-        { type: 'coilskarSerpentGuard', weight: 1 },
-      ],
-    },
-    // Reinforcements pour in from all 4 edges — distinct from building-local
-    // spawning and reinforces the "surrounded siege" feeling
-    spawning: {
-      mode: 'continuous',
-      interval: 4000,
-      countPerWave: [1, 2],
-      maxAliveAtOnce: 3,
-      spawnEdge: 'all',
-      enemyTypes: [
-        { type: 'felGuard',          weight: 4 },
-        { type: 'coilskarHarpooner', weight: 1 },
-        { type: 'bonechewerBrute',   weight: 1 },
-],
-    },
-    difficulty: {
-      hpMult:     { base: 1.0, perPlayer: 0.06 },
-      damageMult: { base: 1.0, perPlayer: 0.05 },
-      spawnMult:  { base: 1.0, perPlayer: 0.10 },
-      countMult:  { base: 1.0, perPlayer: 0.05 },
-    },
-    transition: {
-      opening: {
-        fadeInMs: 1200,
-        walkInMs: 2500,
-        enemySpawnDelayMs: 2000,
-      },
-      closing: {
-        fadeOutMs: 1500,
-        walkOutMs: 2000,
-        steps: [
-          { type: 'delay', ms: 2200 },
-        ],
-      },
-    },
-    boss: null,
-  },
-
-  // ── Level 3: Destroy the Gates ────────────────────────────────────────
-  {
-    id: 'level_3',
     name: 'The Black Temple Gates',
     audio: {
-      music: 'music_level_3_gates',
+      music: 'music_level_2_gates',
     },
     arena: {
       width: 1100,
@@ -267,6 +180,93 @@ export const CAMPAIGN = [
     transition: {
       opening: {
         fadeInMs: 1500,
+        walkInMs: 2500,
+        enemySpawnDelayMs: 2000,
+      },
+      closing: {
+        fadeOutMs: 1500,
+        walkOutMs: 2000,
+        steps: [
+          { type: 'delay', ms: 2200 },
+        ],
+      },
+    },
+    boss: null,
+  },
+
+  // ── Level 3: The Siege (Destroy the Buildings) ────────────────────────
+  {
+    id: 'level_3',
+    name: 'The Siege',
+    audio: {
+      music: 'music_level_3_siege',
+    },
+    arena: { width: L2_MAP_WIDTH, height: L2_MAP_HEIGHT },
+    objectives: [
+      { type: 'destroyBuildings' },
+    ],
+    buildings: [
+      { id: 'b1', position: L2_BUILDING_POSITIONS[0], hp: Math.round(8 * X * R), width: L2_BUILDING_SIZE, height: L2_BUILDING_SIZE, spriteKey: 'portal_building' },
+      { id: 'b2', position: L2_BUILDING_POSITIONS[1], hp: Math.round(8 * X * R), width: L2_BUILDING_SIZE, height: L2_BUILDING_SIZE, spriteKey: 'portal_building' },
+      { id: 'b3', position: L2_BUILDING_POSITIONS[2], hp: Math.round(8 * X * R), width: L2_BUILDING_SIZE, height: L2_BUILDING_SIZE, spriteKey: 'portal_building' },
+      { id: 'b4', position: L2_BUILDING_POSITIONS[3], hp: Math.round(8 * X * R), width: L2_BUILDING_SIZE, height: L2_BUILDING_SIZE, spriteKey: 'portal_building' },
+    ],
+    // Portal beam mechanic: two buildings link via a mirror every 10 seconds.
+    // 3-second warning phase, then damage phase. Cyby will tune damage values.
+    // mirrors?: [{ id: string, position: { x: number, y: number } }]
+    mirrors: [
+      { id: 'm1', position: { x: 700, y: 200 } },
+      { id: 'm2', position: { x: 400, y: 500 } },
+      { id: 'm3', position: { x: 1000, y: 500 } },
+      { id: 'm4', position: { x: 700, y: 800 } },
+    ],
+    beamMechanic: {
+      cycleMs:         10000,  // full cycle length (warning + damage combined)
+      warningMs:       3000,   // warning phase duration before damage starts
+      damageMs:        5000,   // how long the damage phase lasts
+      damagePerSecond: 40,     // DPS to players caught in the beam rectangle
+      beamWidth:       60,     // half-width of each beam rectangle
+    },
+    buildingSpawning: {
+      baseInterval: 6000,          // ms between spawns per building
+      countPerSpawn: [1, 1],       // min/max enemies per spawn event
+      maxTotalAlive: 1,            // total cap shared across alive buildings — redistributes on death
+      buffFactor: 0.10,            // 25% faster spawns per destroyed building
+      spawnRadius: 120,             // spawn distance from building center
+      enemyTypes: [
+        { type: 'felGuard',   weight: 4 },
+        { type: 'bonechewerBrute',   weight: 2 },
+        { type: 'coilskarHarpooner',  weight: 3 },
+        { type: 'illidariCenturion', weight: 2 },
+        { type: 'bonechewerBladeFury', weight: 2 },
+        { type: 'ashtonghueMystic', weight: 2 },
+        { type: 'bloodProphet', weight: 2 },
+        { type: 'coilskarSerpentGuard', weight: 1 },
+      ],
+    },
+    // Reinforcements pour in from all 4 edges — distinct from building-local
+    // spawning and reinforces the "surrounded siege" feeling
+    spawning: {
+      mode: 'continuous',
+      interval: 4000,
+      countPerWave: [0, 0],
+      maxAliveAtOnce: 3,
+      spawnEdge: 'all',
+      enemyTypes: [
+        { type: 'felGuard',          weight: 4 },
+        { type: 'coilskarHarpooner', weight: 1 },
+        { type: 'bonechewerBrute',   weight: 1 },
+],
+    },
+    difficulty: {
+      hpMult:     { base: 1.0, perPlayer: 0.06 },
+      damageMult: { base: 1.0, perPlayer: 0.05 },
+      spawnMult:  { base: 1.0, perPlayer: 0.10 },
+      countMult:  { base: 1.0, perPlayer: 0.05 },
+    },
+    transition: {
+      opening: {
+        fadeInMs: 1200,
         walkInMs: 2500,
         enemySpawnDelayMs: 2000,
       },

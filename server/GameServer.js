@@ -2847,6 +2847,16 @@ export default class GameServer {
 
   // ── Quiz system ─────────────────────────────────────────────────────────────
 
+  _shuffleQuizQuestion(question) {
+    const options = [...question.options]
+    for (let i = options.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [options[i], options[j]] = [options[j], options[i]]
+    }
+    const correctIndex = options.indexOf(question.correctAnswer)
+    return { ...question, options, correctIndex }
+  }
+
   _startQuiz() {
     // Pick a random unused question
     const available = QUIZ_QUESTIONS.filter(q => !this._usedQuestionIds.has(q.id))
@@ -2856,9 +2866,10 @@ export default class GameServer {
       return
     }
 
-    const question = available[Math.floor(Math.random() * available.length)]
-    this._usedQuestionIds.add(question.id)
+    const raw = available[Math.floor(Math.random() * available.length)]
+    this._usedQuestionIds.add(raw.id)
 
+    const question = this._shuffleQuizQuestion(raw)
     this._quizQuestion = question
     this._quizAnswers.clear()
     this._quizResults.clear()
@@ -2887,8 +2898,9 @@ export default class GameServer {
       this._startLevel(this._preLevelTargetIndex)
       return
     }
-    const question = available[Math.floor(Math.random() * available.length)]
-    this._usedQuestionIds.add(question.id)
+    const raw = available[Math.floor(Math.random() * available.length)]
+    this._usedQuestionIds.add(raw.id)
+    const question = this._shuffleQuizQuestion(raw)
     this._quizQuestion = question
     this._quizAnswers.clear()
     this._quizResults.clear()

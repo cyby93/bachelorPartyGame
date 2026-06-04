@@ -686,6 +686,43 @@ export default class AudioManager {
     return audio
   }
 
+  debugResetAudio() {
+    if (this._greetingDuckTimer) { clearTimeout(this._greetingDuckTimer); this._greetingDuckTimer = null }
+    if (this._voiceReleaseTimer) { clearTimeout(this._voiceReleaseTimer); this._voiceReleaseTimer = null }
+
+    if (this._fadingOutTimer) { clearInterval(this._fadingOutTimer); this._fadingOutTimer = null }
+    if (this._fadingOutEl) { this._fadingOutEl.pause(); this._fadingOutEl.src = ''; this._fadingOutEl = null }
+
+    if (this._activeVoiceEl) { this._activeVoiceEl.pause(); this._activeVoiceEl.src = ''; this._activeVoiceEl = null }
+    if (this._reactiveVoiceEl) { this._reactiveVoiceEl.pause(); this._reactiveVoiceEl.src = ''; this._reactiveVoiceEl = null }
+
+    this._sfxDuck = 1
+    this._sfxDucked = false
+    this._musicDuck = 1
+    this._greetingMusicDuck = 1
+
+    if (this._buses) {
+      const now = this._ctx?.currentTime ?? 0
+      for (const busName of ['master', 'music', 'sfx', 'voice']) {
+        const node = this._buses[busName]
+        if (!node) continue
+        node.gain.cancelScheduledValues(now)
+        node.gain.setValueAtTime(node.gain.value, now)
+      }
+    }
+
+    this._resume()
+    this._applySettings()
+
+    if (this._musicEl && this._musicEl.paused) {
+      this._musicEl.volume = clamp01(this._settings.music) * clamp01(this._settings.master) * this._musicDuck * this._greetingMusicDuck
+      this._musicEl.muted = !!this._settings.muted
+      this._musicEl.play().catch(() => {})
+    }
+
+    console.log('[AudioManager] debugResetAudio — duck state cleared, gains restored')
+  }
+
   _randomFleshHitKey() {
     return HIT_FLESH_KEYS[Math.floor(Math.random() * HIT_FLESH_KEYS.length)]
   }

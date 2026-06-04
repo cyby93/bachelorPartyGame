@@ -2,6 +2,7 @@
   import { EVENTS } from '../../../shared/protocol.js'
   import { CAMPAIGN, LEVEL_SELECT_OPTIONS } from '../../../shared/LevelConfig.js'
   import { gameState } from '../stores/gameState.js'
+  import { audioStore } from '../stores/audioStore.js'
 
   let { socket } = $props()
 
@@ -61,6 +62,10 @@
 
   function handleKillIllidan() {
     socket.emit(EVENTS.DEBUG_KILL_ILLIDAN)
+  }
+
+  function handleResetAudio() {
+    $audioStore?.debugResetAudio()
   }
 </script>
 
@@ -126,6 +131,9 @@
     {#if $gameState.serverScene === 'bossFight'}
       <button class="util-btn kill-illidan-btn" onclick={handleKillIllidan}>💀 Kill Illidan (skip fight)</button>
     {/if}
+
+    <h3 style="margin-top:10px">Audio</h3>
+    <button class="util-btn reset-audio-btn" onclick={handleResetAudio}>🔊 Reset Audio</button>
   </div>
 {/if}
 
@@ -250,4 +258,8 @@
     margin-top: 4px;
   }
   .kill-illidan-btn:hover { color: #ff8080; border-color: rgba(200, 60, 60, 0.70); }
+
+  .reset-audio-btn {
+    width: 100%;
+  }
 </style>

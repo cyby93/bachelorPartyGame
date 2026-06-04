@@ -230,7 +230,12 @@ export default class SkillSystem {
       gs.gates.forEach(gate => {
         if (gate.isDead || !gate.isActive) return
         if (_inHitbox(gate.x, gate.y, gate.radius)) {
-          gate.takeDamage(Math.round((config.damage ?? 0) * (player.damageMult ?? 1)))
+          const gMeleeDmg    = Math.round((config.damage ?? 0) * (player.damageMult ?? 1))
+          const gMeleeActual = gate.takeDamage(gMeleeDmg)
+          if (gMeleeActual > 0) {
+            gs.stats.damage[player.id] = (gs.stats.damage[player.id] ?? 0) + gMeleeActual
+            if (gs.levelStats) gs.levelStats.damage[player.id] = (gs.levelStats.damage[player.id] ?? 0) + gMeleeActual
+          }
           hitCount++
         }
       })
@@ -241,7 +246,12 @@ export default class SkillSystem {
       gs.buildings.forEach(building => {
         if (building.isDead) return
         if (_inHitbox(building.x, building.y, building.radius)) {
-          building.takeDamage(Math.round((config.damage ?? 0) * (player.damageMult ?? 1)))
+          const bMeleeDmg = Math.round((config.damage ?? 0) * (player.damageMult ?? 1))
+          const bMeleeActual = building.takeDamage(bMeleeDmg)
+          if (bMeleeActual > 0) {
+            gs.stats.damage[player.id] = (gs.stats.damage[player.id] ?? 0) + bMeleeActual
+            if (gs.levelStats) gs.levelStats.damage[player.id] = (gs.levelStats.damage[player.id] ?? 0) + bMeleeActual
+          }
           hitCount++
         }
       })
@@ -1046,7 +1056,13 @@ export default class SkillSystem {
         const aoeCircle = { x: cx, y: cy, radius }
         const gateRect  = { x: gate.x, y: gate.y, width: gate.width ?? 40, height: gate.height ?? 100 }
         if (this._collision.circleRectOverlap(aoeCircle, gateRect)) {
-          gate.takeDamage(Math.round((config.damage ?? 0) * (player?.damageMult ?? 1)))
+          const gAoeDmg    = Math.round((config.damage ?? 0) * (player?.damageMult ?? 1))
+          const gAoeActual = gate.takeDamage(gAoeDmg)
+          if (gs.io && gAoeActual > 0) gs.io.emit('effect:damage', { targetId: gate.id, amount: gAoeActual, type: 'damage', sourceSkill: null })
+          if (player && gAoeActual > 0) {
+            gs.stats.damage[player.id] = (gs.stats.damage[player.id] ?? 0) + gAoeActual
+            if (gs.levelStats) gs.levelStats.damage[player.id] = (gs.levelStats.damage[player.id] ?? 0) + gAoeActual
+          }
         }
       })
     }
@@ -1058,9 +1074,13 @@ export default class SkillSystem {
         const aoeCircle    = { x: cx, y: cy, radius }
         const buildingRect = { x: building.x, y: building.y, width: building.width ?? 60, height: building.height ?? 60 }
         if (this._collision.circleRectOverlap(aoeCircle, buildingRect)) {
-          const bAoeDmg = Math.round((config.damage ?? 0) * (player?.damageMult ?? 1))
-          building.takeDamage(bAoeDmg)
-          if (gs.io && bAoeDmg > 0) gs.io.emit('effect:damage', { targetId: building.id, amount: bAoeDmg, type: 'damage', sourceSkill: null })
+          const bAoeDmg    = Math.round((config.damage ?? 0) * (player?.damageMult ?? 1))
+          const bAoeActual = building.takeDamage(bAoeDmg)
+          if (gs.io && bAoeActual > 0) gs.io.emit('effect:damage', { targetId: building.id, amount: bAoeActual, type: 'damage', sourceSkill: null })
+          if (player && bAoeActual > 0) {
+            gs.stats.damage[player.id] = (gs.stats.damage[player.id] ?? 0) + bAoeActual
+            if (gs.levelStats) gs.levelStats.damage[player.id] = (gs.levelStats.damage[player.id] ?? 0) + bAoeActual
+          }
         }
       })
     }
@@ -1322,7 +1342,13 @@ export default class SkillSystem {
           const gateRect   = { x: gate.x, y: gate.y, width: gate.width ?? 40, height: gate.height ?? 100 }
           if (this._collision.circleRectOverlap(projCircle, gateRect)) {
             proj.hit.add(gate.id)
-            gate.takeDamage(proj.damage ?? 0)
+            const gProjDmg    = Math.round((proj.damage ?? 0) * (gs.players.get(proj.ownerId)?.damageMult ?? 1))
+            const gProjActual = gate.takeDamage(gProjDmg)
+            if (gs.io && gProjActual > 0) gs.io.emit('effect:damage', { targetId: gate.id, amount: gProjActual, type: 'damage', sourceSkill: null })
+            if (proj.ownerId && gProjActual > 0) {
+              gs.stats.damage[proj.ownerId] = (gs.stats.damage[proj.ownerId] ?? 0) + gProjActual
+              if (gs.levelStats) gs.levelStats.damage[proj.ownerId] = (gs.levelStats.damage[proj.ownerId] ?? 0) + gProjActual
+            }
             if (!proj.pierce) proj.isAlive = false
           }
         })
@@ -1338,9 +1364,12 @@ export default class SkillSystem {
           if (this._collision.circleRectOverlap(projCircle, buildingRect)) {
             proj.hit.add(building.id)
             const bDmg = Math.round((proj.damage ?? 0) * (gs.players.get(proj.ownerId)?.damageMult ?? 1))
-            building.takeDamage(bDmg)
-            if (gs.io && bDmg > 0) gs.io.emit('effect:damage', { targetId: building.id, amount: bDmg, type: 'damage', sourceSkill: null })
-            if (gs.stats && proj.ownerId) gs.stats.damage[proj.ownerId] = (gs.stats.damage[proj.ownerId] ?? 0) + bDmg
+            const bProjActual = building.takeDamage(bDmg)
+            if (gs.io && bProjActual > 0) gs.io.emit('effect:damage', { targetId: building.id, amount: bProjActual, type: 'damage', sourceSkill: null })
+            if (proj.ownerId && bProjActual > 0) {
+              gs.stats.damage[proj.ownerId] = (gs.stats.damage[proj.ownerId] ?? 0) + bProjActual
+              if (gs.levelStats) gs.levelStats.damage[proj.ownerId] = (gs.levelStats.damage[proj.ownerId] ?? 0) + bProjActual
+            }
             if (!proj.pierce) proj.isAlive = false
           }
         })
@@ -1669,9 +1698,13 @@ export default class SkillSystem {
           if (!eff.lastDamageTick) eff.lastDamageTick = now2
           if (now2 - eff.lastDamageTick >= eff.params.tickRate) {
             eff.lastDamageTick = now2
-            const bDotDmg = eff.params.damagePerTick
-            b.takeDamage(bDotDmg)
-            if (gs.io && bDotDmg > 0) gs.io.emit('effect:damage', { targetId: b.id, amount: bDotDmg, type: 'damage', sourceSkill: eff.params.sourceSkill ?? null })
+            const bDotDmg    = eff.params.damagePerTick
+            const bDotActual = b.takeDamage(bDotDmg)
+            if (gs.io && bDotActual > 0) gs.io.emit('effect:damage', { targetId: b.id, amount: bDotActual, type: 'damage', sourceSkill: eff.params.sourceSkill ?? null })
+            if (eff.ownerId && bDotActual > 0) {
+              gs.stats.damage[eff.ownerId] = (gs.stats.damage[eff.ownerId] ?? 0) + bDotActual
+              if (gs.levelStats) gs.levelStats.damage[eff.ownerId] = (gs.levelStats.damage[eff.ownerId] ?? 0) + bDotActual
+            }
           }
         }
       }

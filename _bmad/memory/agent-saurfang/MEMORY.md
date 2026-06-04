@@ -60,6 +60,22 @@ Self-cast BURST projectiles spawn with `vx=0, vy=0, selfCast=true`. `_tickProjec
 
 `getZonesDTO()` now includes `skillName: z.config?.name ?? null`. Thrall uses this to render Consecration differently from other ground zones.
 
+## Structure damage tracking — buildings and gates bypass `_dealDamage`
+
+Buildings (`ServerBuilding`) and gates (`ServerGate`) are never passed to `_dealDamage` — that function is wired for enemies/boss/players only. All building/gate damage is manual `takeDamage()` calls at each site in `SkillSystem.js`.
+
+**Both entities now return actual HP dealt from `takeDamage()`.** Every call site must capture the return value and write to both stat maps:
+```js
+const actual = structure.takeDamage(dmg)
+if (attacker && actual > 0) {
+  gs.stats.damage[attacker.id] = (gs.stats.damage[attacker.id] ?? 0) + actual
+  if (gs.levelStats) gs.levelStats.damage[attacker.id] = (gs.levelStats.damage[attacker.id] ?? 0) + actual
+}
+```
+DoT effects on buildings use `eff.ownerId` as the attacker key.
+
+**If adding a new building/gate damage path — this boilerplate is required.** A `_dealStructureDamage()` helper would centralize it; not yet implemented.
+
 ## Entity takeDamage / heal return contracts
 
 - `ServerPlayer.takeDamage(amount)` → returns actual HP damage dealt (capped, 0 if immune/absorbed)

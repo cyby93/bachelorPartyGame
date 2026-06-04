@@ -229,9 +229,9 @@ export const CAMPAIGN = [
     },
     buildingSpawning: {
       baseInterval: 6000,          // ms between spawns per building
-      countPerSpawn: [1, 1],       // min/max enemies per spawn event
-      maxTotalAlive: 1,            // total cap shared across alive buildings — redistributes on death
-      buffFactor: 0.10,            // 25% faster spawns per destroyed building
+      countPerSpawn: [1, 2],       // min/max enemies per spawn event
+      maxTotalAlive: 8,           // total cap across all alive buildings combined (~4 per building base)
+      buffFactor: 0.10,            // 10% faster spawns per destroyed building
       spawnRadius: 120,             // spawn distance from building center
       enemyTypes: [
         { type: 'felGuard',   weight: 4 },
@@ -249,7 +249,7 @@ export const CAMPAIGN = [
     spawning: {
       mode: 'continuous',
       interval: 4000,
-      countPerWave: [0, 0],
+      countPerWave: [1, 2],
       maxAliveAtOnce: 3,
       spawnEdge: 'all',
       enemyTypes: [
@@ -261,7 +261,7 @@ export const CAMPAIGN = [
     difficulty: {
       hpMult:     { base: 1.0, perPlayer: 0.06 },
       damageMult: { base: 1.0, perPlayer: 0.05 },
-      spawnMult:  { base: 1.0, perPlayer: 0.10 },
+      spawnMult:  { base: 1.0, perPlayer: 0.04 },
       countMult:  { base: 1.0, perPlayer: 0.05 },
     },
     transition: {

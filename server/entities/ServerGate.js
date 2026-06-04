@@ -35,11 +35,11 @@ export default class ServerGate {
    * Only takes damage if the gate is active (current objective target).
    */
   takeDamage(amount) {
-    if (this.isDead || !this.isActive) return
+    if (this.isDead || !this.isActive) return 0
+    const actual = Math.min(amount, this.hp)
     this.hp = Math.max(0, this.hp - amount)
-    if (this.hp === 0) {
-      this.isDead = true
-    }
+    if (this.hp === 0) this.isDead = true
+    return actual
   }
 
   /**

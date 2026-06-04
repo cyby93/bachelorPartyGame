@@ -72,13 +72,19 @@ export default class BuildingSpawnSystem {
     const baseInterval   = this.config.baseInterval ?? 3000
     const buffFactor     = this.config.buffFactor ?? 0.25
 
-    // If maxTotalAlive is set, distribute it among alive buildings to keep difficulty constant.
-    // Otherwise fall back to the old per-building cap.
-    let aliveBuildings = 0
-    buildings.forEach(b => { if (!b.isDead) aliveBuildings++ })
-    const maxPerBuilding = this.config.maxTotalAlive != null
-      ? Math.ceil((this.config.maxTotalAlive * this._countMult) / Math.max(aliveBuildings, 1))
-      : Math.ceil((this.config.maxAlivePerBuilding ?? 6) * this._countMult)
+    // Sum all per-building alive counts for global cap enforcement
+    let totalAlive = 0
+    this._aliveCount.forEach(c => { totalAlive += c })
+
+    // maxTotalAlive = global hard ceiling across all buildings
+    // maxAlivePerBuilding = optional per-building subcap (used only when no global cap)
+    const maxGlobal = this.config.maxTotalAlive != null
+      ? Math.ceil(this.config.maxTotalAlive * this._countMult)
+      : Infinity
+    const maxPerBuilding = this.config.maxTotalAlive == null
+      ? Math.ceil((this.config.maxAlivePerBuilding ?? 6) * this._countMult)
+      : Infinity
+
     const [minCount, maxCount] = this.config.countPerSpawn ?? [1, 2]
     const scaledMin      = Math.ceil(minCount * this._countMult)
     const scaledMax      = Math.ceil(maxCount * this._countMult)
@@ -100,12 +106,17 @@ export default class BuildingSpawnSystem {
       if (now - this._lastSpawn.get(building.id) < interval) return
       this._lastSpawn.set(building.id, now)
 
-      // Respect per-building cap
+      // Check per-building cap (only active when no global cap)
       const alive = this._aliveCount.get(building.id) ?? 0
       if (alive >= maxPerBuilding) return
 
+      // Check global cap
+      if (totalAlive >= maxGlobal) return
+
       const count = Math.floor(Math.random() * (scaledMax - scaledMin + 1)) + scaledMin
-      const toSpawn = Math.min(count, maxPerBuilding - alive)
+      const roomInBuilding = isFinite(maxPerBuilding) ? maxPerBuilding - alive : count
+      const roomGlobal     = isFinite(maxGlobal) ? maxGlobal - totalAlive : count
+      const toSpawn = Math.min(count, roomInBuilding, roomGlobal)
 
       for (let i = 0; i < toSpawn; i++) {
         const typeName = this._typeTable[Math.floor(Math.random() * this._typeTable.length)]
@@ -119,6 +130,7 @@ export default class BuildingSpawnSystem {
         // Track ownership
         this._enemyOwner.set(enemy.id, building.id)
         this._aliveCount.set(building.id, (this._aliveCount.get(building.id) ?? 0) + 1)
+        totalAlive++
       }
     })
 

@@ -119,6 +119,40 @@ SKILL_FIRED payload includes `width: config.width` when set — Thrall's VFX bra
 
 **Critical ordering**: always call `recordLevel` and `_buildPlayerSnapshot()` BEFORE nulling `this.currentLevel` or `this.currentLevelIndex` — those values are used in the call.
 
+## ServerEnemy — maxRangedTargets override (2026-06-08)
+
+Constructor now accepts `maxRangedTargets` as an optional override param:
+```js
+constructor({ ..., maxRangedTargets = undefined }) {
+  this._maxRangedTargets = maxRangedTargets ?? base.maxRangedTargets ?? 2
+}
+```
+
+Split children inherit via `maxRangedTargets: e._maxRangedTargets` in `_pendingChildren` entries. Child spawn uses `{ ...child }` spread so it propagates automatically.
+
+Used in `_spawnInitialEnemies` to scale Leviathan ranged targets with player count:
+```js
+const maxRangedTargets = entry.type === 'leviathan'
+  ? Math.max(1, Math.round(playerCount * 2 / 12))
+  : undefined
+```
+
+## Warlock countPerPlayer config pattern (2026-06-08)
+
+L5 warlocks config uses `countPerPlayer` / `minCount` instead of fixed `count`:
+```js
+warlocks: { countPerPlayer: 0.5, minCount: 2, ... }
+```
+
+GameServer resolves at spawn time:
+```js
+const count = wCfg.countPerPlayer != null
+  ? Math.max(wCfg.minCount ?? 1, Math.round(playerCount * wCfg.countPerPlayer))
+  : (wCfg.count ?? 6)
+```
+
+`_warlockCount` tracking is count-agnostic — phase transition gates on `prev > 0 && alive === 0`, never on a literal 6.
+
 ## BotController — architecture and deps (as of 2026-05-27)
 
 `server/systems/BotController.js`. Constructor receives: `bots, players, inputQueues, enemies, getBoss, buildings, gates, getCurrentLevel, isDialogRunning, getScene`.

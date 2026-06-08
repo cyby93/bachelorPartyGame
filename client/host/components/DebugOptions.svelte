@@ -1,6 +1,7 @@
 <script>
   import { EVENTS } from '../../../shared/protocol.js'
   import { CAMPAIGN, LEVEL_SELECT_OPTIONS } from '../../../shared/LevelConfig.js'
+  import { GAME_CONFIG } from '../../../shared/GameConfig.js'
   import { gameState } from '../stores/gameState.js'
   import { audioStore } from '../stores/audioStore.js'
 
@@ -112,7 +113,7 @@
       </div>
     {/each}
 
-    <h3 style="margin-top:10px">Bots ({botCount} / 12)</h3>
+    <h3 style="margin-top:10px">Bots ({botCount} / {GAME_CONFIG.MAX_PLAYERS - 1})</h3>
     <div class="bot-row">
       <button class="util-btn" onclick={handleBotAdd}>+ Add Bot</button>
       <button class="util-btn" onclick={handleBotRemove}>Remove All</button>

@@ -69,6 +69,14 @@ Current PixelLab research notes:
 
 Repo fit: keep the current sprite + trail + impact architecture for most projectile skills. Reserve animated object support, if ever added, for premium/heavy spells like Pyroblast rather than making it the default for every ability.
 
+## Svelte Version — Use Runes
+
+JoinScreen.svelte, DebugOptions.svelte, and other host screens use **Svelte 5 runes** (`$props`, `$derived`, `$state`). The MEMORY note about "Svelte 4 legacy mode" applied to older components and is no longer representative. Match the runes pattern in any file you edit.
+
+## Bot Controls — Production Lobby
+
+`JoinScreen.svelte` now has a production-visible "Bots" card with `+ Bot` / `Clear All` buttons. Max bots derived from `GAME_CONFIG.MAX_PLAYERS - 1`. `BOT_REMOVE` removes all bots (not one); labeled "Clear All" so the behavior is obvious.
+
 ## Known Open Gaps
 
 - Tasks 12 and 13 (socket event schema validation, cooldown/skill button rendering review) blocked on Thrall's `skill:fired` shape being frozen

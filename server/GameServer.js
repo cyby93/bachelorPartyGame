@@ -423,7 +423,7 @@ export default class GameServer {
 
   _onBotAdd(socket, data) {
     if (!this.players.get(socket.id)?.isHost) return
-    if (this.bots.size >= 12) return
+    if (this.bots.size >= GAME_CONFIG.MAX_PLAYERS - 1) return
 
     const id = `bot-${this._botSeq++}`
     const className = resolveClassName(data?.className)
@@ -919,7 +919,9 @@ export default class GameServer {
     this._lastWarlockBuffVfxTime = 0
     if (level.warlocks && this.boss) {
       const wCfg = level.warlocks
-      const count = wCfg.count ?? 6
+      const count = wCfg.countPerPlayer != null
+        ? Math.max(wCfg.minCount ?? 1, Math.round(playerCount * wCfg.countPerPlayer))
+        : (wCfg.count ?? 6)
       const circleR = wCfg.circleRadius ?? 120
       for (let i = 0; i < count; i++) {
         const angle = (i / count) * Math.PI * 2
@@ -1872,14 +1874,15 @@ export default class GameServer {
                   const angle = (i / split.count) * Math.PI * 2 + (Math.random() - 0.5) * 0.5
                   const dist = e.radius * 1.5 + 20
                   e._pendingChildren.push({
-                    type:        e.type,
-                    x:           e.x + Math.cos(angle) * dist,
-                    y:           e.y + Math.sin(angle) * dist,
-                    generation:  childGen,
-                    hp:          Math.round(e.maxHp * mult),
-                    speed:       e.speed * mult,
-                    radius:      Math.round(e.radius * mult),
-                    meleeDamage: Math.round(e.meleeDamage * mult),
+                    type:             e.type,
+                    x:                e.x + Math.cos(angle) * dist,
+                    y:                e.y + Math.sin(angle) * dist,
+                    generation:       childGen,
+                    hp:               Math.round(e.maxHp * mult),
+                    speed:            e.speed * mult,
+                    radius:           Math.round(e.radius * mult),
+                    meleeDamage:      Math.round(e.meleeDamage * mult),
+                    maxRangedTargets: e._maxRangedTargets,
                   })
                 }
               }
@@ -2782,10 +2785,15 @@ export default class GameServer {
   /** Spawn all entries in level.initialEnemies into the enemies map. */
   _spawnInitialEnemies(level, hpMult, damageMult) {
     this._initialEnemiesReady = true
+    let playerCount = 0
+    this.players.forEach(p => { if (!p.isHost) playerCount++ })
     for (const entry of level.initialEnemies) {
       const base = ENEMY_TYPES[entry.type]
       if (!base) continue
       const id = ++this._enemyIdSeq.value
+      const maxRangedTargets = entry.type === 'leviathan'
+        ? Math.max(1, Math.round(playerCount * 2 / 12))
+        : undefined
       const enemy = new ServerEnemy({
         id,
         x: entry.x,
@@ -2797,6 +2805,7 @@ export default class GameServer {
         radius: base.radius,
         meleeDamage: Math.round(base.meleeDamage * damageMult),
         generation: entry.generation ?? 0,
+        maxRangedTargets,
       })
       enemy.setArenaSize(this.arenaWidth, this.arenaHeight)
       this.enemies.set(id, enemy)

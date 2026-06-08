@@ -11,7 +11,7 @@ import { GAME_CONFIG }   from '../../shared/GameConfig.js'
 import { ENEMY_TYPES }   from '../../shared/EnemyTypeConfig.js'
 
 export default class ServerEnemy {
-  constructor({ id, x, y, type = 'felGuard', hp, maxHp, speed, radius, meleeDamage, generation, renderType = null, forcedAnimation = null }) {
+  constructor({ id, x, y, type = 'felGuard', hp, maxHp, speed, radius, meleeDamage, generation, renderType = null, forcedAnimation = null, maxRangedTargets = undefined }) {
     const base = ENEMY_TYPES[type] ?? ENEMY_TYPES.felGuard
 
     this.id            = id
@@ -84,7 +84,7 @@ export default class ServerEnemy {
     this.splitOnDeath    = base.splitOnDeath ?? null
 
     // Leviathan AI — multi-target
-    this._maxRangedTargets = base.maxRangedTargets ?? 2
+    this._maxRangedTargets = maxRangedTargets ?? base.maxRangedTargets ?? 2
     this._meleeTarget      = null
     this._rangedTargets    = []
 

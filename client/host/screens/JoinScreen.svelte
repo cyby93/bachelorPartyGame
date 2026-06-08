@@ -1,5 +1,6 @@
 <script>
   import { EVENTS } from '../../../shared/protocol.js'
+  import { GAME_CONFIG } from '../../../shared/GameConfig.js'
   import { gameState } from '../stores/gameState.js'
   import HostButton from '../components/HostButton.svelte'
   import LobbyPlayerList from '../components/LobbyPlayerList.svelte'
@@ -7,6 +8,8 @@
   import { IS_PROD } from '../../../shared/BuildConfig.js'
 
   let { socket } = $props()
+
+  const MAX_BOTS = GAME_CONFIG.MAX_PLAYERS - 1
 
   const players      = $derived(Object.values($gameState.players).filter(p => !p.isHost && !p.isBot))
   const bots         = $derived(Object.values($gameState.players).filter(p => p.isBot))
@@ -25,6 +28,14 @@
       socket.emit(EVENTS.SESSION_RESET)
     }
   }
+
+  function handleBotAdd() {
+    socket.emit(EVENTS.BOT_ADD, {})
+  }
+
+  function handleBotRemove() {
+    socket.emit(EVENTS.BOT_REMOVE)
+  }
 </script>
 
 <div class="join-screen">
@@ -37,6 +48,14 @@
   <div class="player-section card" onkick-player={handleKickPlayer}>
     <h3>Raid Members</h3>
     <LobbyPlayerList />
+  </div>
+
+  <div class="bot-section card">
+    <h3>Bots — {bots.length} / {MAX_BOTS}</h3>
+    <div class="bot-controls">
+      <button class="bot-btn" onclick={handleBotAdd} disabled={bots.length >= MAX_BOTS}>+ Bot</button>
+      <button class="bot-btn" onclick={handleBotRemove} disabled={bots.length === 0}>Clear All</button>
+    </div>
   </div>
 
   <div class="start-area">
@@ -121,6 +140,26 @@
     min-height: 0;
     overflow-y: auto;
   }
+
+  .bot-section { flex-shrink: 0; }
+
+  .bot-controls {
+    display: flex;
+    gap: 6px;
+  }
+
+  .bot-btn {
+    flex: 1;
+    padding: 6px 10px;
+    border-radius: var(--rn-radius-sm);
+    border: 1px solid rgba(100, 72, 20, 0.40);
+    background: rgba(26, 16, 8, 0.70);
+    color: var(--rn-text-dim);
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .bot-btn:hover:not(:disabled) { color: var(--rn-text-body); border-color: var(--rn-border); }
+  .bot-btn:disabled { opacity: 0.35; cursor: default; }
 
   .start-area { flex-shrink: 0; }
 

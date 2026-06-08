@@ -261,7 +261,7 @@ export const CAMPAIGN = [
     difficulty: {
       hpMult:     { base: 1.0, perPlayer: 0.06 },
       damageMult: { base: 1.0, perPlayer: 0.05 },
-      spawnMult:  { base: 1.0, perPlayer: 0.04 },
+      spawnMult:  { base: 0.65, perPlayer: 0.07 }, // lowered base, raised perPlayer — equalises per-player pressure (×0.99 at N=4, N=12 unchanged)
       countMult:  { base: 1.0, perPlayer: 0.05 },
     },
     transition: {
@@ -302,8 +302,8 @@ export const CAMPAIGN = [
       },
     ],
     difficulty: {
-      hpMult:     { base: 1.0, perPlayer: 0.08 },
-      damageMult: { base: 1.0, perPlayer: 0.05 },
+      hpMult:     { base: 0.157, perPlayer: 0.157 }, // linear: 0.157×N → ×1.88 at N=12 (constant fight time)
+      damageMult: { base: 0.13,  perPlayer: 0.13  }, // linear: 0.13×N  → ×1.56 at N=12 (constant per-player damage)
       spawnMult:  { base: 1.0, perPlayer: 0.0 },
       countMult:  { base: 1.0, perPlayer: 0.05 },
     },
@@ -354,7 +354,8 @@ export const CAMPAIGN = [
     boss: 'SHADE_OF_AKAMA',
     bossSpawnPosition: { x: 1100, y: 450 },
     warlocks: {
-      count: 6,
+      countPerPlayer: 0.5,  // max(minCount, round(N × 0.5)) → 2@N=4, 3@N=6, 4@N=8, 6@N=12
+      minCount: 2,
       circleRadius: 120,
       centerEntityId: 'shade',
       hp: Math.round(2.20 * X * R),   // tunable per-level warlock HP (falls back to EnemyTypeConfig if omitted)
@@ -422,7 +423,7 @@ export const CAMPAIGN = [
     // No ambient minionSpawning on Illidan — all adds are phase-scripted (Flames, Shadow Demons).
     minionSpawning: null,
     difficulty: {
-      hpMult:     { base: 1.0, perPlayer: 0.10 },  // +10%/player → ×2.2 at 13p (brainstorm derivation)
+      hpMult:     { base: 0.175, perPlayer: 0.175 }, // linear: 0.175×N → ×2.1 at 12p, ×0.7 at 4p (constant fight time)
       damageMult: { base: 1.0, perPlayer: 0.06 },
       // countMult not applicable — Illidan adds are spawned programmatically, not via SpawnSystem
       spawnMult:  { base: 1.0, perPlayer: 0.0  },

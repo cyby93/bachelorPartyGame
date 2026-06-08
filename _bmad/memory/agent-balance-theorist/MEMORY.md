@@ -6,8 +6,16 @@ _Curated long-term knowledge. Distilled from sessions._
 
 ## Settled Design Decisions
 
-### Illidan Fight Duration
-**Live constant = 1200 → ~4:32 at 13p.** Formula: `fight_time = (constant × hpMult) / GroupDPS_mult`. R and RLEF cancel. The original 2116 target (8 min) was superseded — Cyby intentionally shortened the fight. At 12p the fight is 4:28–4:50 depending on class composition. All scenarios well inside the 12-min enrage. Confirmed 2026-06-02.
+### Illidan Fight Duration — LINEAR SCALING (updated 2026-06-08)
+**Live: maxHp = 1200, hpMult = 0.175 × N → fight = 4:41 at ALL player counts.**
+The hpMult was changed from `{ base: 1.0, perPlayer: 0.10 }` to `{ base: 0.175, perPlayer: 0.175 }`.
+Formula `0.175 × N` is linear — N cancels in fight_time = HP / DPS → constant ~4:41 regardless of group size.
+Enrage buffer at any N: 7.3 min (720s − 281s). Ample.
+Old formula gave 8:43 at N=4 — dangerously close to 12-min enrage. Fixed.
+
+**⚠ STALE COMMENTS in code (does not affect gameplay):**
+- `IllidanConfig.js` fight_time block references `2116` and "8 min" — live values are 1200 and ~4:41
+- `BalanceConfig.js` Illidan HP derivation references "480s" and `1058` base HP — both wrong
 
 ### RLEF Semantics
 RLEF is a difficulty-pressure dial, not a fight duration knob. Higher RLEF = more HP AND more effective DPS, they cancel. It controls how threatening content feels for a given player skill level. Easy=0.3, Normal=0.5, Hard=0.7.
@@ -30,6 +38,21 @@ Slow crawl (speed 0.6), tanky (hp 10×XR = 500 at defaults), instant kill on con
 - Wave mode previously used spawnMult for count — moved to countMult in 2026-04-16 session.
 
 ---
+
+## Small-Group Scaling Balance (2026-06-08)
+
+Analysis at N=4 (pure, no bots):
+
+| Level | Kill-obj duration | Fixed-obj duration | Per-player dmg pressure | Status |
+|-------|------------------|--------------------|------------------------|--------|
+| L6 Illidan | ×1.00 (constant) | — | N/A | ✅ |
+| L1 Courtyard | ×1.65 | N/A | ×1.02 | ✅ |
+| L2 Gates | ×1.58 | ×2.13 | ×0.98 | ✅ |
+| L3 Siege | ×1.58 | ×2.13 | ×1.28 | ⚠️ monitor |
+| L4 Leviathan | ×1.47 | — | ×1.65 | ⚠️ priority |
+| L5 Shade | ×1.58 | — | ×1.14 | ⚠️ healer risk |
+
+Nothing is broken. L4 is highest playtest priority for small groups.
 
 ## Balance State by Level (as of 2026-04-16, config-only — no playtest)
 

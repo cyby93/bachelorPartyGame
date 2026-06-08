@@ -6,8 +6,8 @@
  * (ShadeOfAkamaConfig.js). Common defaults come from BaseBossConfig.js.
  *
  * maxHp is the 1-player base. LevelConfig.js applies hpMult at runtime:
- *   hpMult = 1.0 + (playerCount - 1) × 0.10   → ×2.2 at 13 players
- *   Illidan HP (13p, Normal) = maxHp × 2.2 ≈ R × 23,276
+ *   hpMult = 0.175 × playerCount   (linear — constant ~10 min fight at any count)
+ *   At 4 players: ×0.7   At 12 players: ×2.1   At 13 players: ×2.275
  *
  * Tune RANGED_BASE_DPS (R) in BalanceConfig.js until the fight feels right.
  *
